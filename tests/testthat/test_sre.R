@@ -1,10 +1,15 @@
 library(sp)
+library(ggplot2)
+library(INLA)
+library(dplyr)
+
 data(meuse)
 meuse$std <- sqrt(0.05066)
 coordinates(meuse) = ~x+y # change into an sp object
 f <- log(zinc) ~ 1
 
-S <- SRE(f,meuse,radial_basis(plane(),loc = matrix(c(179024,329733),nrow=1),scale=600))
+G <- auto_basis(m = plane(),bndary=coordinates(meuse),nres = 2,type = "bisquare")
+S <- SRE(f,meuse,G)
 g <- ggplot()+
     geom_point(data=data.frame(meuse),aes(x,y))
-show_basis(g,S@basis) + coord_fixed()
+show_basis(g,S@basis) + coord_fixed() + geom_path(data=data.frame(c),aes(x,y))

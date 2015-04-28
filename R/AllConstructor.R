@@ -447,6 +447,41 @@ initGRBFbasis = function(x,y,std,nx,ny) {
   return(this_basis)
 }
 
+auto_basis <- function(m = plane(),bndary=matrix(c(0,0,1,1,0,1,1,0),4,2),nres=2,prune=FALSE,type="Gaussian") {
+    bndary_seg = inla.nonconvex.hull(bndary,convex=-0.05)
+
+    if(is(m,"plane")) {
+        warning("Automatic basis function generation only suitable for rectangles")
+        xrange <- range(bndary[,1])
+        yrange <- range(bndary[,2])
+        x <- seq(xrange[1], xrange[2],length=50)
+        y <- seq(yrange[1], yrange[2],length=50)
+        xy <- expand.grid(x=x,y=y) %>%
+              SDMTools::pnt.in.poly(bndary) %>%
+              filter(pip==1) %>%
+              select(x,y)
+        loc <- scale <- NULL
+        for(i in 1:nres) {
+            this_res_locs <- inla.mesh.2d(loc = sample_n(xy,1),
+                                          boundary = list(bndary_seg),
+                                          max.edge = max(diff(xrange),diff(yrange))/(2*2.5^(i-1)),
+                                          cutoff = max(diff(xrange),diff(yrange))/(3*2.5^(i-1)))$loc
+            D <- FRK::distance(m,this_res_locs[,1:2],this_res_locs[,1:2])
+            print(paste0("Number of basis at resolution ",i," = ",nrow(this_res_locs)))
+            diag(D) <- Inf
+            this_res_scales <- apply(D,1,min)
+
+            loc <- rbind(loc,this_res_locs[,1:2])
+            scale <- c(scale,this_res_scales)
+        }
+        if(type=="Gaussian") {
+            G_basis <- radial_basis(manifold = m,loc=loc,scale=scale,type="Gaussian")
+        } else if (type == "bisquare") {
+            G_basis <-radial_basis(manifold = m,loc=loc,scale=1.5*scale,type="bisquare")
+        }
+    }
+    G_basis
+}
 
 radial_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type="Gaussian") {
     stopifnot(is.matrix(loc))
