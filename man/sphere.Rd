@@ -3,7 +3,7 @@
 \alias{sphere}
 \title{sphere}
 \usage{
-sphere(radius = 6378.388, metric = gc_dist(R = radius))
+sphere(radius = 1, metric = gc_dist(R = radius))
 }
 \description{
 This function initialises a sphere

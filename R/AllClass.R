@@ -100,14 +100,15 @@ setClass("FEBasis",contains="Basis")
 #' @keywords Spatial random effects, fixed rank kriging
 setClass("SRE",representation(data="Spatial",
                               basis="Basis",
-                              K = "Matrix",
                               S = "Matrix",
                               V = "Matrix",
                               Z = "Matrix",
-                              X = "Matrix",
+                              X = "Matrix"))
+
+setClass("SRE.fit",contains="SRE",representation(
+                              Khat = "Matrix",
                               alphahat = "numeric",
-                              sigma2obs = "numeric",
-                              sigma2fs = "numeric"))
+                              sigma2fshat = "numeric"))
 
 ####  Spatio-temporal blocks ####
 #'  @docType class

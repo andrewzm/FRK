@@ -4,9 +4,9 @@ setMethod("eval_basis",signature(basis="Basis",s="matrix"),function(basis,s,outp
         stopifnot(output %in% c("list","matrix"))
         x <- lapply(basis@fn,function(f) f(s))
         if (output=="matrix") {
-            x <- Reduce("cbind",x)
+            x <- Reduce("cBind",x)
         }
-        x
+        as(x,"Matrix")
     })
 
 

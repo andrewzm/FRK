@@ -87,7 +87,7 @@ setMethod("show_basis",signature(basis = "Basis"),  # GRBF basis with mean offse
                   for (i in 1:basis@n) {
                       g <- g + geom_path(data=circleFun(center=basis@pars[[i]]$loc,
                                                         diameter = basis@pars[[i]]$scale),
-                                         aes(x=y,y=x),col=col)
+                                         aes(x=x,y=y),col=col)
                   }
               } else  if(is(manifold(basis),"sphere")) {
                   for (i in 1:basis@n) {

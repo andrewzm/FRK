@@ -57,7 +57,6 @@ setGeneric("plot")
 setGeneric("plot_interp", function(x,y,ds,...) standardGeneric("plot_interp"))
 
 setGeneric("show_basis", function(g,basis,...) standardGeneric("show_basis"))
-setGeneric("dimensions", function(obj) standardGeneric("dimensions"))
 
 
 

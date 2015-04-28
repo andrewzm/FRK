@@ -85,8 +85,16 @@ setMethod("initialize",signature="domain",function(.Object,m = sphere(), bndary=
     .Object
     })
 
-
-SRE <- function(f) {}
+SRE <- function(f,data,basis) {
+   L <- gstat:::gstat.formula(f,data=data)
+   new("SRE",
+       data=data,
+       basis=basis,
+       S = eval_basis(basis, s = coordinates(data)),
+       V = Diagonal(x=data$std^2),
+       Z = Matrix(L$y),
+       X = as(L$X,"Matrix"))
+}
 
 
 #' @title GMRF

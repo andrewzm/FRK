@@ -2,12 +2,9 @@
 \docType{class}
 \name{sphere-class}
 \alias{sphere-class}
-\title{sphere}
+\title{}
 \description{
 Sphere manifold
-}
-\details{
-
 }
 \keyword{Manifolds,}
 \keyword{planes}
