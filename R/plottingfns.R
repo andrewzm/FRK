@@ -91,7 +91,7 @@ setMethod("show_basis",signature(basis = "Basis"),  # GRBF basis with mean offse
                   }
               } else  if(is(manifold(basis),"sphere")) {
                   for (i in 1:basis@n) {
-                      df <-basis@pars$df[,1:2]
+                      df <-basis@df[,1:2]
                       names(df) <- c("long","lat")
                       g <- g + geom_point(data=df,aes(x=long,y=lat),col=col)
                   }

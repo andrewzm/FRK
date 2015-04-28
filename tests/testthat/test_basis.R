@@ -31,7 +31,7 @@ std <- rep(0.3,5)
 G_basis <- radial_basis(manifold = plane(),loc = mu,scale=std,type="Gaussian")
 test_that("we can have multiple functions in a Basis object and plot them", {
     expect_equal(G_basis@n, 5)
-    expect_equal(nrow(G_basis@pars$df), 5)
+    expect_equal(nrow(G_basis@df), 5)
     expect_equal(G_basis@fn[[1]](mu)[1,1],1) # Value of basis at mean is 1
     expect_equal(diag(eval_basis(G_basis,s = mu)),rep(1,5))
     expect_true({show_basis(ggplot(),G_basis); TRUE})
@@ -42,7 +42,7 @@ std <- rep(0.3,10)
 G_basis <- radial_basis(manifold = real_line(),loc = mu,scale=std,type="Gaussian")
 test_that("we can have multiple functions in a Basis object and plot them", {
     expect_equal(G_basis@n, 10)
-    expect_equal(nrow(G_basis@pars$df), 10)
+    expect_equal(nrow(G_basis@df), 10)
     expect_equal(G_basis@fn[[1]](mu)[1,1],1) # Value of basis at mean is 1
     expect_equal(diag(eval_basis(G_basis,s = mu)),rep(1,10))
     expect_true({show_basis(ggplot(),G_basis,s1min=-1,s1max=2,ds1 = 0.01); TRUE})

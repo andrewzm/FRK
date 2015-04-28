@@ -1,3 +1,10 @@
+#' @rdname type
+#' @aliases type,manifold-method
+setMethod("type",signature(.Object="manifold"),function(.Object) {
+    return(.Object@type)
+})
+
+
 #' @rdname manifold
 #' @aliases manifold,Basis-method
 setMethod("manifold",signature(.Object="Basis"),function(.Object) {

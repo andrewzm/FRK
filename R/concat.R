@@ -1,6 +1,26 @@
 #### concatenate blocks ####
 
 #' @rdname concat
+#' @aliases concat,Basis-method
+setMethod("concat",signature = "Basis",function(...) {
+    l <- list(...)
+    if(length(l) < 2)
+        stop("Need more than one basis set to concatenate")
+    if(!(length(unique(sapply(sapply(l,manifold),type))) == 1))
+        stop("Basis need to be on the same manifold")
+    G <- l[[1]]
+
+    for (i in 2:length(l)) {
+        G@fn <- c(G@fn, l[[i]]@fn)
+        G@pars <- c(G@pars, l[[i]]@pars)
+        G@df <- rbind(G@df, l[[i]]@df)
+    }
+    G@n <- length(G@fn)
+    G
+})
+
+
+#' @rdname concat
 #' @aliases concat,block-method
 setMethod("concat",signature = "block", function(...) { return(...) })
 
@@ -9,18 +29,18 @@ setMethod("concat",signature = "block", function(...) { return(...) })
 setMethod("concat",signature = "GMRF",function(...) {
   l <- list(...)
   mu <- Q <- intrinsic <- n <- rep <- list()
-  
+
   for (i in 1:length(l)) {
     mu[[i]] <- l[[i]]@mu
     Q[[i]] <- l[[i]]@Q
     intrinsic[[i]] <- l[[i]]@intrinsic
     n[[i]] <- l[[i]]@n
-  }    
+  }
   mu <- Reduce("rBind",mu)
   Q <- Reduce("bdiag",Q)
   intrinsic <- Reduce("min",intrinsic)
   n <- Reduce("+",n)
-  
+
   common_cols <- Reduce("intersect",lapply(l,function(x) {colnames(x@rep)}))
   compatible <- lapply(l,function(x) suppressWarnings(all(common_cols == colnames(x@rep))))
   if(!all(unlist(compatible))) warning("Keeping only common columns in mesh attributes when compressing")
@@ -50,14 +70,14 @@ setMethod("concat",signature = "Obs",function(...) {
   for (i in 1:length(l)) {
     df[[i]] <- l[[i]]@df
     n[[i]] <- l[[i]]@n
-  }    
-  
+  }
+
   common_cols <- Reduce("intersect",lapply(df,colnames))
   compatible <- lapply(df,function(x) suppressWarnings(all(common_cols == colnames(x))))
   if(!all(unlist(compatible))) warning("Keeping only common columns in data sets when compressing")
   df <- Reduce("rBind",lapply(df,function(x) return(subset(x,select=common_cols))))
   n <- Reduce("+",n)
-  
+
   return(new("Obs",
              df = df))})
 

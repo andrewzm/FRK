@@ -60,7 +60,7 @@ setClass("domain",representation(m = "manifold", bndary="matrix"))
 #'
 #' @keywords Basis functions
 #' @rdname Basisclass
-setClass("Basis", representation(manifold="manifold",n = "numeric",fn="list",pars="list"))
+setClass("Basis", representation(manifold="manifold",n = "numeric",fn="list",pars="list", df="data.frame"))
 
 #'  @docType class
 #'  @title Gaussian radial basis functions basis
