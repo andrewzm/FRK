@@ -447,56 +447,53 @@ initGRBFbasis = function(x,y,std,nx,ny) {
   return(this_basis)
 }
 
-auto_basis <- function(m = plane(),data,nres=2,prune=FALSE,type="Gaussian") {
+auto_basis <- function(m = plane(),data,nres=2,prune=1.0,type="Gaussian") {
     coords <- coordinates(data)
     bndary_seg = inla.nonconvex.hull(coords,convex=-0.05)
+    loc <- scale <- NULL
+    G <- list()
 
-    if(is(m,"plane")) {
+    xrange <- range(coords[,1])
+    yrange <- range(coords[,2])
 
-        ## Find possible grid points for basis locations
-        xrange <- range(coords[,1])
-        yrange <- range(coords[,2])
-        x <- seq(xrange[1], xrange[2],length=50)
-        y <- seq(yrange[1], yrange[2],length=50)
-        xy <- expand.grid(x=x,y=y) %>%
-              SDMTools::pnt.in.poly(coords) %>%
-              filter(pip==1) %>%
-              select(x,y)
-        loc <- scale <- NULL
-        G <- list()
-        for(i in 1:nres) {
-
+    #         ## Find possible grid points for basis locations
+    for(i in 1:nres) {
+        if(is(m,"plane")) {
             ## Generate mesh and use these as centres
-            this_res_locs <- inla.mesh.2d(loc = sample_n(xy,1),
+            this_res_locs <- inla.mesh.2d(loc = matrix(apply(coords,2,mean),nrow=1),
                                           boundary = list(bndary_seg),
                                           max.edge = max(diff(xrange),diff(yrange))/(2*2.5^(i-1)),
-                                          cutoff = max(diff(xrange),diff(yrange))/(3*2.5^(i-1)))$loc
-
-            ## Set scales: To 1.5x the distance to nearest basis
-            ## Refine: Remove basis which are not influenced by data and re-find the scales
-            for(j in 1:2) {
-                D <- FRK::distance(m,this_res_locs[,1:2],this_res_locs[,1:2])
-                diag(D) <- Inf
-                this_res_scales <- apply(D,1,min)
-                this_res_basis <- radial_basis(manifold = m,
-                                        loc=this_res_locs[,1:2],
-                                        scale=ifelse(type=="Gaussian",1,1.5)*this_res_scales,
-                                        type=type)
-                if(j==1) {
-                    rm_idx <- which(colSums(eval_basis(this_res_basis,coords)) < 0.5)
-                    if(length(rm_idx) >0) this_res_locs <- this_res_locs[-rm_idx,]
-                }
-            }
-            print(paste0("Number of basis at resolution ",i," = ",nrow(this_res_locs)))
-
-            G[[i]] <-  radial_basis(manifold = m,
-                                     loc=this_res_locs[,1:2],
-                                     scale=ifelse(type=="Gaussian",1,1.5)*this_res_scales,
-                                     type=type)
-            G[[i]]@df$res=i
+                                          cutoff = max(diff(xrange),diff(yrange))/(3*2.5^(i-1)))$loc[,1:2]
+        }  else if(is(m,"real_line")) {
+            this_res_locs <- matrix(seq(xrange[1],xrange[2],length=i*6))
+        } else if(is(m,"sphere")) {
+            load(system.file("extdata","isea3h.rda", package = "FRK"))
+            this_res_locs <- as.matrix(filter(isea3h,centroid==1,res==i)[c("lon","lat")])
         }
+        ## Set scales: To 1.5x the distance to nearest basis
+        ## Refine: Remove basis which are not influenced by data and re-find the scales
+        for(j in 1:2) {
+            D <- FRK::distance(m,this_res_locs,this_res_locs)
+            diag(D) <- Inf
+            this_res_scales <- apply(D,1,min)
+            this_res_basis <- radial_basis(manifold = m,
+                                           loc=this_res_locs,
+                                           scale=ifelse(type=="Gaussian",1,1.5)*this_res_scales,
+                                           type=type)
+            if(j==1) {
+                rm_idx <- which(colSums(eval_basis(this_res_basis,coords)) < prune)
+                if(length(rm_idx) >0) this_res_locs <- this_res_locs[-rm_idx,,drop=FALSE]
+            }
+        }
+        print(paste0("Number of basis at resolution ",i," = ",nrow(this_res_locs)))
 
+        G[[i]] <-  radial_basis(manifold = m,
+                                loc=this_res_locs,
+                                scale=ifelse(type=="Gaussian",1,1.5)*this_res_scales,
+                                type=type)
+        G[[i]]@df$res=i
     }
+
     G_basis <- Reduce("concat",G)
     if(G_basis@n > nrow(data)) warning("More basis functions than data points")
     G_basis
@@ -508,6 +505,7 @@ radial_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,typ
     stopifnot(length(scale) == nrow(loc))
     stopifnot(type %in% c("Gaussian","bisquare"))
     n <- nrow(loc)
+    colnames(loc) <- c(outer("loc",1:ncol(loc),FUN = paste0))
 
     fn <- pars <- list()
     for (i in 1:n) {
@@ -518,7 +516,7 @@ radial_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,typ
         }
         pars[[i]] <- list(loc = matrix(loc[i,],nrow=1), scale=scale[i])
     }
-    df <- data.frame(loc,scale)
+    df <- data.frame(loc,scale,res=1)
     this_basis <- new("Basis", manifold=manifold, pars=pars, n=n, fn=fn, df=df)
     return(this_basis)
 }

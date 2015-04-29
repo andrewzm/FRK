@@ -75,26 +75,33 @@ draw_world <- function(g,inc_border = TRUE) {
 }
 
 setMethod("show_basis",signature(basis = "Basis"),  # GRBF basis with mean offset as last weight
-          function(g=ggplot(),basis,s1min = 0, s1max = 1,ds1=0.1,col="red") {
+          function(g=ggplot(),basis) {
               if(is(manifold(basis),"real_line")) {
-                 s <- matrix(seq(s1min,s1max,by=ds1))
+                 s1min <- min(basis@df$loc1)  - max(basis@df$scale)*3
+                 s1max <- max(basis@df$loc1)  + max(basis@df$scale)*3
+                 s <- matrix(seq(s1min,s1max,length=1000))
                  for (i in 1:basis@n) {
                      S <- basis@fn[[i]](s)
-                     df <- data.frame(s=as.numeric(s), y = as.numeric(S))
-                     g <- g + geom_line(data=df,aes(x=s,y=y),col=col)
+                     df <- data.frame(s=as.numeric(s), y = as.numeric(S),res=basis@df$res[i])
+                     g <- g + geom_line(data=df,aes(x=s,y=y,col=as.factor(res)))
                  }
               } else  if(is(manifold(basis),"plane")) {
                   for (i in 1:basis@n) {
-                      g <- g + geom_path(data=circleFun(center=basis@pars[[i]]$loc,
-                                                        diameter = basis@pars[[i]]$scale),
-                                         aes(x=x,y=y),col=col)
+#                       g <- g + geom_path(data=circleFun(center=basis@pars[[i]]$loc,
+#                                                         diameter = basis@pars[[i]]$scale),
+#                                          aes(x=x,y=y),col=col)
+                      g <- g + geom_path(data=cbind(circleFun(center=as.numeric(basis@df[i,1:2]),
+                                                        diameter = basis@df$scale[i]),
+                                                    res=as.factor(basis@df$res[i])),
+                                         aes(x=x,y=y,col=res))
                   }
               } else  if(is(manifold(basis),"sphere")) {
-                  for (i in 1:basis@n) {
-                      df <-basis@df[,1:2]
-                      names(df) <- c("long","lat")
-                      g <- g + geom_point(data=df,aes(x=long,y=lat),col=col)
-                  }
+                  df <-basis@df
+                  df <- df[rev(rownames(df)),]
+                  names(df)[1:2] <- c("lon","lat")
+                  g <- g + geom_point(data=df,aes(x=lon,y=lat,size=res),shape=1) +
+                           scale_size_continuous(trans="reverse",breaks =1:10)
+
               }
                return(g)
 

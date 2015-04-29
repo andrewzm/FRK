@@ -45,6 +45,6 @@ test_that("we can have multiple functions in a Basis object and plot them", {
     expect_equal(nrow(G_basis@df), 10)
     expect_equal(G_basis@fn[[1]](mu)[1,1],1) # Value of basis at mean is 1
     expect_equal(diag(eval_basis(G_basis,s = mu)),rep(1,10))
-    expect_true({show_basis(ggplot(),G_basis,s1min=-1,s1max=2,ds1 = 0.01); TRUE})
+    expect_true({show_basis(ggplot(),G_basis); TRUE})
 })
 
