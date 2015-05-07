@@ -1,7 +1,7 @@
 #' @title Pivoted Cholesky factorisation
 #'
 #' @description Pivoted Cholesky (same as pivot=T when carrying out Cholesky with dense matrices)
-#' 
+#'
 #' @param A matrix (sparse or dense), the Cholesky factor of which needs to be found
 #' @details This function should just be used to verify the pivot=T with dense matrices. Since it is an R implementation it is much slower than that in the base package.
 #' @return A list with two elements, R (the Cholesky factor) and piv (the pivoting order)
@@ -30,22 +30,22 @@ find_pivot_Bastos <- function(A) {
 
 #' @title Sparse Cholesky Factorisation with fill-in reducing permutations
 #'
-#' @description This function is similar to chol(A,pivot=T) when A is a sparse matrix. The fill-in reduction permutation is the approximate minimum degree permutation of 
+#' @description This function is similar to chol(A,pivot=T) when A is a sparse matrix. The fill-in reduction permutation is the approximate minimum degree permutation of
 #' Davis' SuiteSparse package configured to be slightly more aggressive than that in the Matrix package. If the Cholesky factor fails, the matrix is coerced to be symmetric.
-#' 
+#'
 #' @param Q matrix (sparse or dense), the Cholesky factor of which needs to be found
 #' @param method If "amd", Timothy Davis SuiteSparse algorithm is used, if not that in the R Matrix package is employed
 #' @param matlab_server A matlab server initiated using the R.matlab package by Henrik Bengtsson. Sparse Cholesky factorisation in MATLAB is generally much faster than in R.
 #' @return A list with two elements, Qpermchol (the permuted Cholesky factor) and P (the pivoting order matrix)
 #' @keywords Cholesky factor
 #' @export
-#' @examples 
+#' @examples
 #' require(Matrix)
 #' cholPermute(sparseMatrix(i=c(1,1,2,2),j=c(1,2,1,2),x=c(0.1,0.2,0.2,1)))
 #' @references Havard Rue and Leonhard Held (2005). Gaussian Markov Random Fields: Theory and Applications. Chapman & Hall/CRC Press
 cholPermute <- function(Q,method="spam",matlab_server=NULL)  {
   n <- nrow(Q)
-  
+
   if(method == "amd") {
     P <- amd_Davis(Q)
     Qp <- Q[P,P]
@@ -56,20 +56,20 @@ cholPermute <- function(Q,method="spam",matlab_server=NULL)  {
     }
     P <- sparseMatrix(i=P,j=1:n,x=1)
     return(list(Qpermchol=Qpermchol,P=P))
-    
+
   } else if (method == "spam")   {
     return(.spam_chol(Q,amd=0))
-    
+
   } else if (method == "spam_amd")   {
     return(.spam_chol(Q,amd=1))
-    
+
   } else {
     e <-tryCatch({ symchol <- Cholesky(Q)},error= function(temp) {print("Cholesky failed, coercing to symmetric")},finally="Cholesky successful")
     if (class(e) == "character")  {
       symchol <- Cholesky(forceSymmetric(Q))
     }
-    
-    
+
+
     j <- 1:n
     i <- symchol@perm + 1
     P <- sparseMatrix(i,j,x=rep(1,n))
@@ -78,7 +78,7 @@ cholPermute <- function(Q,method="spam",matlab_server=NULL)  {
     } else { Qpermchol <- t(chol(t(P)%*%Q%*%P)) }
     return(list(Qpermchol=Qpermchol,P=P))
   }
-  
+
 }
 
 #' @title Solve the equation Qx = y
@@ -86,17 +86,17 @@ cholPermute <- function(Q,method="spam",matlab_server=NULL)  {
 #' @description This function is similar to \code{solve(Q,y)} but with the added benefit that it allows for permuted matrices. This function does the job in order to minimise
 #' user error when attempting to re-permute the matrices prior or after solving. The user also has an option for the permuted Cholesky factorisation of Q to be carried out
 #' internally.
-#' 
+#'
 #' @param Q matrix (sparse or dense), the Cholesky factor of which needs to be found
 #' @param y matrix with the same number of rows as Q
 #' @param perm if F no permutation is carried out, if T permuted Cholesky factors are used
 #' @param cholQ the Cholesky factor of Q (if known already)
 #' @param cholQp the permuted Cholesky factor of Q (if known already)
 #' @param P the pivot matrix (if known already)
-#' @return x solution to Qx = y 
+#' @return x solution to Qx = y
 #' @keywords Cholesky factor, linear solve
 #' @export
-#' @examples 
+#' @examples
 #' require(Matrix)
 #' Q = sparseMatrix(i=c(1,1,2,2),j=c(1,2,1,2),x=c(0.1,0.2,0.2,1))
 #' y = matrix(c(1,2),2,1)
@@ -112,7 +112,7 @@ cholsolve <- function(Q,y,perm=F,cholQ = matrix(1,0,0),cholQp = matrix(1,0,0),P=
     }  else {
       L <- cholQ
     }
-    
+
     v <- solve(L,y)
     x <- solve(t(L),v)
   }
@@ -124,7 +124,7 @@ cholsolve <- function(Q,y,perm=F,cholQ = matrix(1,0,0),cholQp = matrix(1,0,0),P=
     } else {
       Lp <- cholQp
     }
-    
+
     v <- solve(Lp,t(P)%*%y)
     w <- solve(t(Lp),v)
     x <- P%*%w
@@ -135,7 +135,7 @@ cholsolve <- function(Q,y,perm=F,cholQ = matrix(1,0,0),cholQp = matrix(1,0,0),P=
 #' @title Solve the equation X = AQ^{-1}t(A) under permutations
 #'
 #' @description This function is a wrapper of solve() for finding \code{X = AQ^{-1}t(A)} when the permuted Cholesky factor of Q is known.
-#' #' 
+#' #'
 #' @param Q ignored (deprecated)
 #' @param A matrix
 #' @param Lp Permuted Cholesky factor of Q
@@ -143,7 +143,7 @@ cholsolve <- function(Q,y,perm=F,cholQ = matrix(1,0,0),cholQp = matrix(1,0,0),P=
 #' @return x solution to \code{X = AQ^{-1}t(A)}
 #' @keywords Cholesky factor, linear solve
 #' @export
-#' @examples 
+#' @examples
 #' require(Matrix)
 #' Q <- sparseMatrix(i=c(1,1,2,2),j=c(1,2,1,2),x=c(0.1,0.2,0.2,1))
 #' X <- cholPermute(Q)
@@ -154,35 +154,35 @@ cholsolveAQinvAT <- function(Q,A,Lp,P) {
   #Solve X = AQ^{-1}t(A)
   W <- t(solve(Lp,t(P)%*%t(A)))
   return(W %*% t(W))
-  
+
 }
 
 
 #' @title Compute the Takahashi equations
 #'
 #' @description This function is wrapper for the Takahashi equations required to compute the marginal variances from the Cholesky factor of a precision matrix.
-#' The equations themselves are implemented in C using the SparseSuite package of Timothy Davis. 
-#' 
+#' The equations themselves are implemented in C using the SparseSuite package of Timothy Davis.
+#'
 #' @param Q precision matrix (sparse or dense)
 #' @param return_perm_chol if 1 returns the permuted Cholesky factor (not advisable for large systems)
 #' @param cholQp the permuted Cholesky factor of Q (if known already)
 #' @param P the pivot matrix (if known already)
 #' @return if return_perm_chol == 0, returns the partial matrix inverse of Q, where the non-zero elements correspond to those in the Cholesky factor.
-#' If !(return_perm_chol  == 0), returns a list with three elements, S (the partial matrix inverse), Lp (the Cholesky factor of the permuted matrix) and P (the 
+#' If !(return_perm_chol  == 0), returns a list with three elements, S (the partial matrix inverse), Lp (the Cholesky factor of the permuted matrix) and P (the
 #' permutation matrix)
 #' @keywords Cholesky factor, linear solve
 #' @export
-#' @examples 
+#' @examples
 #' require(Matrix)
 #' Q = sparseMatrix(i=c(1,1,2,2),j=c(1,2,1,2),x=c(0.1,0.2,0.2,1))
 #' X <- cholPermute(Q)
 #' S_partial = Takahashi_Davis(Q,cholQp = X$Qpermchol,P=X$P)
 #' @references Yogin E. Campbell and Timothy A Davis (1995). Computing the sparse inverse subset: an inverse multifrontal approach. \url{http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.37.9276&rep=rep1&type=pdf}
 Takahashi_Davis <- function(Q,return_perm_chol = 0,cholQp = matrix(0,0,0),P=0) {
-  
+
   n <- nrow(Q)
   rm(Q)
-  
+
   if (dim(cholQp)[1] == 0) {
     symchol <- Cholesky(forceSymmetric(Q))
     j <- 1:n
@@ -193,22 +193,22 @@ Takahashi_Davis <- function(Q,return_perm_chol = 0,cholQp = matrix(0,0,0),P=0) {
     L <- cholQp
     P <- P
   }
-  
+
   if (return_perm_chol == 0) rm(cholQp)
-  
+
   d <- diag (L)
   L <- tril(L%*%sparseMatrix(i=1:n,j=1:n,x=1/d),-1)
   d <- d^2
   D <- sparseMatrix(i=1:n,j=1:n,x=d)
-  
+
   #ii <- L@i + 1 # in {1,...,n}
   dp <- diff(L@p)
   jj <- rep(seq_along(dp), dp) # in {1,...,n}, non-decreasing
-  
+
   gc()
   Zpattern <- sparseMatrix(c(L@i + 1,jj,1:n),c(jj,L@i + 1,1:n))
   rm(dp,jj)
-  
+
   gc()
   Z <- sparseinv_wrapper(L,d,L,Zpattern)
   if (return_perm_chol == 0) {
@@ -216,7 +216,7 @@ Takahashi_Davis <- function(Q,return_perm_chol = 0,cholQp = matrix(0,0,0),P=0) {
   } else {
     return(list(S=P%*%Z%*%t(P),Lp = cholQp,P=P)) # Only possible for small problems
   }
-  
+
 }
 
 
@@ -224,7 +224,7 @@ Takahashi_Davis <- function(Q,return_perm_chol = 0,cholQp = matrix(0,0,0),P=0) {
 #'
 #' @description Creates an empty sparse matrix of size 0 x 0
 #' @export
-#' @examples 
+#' @examples
 #' require(Matrix)
 #' Q <- emptySp()
 emptySp <- function() {
@@ -236,7 +236,7 @@ emptySp <- function() {
 #' @description Creates a sparse identity matrix of size n x n
 #' @param n size of matrix
 #' @export
-#' @examples 
+#' @examples
 #' require(Matrix)
 #' Q <- Imat(4)
 Imat <- function(n) {
@@ -249,7 +249,7 @@ Imat <- function(n) {
 #' @param ni number of rows
 #' @param nj number of columns. If NULL a square matrix is produced
 #' @export
-#' @examples 
+#' @examples
 #' require(Matrix)
 #' Q <- Zeromat(2,5)
 Zeromat <- function(ni,nj=NULL) {
@@ -262,7 +262,7 @@ Zeromat <- function(ni,nj=NULL) {
 #'
 #' @description Find the log determinant of a matrix Q from its Cholesky factor L (which could be permutated or not)
 #' @param L the Cholesky factor of Q
-#' @examples 
+#' @examples
 #' require(Matrix)
 #' Q <- sparseMatrix(i=c(1,1,2,2),j=c(1,2,1,2),x=c(0.1,0.2,0.2,1))
 #' logdet(chol(Q))
@@ -278,7 +278,7 @@ logdet <- function(L)  {
 #' @description Creates a sparse diagonal matrix of length(xx) where xx is the vector containing the elements on the diagonal
 #' @param xx diagonal vector
 #' @export
-#' @examples 
+#' @examples
 #' require(Matrix)
 #' Q <- sparsediag(c(1,2,3,4))
 sparsediag <- function(xx) {
@@ -313,7 +313,7 @@ amd_Davis <- function(Q) {
   n <- nrow(Q)
   Ap <- Q@p
   Ai <- Q@i
-  
+
   X <- .C("AMD_order_wrapper",as.integer(n),as.integer(Ap),as.integer(Ai),
           P = integer(n), Control=double(5),Info=double(20))
   return(X$P + 1)
@@ -322,7 +322,7 @@ amd_test <- function() {
   n=24
   Ap = c( 0, 9, 15, 21, 27, 33, 39, 48, 57, 61, 70, 76, 82, 88, 94, 100,
           106, 110, 119, 128, 137, 143, 152, 156, 160 )
-  
+
   Ai = c(0, 5, 6, 12, 13, 17, 18, 19, 21,
          1, 8, 9, 13, 14, 17,
          2, 6, 11, 20, 21, 22,
@@ -383,32 +383,32 @@ cholMATLAB <- function(Q,matlab_server) {
   cat("Finished Cholesky in MATLAB",sep="\n")
   evaluate(matlab_server, "clearvars Q L i j x")
   return(L)
-  
+
 }
 
 
 sparseinv_wrapper <- function(L,d,U,Zpattern) {
-  
+
   n <- nrow(L)
   Lp <- L@p
   Li <- L@i
   Lx <- L@x
-  
+
   Up <- U@p
   Uj <- U@i
   Ux <- U@x
-  
+
   Zpatp <- Zpattern@p
   Zpati <- Zpattern@i
   znz = Zpatp [n+1]
-  
-  
+
+
   X <- .C("sparseinv",as.integer(n),as.integer(Lp),as.integer(Li),as.double(Lx),as.double(d),as.integer(Up),as.integer(Uj),as.double(Ux),as.integer(Zpatp),as.integer(Zpati),result = double(znz))
   X <- X$result
-  
+
   rm(U,L,Zpattern,Ux,Uj,Up,Lp,Li,Lx)
   Z <- sparseMatrix(p = Zpatp, i =Zpati, x = X,index1=F)
-  
+
   return(Z)
 }
 
@@ -425,10 +425,10 @@ Takahashidiag <- function(L) {
   Sigma <- as(Sigma,"dgTMatrix") # coerce to i,j format
   Sigma[n,n] <- 1/L[n,n]^2
   numcomp = 0
-  
+
   # Sigma <- as.matrix(Sigma)
   # L <- as.matrix(L)
-  
+
   tic()
   for (i in seq(n-1,1,-1)) {
     Lii <- L[i,i]
@@ -440,46 +440,46 @@ Takahashidiag <- function(L) {
     }
   }
   toc()
-  
-  
-  
+
+
+
   return(diag(Sigma))
 }
 Takahashidiag_Cseke <- function(L) {
-  
+
   n <- dim(L)[1]
   invdiagL2 <- 1/diag(L)^2
   S <- L + t(L)
   S[S >0] = 1
   S[n,n] =invdiagL2[n]
-  
+
   for (i in seq(n-1,1,-1)) {
     I   = i+which(abs(L[seq(i+1,n,1),i]) > 0)
     S[I,i] = -(S[I,I]%*%L[I,i])/L[i,i]
     S[i,I] = t(S[I,i])
     S[i,i] = invdiagL2[i] - (S[i,I]%*%L[I,i])/L[i,i];
-    
+
   }
   return(diag(S))
 }
 
 Takahashi <- function(L, diag = TRUE, method = c("R", "C")) {
   #### R and C implementation of Takahashi diagonal equations by Jonty
-  
+
   method <- match.arg(method)
   stopifnot(inherits(L, "CsparseMatrix")) # has @i and @p
-  
-  
+
+
   n <- nrow(L)
   ii <- L@i + 1 # in {1,...,n}
   dp <- diff(L@p)
   jj <- rep(seq_along(dp), dp) # in {1,...,n}, non-decreasing
   N = length(ii)
-  
+
   stopifnot(ii >= jj,              # lower triangular
             1:n %in% ii[ii == jj]) # full diagonal
-  
-  
+
+
   if (method == "C") {
     tic();
     dyn.load("Test.so")
@@ -487,23 +487,23 @@ Takahashi <- function(L, diag = TRUE, method = c("R", "C")) {
     toc();
     return(X$results[ii==jj])
   } else if (method == "R") {
-    
+
     if (diag) { # this to speed up the calculation
       tic()
       S <- L; S@x[] <- -999
-      
+
       S@x[ii == n & jj == n] <- 1 / L[n, n]^2
-      
+
       if (n > 1)
         for (i in (n-1):1) {
-          
+
           k <- ii[ii > i & jj == i]      # Find row numbers with non zero indices at this column
           if (length(k) == 0) {
             S@x[ii == i & jj == i] <- 1 / L[i, i]^2
           } else {
             Lii <- L[i, i]
             Lki <- L[k, i]
-            
+
             js <- rev(jj[ii %in% k & jj >= i]) # going backwards
             #for (j in js) {
             #  skj <- S@x[ii == pmax(k, j) & jj == pmin(k, j)] # select from lower triangle
@@ -515,39 +515,39 @@ Takahashi <- function(L, diag = TRUE, method = c("R", "C")) {
               skj <- apply(matrix(k),1,function(ind){ S@x[ii == max(ind,j) & jj == min(j,ind)] } )
               S@x[ii == j & jj == i] <- ((i==j) / Lii - sum(Lki * skj)) / Lii
             }
-            
+
           }
         }
       toc()
       return(diag(S))
-      
+
     } else { # diag = FALSE : use full-size S but only fill lower triangle
-      
+
       S <- matrix(NA, n, n)
-      
+
       S[n, n] <- 1 / L[n, n]^2
-      
+
       if (n > 1)
         for (i in (n-1):1) {
-          
+
           k <- ii[ii > i & jj == i]
           if (length(k) == 0) {
             S@x[ii == i & jj == i] <- 1 / L[i, i]^2
           } else {
             Lii <- L[i, i]
             Lki <- L[k, i]
-            
+
             js <- n:i # going backwards
-            
+
             for (j in js) {
               skj <- S[pmax(k, j), pmin(k, j)] # select from lower triangle
               S[j, i] <- ((i==j) / Lii - sum(Lki * skj)) / Lii
             }
           }
         }
-      
+
       return(ifelse(is.na(S), t(S), S))
     }
-    
+
   } else stop("Never get here!")
 }

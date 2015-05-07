@@ -1,3 +1,5 @@
+print("Entering test_basis.R")
+
 m1 <- sphere(radius = 1)
 m2 <- plane()
 m3 <- real_line()
@@ -29,7 +31,7 @@ test_that("we can show basis locations on sphere", {
 mu <- matrix(rnorm(10),5,2)
 std <- rep(0.3,5)
 G_basis <- radial_basis(manifold = plane(),loc = mu,scale=std,type="Gaussian")
-test_that("we can have multiple functions in a Basis object and plot them", {
+test_that("we can have multiple functions in a Basis object on plane and plot them", {
     expect_equal(G_basis@n, 5)
     expect_equal(nrow(G_basis@df), 5)
     expect_equal(G_basis@fn[[1]](mu)[1,1],1) # Value of basis at mean is 1
@@ -40,11 +42,12 @@ test_that("we can have multiple functions in a Basis object and plot them", {
 mu <- matrix(runif(10),10,1)
 std <- rep(0.3,10)
 G_basis <- radial_basis(manifold = real_line(),loc = mu,scale=std,type="Gaussian")
-test_that("we can have multiple functions in a Basis object and plot them", {
+test_that("we can have multiple functions in a Basis object on real line and plot them", {
     expect_equal(G_basis@n, 10)
     expect_equal(nrow(G_basis@df), 10)
     expect_equal(G_basis@fn[[1]](mu)[1,1],1) # Value of basis at mean is 1
     expect_equal(diag(eval_basis(G_basis,s = mu)),rep(1,10))
+    expect_is(eval_basis(G_basis,s = mu),"Matrix")
     expect_true({show_basis(ggplot(),G_basis); TRUE})
 })
 

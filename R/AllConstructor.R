@@ -85,16 +85,7 @@ setMethod("initialize",signature="domain",function(.Object,m = sphere(), bndary=
     .Object
     })
 
-SRE <- function(f,data,basis) {
-   L <- gstat:::gstat.formula(f,data=data)
-   new("SRE",
-       data=data,
-       basis=basis,
-       S = eval_basis(basis, s = coordinates(data)),
-       V = Diagonal(x=data$std^2),
-       Z = Matrix(L$y),
-       X = as(L$X,"Matrix"))
-}
+#simulate <- setMethod(.Object,)
 
 
 #' @title GMRF
@@ -453,6 +444,8 @@ auto_basis <- function(m = plane(),data,nres=2,prune=1.0,type="Gaussian") {
     loc <- scale <- NULL
     G <- list()
 
+    if(is(m,"sphere")) load(system.file("extdata","isea3h.rda", package = "FRK"))
+
     xrange <- range(coords[,1])
     yrange <- range(coords[,2])
 
@@ -467,7 +460,6 @@ auto_basis <- function(m = plane(),data,nres=2,prune=1.0,type="Gaussian") {
         }  else if(is(m,"real_line")) {
             this_res_locs <- matrix(seq(xrange[1],xrange[2],length=i*6))
         } else if(is(m,"sphere")) {
-            load(system.file("extdata","isea3h.rda", package = "FRK"))
             this_res_locs <- as.matrix(filter(isea3h,centroid==1,res==i)[c("lon","lat")])
         }
         ## Set scales: To 1.5x the distance to nearest basis

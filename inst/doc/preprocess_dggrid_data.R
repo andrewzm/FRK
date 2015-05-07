@@ -1,10 +1,12 @@
 library(dplyr)
 library(ggplot2)
 library(RCurl)
+library(doMC)
 
 isea3h <- NULL
-
-for(j in 0:5) {
+registerDoMC(7)
+isea3h <- foreach(j = 0:8,.combine = "rbind") %dopar% {
+#for(j in 0:8) {
     print(paste0("Processing resolution ",j))
     ## Data obtained from http://webpages.sou.edu/~sahrk/dgg/isea.old/gen/isea3h.html
     X <- read.table(paste0("~/Desktop/isea3h",j,".gen"),sep=" ",fill=T,header=F,col.names = c("id","lon","lat")) %>%
@@ -17,10 +19,11 @@ for(j in 0:5) {
             current_id <- X[i,1]
             X$centroid[i] = 1
         }
-        X[i,1] <- current_di
+        X[i,1] <- current_id
     }
     X$id <- as.numeric(X$id)
-    isea3h <- rbind(isea3h,X)
+    #isea3h <- rbind(isea3h,X)
+    X
 }
 save(isea3h,file="./inst/extdata/isea3h.rda")
 #ggplot(subset(isea3h,res==5)) + geom_point(aes(lon,lat,colour=centroid)) + coord_map("ortho")

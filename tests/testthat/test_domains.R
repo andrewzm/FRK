@@ -1,3 +1,5 @@
+print("Entering test_domains.R")
+
 S <- sphere(radius = 1)
 x <- matrix(c(-90,90,0,0),2,2)
 

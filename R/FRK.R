@@ -23,6 +23,7 @@
 #' @import spam
 #' @import Matrix
 #' @import sp
+#' @import parallel
 #' @importClassesFrom gpclib gpc.poly
 #' @importFrom raster raster
 #' @importFrom gpclib area.poly

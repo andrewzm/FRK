@@ -93,7 +93,7 @@ setMethod("show_basis",signature(basis = "Basis"),  # GRBF basis with mean offse
                       g <- g + geom_path(data=cbind(circleFun(center=as.numeric(basis@df[i,1:2]),
                                                         diameter = basis@df$scale[i]),
                                                     res=as.factor(basis@df$res[i])),
-                                         aes(x=x,y=y,col=res))
+                                         aes(x=x,y=y,linetype=res))
                   }
               } else  if(is(manifold(basis),"sphere")) {
                   df <-basis@df
@@ -364,6 +364,27 @@ EmptyTheme <- function() {
                          panel.grid.major=element_blank(),panel.grid.minor=element_blank(),axis.text.x=element_blank(),axis.text.y=element_blank())
   return (g)
 }
+
+
+
+
+clip_polygons_lonlat <- function(d,key) {
+    plyr::ddply(d,key,function(df) {
+        if(diff(range(df$lon)) > 90) {
+            Y1 <- filter(df,lon >= 0) %>% mutate(id= df[key][1,]*1e6)
+            Y1$lon[which(Y1$lon %in% sort(Y1$lon,decreasing=T)[1:2])] <- 179.99
+            Y1 <- rbind(Y1,Y1[1,])
+            Y2 <- filter(df,lon <= 0) %>% mutate(id= df[key][1,]*1e6+1)
+            Y2$lon[which(Y2$lon %in% sort(Y2$lon,decreasing=F)[1:2])] <- -179.99
+            Y2 <- rbind(Y2,Y2[1,])
+            rbind(Y1,Y2)
+        } else {
+            df
+        }})
+}
+
+
+
 ## this temperature field suggested in Kaye et al (2011), Fig 3 in the
 ## response to my comment
 makeKaye1 <- function(mbr = c(-15, 0, 10, 25), sdbr = c(0.3, 0.6, 1),rtb=F) {

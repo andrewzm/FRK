@@ -2,6 +2,7 @@
 \docType{methods}
 \name{concat}
 \alias{concat}
+\alias{concat,Basis-method}
 \alias{concat,GMRF-method}
 \alias{concat,GMRF_basis-method}
 \alias{concat,Obs-method}
@@ -9,6 +10,8 @@
 \title{Concatenation}
 \usage{
 concat(...)
+
+\S4method{concat}{Basis}(...)
 
 \S4method{concat}{block}(...)
 

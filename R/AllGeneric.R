@@ -549,7 +549,9 @@ setGeneric("validate", function(Results,G,sim_obs=F,...) standardGeneric("valida
 #' X <- sample_GMRF(G,reps=10)
 setGeneric("sample_GMRF", function(G,L=NULL,reps=1,P=NULL) standardGeneric("sample_GMRF"))
 
+setGeneric("SRE.predict", function(Sm,pred_locs,depname) standardGeneric("SRE.predict"))
 setGeneric("type", function(.Object) standardGeneric("type"))
+setGeneric("nbasis", function(.Object) standardGeneric("nbasis"))
 setGeneric(".exist", function(L,to,from) standardGeneric(".exist"))
 setGeneric("getData", function(.Object) standardGeneric("getData"))
 setGeneric("basisinterp", function(G,s,weights) standardGeneric("basisinterp"))

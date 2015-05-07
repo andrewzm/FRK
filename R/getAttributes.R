@@ -1,3 +1,11 @@
+#' @rdname nbasis
+#' @aliases nbasis,Basis-method
+setMethod("nbasis",signature(.Object="Basis"),function(.Object) {return(.Object@n)})
+
+#' @rdname nbasis
+#' @aliases nbasis,SRE-method
+setMethod("nbasis",signature(.Object="SRE"),function(.Object) {return(nbasis(.Object@basis))})
+
 #' @rdname type
 #' @aliases type,manifold-method
 setMethod("type",signature(.Object="manifold"),function(.Object) {

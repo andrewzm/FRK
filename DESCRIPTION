@@ -35,6 +35,7 @@ Imports:
     akima,
     geometry,
     igraph,
+    parallel,
     sp
 License: GPL (>= 2)
 NeedsCompilation: yes
