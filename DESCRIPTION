@@ -1,14 +1,15 @@
 Package: FRK
 Type: Package
 Title: Fixed Rank Kriging
-Version: 1.0
-Date: 2014-01-06
+Version: 0.1.0
+Date: 2015-05-15
 Author: Andrew Zammit-Mangion
 Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
 VignetteBuilder: knitr
 Description: Fixed Rank Kriging
+BugReports: http://github.com/andrewzm/FRK/issues
 Depends:
-    R (>= 2.14)
+    R (>= 3.1)
 Suggests:
     testthat,
     reshape2,
@@ -16,26 +17,19 @@ Suggests:
     knitr
 Imports:
     Matrix,
-    spam,
     digest,
-    maptools,
+    gstat,
     ggplot2,
-    raster,
     dplyr,
-    deldir,
-    SDMTools,
-    network,
     scales,
+    INLA,
     grid,
     fields,
     plyr,
-    gpclib,
-    matlab,
-    actuar,
+    PBSmapping,
     akima,
-    geometry,
-    igraph,
     parallel,
     sp
 License: GPL (>= 2)
 NeedsCompilation: yes
+LazyData: true

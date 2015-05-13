@@ -2,8 +2,12 @@
 \docType{class}
 \name{bisquareBasis-class}
 \alias{bisquareBasis-class}
+\title{Bisquare radial basis functions basis}
 \description{
 bisquareBasis inherits from the virtual class Basis. A bisquare basis functions is initialsied using the function \code{initbisquarebasis}.
+}
+\details{
+
 }
 \keyword{Basis}
 \keyword{GRBF}

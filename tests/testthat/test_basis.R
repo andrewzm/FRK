@@ -8,9 +8,9 @@ mu1 <- mu2 <- matrix(c(1,1),1,2)
 mu3 <- matrix(1,1,1)
 std <- 1
 
-G1 <- GRBF_wrapper(m1,mu1,std)
-G2 <- GRBF_wrapper(m2,mu2,std)
-G3 <- GRBF_wrapper(m3,mu3,std)
+G1 <- .GRBF_wrapper(m1,mu1,std)
+G2 <- .GRBF_wrapper(m2,mu2,std)
+G3 <- .GRBF_wrapper(m3,mu3,std)
 
 test_that("basis work with all manifolds", {
     expect_identical(G2(s=matrix(c(0,1),1,2)), as.matrix(dnorm(mean=0,sd=1,x=1)*sqrt(2*pi)))
@@ -51,3 +51,22 @@ test_that("we can have multiple functions in a Basis object on real line and plo
     expect_true({show_basis(ggplot(),G_basis); TRUE})
 })
 
+## Get data
+library(sp)
+data(meuse)
+data(meuse.grid)
+coordinates(meuse) = ~x+y # change into an sp object
+gridded(meuse.grid) = ~x + y
+HexPts <- spsample(meuse.grid, type = "hexagonal", cellsize = 50)
+HexPols <- HexPoints2SpatialPolygons(HexPts)
+HexPols_df <- SpatialPolygonsDataFrame(HexPols,
+                                       cbind(over(HexPols,meuse.grid),
+                                             coordinates(HexPts)))
+## Generate basis functions
+G <- auto_basis(m = plane(),data=meuse,nres = 2,prune=10,type = "Gaussian")
+test_that("can average basis over polygons in plane", {
+        expect_true({eval_basis(G,coordinates(HexPts)); TRUE})
+        expect_true({eval_basis(G,HexPols_df); TRUE})
+        #plot(as.numeric(S1))
+        #lines(as.numeric(S2),col='red')
+})

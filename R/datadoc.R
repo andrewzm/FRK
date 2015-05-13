@@ -1,57 +1,18 @@
-#' ICESAT data.
-#' 
-#' A sample of the Ice, Cloud and Elevation dataset, where each point represents an average trend in m/yr over a 20km x 20km grid box. The data has the following fields
-#' 
-#' \itemize{
-#'   \item t. year of observation (0--6 where 0 is 2003, and 6 is 2009)
-#'   \item x. x coordinate in km (under polar stereographic projection)
-#'   \item y. y coordinate in km (under polar stereographic projection)
-#'   \item std. std standard error of trend
-#'   \item z. trend
-#'   \item obs_name. the name of the observation
+#' @title AIRS data for May 2003
+#'
+#' @description Mid-troposheric CO2 measurements from the Atmospheric InfraRed Sounder (AIRS). The data represent measurements between 60 degrees S and 90 degrees North at roughly 1:30 pm local time on 1 May through 16 May 2003
+#'
+#' @format A data frame with 223662 rows and 8 variables:
+#' \describe{
+#'   \item{year}{year of retrieval}
+#'   \item{month}{month of retrieval}
+#'   \item{day}{day of retrieval}
+#'   \item{lat}{latitude coordinate of retrieval}
+#'   \item{lon}{longitude coordinate of retrieval}
+#'   \item{solzen}{solar zenith angle}
+#'   \item{co2avgret}{CO2 mole fraction in ppm}
+#'   \item{co2std}{standard deviation of CO2 reading in ppm}
 #' }
-#' 
 #' @docType data
-#' @keywords datasets
-#' @format A data frame with 10000 rows and 6 variables
-#' @name icesat
-NULL
-
-#' Example mesh
-#' 
-#' A list containing the mesh details of the Antarctic ice sheet at moderate (~200km) resolution
-#' 
-#' \itemize{
-#'   \item p. a 1984 x 2 matrix containing the vertices
-#'   \item t. a 3911 x 3 matrix containing the trianulations
-#'   \item M. a 1984 x 1984 sparse mass matrix
-#'   \item K. a 1984 x 1984 sparse stiffness matrix
-#' }
-#' 
-#' @docType data
-#' @keywords datasets
-#' @format A list with four fields
-#' @name surf_fe
-NULL
-
-#' Boundaries for Antarctica
-#' 
-#' A list of data frames containing useful shapefiles for plotting results relating to Antarctica.
-#' 
-#' \itemize{
-#'   \item grounding_sub. a 1984 x 2 matrix containing the vertices
-#'   \item coast_sub. a 3911 x 3 matrix containing the trianulations
-#'   \item Islands. a 1984 x 1984 sparse mass matrix
-#'   \item K. a 1984 x 1984 sparse stiffness matrix
-#' }
-#' 
-#' @docType data
-#' @keywords datasets
-#' @format A list with three fields. Each data frame has at least the following fields
-#'  \itemize{
-#'   \item x. x coordinate in km under a polar stereographic projection
-#'   \item y. y coordinate in km under a polar stereographic projection
-#'   \item id. polygon id
-#' }
-#' @name shapefiles
-NULL
+#' @references  Chahine, M., Pwaagepeagano, T., Aumann, H., Atlas, R., Barnet, C., Blaisdell, J., Chen, L., Divakarla, M., Fetzer, E., Goldberg, M., Gautier, C., Granger, S., Hannon, S., Irion, F. W., Kakar, R., Kalnay, E., Lambrigtsen, B. H., Lee, S.-Y., Marshall, J. L., McMillian, W. W., McMillin, L., Olsen, E. T., Revercomb, H., Rosenkranz, P., Smith, W. L., Staelin, D., Strow, L. L., Susskind, J., Tobin, D., Wolf, W., Zhou, L. (2006). AIRS: Improving weather forecasting and providing new data on greenhouse gases. Bulletin of the American Meteorological Society 87, 911–26.
+"AIRS_05_2003"

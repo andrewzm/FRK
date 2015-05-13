@@ -1,15 +1,95 @@
+#' @title Construct a set of radial basis functions
+#' @export
+radial_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type="Gaussian") {
+    stopifnot(is.matrix(loc))
+    stopifnot(dimensions(manifold) == ncol(loc))
+    stopifnot(length(scale) == nrow(loc))
+    stopifnot(type %in% c("Gaussian","bisquare"))
+    n <- nrow(loc)
+    colnames(loc) <- c(outer("loc",1:ncol(loc),FUN = paste0))
+
+    fn <- pars <- list()
+    for (i in 1:n) {
+        if(type=="Gaussian") {
+            fn[[i]] <-  .GRBF_wrapper(manifold,matrix(loc[i,],nrow=1),scale[i])
+        } else {
+            fn[[i]] <-  .bisquare_wrapper(manifold,matrix(loc[i,],nrow=1),scale[i])
+        }
+        pars[[i]] <- list(loc = matrix(loc[i,],nrow=1), scale=scale[i])
+    }
+    df <- data.frame(loc,scale,res=1)
+    this_basis <- new("Basis", manifold=manifold, pars=pars, n=n, fn=fn, df=df)
+    return(this_basis)
+}
+
+#' @title Automatic basis-function placement
+#' @export
+auto_basis <- function(m = plane(),data,nres=2,prune=1.0,type="Gaussian") {
+    coords <- coordinates(data)
+    bndary_seg = inla.nonconvex.hull(coords,convex=-0.05)
+    loc <- scale <- NULL
+    G <- list()
+
+    if(is(m,"sphere")) load(system.file("extdata","isea3h.rda", package = "FRK"))
+
+    xrange <- range(coords[,1])
+    yrange <- range(coords[,2])
+
+    #         ## Find possible grid points for basis locations
+    for(i in 1:nres) {
+        if(is(m,"plane")) {
+            ## Generate mesh and use these as centres
+            this_res_locs <- inla.mesh.2d(loc = matrix(apply(coords,2,mean),nrow=1),
+                                          boundary = list(bndary_seg),
+                                          max.edge = max(diff(xrange),diff(yrange))/(2*2.5^(i-1)),
+                                          cutoff = max(diff(xrange),diff(yrange))/(3*2.5^(i-1)))$loc[,1:2]
+        }  else if(is(m,"real_line")) {
+            this_res_locs <- matrix(seq(xrange[1],xrange[2],length=i*6))
+        } else if(is(m,"sphere")) {
+            this_res_locs <- as.matrix(filter(isea3h,centroid==1,res==i)[c("lon","lat")])
+        }
+        ## Set scales: To 1.5x the distance to nearest basis
+        ## Refine: Remove basis which are not influenced by data and re-find the scales
+        for(j in 1:2) {
+            D <- FRK::distance(m,this_res_locs,this_res_locs)
+            diag(D) <- Inf
+            this_res_scales <- apply(D,1,min)
+            this_res_basis <- radial_basis(manifold = m,
+                                           loc=this_res_locs,
+                                           scale=ifelse(type=="Gaussian",1,1.5)*this_res_scales,
+                                           type=type)
+            if(j==1) {
+                rm_idx <- which(colSums(eval_basis(this_res_basis,coords)) < prune)
+                if(length(rm_idx) >0) this_res_locs <- this_res_locs[-rm_idx,,drop=FALSE]
+            }
+        }
+        print(paste0("Number of basis at resolution ",i," = ",nrow(this_res_locs)))
+
+        G[[i]] <-  radial_basis(manifold = m,
+                                loc=this_res_locs,
+                                scale=ifelse(type=="Gaussian",1,1.5)*this_res_scales,
+                                type=type)
+        G[[i]]@df$res=i
+    }
+
+    G_basis <- Reduce("concat",G)
+    if(G_basis@n > nrow(data)) warning("More basis functions than data points")
+    G_basis
+}
+
+
 #' @rdname eval_basis
 #' @aliases eval_basis,Basis-matrix-method
 setMethod("eval_basis",signature(basis="Basis",s="matrix"),function(basis,s,output = "matrix"){
     stopifnot(output %in% c("list","matrix"))
-    point_eval_fn(basis@fn,s,output)
+    .point_eval_fn(basis@fn,s,output)
 })
 
 #' @rdname eval_basis
 #' @aliases eval_basis,Basis-SpatialPointsDataFrame-method
 setMethod("eval_basis",signature(basis="Basis",s="SpatialPointsDataFrame"),function(basis,s,output = "matrix"){
     stopifnot(output %in% c("matrix","list"))
-    point_eval_fn(basis@fn,coordinates(s),output)
+    .point_eval_fn(basis@fn,coordinates(s),output)
 })
 
 #' @rdname eval_basis
@@ -22,14 +102,14 @@ setMethod("eval_basis",signature(basis="Basis",s="SpatialPolygonsDataFrame"),fun
     if(defaults$parallel > 0) {
             cl <- makeCluster(opts_FRK$parallel)
             X <- mclapply(1:length(s), function(i) {
-                samps <- samps_in_polygon(basis,s,i)
-                colSums(point_eval_fn(basis@fn,samps))/nrow(samps)
+                samps <- .samps_in_polygon(basis,s,i)
+                colSums(.point_eval_fn(basis@fn,samps))/nrow(samps)
             },mc.cores = defaults$parallel)
             stopCluster(cl)
     } else  {
         X <- lapply(1:length(s), function(i) {
-            samps <- samps_in_polygon(basis,s,i)
-            colSums(point_eval_fn(basis@fn,samps))/nrow(samps)
+            samps <- .samps_in_polygon(basis,s,i)
+            colSums(.point_eval_fn(basis@fn,samps))/nrow(samps)
         })
     }
     X <- Reduce("rBind",X)
@@ -37,12 +117,12 @@ setMethod("eval_basis",signature(basis="Basis",s="SpatialPolygonsDataFrame"),fun
 })
 
 
-point_eval_fn <- function(flist,s,output="matrix") {
+.point_eval_fn <- function(flist,s,output="matrix") {
     x <- sapply(flist,function(f) f(s))
     as(x,"Matrix")
 }
 
-samps_in_polygon <- function(basis,s,i) {
+.samps_in_polygon <- function(basis,s,i) {
     nMC <- 1000
     if(is(basis@manifold,"plane")) {
         samps <- coordinates(spsample(s@polygons[[i]],n=nMC,type="random"))
@@ -76,55 +156,8 @@ samps_in_polygon <- function(basis,s,i) {
     samps
 }
 
-#' @rdname mass_matrix
-#' @aliases mass_matrix,FEBasis-method
-setMethod("mass_matrix",signature(B = "FEBasis"),
-          function(B) {
-              return(B@pars$M)
-          })
 
-#' @rdname stiffness_matrix
-#' @aliases stiffness_matrix,FEBasis-method
-setMethod("stiffness_matrix",signature(B = "FEBasis"),
-          function(B) {
-              return(B@pars$K)
-          })
-
-#' Load meshes
-#'
-#' Imports meshes from folders containing the files \code{p.csv, t.csv, M.csv} and \code{K.csv} which are csv files containing the vertices, triangulations, mass matrix and stiffness matrix details respectively. The matrices should be stored in the three-column format \code{i,j,k}.
-#' @param paths a list of path names to the relevant folders
-#' @export
-#' @return a list of objects of class \code{FEBasis}. Please refer to the vignette for and example.
-Load_meshes <- function(paths) {
-
-    Meshes <- lapply(paths,function(x) {
-        p <-  round(as.matrix(read.table(file.path(x,"p.csv"),sep=",")))
-        tri <- as.matrix(read.table(file.path(x,"t.csv"),sep=","))
-        M <-  as.matrix(read.table(file.path(x,"M.csv"),sep=","))
-        K <-  as.matrix(read.table(file.path(x,"K.csv"),sep=","))
-        n <- nrow(p)
-        M <- sparseMatrix(i=M[,1],j=M[,2],x=M[,3],dims=c(n,n))
-        K <- sparseMatrix(i=K[,1],j=K[,2],x=K[,3],dims=c(n,n))
-
-        return(initFEbasis(p=p, t = tri, M = M, K = K))
-
-    })
-    names(Meshes) <- names(paths)
-
-    return(Meshes)
-
-}
-
-# GRBF <- function(c,std,s) {
-#   c_ext <- matrix(c,nrow(s),2,byrow=T)
-#   dist_sq <- (rowSums((s - c_ext)^2))
-#   return(exp(-0.5* dist_sq/(std^2) ))
-# }
-
-
-
-GRBF_wrapper <- function(manifold,mu,std) {
+.GRBF_wrapper <- function(manifold,mu,std) {
     stopifnot(is.matrix(mu))
     stopifnot(dimensions(manifold) == ncol(mu))
     stopifnot(is.numeric(std))
@@ -136,7 +169,7 @@ GRBF_wrapper <- function(manifold,mu,std) {
     }
 }
 
-bisquare_wrapper <- function(manifold,c,R) {
+.bisquare_wrapper <- function(manifold,c,R) {
     stopifnot(dimensions(manifold) == ncol(c))
     stopifnot(is.numeric(R))
     stopifnot(R > 0)
@@ -147,59 +180,32 @@ bisquare_wrapper <- function(manifold,c,R) {
 }
 
 
-my_RBF <- function(r,mu=matrix(0,1,2),sigma2=1,A=1) {
-    y <- A*exp(-r^2/(2*sigma2))
-    return(y)
-}
+
+#' @rdname concat
+#' @aliases concat,Basis-method
+setMethod("concat",signature = "Basis",function(...) {
+    l <- list(...)
+    if(length(l) < 2)
+        stop("Need more than one basis set to concatenate")
+    if(!(length(unique(sapply(sapply(l,manifold),type))) == 1))
+        stop("Basis need to be on the same manifold")
+    G <- l[[1]]
+
+    for (i in 2:length(l)) {
+        G@fn <- c(G@fn, l[[i]]@fn)
+        G@pars <- c(G@pars, l[[i]]@pars)
+        G@df <- rbind(G@df, l[[i]]@df)
+    }
+    G@n <- length(G@fn)
+    G
+})
+
+#' @rdname nbasis
+#' @aliases nbasis,Basis-method
+setMethod("nbasis",signature(.Object="Basis"),function(.Object) {return(.Object@n)})
+
+#' @rdname nbasis
+#' @aliases nbasis,SRE-method
+setMethod("nbasis",signature(.Object="SRE"),function(.Object) {return(nbasis(.Object@basis))})
 
 
-setMethod("basisinterp",signature(G = "Basis"),  # GRBF basis with mean offset as last weight
-          function(G,s,weights=NULL) {
-              y <- matrix(0,nrow(s),1)
-              n <- length(weights)
-              if (is.null(weights)) {
-                  weights <- rep(1,n)
-              }
-              for (i in 1:n) {
-                  y <- y + weights[i]*(G@fn[[i]](G@pars[[i]],s))
-              }
-              return(as.vector(y))
-          })
-
-tsearch2 <- function(x,y,t,xi,yi,bary=FALSE) {
-    if (!is.vector(x)) {
-        stop(paste(deparse(substitute(x)), "is not a vector"))
-    }
-    if (!is.vector(y)) {
-        stop(paste(deparse(substitute(y)), "is not a vector"))
-    }
-    if (!is.matrix(t)) {
-        stop(paste(deparse(substitute(t)), "is not a matrix"))
-    }
-    if (!is.vector(xi)) {
-        stop(paste(deparse(substitute(xi)), "is not a vector"))
-    }
-    if (!is.vector(yi)) {
-        stop(paste(deparse(substitute(yi)), "is not a vector"))
-    }
-    if (length(x) != length(y)) {
-        stop(paste(deparse(substitute(x)), "is not same length as ",
-                   deparse(substitute(y))))
-    }
-    if (length(xi) != length(yi)) {
-        stop(paste(deparse(substitute(xi)), "is not same length as ",
-                   deparse(substitute(yi))))
-    }
-    if (ncol(t) != 3) {
-        stop(paste(deparse(substitute(t)), "does not have three columns"))
-    }
-    storage.mode(t) <- "integer"
-    out <- .Call("tsearch", as.double(x), as.double(y), t, as.double(xi),
-                 as.double(yi), as.logical(bary),PACKAGE="geometry")
-    if (bary) {
-        names(out) <- c("idx", "p")
-    }
-    return(out)
-
-
-}

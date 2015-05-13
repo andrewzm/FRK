@@ -3,23 +3,11 @@
 \name{concat}
 \alias{concat}
 \alias{concat,Basis-method}
-\alias{concat,GMRF-method}
-\alias{concat,GMRF_basis-method}
-\alias{concat,Obs-method}
-\alias{concat,block-method}
 \title{Concatenation}
 \usage{
 concat(...)
 
 \S4method{concat}{Basis}(...)
-
-\S4method{concat}{block}(...)
-
-\S4method{concat}{GMRF}(...)
-
-\S4method{concat}{GMRF_basis}(...)
-
-\S4method{concat}{Obs}(...)
 }
 \arguments{
 \item{...}{a series of \code{MVST} objects}

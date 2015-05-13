@@ -3,7 +3,7 @@
 \alias{cholPermute}
 \title{Sparse Cholesky Factorisation with fill-in reducing permutations}
 \usage{
-cholPermute(Q, method = "spam", matlab_server = NULL)
+cholPermute(Q, method = "amd", matlab_server = NULL)
 }
 \arguments{
 \item{Q}{matrix (sparse or dense), the Cholesky factor of which needs to be found}

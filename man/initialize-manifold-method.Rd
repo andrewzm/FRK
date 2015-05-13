@@ -7,6 +7,6 @@
 \S4method{initialize}{manifold}(.Object)
 }
 \description{
-This function initialises a manifold
+n This function initialises a manifold
 }
 

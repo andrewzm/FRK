@@ -1,31 +1,56 @@
+#' @title Construct SRE object
+#' @export
+SRE <- function(f,data,basis,BAUs) {
 
-SRE <- function(f,data,basis) {
-    if(!is(f,"formula")) stop("f needs to be a formula.")
-    if(!is(data,"Spatial")) stop("data needs to be of class Spatial (package sp).")
-    if(!is(basis,"Basis")) stop("basis needs to be of class Basis (package FRK)")
-    if(!("std" %in% names(data))) stop("data needs to contain a field 'std' denoting the observation error")
-    if(!("fs" %in% names(data))) {
-        warning("data should contain a field 'fs' containing a basis function for fine-scale variation. Setting basis function equal to one everywhere.")
-        data$fs <- 1
+    .check_args(f=f,data=data,basis=basis,BAUs=BAUs)
+    av_var <-all.vars(f)[1]
+    ndata <- length(data)
+
+    S <- Ve <- Vfs <- X <- Z <- Cmat <- list()
+    for(i in 1:ndata) {
+        data_proc <- map_data_to_BAUs(data[[i]],
+                                 BAUs,
+                                 av_var = av_var,
+                                 variogram.formula = f)
+
+        L <- gstat:::gstat.formula(f,data=data_proc)
+        X[[i]] <- as(L$X,"Matrix")
+        Z[[i]] <- Matrix(L$y)
+        Ve[[i]] <- Diagonal(x=data_proc$std^2)
+
+        if(is(data_proc,"SpatialPolygonsDataFrame")) {
+            data_proc$id <- 1:length(data_proc)
+            overlap <- over(SpatialPoints(coordinates(BAUs)),data_proc)
+            i_idx <- as.numeric(na.exclude(overlap$id))
+            j_idx <- which(!is.na(overlap$id))
+        } else {
+             i_idx <- 1:length(data_proc)
+             j_idx <- which(row.names(BAUs) %in% row.names(data_proc))
+        }
+        Cmat[[i]] <- sparseMatrix(i=i_idx,j=j_idx,x=1,dims=c(length(data_proc),nrow(BAUs)))
+        Cmat[[i]] <- Cmat[[i]] / rowSums(Cmat[[i]])
+        Vfs[[i]] <- Diagonal(x=as.numeric(Cmat[[i]]^2 %*% BAUs$fs )) # Assuming no obeservations overlap
+        S[[i]] <- eval_basis(basis, s = data_proc)
+
     }
-    if(!(all(data$fs > 0))) stop("fine-scale variation basis function needs to be nonnegative everywhere")
 
-    L <- gstat:::gstat.formula(f,data=data)
-
-    X <- as(L$X,"Matrix")
-    Z <- Matrix(L$y)
-    Ve <- Diagonal(x=data$std^2)
-    Vfs <- Diagonal(x=data$fs)
+    S <- do.call("rBind",S)
+    X <- do.call("rBind",X)
+    Z <- do.call("rBind",Z)
+    Ve <- do.call("bdiag",Ve)
+    Vfs <- do.call("bdiag",Vfs)
 
     new("SRE",
         data=data,
         basis=basis,
+        BAUs=BAUs,
         f = f,
-        S = eval_basis(basis, s = coordinates(data)),
+        S = S,
         Ve = Ve,
         Vfs = Vfs,
         X = X,
         Z = Z,
+        Cmat = do.call("rBind",Cmat),
         mu_eta = Matrix(0,nbasis(basis),1),
         S_eta = Diagonal(x = rep(1,nbasis(basis))),
         alphahat = solve(t(X) %*% X) %*% t(X) %*% Z,
@@ -33,99 +58,102 @@ SRE <- function(f,data,basis) {
         sigma2fshat = mean(diag(Ve)) / mean(diag(Vfs)))
 }
 
+#' @title Estimate SRE model parameters
+#' @export
 SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM",print_lik=F) {
+    if(!is.numeric(n_EM)) stop("n_EM needs to be an integer")
+    if(!(n_EM <- round(n_EM)) > 0) stop("n_EM needs to be greater than 0")
+    if(!is.numeric(tol)) stop("tol needs to be a number greater than zero")
+    if(!(tol > 0)) stop("tol needs to be a number greater than zero")
+    if(!(method == "EM")) stop("Currently only the EM algorithm is implemented for parameter estimation")
+    if(!(is.logical(print_lik))) stop("print_lik needs to be a logical quantity")
+
     n <- nbasis(SRE_model)
     X <- SRE_model@X
     lk <- rep(0,n_EM)
 
-    pb <- txtProgressBar(min = 0, max = n_EM, style = 3)
+    if(defaults$progress) pb <- txtProgressBar(min = 0, max = n_EM, style = 3)
     for(i in 1:n_EM) {
-        lk[i] <- loglik(SRE_model)
-        SRE_model <- SRE.Estep(SRE_model)
-        SRE_model <- SRE.Mstep(SRE_model)
-        setTxtProgressBar(pb, i)
-        if(i>2) if(lk[i] - lk[i-1] < tol) break
+        lk[i] <- .loglik(SRE_model)  # Compute likelihood as in Katzfuss and Cressie (2011)
+        SRE_model <- .SRE.Estep(SRE_model)
+        SRE_model <- .SRE.Mstep(SRE_model)
+        if(defaults$progress) setTxtProgressBar(pb, i)
+        if(i>2) if(lk[i] - lk[i-1] < tol) {
+            print("Minimum tolerance reached")
+            break
+        }
     }
-    close(pb)
+    if(defaults$progress) close(pb)
 
     if(i == n_EM) print("Maximum EM iterations reached")
-    if(print_lik) plot(lk[1:i][-1])
+    if(print_lik) {
+        plot(lk[1:i][-1],ylab="log likelihood")
+        warning("Ignoring constants in log-likelihood computation")
+    }
     SRE_model
 }
 
-setMethod("SRE.predict",signature(Sm="SRE", pred_locs="Spatial",depname="character"),
-          function(Sm,pred_locs,depname) {
+#setMethod("SRE.predict",signature(Sm="SRE", pred_locs="NULL",depname="character"),
 
-              if(!("fs" %in% names(pred_locs))) {
-                  warning("data should contain a field 'fs' containing a basis function for fine-scale variation. Setting basis function equal to one everywhere.")
-                  pred_locs$fs <- 1
-              }
-              if(!(all(pred_locs$fs > 0))) stop("fine-scale variation basis function needs to be nonnegative everywhere")
-              pred_locs[[depname]] <- median(Sm@data[[depname]])
-              L <- gstat:::gstat.formula(Sm@f,data=pred_locs)
-              X = as(L$X,"Matrix")
-              S0 <- eval_basis(Sm@basis,pred_locs)
-              pred_locs[[depname]] <- NULL
+#' @title Predict using SRE model
+#' @export
+SRE.predict <- function(Sm,use_centroid=T) {
+    pred_locs <- Sm@BAUs
 
-              alpha <- Sm@alphahat
-              K <- Sm@Khat
-              sigma2fs <- Sm@sigma2fshat
-              D <- sigma2fs*Sm@Vfs + Sm@Ve
-              Dinv <- solve(D)
+    if(!(is(pred_locs,"SpatialPolygonsDataFrame"))) stop("Predictions need to be over BAUs or spatial polygons")
+    if(!("fs" %in% names(pred_locs))) {
+        warning("data should contain a field 'fs' containing a basis function for fine-scale variation. Setting basis function equal to one everywhere.")
+        pred_locs$fs <- 1
+    }
+    if(!(all(pred_locs$fs > 0))) stop("fine-scale variation basis function needs to be nonnegative everywhere")
 
+    depname <- all.vars(Sm@f)[1]
+    pred_locs[[depname]] <- 0.1
+    L <- gstat:::gstat.formula(Sm@f,data=pred_locs)
+    X = as(L$X,"Matrix")
+    if(use_centroid) {
+        S0 <- eval_basis(Sm@basis,as.matrix(pred_locs[coordnames(Sm@data[[1]])]@data))
+    } else {
+        S0 <- eval_basis(Sm@basis,pred_locs)
+    }
+    pred_locs[[depname]] <- NULL
 
+    alpha <- Sm@alphahat
+    K <- Sm@Khat
+    sigma2fs <- Sm@sigma2fshat
+    D <- sigma2fs*Sm@Vfs + Sm@Ve
+    Dinv <- solve(D)
 
-              sig2_Vfs_pred <- Diagonal(x=sigma2fs*pred_locs$fs)
-              if(is(pred_locs,"SpatialPointsDataFrame")) {
+    sig2_Vfs_pred <- Diagonal(x=sigma2fs*pred_locs$fs)
+    C <- Sm@Cmat
 
-                    i_idx <- 1:nrow(Sm@Z)
-                    j_idx <- which(pred_locs@data$id %in% Sm@data$id )
-                    C <- sparseMatrix(i=i_idx,j=j_idx,x=1,dims=c(length(Sm@Z),nrow(pred_locs)))
+    LAMBDA <- bdiag(Sm@Khat,sig2_Vfs_pred)
+    LAMBDAinv <- chol2inv(chol(LAMBDA))
+    PI <- cBind(S0, .symDiagonal(n=nrow(pred_locs)))
+    Qx <- t(PI) %*% t(C) %*% solve(Sm@Ve) %*% C %*% PI + LAMBDAinv
+    temp <- cholPermute(Qx)
+    ybar <- t(PI) %*%t(C) %*% solve(Sm@Ve) %*% (Sm@Z - C %*% X %*% alpha)
+    x_mean <- cholsolve(Qx,ybar,perm=T,cholQp = temp$Qpermchol, P = temp$P)
+    Partial_Cov <- Takahashi_Davis(Qx,cholQp = temp$Qpermchol,P = temp$P)
+    x_margvar <- diag(Partial_Cov)
 
-                    LAMBDA <- bdiag(Sm@Khat,sig2_Vfs_pred)
-                    LAMBDAinv <- chol2inv(chol(LAMBDA))
-                    PI <- cBind(S0, .symDiagonal(n=nrow(pred_locs)))
-                    Qx <- t(PI) %*% t(C) %*% solve(Sm@Ve) %*% C %*% PI + LAMBDAinv
-                    temp <- cholPermute(Qx)
-                    ybar <- t(PI) %*%t(C) %*% solve(Sm@Ve) %*% (Sm@Z - C %*% X %*% alpha)
-                    x_mean <- cholsolve(Qx,ybar,perm=T,cholQp = temp$Qpermchol, P = temp$P)
-                    Partial_Cov <- Takahashi_Davis(Qx,cholQp = temp$Qpermchol,P = temp$P)
-                    x_margvar <- diag(Partial_Cov)
+    pred_locs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
 
-                    pred_locs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
-                    pred_locs[["var"]] <- as.numeric(rowSums((PI %*% Partial_Cov)*PI))
+    ## variance to hard to compute all at once -- do it in blocks of 1000
+    temp <- rep(0,length(pred_locs))
+    batching=cut(1:nrow(PI),breaks = seq(0,nrow(PI)+1000,by=1000),labels=F)
+    for(i in 1:max(unique(batching))) {
+        idx = which(batching==i)
+        temp[idx] <- as.numeric(rowSums((PI[idx,] %*% Partial_Cov)*PI[idx,]))
+    }
+    pred_locs[["var"]] <- temp
+    #pred_locs[["var"]] <- as.numeric(rowSums((PI %*% Partial_Cov)*PI))
 
-#                     S_eta <- chol2inv(chol(crossprod(sqrt(Dinv) %*% Sm@S) + solve(K)))
-#                     mu_eta <- S_eta %*% t(Sm@S) %*% Dinv %*% (Sm@Z - Sm@X %*% alpha)
-#                     pred_locs[["mu"]] <- as.numeric(X %*% alpha + S0 %*% mu_eta)
-#                     pred_locs[["var"]] <- as.numeric(rowSums((S0 %*% S_eta)*S0) +
-#                                                          diag(sig2_Vfs_pred))
-                } else if (is(pred_locs,"SpatialPolygonsDataFrame")) {
-                    i_idx <- 1:nrow(Sm@Z)
-                    j_idx <- over(Sm@data,as(pred_locs,"SpatialPolygons"))
-                    C <- sparseMatrix(i=i_idx,j=j_idx,x=1,dims=c(length(Sm@Z),nrow(pred_locs)))
-
-                    LAMBDA <- bdiag(Sm@Khat,sig2_Vfs_pred)
-                    LAMBDAinv <- chol2inv(chol(LAMBDA))
-                    PI <- cBind(S0, .symDiagonal(n=nrow(pred_locs)))
-                    Qx <- t(PI) %*% t(C) %*% solve(Sm@Ve) %*% C %*% PI + LAMBDAinv
-                    temp <- cholPermute(Qx)
-                    ybar <- t(PI) %*%t(C) %*% solve(Sm@Ve) %*% (Sm@Z - C %*% X %*% alpha)
-                    x_mean <- cholsolve(Qx,ybar,perm=T,cholQp = temp$Qpermchol, P = temp$P)
-                    Partial_Cov <- Takahashi_Davis(Qx,cholQp = temp$Qpermchol,P = temp$P)
-                    x_margvar <- diag(Partial_Cov)
-
-                    pred_locs[["mu"]] <- as.numeric(x_mean[-(1:Sm@basis@n)])
-                    pred_locs[["var"]] <- as.numeric(x_margvar[-(1:Sm@basis@n)])
-                }
-              pred_locs
-
-          })
+    pred_locs
+}
 
 
-
-
-SRE.Estep <- function(Sm) {
+.SRE.Estep <- function(Sm) {
 
     alpha <- Sm@alphahat
     K <- Sm@Khat
@@ -143,7 +171,10 @@ SRE.Estep <- function(Sm) {
     Sm
 }
 
-SRE.Mstep <- function(Sm) {
+
+
+
+.SRE.Mstep <- function(Sm) {
 
     mu_eta <- Sm@mu_eta
     S_eta <- Sm@S_eta
@@ -154,7 +185,6 @@ SRE.Mstep <- function(Sm) {
     alpha <- alpha_init
     sigma2fs <- sigma2fs_init
     converged <- FALSE
-
 
 
     while(!converged) {
@@ -178,7 +208,13 @@ SRE.Mstep <- function(Sm) {
             diag2(resid,t(resid))
         Omega_diag <- Diagonal(x=Omega_diag)
 
-        sigma2fs_new <- uniroot(f = J,interval = c(sigma2fs/100,sigma2fs*100))$root
+        # Repeat until finding values on opposite sides of zero
+        amp_factor <- 10; OK <- 0
+        while(!OK) {
+            amp_factor <- amp_factor * 10
+            if(!(sign(J(sigma2fs/amp_factor)) == sign(J(sigma2fs*amp_factor)))) OK <- 1
+        }
+        sigma2fs_new <- uniroot(f = J,interval = c(sigma2fs/amp_factor,sigma2fs*amp_factor))$root
         D <- sigma2fs_new*Sm@Vfs + Sm@Ve
         Dinv <- solve(D)
         alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*% (Sm@Z - Sm@S %*% mu_eta)
@@ -196,7 +232,9 @@ SRE.Mstep <- function(Sm) {
 
 
 
-loglik <- function(Sm) {
+
+
+.loglik <- function(Sm) {
 
     D <- Sm@sigma2fshat*Sm@Vfs + Sm@Ve
     Dinv <- solve(D)
@@ -206,11 +244,21 @@ loglik <- function(Sm) {
                    0.5 * t(r) %*% Dinv %*% r)
 }
 
-tr <- function(X) {
-    sum(diag(X))
-}
 
-diag2 <- function(X,Y) {
-    rowSums(X * t(Y))
+.check_args <- function(f,data,basis,BAUs) {
+    if(!is(f,"formula")) stop("f needs to be a formula.")
+    if(!all(all.vars(f)[-1] %in% names(BAUs))) stop("All covariates need to be in the SpatialPolygons BAU object")
+    if(!is(data,"list")) stop("Please supply a list of Spatial objects.")
+    if(!all(sapply(data,function(x) is(x,"Spatial")))) stop("All data list elements need to be of class Spatial")
+    if(!all(sapply(data,function(x) all.vars(f)[1] %in% names(x)))) stop("All data list elements to have values for the dependent variable")
+    if(!all(sapply(data,function(x) identical(proj4string(x), proj4string(BAUs))))) stop("Please ensure all data items and BAUs have the same coordinate reference system")
+    if(!is(basis,"Basis")) stop("basis needs to be of class Basis (package FRK)")
+    #if(is(data,"SpatialPolygonsDataFrame") & !("std" %in% names(data))) stop("Polygon data needs to contain a field 'std' denoting the observation error")
+    if(!("fs" %in% names(BAUs))) {
+        warning("BAUs should contain a field 'fs' containing a basis function for fine-scale variation. Setting basis function equal to one everywhere.")
+        BAUs$fs <- 1
+    }
+    if(!is(BAUs,"SpatialPolygonsDataFrame")) stop("fine-scale variation basis function needs to be nonnegative everywhere")
+    if((is(basis@manifold,"sphere")) & !all((coordnames(BAUs) == c("lon","lat")))) stop("Since a sphere is being used, please ensure that all coordinates (including those of BAUs) are in (lon,lat)")
 }
 
