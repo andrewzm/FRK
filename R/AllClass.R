@@ -42,14 +42,6 @@ setClass("plane",contains="manifold")
 setClass("real_line",contains="manifold")
 
 
-#'  @docType class
-#'  @title domain
-#'
-#' @description Domain
-#'
-#' @keywords Domain, bounding box
-setClass("domain",representation(m = "manifold", bndary="matrix"))
-
 
 ####  Basis functions ####
 #'  @docType class

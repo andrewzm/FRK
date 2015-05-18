@@ -1,8 +1,8 @@
 #' @title Construct SRE object
 #' @export
-SRE <- function(f,data,basis,BAUs) {
+SRE <- function(f,data,basis,BAUs,est_error=T) {
 
-    .check_args(f=f,data=data,basis=basis,BAUs=BAUs)
+    .check_args(f=f,data=data,basis=basis,BAUs=BAUs,est_error=est_error)
     av_var <-all.vars(f)[1]
     ndata <- length(data)
 
@@ -11,7 +11,8 @@ SRE <- function(f,data,basis,BAUs) {
         data_proc <- map_data_to_BAUs(data[[i]],
                                  BAUs,
                                  av_var = av_var,
-                                 variogram.formula = f)
+                                 variogram.formula = f,
+                                 est_error=est_error)
 
         L <- gstat:::gstat.formula(f,data=data_proc)
         X[[i]] <- as(L$X,"Matrix")
@@ -72,6 +73,7 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM",print_lik=F) 
     X <- SRE_model@X
     lk <- rep(0,n_EM)
 
+
     if(defaults$progress) pb <- txtProgressBar(min = 0, max = n_EM, style = 3)
     for(i in 1:n_EM) {
         lk[i] <- .loglik(SRE_model)  # Compute likelihood as in Katzfuss and Cressie (2011)
@@ -97,9 +99,8 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM",print_lik=F) 
 
 #' @title Predict using SRE model
 #' @export
-SRE.predict <- function(Sm,use_centroid=T) {
-    pred_locs <- Sm@BAUs
-
+SRE.predict <- function(Sm,pred_locs = Sm@BAUs,use_centroid=T) {
+### CHANGE INPUT TO IDX!!! OR NAMES OR SOMETHING SO THAT WE CAN PREDICT ON A SUBSET OF BAUs!!
     if(!(is(pred_locs,"SpatialPolygonsDataFrame"))) stop("Predictions need to be over BAUs or spatial polygons")
     if(!("fs" %in% names(pred_locs))) {
         warning("data should contain a field 'fs' containing a basis function for fine-scale variation. Setting basis function equal to one everywhere.")
@@ -107,51 +108,68 @@ SRE.predict <- function(Sm,use_centroid=T) {
     }
     if(!(all(pred_locs$fs > 0))) stop("fine-scale variation basis function needs to be nonnegative everywhere")
 
-    depname <- all.vars(Sm@f)[1]
-    pred_locs[[depname]] <- 0.1
-    L <- gstat:::gstat.formula(Sm@f,data=pred_locs)
-    X = as(L$X,"Matrix")
-    if(use_centroid) {
-        S0 <- eval_basis(Sm@basis,as.matrix(pred_locs[coordnames(Sm@data[[1]])]@data))
+    if(defaults$Rhipe) {
+        pred_locs <- rhwrapper(Ntot = length(pred_locs),
+                               N = 4000,
+                               f_expr = .rhSRE.predict,
+                               Sm = Sm,
+                               pred_locs = pred_locs,
+                               use_centroid = use_centroid)
     } else {
-        S0 <- eval_basis(Sm@basis,pred_locs)
+
+        pred_locs <- .SRE.predict(Sm=Sm,pred_locs=pred_locs,use_centroid=use_centroid)
     }
-    pred_locs[[depname]] <- NULL
-
-    alpha <- Sm@alphahat
-    K <- Sm@Khat
-    sigma2fs <- Sm@sigma2fshat
-    D <- sigma2fs*Sm@Vfs + Sm@Ve
-    Dinv <- solve(D)
-
-    sig2_Vfs_pred <- Diagonal(x=sigma2fs*pred_locs$fs)
-    C <- Sm@Cmat
-
-    LAMBDA <- bdiag(Sm@Khat,sig2_Vfs_pred)
-    LAMBDAinv <- chol2inv(chol(LAMBDA))
-    PI <- cBind(S0, .symDiagonal(n=nrow(pred_locs)))
-    Qx <- t(PI) %*% t(C) %*% solve(Sm@Ve) %*% C %*% PI + LAMBDAinv
-    temp <- cholPermute(Qx)
-    ybar <- t(PI) %*%t(C) %*% solve(Sm@Ve) %*% (Sm@Z - C %*% X %*% alpha)
-    x_mean <- cholsolve(Qx,ybar,perm=T,cholQp = temp$Qpermchol, P = temp$P)
-    Partial_Cov <- Takahashi_Davis(Qx,cholQp = temp$Qpermchol,P = temp$P)
-    x_margvar <- diag(Partial_Cov)
-
-    pred_locs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
-
-    ## variance to hard to compute all at once -- do it in blocks of 1000
-    temp <- rep(0,length(pred_locs))
-    batching=cut(1:nrow(PI),breaks = seq(0,nrow(PI)+1000,by=1000),labels=F)
-    for(i in 1:max(unique(batching))) {
-        idx = which(batching==i)
-        temp[idx] <- as.numeric(rowSums((PI[idx,] %*% Partial_Cov)*PI[idx,]))
-    }
-    pred_locs[["var"]] <- temp
-    #pred_locs[["var"]] <- as.numeric(rowSums((PI %*% Partial_Cov)*PI))
-
     pred_locs
 }
 
+
+.SRE.predict <- function(Sm,pred_locs,use_centroid) {
+        depname <- all.vars(Sm@f)[1]
+        pred_locs[[depname]] <- 0.1
+        L <- gstat:::gstat.formula(Sm@f,data=pred_locs)
+        X = as(L$X,"Matrix")
+        if(use_centroid) {
+            S0 <- eval_basis(Sm@basis,as.matrix(pred_locs[coordnames(Sm@data[[1]])]@data))
+        } else {
+            S0 <- eval_basis(Sm@basis,pred_locs)
+        }
+        pred_locs[[depname]] <- NULL
+
+        alpha <- Sm@alphahat
+        K <- Sm@Khat
+        sigma2fs <- Sm@sigma2fshat
+        D <- sigma2fs*Sm@Vfs + Sm@Ve
+        Dinv <- Diagonal(x=1/diag(D))
+
+        idx <- match(row.names(pred_locs),row.names(Sm@BAUs))
+        sig2_Vfs_pred <- Diagonal(x=sigma2fs*pred_locs$fs)
+
+        idx <- match(row.names(pred_locs),row.names(Sm@BAUs))
+        C <- Sm@Cmat[,idx]
+
+        LAMBDA <- bdiag(Sm@Khat,sig2_Vfs_pred)
+        LAMBDAinv <- chol2inv(chol(LAMBDA))
+        PI <- cBind(S0, .symDiagonal(n=nrow(pred_locs)))
+        Qx <- t(PI) %*% t(C) %*% solve(Sm@Ve) %*% C %*% PI + LAMBDAinv
+        temp <- cholPermute(Qx)
+        ybar <- t(PI) %*%t(C) %*% solve(Sm@Ve) %*% (Sm@Z - C %*% X %*% alpha)
+        x_mean <- cholsolve(Qx,ybar,perm=T,cholQp = temp$Qpermchol, P = temp$P)
+        Partial_Cov <- Takahashi_Davis(Qx,cholQp = temp$Qpermchol,P = temp$P)
+        x_margvar <- diag(Partial_Cov)
+
+        pred_locs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
+
+        ## variance to hard to compute all at once -- do it in blocks of 1000
+        temp <- rep(0,length(pred_locs))
+        batching=cut(1:nrow(PI),breaks = seq(0,nrow(PI)+1000,by=1000),labels=F)
+        for(i in 1:max(unique(batching))) {
+            idx = which(batching==i)
+            temp[idx] <- as.numeric(rowSums((PI[idx,] %*% Partial_Cov)*PI[idx,]))
+        }
+        pred_locs[["var"]] <- temp
+        #pred_locs[["var"]] <- as.numeric(rowSums((PI %*% Partial_Cov)*PI))
+        pred_locs
+}
 
 .SRE.Estep <- function(Sm) {
 
@@ -160,18 +178,18 @@ SRE.predict <- function(Sm,use_centroid=T) {
     sigma2fs <- Sm@sigma2fshat
 
     D <- sigma2fs*Sm@Vfs + Sm@Ve
-    Dinv <- solve(D)
+    Dinv <- Diagonal(x=1/diag(D))
 
-    S_eta <- chol2inv(chol(crossprod(sqrt(Dinv) %*% Sm@S) + solve(K)))
-    mu_eta <- S_eta %*% t(Sm@S) %*% Dinv %*% (Sm@Z - Sm@X %*% alpha)
+    Kinv <- chol2inv(chol(K))
+
+    S_eta <- chol2inv(chol(crossprod(sqrt(Dinv) %*% Sm@S) + Kinv))
+    mu_eta <- S_eta %*% (t(Sm@S) %*% Dinv %*% (Sm@Z - Sm@X %*% alpha))
 
     Sm@mu_eta <- mu_eta
     Sm@S_eta <- S_eta
 
     Sm
 }
-
-
 
 
 .SRE.Mstep <- function(Sm) {
@@ -186,6 +204,8 @@ SRE.predict <- function(Sm,use_centroid=T) {
     sigma2fs <- sigma2fs_init
     converged <- FALSE
 
+    Omega_diag1 <- diag2(Sm@S %*% as.matrix(S_eta),t(Sm@S)) +
+                   diag2(Sm@S %*% mu_eta %*% t(mu_eta), t(Sm@S))
 
     while(!converged) {
         J <- function(sigma2fs) {
@@ -202,8 +222,7 @@ SRE.predict <- function(Sm,use_centroid=T) {
         }
 
         resid <- Sm@Z - Sm@X %*% alpha
-        Omega_diag <- diag2(Sm@S %*% S_eta,t(Sm@S)) +
-            diag2(Sm@S %*% mu_eta %*% t(mu_eta), t(Sm@S)) -
+        Omega_diag <- Omega_diag1 -
             2*diag2(Sm@S %*% mu_eta, t(resid)) +
             diag2(resid,t(resid))
         Omega_diag <- Diagonal(x=Omega_diag)
@@ -216,7 +235,7 @@ SRE.predict <- function(Sm,use_centroid=T) {
         }
         sigma2fs_new <- uniroot(f = J,interval = c(sigma2fs/amp_factor,sigma2fs*amp_factor))$root
         D <- sigma2fs_new*Sm@Vfs + Sm@Ve
-        Dinv <- solve(D)
+        Dinv <- Diagonal(x=1/diag(D))
         alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*% (Sm@Z - Sm@S %*% mu_eta)
 
         if(max(sigma2fs_new / sigma2fs, sigma2fs / sigma2fs_new) < 1.001) converged <- TRUE
@@ -245,7 +264,7 @@ SRE.predict <- function(Sm,use_centroid=T) {
 }
 
 
-.check_args <- function(f,data,basis,BAUs) {
+.check_args <- function(f,data,basis,BAUs,est_error) {
     if(!is(f,"formula")) stop("f needs to be a formula.")
     if(!all(all.vars(f)[-1] %in% names(BAUs))) stop("All covariates need to be in the SpatialPolygons BAU object")
     if(!is(data,"list")) stop("Please supply a list of Spatial objects.")
@@ -260,5 +279,6 @@ SRE.predict <- function(Sm,use_centroid=T) {
     }
     if(!is(BAUs,"SpatialPolygonsDataFrame")) stop("fine-scale variation basis function needs to be nonnegative everywhere")
     if((is(basis@manifold,"sphere")) & !all((coordnames(BAUs) == c("lon","lat")))) stop("Since a sphere is being used, please ensure that all coordinates (including those of BAUs) are in (lon,lat)")
+    if(!est_error & !all(sapply(data,function(x) "std" %in% names(x)))) stop("If observational error is not going to be estimated, please supply a field 'std' in the data objects")
 }
 

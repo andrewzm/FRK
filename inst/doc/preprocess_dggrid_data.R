@@ -6,7 +6,7 @@ library(zoo)
 
 isea3h <- NULL
 registerDoMC(7)
-isea3h <- foreach(j = 0:8,.combine = "rbind") %dopar% {
+isea3h <- foreach(j = 0:9,.combine = "rbind") %dopar% {
     print(paste0("Processing resolution ",j))
     ## Data obtained from http://webpages.sou.edu/~sahrk/dgg/isea.old/gen/isea3h.html
     X <- read.table(paste0("~/Desktop/isea3h",j,".gen"),

@@ -24,9 +24,12 @@ radial_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,typ
 
 #' @title Automatic basis-function placement
 #' @export
-auto_basis <- function(m = plane(),data,nres=2,prune=1.0,type="Gaussian") {
+auto_basis <- function(m = plane(),data,nres=2,prune=0,subsamp=10000,type="Gaussian") {
     coords <- coordinates(data)
-    bndary_seg = inla.nonconvex.hull(coords,convex=-0.05)
+    if(nrow(coords)>subsamp) {
+        coords <- coords[sample(nrow(coords),size=subsamp,replace=FALSE),]
+    }
+    if(is(m,"plane")) bndary_seg = inla.nonconvex.hull(coords,convex=-0.05)
     loc <- scale <- NULL
     G <- list()
 
@@ -58,9 +61,13 @@ auto_basis <- function(m = plane(),data,nres=2,prune=1.0,type="Gaussian") {
                                            loc=this_res_locs,
                                            scale=ifelse(type=="Gaussian",1,1.5)*this_res_scales,
                                            type=type)
-            if(j==1) {
-                rm_idx <- which(colSums(eval_basis(this_res_basis,coords)) < prune)
-                if(length(rm_idx) >0) this_res_locs <- this_res_locs[-rm_idx,,drop=FALSE]
+            if(prune > 0) {
+                if(j==1) {
+                    rm_idx <- which(colSums(eval_basis(this_res_basis,coords)) < prune)
+                    if(length(rm_idx) >0) this_res_locs <- this_res_locs[-rm_idx,,drop=FALSE]
+                }
+            } else {
+                break
             }
         }
         print(paste0("Number of basis at resolution ",i," = ",nrow(this_res_locs)))
@@ -118,8 +125,22 @@ setMethod("eval_basis",signature(basis="Basis",s="SpatialPolygonsDataFrame"),fun
 
 
 .point_eval_fn <- function(flist,s,output="matrix") {
-    x <- sapply(flist,function(f) f(s))
-    as(x,"Matrix")
+    #if(!defaults$Rhipe) {
+    if(1) {
+        x <- sapply(flist,function(f) f(s))
+        as(x,"Matrix")
+     } else { ## The below works but likely to be slower.. whole prediction should be parallelised
+          envlist <- lapply(flist, function(f) environment(f))
+          flist <- lapply(flist, function(f) parse(text = deparse(f)))
+          x <- rhwrapper(Ntot = nrow(s),
+                        N = 4000,
+			type="Matrix",
+                        f_expr = .rhpoint_eval_fn,
+                        flist=flist,
+                        envlist = envlist,
+                        s=s)
+         as(data.matrix(x),"Matrix")
+     }
 }
 
 .samps_in_polygon <- function(basis,s,i) {

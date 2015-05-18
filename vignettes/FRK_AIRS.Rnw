@@ -1,0 +1,85 @@
+\documentclass{article}
+
+\begin{document}
+
+<<eval=TRUE>>=
+    library(sp)
+    library(ggplot2)
+    library(dplyr)
+    devtools::load_all("~/Wollongong/pkgs/FRK",
+                       export_all = FALSE)
+
+    ## Load data
+    data(AIRS_05_2003)
+    AIRS_05_2003 <- filter(AIRS_05_2003,day %in% 1:1) %>%
+        mutate(std=co2std) %>%
+        select(lon,lat,co2avgret,std)
+    coordinates(AIRS_05_2003) = ~lon+lat # change into an sp object
+    proj4string(AIRS_05_2003)=CRS("+proj=longlat")
+
+    ## Prediction (BAU) grid
+    data(isea3h)
+    isea3h_res <- filter(isea3h,res == 6) %>%
+    arrange(id) %>%
+    group_by(id) %>%
+    filter(diff(range(lon)) < 90) %>%
+    data.frame() %>%
+    mutate(fs=1)
+
+    isea3h_sp_pol <- df_to_SpatialPolygons(
+        df=filter(isea3h_res,centroid==0),
+        keys=c("id"),
+        coords=c("lon","lat"),
+        proj=CRS("+proj=longlat"))
+
+    isea3h_sp_poldf <- SpatialPolygonsDataFrame(
+        isea3h_sp_pol,
+        cbind(data.frame(row.names=names(isea3h_sp_pol)),
+              (filter(isea3h_res,centroid==1) %>%
+                   select(id,lon,lat,fs))))
+
+    ## Set up SRE model
+    G <- auto_basis(m = sphere(),data=AIRS_05_2003,
+                    nres = 2,prune=15,
+                    type = "bisquare",
+                    subsamp = 20000)
+    f <- co2avgret ~ lat + 1
+    S <- SRE(f,list(AIRS_05_2003),G,
+             isea3h_sp_poldf,
+             est_error = FALSE) %>%
+    SRE.fit(n_EM = 3,tol = 1e-5,print_lik=T)
+    isea3h_sp_poldf <- SRE.predict(S,pred_locs = isea3h_sp_poldf,use_centroid = T)
+
+    X <- SpatialPolygons_to_df(sp_polys = isea3h_sp_poldf,
+                               vars = c("mu","var"))
+
+    g1 <- (EmptyTheme() +
+               geom_polygon(data=X,
+                            aes(lon,lat,fill=mu,group=id))+
+               scale_fill_distiller(palette="Spectral",trans="reverse") +
+               coord_map("mollweide")) %>%
+    draw_world(inc_border=FALSE)
+
+    mumin <- min(X$mu)
+    mumax <- max(X$mu)
+
+    g2 <- (EmptyTheme() +
+               geom_point(data=data.frame(AIRS_05_2003),
+                          aes(lon,lat,
+                              colour=pmin(pmax(
+                                  co2avgret,mumin),
+                                          mumax)),
+                          size=2) +
+               scale_colour_distiller(palette="Spectral",
+                                      trans="reverse",
+                                      guide_legend(title="co2")
+                                      ) +
+                   coord_map("mollweide")) %>%
+    draw_world(inc_border=TRUE)
+
+    print(g1)
+    print(g2)
+@
+
+
+\end{document}

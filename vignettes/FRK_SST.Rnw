@@ -1,0 +1,105 @@
+\documentclass{article}
+
+\begin{document}
+
+<<eval=TRUE>>=
+    library(sp)
+    library(ggplot2)
+    library(dplyr)
+    devtools::load_all("~/Wollongong/pkgs/FRK",
+    export_all = FALSE)
+
+    opts_FRK$set("progress",FALSE)
+
+    library(Rhipe)
+    rhinit()
+    hdfs.setwd("/azm")
+    rhoptions(zips = "R.Pkg.tar.gz")
+    rhoptions(runner = "sh ./R.Pkg/library/Rhipe/bin/RhipeMapReduce.sh")
+
+    set.seed(1)
+
+    ## Get data
+    load("~/Desktop/SST/sst_data.Rdata")
+    SST <- mutate(SST,std = error) %>%
+    select(-error)
+    coordinates(SST) = ~lon+lat # change into an sp object
+    proj4string(SST) <- CRS("+proj=longlat")
+
+    ## Prediction (BAU) grid
+    load(system.file("extdata","isea3h.rda", package = "FRK"))
+    isea3h_res <- filter(isea3h,res == 9) %>%
+    arrange(id) %>%
+    group_by(id) %>%
+    filter(diff(range(lon)) < 90) %>%
+    data.frame() %>%
+    mutate(fs=1)
+
+    isea3h_sp_pol <- df_to_SpatialPolygons(
+    df=filter(isea3h_res,centroid==0),
+    keys=c("id"),
+    coords=c("lon","lat"),
+    proj=CRS("+proj=longlat"))
+
+    isea3h_sp_poldf <- SpatialPolygonsDataFrame(
+    isea3h_sp_pol,
+    cbind(data.frame(row.names=names(isea3h_sp_pol)),
+    (filter(isea3h_res,centroid==1) %>%
+    select(id,lon,lat,fs))))
+
+    sub_pols <- coordinates(SST) %>%
+    chull()
+    conv_hull <- coordinates(SST)[c(sub_pols,sub_pols[1]),] %>%
+    data.frame() %>%
+    mutate(id=1) %>%
+    df_to_SpatialPolygons(keys="id",
+    coords=c("lon","lat"),
+    proj=CRS("+proj=longlat"))
+    isea3h_sp_poldf$in_chull <- over(isea3h_sp_pol,conv_hull)
+    isea3h_sp_poldf <- subset(isea3h_sp_poldf,!is.na(in_chull))
+
+    ## Set up SRE model
+    G <- auto_basis(m = sphere(),data=SST,
+                    nres = 5,prune=10,
+                    type = "bisquare",
+                    subsamp = 10000)
+    f <- sst ~ lat + 1
+    S <- SRE(f,list(SST),G,isea3h_sp_poldf,est_error = FALSE) %>%
+    SRE.fit(n_EM = 3,print_lik=T)
+    isea3h_sp_poldf <- SRE.predict(S,use_centroid = T)
+
+    X <- SpatialPolygons_to_df(sp_polys = isea3h_sp_poldf,
+    vars = c("mu","var"))
+
+    coords <- coordinates(SST)
+    g1 <- (EmptyTheme() +
+    geom_polygon(data=X,
+    aes(lon,lat,fill=sqrt(var),group=id)) +
+    scale_fill_distiller(palette="Spectral",trans="reverse") +
+    coord_map("mollweide",
+    xlim = range(coords[,1]),
+    ylim = range(coords[,2])))
+
+    mumin <- min(X$mu)
+    mumax <- max(X$mu)
+
+    g2 <- (EmptyTheme() +
+    geom_point(data=sample_n(data.frame(SST),10000),
+    aes(lon,lat,
+    colour=pmin(pmax(
+    sst,mumin),
+    mumax)),
+    size=2) +
+    scale_colour_distiller(palette="Spectral",
+    trans="reverse",
+    guide_legend(title="co2")
+    ) +
+                   coord_map("mollweide",
+                             xlim = range(coords[,1]),
+                             ylim = range(coords[,2])))
+
+    print(gridExtra::arrangeGrob(g2,g1,nrow=1))
+    @
+
+
+\end{document}
