@@ -71,7 +71,7 @@ void *(*amd_calloc) (size_t, size_t) = NULL ;
  * can then be enabled at run-time by setting amd_printf to a non-NULL function.
  */
 
-#ifndef NPRINT
+/*#ifndef NPRINT
 #ifdef MATLAB_MEX_FILE
 int (*amd_printf) (const char *, ...) = mexPrintf ;
 #else
@@ -80,4 +80,6 @@ int (*amd_printf) (const char *, ...) = printf ;
 #endif
 #else
 int (*amd_printf) (const char *, ...) = NULL ;
-#endif
+#endif */
+#include <stdio.h>
+int (*amd_printf) (const char *, ...) = printf ;

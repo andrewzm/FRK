@@ -1,5 +1,8 @@
 \documentclass{article}
 
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{Introduction to the FRK package}
+
 \begin{document}
 
 <<setup, include=FALSE, cache=FALSE>>=

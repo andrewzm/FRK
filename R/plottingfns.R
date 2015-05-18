@@ -63,6 +63,7 @@ circleFun <- function(center = c(0,0),diameter = 1, npoints = 100){
 #' @export
 draw_world <- function(g,inc_border = TRUE) {
     ### Polygon split solution thanks to http://cameron.bracken.bz/finally-an-easy-way-to-fix-the-horizontal-lines-in-ggplot2-maps
+    X <- Y <- PID <- NULL
     worldmap = map_data("world")
     names(worldmap) <- c("X","Y","PID","POS","region","subregion")
     worldmap = PBSmapping::clipPolys(worldmap, xlim=c(-180,180),ylim=c(-90,90), keepExtra=TRUE)
@@ -148,6 +149,7 @@ EmptyTheme <- function() {
 
 
 clip_polygons_lonlat <- function(d,key) {
+    lon <- lat <- NULL
     plyr::ddply(d,key,function(df) {
         if(diff(range(df$lon)) > 90) {
             Y1 <- filter(df,lon >= 0) %>% mutate(id= df[key][1,]*1e6)

@@ -1,5 +1,8 @@
 \documentclass{article}
 
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{FRK for prediction of CO2 from AIRS data}
+
 \begin{document}
 
 <<eval=TRUE>>=
@@ -81,5 +84,6 @@
     print(g2)
 @
 
+Need an end comment
 
 \end{document}

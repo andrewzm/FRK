@@ -109,11 +109,12 @@ Euclid_dist <- function(dim=2L) {
 #' @details Each row in the data frame \code{df} contains both coordinates and labels (or keys) that identify to which polygon the coordinates belong. This function groups the data frame according to \code{keys} and forms a \code{SpatialPolygons} object from the coordinates in each group. It is important that all rings are closed, that is, that the last row of each group equals the first row. Since the keys can be arbitrary, we identify each polygon with a new key by forming an MD5 has of the respective \code{keys} variables. For lon-lat coordinates use \code{proj = CRS("+proj=longlat")}.
 #' @export
 #' @examples
+#' library(sp)
 #' df <- data.frame(id = c(rep(1,4),rep(2,4)),
 #'                  x = c(0,1,0,0,2,3,2,2),
 #'                  y=c(0,0,1,0,0,1,1,0))
 #' pols <- df_to_SpatialPolygons(df,"id",c("x","y"),CRS())
-#' sp::plot(pols)
+#' plot(pols)
 df_to_SpatialPolygons <- function(df,keys,coords,proj) {
     if(!is(df,"data.frame")) stop("df needs to be a data frame")
     if(!is(keys,"character")) stop("keys needs to be of class character")
@@ -158,6 +159,7 @@ SpatialPolygonsDataFrame_to_df <- function(sp_polys,vars = names(sp_polys)) {
 #' @description This is an internal function which bins data into BAUs or aggregates across BAUs if the data have a large footprint. If est_error == T, the observation error is estimated as in Katzfuss & Cressie (2011)
 map_data_to_BAUs <- function(data_sp,sp_pols,av_var,variogram.formula=NULL,est_error=T) {
     if(is(data_sp,"SpatialPointsDataFrame")) {
+        Nobs <- NULL
         data_sp$Nobs <- 1
         if(est_error) data_sp$std <- 0 ## Just set it to something, this will be overwritten later on
 

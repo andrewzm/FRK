@@ -26,9 +26,5 @@ setGeneric("eval_basis", function(basis,s,output="list") standardGeneric("eval_b
 #' @title Concatenation
 #' @description Concatenates MVST objects of the same class together. This is primarily used to join up \code{GMRF_basis} blocks and \code{Obs} blocks together.
 #' @param ... a series of \code{MVST} objects
-#' @examples
-#' data(icesat)
-#' icesat_obs <- Obs(df=icesat)
-#' icesat_2x <- concat(icesat_obs,icesat_obs)
 setGeneric("concat", function(...) standardGeneric("concat"))
 

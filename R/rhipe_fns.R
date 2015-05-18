@@ -63,7 +63,7 @@ rhwrapper <- function(Ntot = 20, N = 10,type="data.frame",f_expr,...) {
 
 #' @title SRE.predict using Rhipe
 #' @noRd
-r.hSRE.predict <- quote(function(idx) {
+.rhSRE.predict <- quote(function(idx) {
    FRK:::.SRE.predict(Sm=Sm,pred_locs=pred_locs[idx,],use_centroid=use_centroid)
 })
 

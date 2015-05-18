@@ -1,28 +1,24 @@
 #' @title Sparse Cholesky Factorisation with fill-in reducing permutations
 #'
+#' @noRd
 #' @description This function is similar to chol(A,pivot=T) when A is a sparse matrix. The fill-in reduction permutation is the approximate minimum degree permutation of
 #' Davis' SuiteSparse package configured to be slightly more aggressive than that in the Matrix package. If the Cholesky factor fails, the matrix is coerced to be symmetric.
 #'
 #' @param Q matrix (sparse or dense), the Cholesky factor of which needs to be found
 #' @param method If "amd", Timothy Davis SuiteSparse algorithm is used, if not that in the R Matrix package is employed
-#' @param matlab_server A matlab server initiated using the R.matlab package by Henrik Bengtsson. Sparse Cholesky factorisation in MATLAB is generally much faster than in R.
 #' @return A list with two elements, Qpermchol (the permuted Cholesky factor) and P (the pivoting order matrix)
 #' @keywords Cholesky factor
 #' @examples
 #' require(Matrix)
 #' cholPermute(sparseMatrix(i=c(1,1,2,2),j=c(1,2,1,2),x=c(0.1,0.2,0.2,1)))
 #' @references Havard Rue and Leonhard Held (2005). Gaussian Markov Random Fields: Theory and Applications. Chapman & Hall/CRC Press
-cholPermute <- function(Q,method="amd",matlab_server=NULL)  {
+cholPermute <- function(Q,method="amd")  {
   n <- nrow(Q)
 
   if(method == "amd") {
     P <- amd_Davis(Q)
     Qp <- Q[P,P]
-    if(!(is.null(matlab_server))) {
-      Qpermchol  <- t(cholMATLAB(Qp,matlab_server))
-    } else {
-      Qpermchol  <- t(chol(Qp))
-    }
+    Qpermchol  <- t(chol(Qp))
     P <- sparseMatrix(i=P,j=1:n,x=1)
     return(list(Qpermchol=Qpermchol,P=P))
 
@@ -46,6 +42,7 @@ cholPermute <- function(Q,method="amd",matlab_server=NULL)  {
 
 #' @title Solve the equation Qx = y
 #'
+#' @noRd
 #' @description This function is similar to \code{solve(Q,y)} but with the added benefit that it allows for permuted matrices. This function does the job in order to minimise
 #' user error when attempting to re-permute the matrices prior or after solving. The user also has an option for the permuted Cholesky factorisation of Q to be carried out
 #' internally.
@@ -95,7 +92,7 @@ cholsolve <- function(Q,y,perm=F,cholQ = matrix(1,0,0),cholQp = matrix(1,0,0),P=
 }
 
 #' @title Solve the equation X = AQ^{-1}t(A) under permutations
-#'
+#' @noRd
 #' @description This function is a wrapper of solve() for finding \code{X = AQ^{-1}t(A)} when the permuted Cholesky factor of Q is known.
 #' #'
 #' @param Q ignored (deprecated)
@@ -120,7 +117,7 @@ cholsolveAQinvAT <- function(Q,A,Lp,P) {
 
 
 #' @title Compute the Takahashi equations
-#'
+#' @noRd
 #' @description This function is wrapper for the Takahashi equations required to compute the marginal variances from the Cholesky factor of a precision matrix.
 #' The equations themselves are implemented in C using the SparseSuite package of Timothy Davis.
 #'
