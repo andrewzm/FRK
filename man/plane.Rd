@@ -18,6 +18,6 @@ A 2D plane is initialised using a \code{measure} object. By default, the measure
 \examples{
 P <- plane()
 print(type(P))
-print(dimensions(P))
+print(sp::dimensions(P))
 }
 

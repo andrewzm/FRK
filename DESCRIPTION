@@ -14,7 +14,8 @@ Suggests:
     testthat,
     reshape2,
     shapefiles,
-    knitr
+    knitr,
+    INLA
 Imports:
     methods,
     Matrix,
@@ -23,7 +24,6 @@ Imports:
     ggplot2,
     dplyr,
     scales,
-    INLA,
     grid,
     fields,
     plyr,

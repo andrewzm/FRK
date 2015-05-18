@@ -17,6 +17,6 @@ A sphere is initialised using a \code{radius} parameter. By default, the radius 
 }
 \examples{
 S <- sphere()
-print(dimensions(S))
+print(sp::dimensions(S))
 }
 

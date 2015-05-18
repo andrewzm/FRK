@@ -21,6 +21,7 @@ devtools::load_all("~/Wollongong/pkgs/FRK",
                    export_all = FALSE)
 
 opts_FRK$set("progress",FALSE)
+opts_FRK$set("parallel",0L)
 set.seed(1)
 
 ## Get data

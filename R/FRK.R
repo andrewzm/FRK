@@ -12,7 +12,6 @@
 #' @import gstat
 #' @import dplyr
 #' @importFrom plyr ddply dlply rbind.fill
-#' @importFrom INLA inla.nonconvex.hull inla.mesh.2d
 #' @importFrom akima interp
 #' @importFrom PBSmapping clipPolys
 #' @importFrom digest digest

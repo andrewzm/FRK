@@ -16,7 +16,7 @@ setMethod("initialize",signature="manifold",function(.Object) {
 #' @export
 #' @examples
 #' S <- sphere()
-#' print(dimensions(S))
+#' print(sp::dimensions(S))
 sphere <- function(radius=6371) {
     metric=gc_dist(R=radius)
     stopifnot(dimensions(metric)==2L)
@@ -41,7 +41,7 @@ setMethod("initialize",signature="sphere",function(.Object,radius=1,metric=gc_di
 #' @examples
 #' P <- plane()
 #' print(type(P))
-#' print(dimensions(P))
+#' print(sp::dimensions(P))
 plane <- function(metric=Euclid_dist(dim=2L)) {
     stopifnot(dimensions(metric)==2L)
     new("plane",metric=metric)
@@ -65,7 +65,7 @@ setMethod("initialize",signature="plane",function(.Object,metric=Euclid_dist(dim
 #' @examples
 #' R <- real_line()
 #' print(type(R))
-#' print(dimensions(R))
+#' print(sp::dimensions(R))
 real_line <- function(metric=Euclid_dist(dim=1L)) {
     stopifnot(dimensions(metric)==1L)
     new("real_line",metric=metric)

@@ -18,6 +18,6 @@ A real line is initialised using a \code{measure} object. By default, the measur
 \examples{
 R <- real_line()
 print(type(R))
-print(dimensions(R))
+print(sp::dimensions(R))
 }
 
