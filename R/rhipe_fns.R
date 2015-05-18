@@ -1,3 +1,5 @@
+#' Global rhwrapper
+#' @noRd
 rhwrapper <- function(Ntot = 20, N = 10,type="data.frame",f_expr,...) {
     njobs <- ceiling(Ntot/N)
 
@@ -36,6 +38,7 @@ rhwrapper <- function(Ntot = 20, N = 10,type="data.frame",f_expr,...) {
 }
 
 #' @title sp::over using Rhipe
+#' @noRd
 .rhover <- quote(function(idx) {
     sp::over(sp_pols[idx,],
               data_sp[c(av_var,"Nobs","std")],
@@ -43,6 +46,7 @@ rhwrapper <- function(Ntot = 20, N = 10,type="data.frame",f_expr,...) {
 })
 
 #' @title eval_basis using Rhipe
+#' @noRd
 .rhpoint_eval_fn <- quote(function(idx) {
     ## x <- sapply(flist,function(fn) fn(s[idx,,drop=FALSE]))
      x <- sapply(seq_along(flist), function(i) {
@@ -58,7 +62,8 @@ rhwrapper <- function(Ntot = 20, N = 10,type="data.frame",f_expr,...) {
 })
 
 #' @title SRE.predict using Rhipe
-.rhSRE.predict <- quote(function(idx) {
+#' @noRd
+r.hSRE.predict <- quote(function(idx) {
    FRK:::.SRE.predict(Sm=Sm,pred_locs=pred_locs[idx,],use_centroid=use_centroid)
 })
 

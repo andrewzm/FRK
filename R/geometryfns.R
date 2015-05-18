@@ -150,8 +150,7 @@ SpatialPolygonsDataFrame_to_df <- function(sp_polys,vars = names(sp_polys)) {
                                            function(i)
                                                cbind(sp_polys@polygons[[i]]@Polygons[[1]]@coords,
                                                      id=polynames[i])))) %>%
-    left_join(sp_polys@data[c("id",vars)]) %>%
-    select(-id.1)
+    left_join(sp_polys@data[c("id",vars)])
     X
 }
 

@@ -19,7 +19,7 @@
 
     ## Prediction (BAU) grid
     data(isea3h)
-    isea3h_res <- filter(isea3h,res == 6) %>%
+    isea3h_res <- filter(isea3h,res == 4) %>%
     arrange(id) %>%
     group_by(id) %>%
     filter(diff(range(lon)) < 90) %>%
@@ -50,7 +50,7 @@
     SRE.fit(n_EM = 3,tol = 1e-5,print_lik=T)
     isea3h_sp_poldf <- SRE.predict(S,pred_locs = isea3h_sp_poldf,use_centroid = T)
 
-    X <- SpatialPolygons_to_df(sp_polys = isea3h_sp_poldf,
+    X <- SpatialPolygonsDataFrame_to_df(sp_polys = isea3h_sp_poldf,
                                vars = c("mu","var"))
 
     g1 <- (EmptyTheme() +
