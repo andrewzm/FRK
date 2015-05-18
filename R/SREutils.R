@@ -14,7 +14,7 @@ SRE <- function(f,data,basis,BAUs,est_error=T) {
                                  variogram.formula = f,
                                  est_error=est_error)
 
-        L <- gstat:::gstat.formula(f,data=data_proc)
+        L <- .gstat.formula(f,data=data_proc)
         X[[i]] <- as(L$X,"Matrix")
         Z[[i]] <- Matrix(L$y)
         Ve[[i]] <- Diagonal(x=data_proc$std^2)
@@ -126,7 +126,7 @@ SRE.predict <- function(Sm,pred_locs = Sm@BAUs,use_centroid=T) {
 .SRE.predict <- function(Sm,pred_locs,use_centroid) {
         depname <- all.vars(Sm@f)[1]
         pred_locs[[depname]] <- 0.1
-        L <- gstat:::gstat.formula(Sm@f,data=pred_locs)
+        L <- .gstat.formula(Sm@f,data=pred_locs)
         X = as(L$X,"Matrix")
         if(use_centroid) {
             S0 <- eval_basis(Sm@basis,as.matrix(pred_locs[coordnames(Sm@data[[1]])]@data))
@@ -282,3 +282,23 @@ SRE.predict <- function(Sm,pred_locs = Sm@BAUs,use_centroid=T) {
     if(!est_error & !all(sapply(data,function(x) "std" %in% names(x)))) stop("If observational error is not going to be estimated, please supply a field 'std' in the data objects")
 }
 
+.gstat.formula <- function (formula, data)
+{
+    if (is(data, "SpatialPixels") && anyDuplicated(data@grid.index) !=
+        0)
+        gridded(data) = FALSE
+    m = model.frame(terms(formula), as(data, "data.frame"), na.action = na.fail)
+    Y = model.extract(m, "response")
+    if (length(Y) == 0)
+        stop("no response variable present in formula")
+    Terms = attr(m, "terms")
+    X = model.matrix(Terms, m)
+    has.intercept = attr(Terms, "intercept")
+    if (gridded(data))
+        grid = gridparameters(data)
+    else grid = numeric(0)
+    xlevels = .getXlevels(Terms, m)
+    list(y = Y, locations = coordinates(data), X = X, call = call,
+         has.intercept = has.intercept, grid = as.double(unlist(grid)),
+         xlevels = xlevels)
+}
