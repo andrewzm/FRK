@@ -112,12 +112,12 @@ setMethod("eval_basis",signature(basis="Basis",s="SpatialPolygonsDataFrame"),fun
     X <- list()
     print("Averaging over polygons")
 
-    if(defaults$parallel > 0) {
+    if(opts_FRK$get("parallel") > 0) {
             cl <- makeCluster(opts_FRK$parallel)
             X <- mclapply(1:length(s), function(i) {
                 samps <- .samps_in_polygon(basis,s,i)
                 colSums(.point_eval_fn(basis@fn,samps))/nrow(samps)
-            },mc.cores = defaults$parallel)
+            },mc.cores = opts_FRK$get("parallel"))
             stopCluster(cl)
     } else  {
         X <- lapply(1:length(s), function(i) {
@@ -131,7 +131,7 @@ setMethod("eval_basis",signature(basis="Basis",s="SpatialPolygonsDataFrame"),fun
 
 
 .point_eval_fn <- function(flist,s,output="matrix") {
-    #if(!defaults$Rhipe) {
+    #if(!opts_FRK$get("Rhipe")) {
     if(1) {
         x <- sapply(flist,function(f) f(s))
         as(x,"Matrix")

@@ -201,9 +201,10 @@ df_to_SpatialPolygons <- function(df,keys,coords,proj) {
                              coords=coords,
                              dfun=parse(text = deparse(dfun)))
     } else {
-        if(defaults$parallel > 0) {
-            cl <- makeCluster(defaults$parallel)
-            doParallel::registerDoParallel(defaults$parallel)
+        if(opts_FRK$get("parallel") > 0) {
+            browser()
+            cl <- makeCluster(opts_FRK$get("parallel"))
+            doParallel::registerDoParallel(opts_FRK$get("parallel"))
             df_poly <- plyr::dlply(df,keys,dfun,.parallel=TRUE)
             stopCluster(cl)
         } else {
@@ -248,7 +249,7 @@ map_data_to_BAUs <- function(data_sp,sp_pols,av_var,variogram.formula=NULL,est_e
         data_sp$Nobs <- 1
         if(est_error) data_sp$std <- 0 ## Just set it to something, this will be overwritten later on
 
-        if(!defaults$Rhipe) {
+        if(!(opts_FRK$get("Rhipe"))) {
             timer <- system.time(Data_in_BAU <- over(sp_pols,data_sp[c(av_var,"Nobs","std")],fn=sum))
         } else {
             print("Using RHIPE to find overlays")

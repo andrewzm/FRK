@@ -74,23 +74,23 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM",print_lik=F) 
     lk <- rep(0,n_EM)
 
 
-    if(defaults$progress) pb <- txtProgressBar(min = 0, max = n_EM, style = 3)
+    if(opts_FRK$get("progress")) pb <- txtProgressBar(min = 0, max = n_EM, style = 3)
     for(i in 1:n_EM) {
         lk[i] <- .loglik(SRE_model)  # Compute likelihood as in Katzfuss and Cressie (2011)
         SRE_model <- .SRE.Estep(SRE_model)
         SRE_model <- .SRE.Mstep(SRE_model)
-        if(defaults$progress) setTxtProgressBar(pb, i)
+        if(opts_FRK$get("progress")) setTxtProgressBar(pb, i)
         if(i>2) if(lk[i] - lk[i-1] < tol) {
             print("Minimum tolerance reached")
             break
         }
     }
-    if(defaults$progress) close(pb)
+    if(opts_FRK$get("progress")) close(pb)
 
     if(i == n_EM) print("Maximum EM iterations reached")
     if(print_lik) {
         plot(lk[1:i][-1],ylab="log likelihood")
-        warning("Ignoring constants in log-likelihood computation")
+        print("Warning: Ignoring constants in log-likelihood computation")
     }
     SRE_model
 }
@@ -108,7 +108,7 @@ SRE.predict <- function(Sm,pred_locs = Sm@BAUs,use_centroid=T) {
     }
     if(!(all(pred_locs$fs > 0))) stop("fine-scale variation basis function needs to be nonnegative everywhere")
 
-    if(defaults$Rhipe) {
+    if(opts_FRK$get("Rhipe")) {
         pred_locs <- rhwrapper(Ntot = length(pred_locs),
                                N = 4000,
                                f_expr = .rhSRE.predict,
@@ -147,7 +147,7 @@ SRE.predict <- function(Sm,pred_locs = Sm@BAUs,use_centroid=T) {
         idx <- match(row.names(pred_locs),row.names(Sm@BAUs))
         C <- Sm@Cmat[,idx]
 
-        LAMBDA <- bdiag(Sm@Khat,sig2_Vfs_pred)
+        LAMBDA <- as(bdiag(Sm@Khat,sig2_Vfs_pred),"symmetricMatrix")
         LAMBDAinv <- chol2inv(chol(LAMBDA))
         PI <- cBind(S0, .symDiagonal(n=nrow(pred_locs)))
         Qx <- t(PI) %*% t(C) %*% solve(Sm@Ve) %*% C %*% PI + LAMBDAinv
