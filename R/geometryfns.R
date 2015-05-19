@@ -5,6 +5,72 @@ setMethod("initialize",signature="manifold",function(.Object) {
     .Object
 })
 
+#' @title Convert dggrid gen file to data frame
+#'
+#' @description Convert dggrid gen file to data frame
+#' @export
+dggrid_gen_to_df <- function(filename) {
+    if(!is.character(filename)) stop("filename needs to of type 'character'")
+    if(!require(zoo)) stop("zoo is needed for this function. Please install it separately")
+    read.table(filename,
+               sep=" ",fill=T,
+               header=F,
+               col.names = c("id","lon","lat")) %>%
+        filter(!(id == "END")) %>%
+        mutate(res = j,
+               id = as.numeric(as.character(id)),
+               centroid = as.numeric(!is.na(id))) %>%
+        transform(id = na.locf(id))
+}
+
+
+#' @title Auatomatic BAU generation
+#'
+#' @description Autoatic BAU generation
+#' @export
+auto_BAUs <- function(manifold,res,data=NULL) {
+    if(!is(data,"Spatial")) stop("Data needs to be of class 'Spatial'")
+    if(!is(manifold,"manifold")) stop("manifold needs to be of class 'manifold'")
+    if(!is.numeric(res) | is.integer(res)) stop("res needs to be of type 'numeric' or 'integer'")
+    if(!(res >=0 & res <= 9)) stop("res needs to be between 0 and 9")
+    resl <- round(res)
+
+    if(is(manifold,"sphere")) {
+        data(isea3h)
+        isea3h_res <- filter(isea3h,res == resl) %>%
+            arrange(id) %>%
+            group_by(id) %>%
+            filter(diff(range(lon)) < 90) %>%
+            data.frame() %>%
+            mutate(fs=1)
+
+        isea3h_sp_pol <- df_to_SpatialPolygons(
+            df=filter(isea3h_res,centroid==0),
+            keys=c("id"),
+            coords=c("lon","lat"),
+            proj=CRS("+proj=longlat"))
+
+        isea3h_sp_poldf <- SpatialPolygonsDataFrame(
+            isea3h_sp_pol,
+            cbind(data.frame(row.names=names(isea3h_sp_pol)),
+                  (filter(isea3h_res,centroid==1) %>%
+                       select(id,lon,lat,fs))))
+        if(!is.null(data)) {
+            sub_pols <- coordinates(data) %>%
+                chull()
+            conv_hull <- coordinates(data)[c(sub_pols,sub_pols[1]),] %>%
+                data.frame() %>%
+                mutate(id=1) %>%
+                df_to_SpatialPolygons(keys="id",
+                                      coords=c("lon","lat"),
+                                      proj=CRS("+proj=longlat"))
+            isea3h_sp_poldf$in_chull <- over(isea3h_sp_poldf,conv_hull)
+            isea3h_sp_poldf <- subset(isea3h_sp_poldf,!is.na(in_chull))
+        }
+        isea3h_sp_poldf
+    }
+
+}
 
 #' @title sphere
 #'
@@ -123,8 +189,27 @@ df_to_SpatialPolygons <- function(df,keys,coords,proj) {
     if(!all(coords %in% names(df))) stop("All coordinate labels needs to be labels in data frame")
     if(!is(proj,"CRS")) stop("proj needs to be of class CRS")
 
-    df_poly <- plyr::dlply(df,keys,function(d) {
-    Sr <- Polygons(list(Polygon(d[coords])),digest::digest(d[keys]))})
+    dfun <- function(d) {
+        Polygons(list(Polygon(d[coords])),digest::digest(d[keys]))
+    }
+    if(0) {
+        df_poly <- rhwrapper(Ntot = nrow(df),
+                             N = 4000,
+                             f_expr = .rhdlply,
+                             df=df,
+                             keys=keys,
+                             coords=coords,
+                             dfun=parse(text = deparse(dfun)))
+    } else {
+        if(defaults$parallel > 0) {
+            cl <- makeCluster(defaults$parallel)
+            doParallel::registerDoParallel(defaults$parallel)
+            df_poly <- plyr::dlply(df,keys,dfun,.parallel=TRUE)
+            stopCluster(cl)
+        } else {
+            df_poly <- plyr::dlply(df,keys,dfun)
+        }
+    }
     Sr <- SpatialPolygons(df_poly,1:length(df_poly),proj4string=proj)
 }
 

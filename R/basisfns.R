@@ -140,7 +140,7 @@ setMethod("eval_basis",signature(basis="Basis",s="SpatialPolygonsDataFrame"),fun
           flist <- lapply(flist, function(f) parse(text = deparse(f)))
           x <- rhwrapper(Ntot = nrow(s),
                         N = 4000,
-			type="Matrix",
+			            type="Matrix",
                         f_expr = .rhpoint_eval_fn,
                         flist=flist,
                         envlist = envlist,

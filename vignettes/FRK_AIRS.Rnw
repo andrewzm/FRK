@@ -9,9 +9,8 @@
     library(sp)
     library(ggplot2)
     library(dplyr)
-    library(FRK)
-    # devtools::load_all("~/Wollongong/pkgs/FRK",
-    #                        export_all = FALSE)
+    devtools::load_all("~/Wollongong/pkgs/FRK",
+                            export_all = FALSE)
 
     ## Load data
     data(AIRS_05_2003)
@@ -22,25 +21,8 @@
     proj4string(AIRS_05_2003)=CRS("+proj=longlat")
 
     ## Prediction (BAU) grid
-    data(isea3h)
-    isea3h_res <- filter(isea3h,res == 4) %>%
-    arrange(id) %>%
-    group_by(id) %>%
-    filter(diff(range(lon)) < 90) %>%
-    data.frame() %>%
-    mutate(fs=1)
+    isea3h_sp_poldf <- auto_BAUs(manifold=sphere(),res=6,data=NULL)
 
-    isea3h_sp_pol <- df_to_SpatialPolygons(
-        df=filter(isea3h_res,centroid==0),
-        keys=c("id"),
-        coords=c("lon","lat"),
-        proj=CRS("+proj=longlat"))
-
-    isea3h_sp_poldf <- SpatialPolygonsDataFrame(
-        isea3h_sp_pol,
-        cbind(data.frame(row.names=names(isea3h_sp_pol)),
-              (filter(isea3h_res,centroid==1) %>%
-                   select(id,lon,lat,fs))))
 
     ## Set up SRE model
     G <- auto_basis(m = sphere(),data=AIRS_05_2003,

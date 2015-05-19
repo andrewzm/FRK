@@ -11,6 +11,7 @@
 #' @import parallel
 #' @import gstat
 #' @import dplyr
+#' @import mapproj
 #' @importFrom plyr ddply dlply rbind.fill
 #' @importFrom akima interp
 #' @importFrom PBSmapping clipPolys
@@ -18,6 +19,7 @@
 #' @importFrom scales brewer_pal gradient_n_pal muted
 #' @importFrom grid unit grid.newpage pushViewport viewport grid.layout
 #' @importFrom fields rdist fields.rdist.near rdist.earth
+#' @importFrom doParallel registerDoParallel
 #' @name FRK
 NULL
 

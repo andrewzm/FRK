@@ -4,8 +4,8 @@ rhwrapper <- function(Ntot = 20, N = 10,type="data.frame",f_expr,...) {
     njobs <- ceiling(Ntot/N)
 
     map1 <- expression({
-        suppressMessages(library(Matrix))
-        suppressMessages(library(sp))
+        #suppressMessages(library(Matrix))
+        #suppressMessages(library(sp))
         library(FRK)
         lapply(seq_along(map.keys), function(r) {
             idx <- as.numeric((map.values[[r]]-1)*N + (1:N))
@@ -40,6 +40,7 @@ rhwrapper <- function(Ntot = 20, N = 10,type="data.frame",f_expr,...) {
 #' @title sp::over using Rhipe
 #' @noRd
 .rhover <- quote(function(idx) {
+    suppressMessages(library(sp))
     sp::over(sp_pols[idx,],
               data_sp[c(av_var,"Nobs","std")],
               fn=sum)
@@ -48,7 +49,7 @@ rhwrapper <- function(Ntot = 20, N = 10,type="data.frame",f_expr,...) {
 #' @title eval_basis using Rhipe
 #' @noRd
 .rhpoint_eval_fn <- quote(function(idx) {
-    ## x <- sapply(flist,function(fn) fn(s[idx,,drop=FALSE]))
+     suppressMessages(library(Matrix))
      x <- sapply(seq_along(flist), function(i) {
                 e <- envlist[[i]]
                c <- e$c
@@ -67,3 +68,9 @@ rhwrapper <- function(Ntot = 20, N = 10,type="data.frame",f_expr,...) {
    FRK:::.SRE.predict(Sm=Sm,pred_locs=pred_locs[idx,],use_centroid=use_centroid)
 })
 
+#' @title .dlply using Rhipe
+#' @noRd
+.rhdlply <- quote(function(idx) {
+    suppressMessages(library(sp))
+    plyr::dlply(df[idx,],keys,eval(dfun))
+})

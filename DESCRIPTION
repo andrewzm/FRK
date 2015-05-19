@@ -15,7 +15,8 @@ Suggests:
     reshape2,
     shapefiles,
     knitr,
-    INLA
+    INLA,
+    zoo
 Imports:
     methods,
     Matrix,
@@ -30,7 +31,9 @@ Imports:
     PBSmapping,
     akima,
     parallel,
-    sp
+    doParallel,
+    sp,
+    mapproj
 License: GPL (>= 2)
 NeedsCompilation: yes
 LazyData: true
