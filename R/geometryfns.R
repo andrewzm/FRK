@@ -29,7 +29,7 @@ dggrid_gen_to_df <- function(filename) {
 #' @description Autoatic BAU generation
 #' @export
 auto_BAUs <- function(manifold,res,data=NULL) {
-    if(!is(data,"Spatial")) stop("Data needs to be of class 'Spatial'")
+    if(!(is(data,"Spatial") | is.null(data))) stop("Data needs to be of class 'Spatial' or NULL")
     if(!is(manifold,"manifold")) stop("manifold needs to be of class 'manifold'")
     if(!is.numeric(res) | is.integer(res)) stop("res needs to be of type 'numeric' or 'integer'")
     if(!(res >=0 & res <= 9)) stop("res needs to be between 0 and 9")

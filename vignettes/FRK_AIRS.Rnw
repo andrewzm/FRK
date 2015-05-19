@@ -9,8 +9,9 @@
     library(sp)
     library(ggplot2)
     library(dplyr)
-    devtools::load_all("~/Wollongong/pkgs/FRK",
-                            export_all = FALSE)
+    library(FRK)
+#     devtools::load_all("~/Wollongong/pkgs/FRK",
+#                             export_all = FALSE)
 
     ## Load data
     data(AIRS_05_2003)

@@ -5,7 +5,7 @@
 \alias{measure-class}
 \title{measure}
 \description{
-Measure function
+An object of class measure contains a distance function and a variable \code{dim} with the dimensions of the Riemannian manifold over which the distance is computed. By default, the distance function used is inherited from the package fields.
 }
 \details{
 
