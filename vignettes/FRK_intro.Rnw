@@ -53,41 +53,44 @@ HexPols_df2 <- SpatialPolygonsDataFrame(HexPols2,
                                             select(zinc)) %>%
     subset(!is.na(zinc))
 
-## Generate basis functions
-G <- auto_basis(m = plane(),data=meuse,nres = 2,
-                prune=10,type = "Gaussian")
+if(require(INLA)) {
 
-## Setup SRE model
-f <- log(zinc) ~ 1
-S <- SRE(f,list(meuse,HexPols_df2),BAUs = HexPols_df, G,est_error=T)
-S <- SRE.fit(S,n_EM = 10,print_lik=T)
+        ## Generate basis functions
+        G <- auto_basis(m = plane(),data=meuse,nres = 2,
+                        prune=10,type = "Gaussian")
 
-## Point predict
-HexPols_df <- SRE.predict(S,use_centroid = T)
+        ## Setup SRE model
+        f <- log(zinc) ~ 1
+        S <- SRE(f,list(meuse,HexPols_df2),BAUs = HexPols_df, G,est_error=T)
+        S <- SRE.fit(S,n_EM = 10,print_lik=T)
 
-X <- SpatialPolygonsDataFrame_to_df(sp_polys = HexPols_df,
-                                    vars = c("mu","var"))
+        ## Point predict
+        HexPols_df <- SRE.predict(S,use_centroid = T)
 
-g1 <- EmptyTheme() +
-    geom_polygon(data=X,aes(x,y,fill=mu,group=id),
-                 colour="light grey") +
-    scale_fill_distiller(palette="Spectral",trans="reverse") +
-    geom_point(data=data.frame(meuse),
-               aes(x,y,fill=log(zinc)),
-               colour="black",
-               pch=21, size=3) +
-    coord_fixed()
+        X <- SpatialPolygonsDataFrame_to_df(sp_polys = HexPols_df,
+                                            vars = c("mu","var"))
 
-g2 <- EmptyTheme() +
-    geom_polygon(data=X,aes(x,y,fill=sqrt(var),group=id),
-                 colour="light grey") +
-    scale_fill_distiller(palette="Spectral",trans="reverse") +
-    #geom_point(data=data.frame(meuse),
-    #           aes(x,y),colour="black",pch=21, size=3) +
-    coord_fixed()
+        g1 <- EmptyTheme() +
+            geom_polygon(data=X,aes(x,y,fill=mu,group=id),
+                         colour="light grey") +
+            scale_fill_distiller(palette="Spectral",trans="reverse") +
+            geom_point(data=data.frame(meuse),
+                       aes(x,y,fill=log(zinc)),
+                       colour="black",
+                       pch=21, size=3) +
+            coord_fixed()
 
-print(g1)
-print(g2)
+        g2 <- EmptyTheme() +
+            geom_polygon(data=X,aes(x,y,fill=sqrt(var),group=id),
+                         colour="light grey") +
+            scale_fill_distiller(palette="Spectral",trans="reverse") +
+            #geom_point(data=data.frame(meuse),
+            #           aes(x,y),colour="black",pch=21, size=3) +
+            coord_fixed()
+
+        print(g1)
+        print(g2)
+}
 @
 
 Error?

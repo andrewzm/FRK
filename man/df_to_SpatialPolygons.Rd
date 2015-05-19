@@ -23,6 +23,7 @@ Each row in the data frame \code{df} contains both coordinates and labels (or ke
 }
 \examples{
 library(sp)
+opts_FRK$set("parallel",0L)
 df <- data.frame(id = c(rep(1,4),rep(2,4)),
                  x = c(0,1,0,0,2,3,2,2),
                  y=c(0,0,1,0,0,1,1,0))

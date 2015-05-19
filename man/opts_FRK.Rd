@@ -7,10 +7,10 @@
 \format{\preformatted{List of 2
  $ set:function (opt, value)  
   ..- attr(*, "srcref")=Class 'srcref'  atomic [1:8] 5 16 8 5 16 5 5 8
-  .. .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x41cead8> 
+  .. .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0xaf96660> 
  $ get:function (opt)  
   ..- attr(*, "srcref")=Class 'srcref'  atomic [1:8] 9 11 12 5 11 5 9 12
-  .. .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x41cead8> 
+  .. .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0xaf96660> 
 }}
 \usage{
 opts_FRK

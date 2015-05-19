@@ -20,6 +20,7 @@ This function is mainly used for plotting SpatialPolygonsDataFrame objects with 
 \examples{
 library(sp)
 library(ggplot2)
+opts_FRK$set("parallel",0L)
 df <- data.frame(id = c(rep(1,4),rep(2,4)),
                  x = c(0,1,0,0,2,3,2,2),
                  y=c(0,0,1,0,0,1,1,0))

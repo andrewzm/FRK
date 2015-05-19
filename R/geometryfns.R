@@ -176,6 +176,7 @@ Euclid_dist <- function(dim=2L) {
 #' @export
 #' @examples
 #' library(sp)
+#' opts_FRK$set("parallel",0L)
 #' df <- data.frame(id = c(rep(1,4),rep(2,4)),
 #'                  x = c(0,1,0,0,2,3,2,2),
 #'                  y=c(0,0,1,0,0,1,1,0))
@@ -202,7 +203,6 @@ df_to_SpatialPolygons <- function(df,keys,coords,proj) {
                              dfun=parse(text = deparse(dfun)))
     } else {
         if(opts_FRK$get("parallel") > 0) {
-            browser()
             cl <- makeCluster(opts_FRK$get("parallel"))
             doParallel::registerDoParallel(opts_FRK$get("parallel"))
             df_poly <- plyr::dlply(df,keys,dfun,.parallel=TRUE)
@@ -223,6 +223,7 @@ df_to_SpatialPolygons <- function(df,keys,coords,proj) {
 #' @examples
 #' library(sp)
 #' library(ggplot2)
+#' opts_FRK$set("parallel",0L)
 #' df <- data.frame(id = c(rep(1,4),rep(2,4)),
 #'                  x = c(0,1,0,0,2,3,2,2),
 #'                  y=c(0,0,1,0,0,1,1,0))
