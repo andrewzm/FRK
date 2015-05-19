@@ -12,6 +12,9 @@ new_opts_FRK <- function(d = list(progress = TRUE, verbose = FALSE, parallel=6L,
     }
 )}
 
+#' @title FRK options
+#' @description The main options list for the FRK package
+#' @export
 opts_FRK = new_opts_FRK()
 
 

@@ -3,20 +3,20 @@
 \docType{data}
 \name{opts_FRK}
 \alias{opts_FRK}
-\title{Options for FRK package}
+\title{FRK options}
 \format{\preformatted{List of 2
  $ set:function (opt, value)  
-  ..- attr(*, "srcref")=Class 'srcref'  atomic [1:8] 4 11 7 5 11 5 4 7
-  .. .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x1e2b2d58> 
+  ..- attr(*, "srcref")=Class 'srcref'  atomic [1:8] 5 16 8 5 16 5 5 8
+  .. .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x41cead8> 
  $ get:function (opt)  
-  ..- attr(*, "srcref")=Class 'srcref'  atomic [1:8] 8 11 11 5 11 5 8 11
-  .. .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x1e2b2d58> 
+  ..- attr(*, "srcref")=Class 'srcref'  atomic [1:8] 9 11 12 5 11 5 9 12
+  .. .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x41cead8> 
 }}
 \usage{
 opts_FRK
 }
 \description{
-Options for FRK package
+The main options list for the FRK package
 }
 \keyword{datasets}
 
