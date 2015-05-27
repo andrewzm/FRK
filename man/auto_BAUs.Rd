@@ -4,7 +4,8 @@
 \alias{auto_BAUs}
 \title{Auatomatic BAU generation}
 \usage{
-auto_BAUs(manifold, res, data = NULL)
+auto_BAUs(manifold, res = 2, cellsize = c(1, 1), type = "hex",
+  data = NULL, convex = -0.05)
 }
 \description{
 Autoatic BAU generation

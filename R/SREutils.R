@@ -13,6 +13,7 @@ SRE <- function(f,data,basis,BAUs,est_error=T) {
                                  av_var = av_var,
                                  variogram.formula = f,
                                  est_error=est_error)
+        if(any(is.na(data_proc@data))) stop("NAs found when mapping data to BAUs. Are you sure all your data are covered by BAUs?")
 
         L <- .gstat.formula(f,data=data_proc)
         X[[i]] <- as(L$X,"Matrix")
@@ -72,7 +73,6 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM",print_lik=F) 
     n <- nbasis(SRE_model)
     X <- SRE_model@X
     lk <- rep(0,n_EM)
-
 
     if(opts_FRK$get("progress")) pb <- txtProgressBar(min = 0, max = n_EM, style = 3)
     for(i in 1:n_EM) {

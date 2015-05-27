@@ -17,9 +17,9 @@ library(knitr)
 library(sp)
 library(ggplot2)
 library(dplyr)
-library(FRK)
-# devtools::load_all("~/Wollongong/pkgs/FRK",
-#                    export_all = FALSE)
+#library(FRK)
+ devtools::load_all("~/Wollongong/pkgs/FRK",
+                    export_all = FALSE)
 
 opts_FRK$set("progress",FALSE)
 opts_FRK$set("parallel",0L)
@@ -30,20 +30,10 @@ data(meuse)
 meuse$fs <- 1
 coordinates(meuse) = ~x+y # change into an sp object
 
-## Set up BAUs
+# Generate observations with large spatial support
 data(meuse.grid)
 gridded(meuse.grid) = ~x + y
-HexPts <- spsample(meuse.grid,
-                   type = "hexagonal",
-                   cellsize = 50)
-HexPols <- HexPoints2SpatialPolygons(HexPts)
-HexPols_df <- SpatialPolygonsDataFrame(HexPols,
-                                       cbind(over(HexPols,meuse.grid),
-                                             coordinates(HexPts)))
-HexPols_df$fs <- 1
-#HexPols_df <- subset(HexPols_df,!is.na(dist))
 
-# Generate observations with large spatial support
 HexPts2 <- spsample(meuse.grid,
                     type = "hexagonal",
                     cellsize = 100)
@@ -53,7 +43,13 @@ HexPols_df2 <- SpatialPolygonsDataFrame(HexPols2,
                                             select(zinc)) %>%
     subset(!is.na(zinc))
 
-if(require(INLA)) {
+if(require(INLA)) { ## Need INLA from here on
+
+        # Generate BAUs
+        HexPols_df <- auto_BAU(manifold = plane(),cellsize = c(50,50),type = "hex",data = meuse,convex=-0.05)
+        HexPols_df$fs <- 1
+
+
 
         ## Generate basis functions
         G <- auto_basis(m = plane(),data=meuse,nres = 2,

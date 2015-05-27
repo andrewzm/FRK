@@ -32,7 +32,7 @@ proj4string(AIRS_05_2003)=CRS("+proj=longlat")
 
 <<eval=TRUE>>=
 ## Prediction (BAU) grid
-isea3h_sp_poldf <- auto_BAUs(manifold=sphere(),res=6,data=NULL)
+isea3h_sp_poldf <- auto_BAU(manifold=sphere(),res=6,data=NULL)
 @
 
 

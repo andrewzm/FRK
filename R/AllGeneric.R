@@ -3,6 +3,11 @@
 #' @export
 setGeneric("show_basis", function(g,basis,...) standardGeneric("show_basis"))
 
+#' @title Automatic BAU generation
+#' @export
+setGeneric("auto_BAU", function(manifold,cellsize,res,type,data,...) standardGeneric("auto_BAU"))
+
+
 #' @title Manifold
 #' @export
 setGeneric("manifold", function(.Object) standardGeneric("manifold"))

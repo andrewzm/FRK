@@ -9,26 +9,120 @@ setMethod("initialize",signature="manifold",function(.Object) {
 #'
 #' @description Convert dggrid gen file to data frame
 #' @export
-dggrid_gen_to_df <- function(filename) {
+dggrid_gen_to_df <- function(filename,res) {
     if(!is.character(filename)) stop("filename needs to of type 'character'")
     if(!require(zoo)) stop("zoo is needed for this function. Please install it separately")
-    read.table(filename,
+    if(!is.numeric(res)) stop("res needs to be of type character")
+    X <- read.table(filename,
                sep=" ",fill=T,
                header=F,
                col.names = c("id","lon","lat")) %>%
-        filter(!(id == "END")) %>%
-        mutate(res = j,
+        filter(!(id == "END")) %>%  ## Sometimes dggrid doesn't put in first space, this mutate caters for this
+        mutate(isna = is.na(lat),
+               lat = ifelse(isna,lon,lat),
+               lon = ifelse(isna,as.numeric(as.character(X$id)),lon))
+    X$id[X$isna] <- NA
+    X <- select(X,-isna) %>%
+        mutate(res = res,
                id = as.numeric(as.character(id)),
                centroid = as.numeric(!is.na(id))) %>%
         transform(id = na.locf(id))
 }
 
+#' @rdname auto_BAU
+#' @aliases auto-BAU,plane-method
+setMethod("auto_BAU",signature(manifold="plane"),function(manifold,cellsize = c(1,1),type="hex",data=NULL,...) {
+    if(!(is(data,"Spatial") | is.null(data))) stop("Data needs to be of class 'Spatial' or NULL")
+
+    coords <- coordinates(data)
+    xrange <- range(coords[,1])
+    yrange <- range(coords[,2])
+    bndary_seg = INLA::inla.nonconvex.hull(coords,...)$loc %>%
+        data.frame() %>%
+        mutate(x=X1,y=X2,id = 1) %>%
+        select(-X1,-X2) %>%
+        df_to_SpatialPolygons(keys="id",coords=c("x","y"),proj=CRS())
+
+
+    drangex <- diff(xrange)
+    drangey <- diff(yrange)
+    xgrid <- seq(xrange[1] - drangex*1.2,xrange[2] + drangex*1.2,by=cellsize[1])
+    ygrid <- seq(yrange[1] - drangey*1.2,yrange[2] + drangey*1.2,by=cellsize[2])
+
+    xy <- expand.grid(x=xgrid,y=ygrid) %>%
+        SpatialPoints()
+
+    if(type == "hex") {
+        HexPts <- spsample(xy,type="hexagonal",cellsize = cellsize[1])
+        idx <- which(!is.na(over(HexPts,bndary_seg)))
+        HexPols <- HexPoints2SpatialPolygons(HexPts[idx,])
+        HexPols_df <- SpatialPolygonsDataFrame(HexPols,
+                                               data.frame(
+                                                   coordinates(HexPts[idx,]),
+                                                   row.names = row.names(HexPols)))
+        return(HexPols_df)
+    } else if (type == "grid") {
+        xy <- xy %>%
+            points2grid() %>%
+            as.SpatialPolygons.GridTopology()
+        idx <- which(!is.na(over(xy,bndary_seg)))
+        xy <- xy[idx,]
+        xy_df <- SpatialPolygonsDataFrame(xy,
+                                          data.frame(
+                                              coordinates(xy),
+                                              row.names = row.names(xy)))
+        return(xy)
+    }
+
+})
+
+#' @rdname auto_BAU
+#' @aliases auto-BAU,plane-method
+setMethod("auto_BAU",signature(manifold="sphere"),function(manifold,cellsize = c(1,1),type="hex",data=NULL,...) {
+    if(!(is(data,"Spatial") | is.null(data))) stop("Data needs to be of class 'Spatial' or NULL")
+    if(!is.numeric(res) | is.integer(res)) stop("res needs to be of type 'numeric' or 'integer'")
+    if(!(res >=0 & res <= 9)) stop("res needs to be between 0 and 9")
+    resl <- round(res)
+
+    data(isea3h)
+    isea3h_res <- filter(isea3h,res == resl) %>%
+        arrange(id) %>%
+        group_by(id) %>%
+        filter(diff(range(lon)) < 90) %>%
+        data.frame() %>%
+        mutate(fs=1)
+
+    isea3h_sp_pol <- df_to_SpatialPolygons(
+        df=filter(isea3h_res,centroid==0),
+        keys=c("id"),
+        coords=c("lon","lat"),
+        proj=CRS("+proj=longlat"))
+
+    isea3h_sp_poldf <- SpatialPolygonsDataFrame(
+        isea3h_sp_pol,
+        cbind(data.frame(row.names=names(isea3h_sp_pol)),
+              (filter(isea3h_res,centroid==1) %>%
+                   select(id,lon,lat,fs))))
+    if(!is.null(data)) {
+        sub_pols <- coordinates(data) %>%
+            chull()
+        conv_hull <- coordinates(data)[c(sub_pols,sub_pols[1]),] %>%
+            data.frame() %>%
+            mutate(id=1) %>%
+            df_to_SpatialPolygons(keys="id",
+                                  coords=c("lon","lat"),
+                                  proj=CRS("+proj=longlat"))
+        isea3h_sp_poldf$in_chull <- over(isea3h_sp_poldf,conv_hull)
+        isea3h_sp_poldf <- subset(isea3h_sp_poldf,!is.na(in_chull))
+    }
+    isea3h_sp_poldf
+})
 
 #' @title Auatomatic BAU generation
 #'
 #' @description Autoatic BAU generation
 #' @export
-auto_BAUs <- function(manifold,res,data=NULL) {
+auto_BAUs <- function(manifold,res=2,cellsize = c(1,1), type="hex",data=NULL,convex=-0.05) {
     if(!(is(data,"Spatial") | is.null(data))) stop("Data needs to be of class 'Spatial' or NULL")
     if(!is(manifold,"manifold")) stop("manifold needs to be of class 'manifold'")
     if(!is.numeric(res) | is.integer(res)) stop("res needs to be of type 'numeric' or 'integer'")
@@ -68,6 +162,47 @@ auto_BAUs <- function(manifold,res,data=NULL) {
             isea3h_sp_poldf <- subset(isea3h_sp_poldf,!is.na(in_chull))
         }
         isea3h_sp_poldf
+    } else if(is(manifold,"plane")) {
+            coords <- coordinates(data)
+            xrange <- range(coords[,1])
+            yrange <- range(coords[,2])
+            bndary_seg = INLA::inla.nonconvex.hull(coords,convex=convex)$loc %>%
+                data.frame() %>%
+                mutate(x=X1,y=X2,id = 1) %>%
+                select(-X1,-X2) %>%
+                df_to_SpatialPolygons(keys="id",coords=c("x","y"),proj=CRS())
+
+
+            drangex <- diff(xrange)
+            drangey <- diff(yrange)
+            xgrid <- seq(xrange[1] - drangex*1.2,xrange[2] + drangex*1.2,by=cellsize[1])
+            ygrid <- seq(yrange[1] - drangey*1.2,yrange[2] + drangey*1.2,by=cellsize[2])
+
+            xy <- expand.grid(x=xgrid,y=ygrid) %>%
+                SpatialPoints()
+
+            if(type == "hex") {
+                HexPts <- spsample(xy,type="hexagonal",cellsize = cellsize[1])
+                idx <- which(!is.na(over(HexPts,bndary_seg)))
+                HexPols <- HexPoints2SpatialPolygons(HexPts[idx,])
+                HexPols_df <- SpatialPolygonsDataFrame(HexPols,
+                                                       data.frame(
+                                                        coordinates(HexPts[idx,]),
+                                                        row.names = row.names(HexPols)))
+                return(HexPols_df)
+            } else if (type == "grid") {
+                xy <- xy %>%
+                    points2grid() %>%
+                    as.SpatialPolygons.GridTopology()
+                idx <- which(!is.na(over(xy,bndary_seg)))
+                xy <- xy[idx,]
+                xy_df <- SpatialPolygonsDataFrame(xy,
+                                                  data.frame(
+                                                      coordinates(xy),
+                                                      row.names = row.names(xy)))
+                return(xy)
+        }
+
     }
 
 }
