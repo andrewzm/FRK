@@ -14,6 +14,6 @@ notifications:
     on_failure: change
 
 r_github_packages:
-  - andrewzm/FRK
+  - jimhester/covr
 after_success:
   - Rscript -e 'library(covr);coveralls()'
