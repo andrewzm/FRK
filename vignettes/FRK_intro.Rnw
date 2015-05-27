@@ -17,9 +17,9 @@ library(knitr)
 library(sp)
 library(ggplot2)
 library(dplyr)
-#library(FRK)
- devtools::load_all("~/Wollongong/pkgs/FRK",
-                    export_all = FALSE)
+library(FRK)
+#  devtools::load_all("~/Wollongong/pkgs/FRK",
+#                     export_all = FALSE)
 
 opts_FRK$set("progress",FALSE)
 opts_FRK$set("parallel",0L)
