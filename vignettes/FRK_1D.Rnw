@@ -1,0 +1,80 @@
+\documentclass{article}
+
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{FRK for prediction of CO2 from AIRS data}
+
+\begin{document}
+
+Introduction
+
+<<eval=TRUE>>=
+library(sp)
+library(ggplot2)
+library(dplyr)
+#library(FRK)
+     devtools::load_all("~/Wollongong/pkgs/FRK",
+                             export_all = FALSE)
+opts_FRK$set("progress",FALSE)
+opts_FRK$set("parallel",0L)
+@
+
+
+
+<<eval=TRUE>>=
+## Load data
+set.seed(1)
+sim_process <- data.frame(x = seq(0.005,0.995,by=0.01)) %>%
+               mutate(y=0,proc = sin(x*10) + 0.3*rnorm(length(x)))
+
+sim_data <- sample_n(sim_process,50) %>%
+            mutate(z = proc + 0.1*rnorm(length(x)), std = 0.1)
+coordinates(sim_data) = ~x + y# change into an sp object
+@
+
+<<eval=TRUE>>=
+## Prediction (BAU) grid
+grid_BAUs <- auto_BAUs(manifold=real_line(),data=sim_data,cellsize = c(0.01),type="grid")
+grid_BAUs$fs = 1
+@
+
+
+<<eval=TRUE>>=
+## Set up SRE model
+G <- auto_basis(m = real_line(),data=sim_data,
+                nres = 2,
+                regular=6,
+                type = "bisquare",
+                subsamp = 20000)
+@
+
+<<eval=TRUE>>=
+f <- z ~ 1
+S <- SRE(f,list(sim_data),G,
+         grid_BAUs,
+         est_error = FALSE)
+@
+
+<<eval=TRUE>>=
+S <- SRE.fit(S,n_EM = 50,tol = 1e-5,print_lik=T)
+@
+
+<<eval=TRUE>>=
+grid_BAUs <- SRE.predict(S,pred_locs = grid_BAUs,use_centroid = T)
+@
+
+<<eval=TRUE>>=
+X <- grid_BAUs@data %>%
+     filter(x >= 0 & x <= 1)
+
+g1 <- LinePlotTheme() +
+           geom_line(data=X,aes(x,y=mu)) +
+           geom_errorbar(data=X,aes(x=x,ymax = mu + 2*sqrt(var), ymin= mu - 2*sqrt(var))) +
+           geom_point(data = data.frame(sim_data),aes(x=x,y=z),size=3) +
+           geom_line(data=sim_process,aes(x=x,y=proc),col="red")
+
+print(g1)
+@
+
+Need an end comment
+
+\end{document}
