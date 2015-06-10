@@ -48,6 +48,9 @@
 \newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
 
 \usepackage{alltt}
+
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{Introduction to the FRK package}
 \IfFileExists{upquote.sty}{\usepackage{upquote}}{}
 \begin{document}
 
@@ -64,13 +67,12 @@
 
 
 {\ttfamily\noindent\itshape\color{messagecolor}{\#\# \\\#\# Attaching package: 'dplyr'\\\#\# \\\#\# The following object is masked from 'package:stats':\\\#\# \\\#\#\ \ \ \  filter\\\#\# \\\#\# The following objects are masked from 'package:base':\\\#\# \\\#\#\ \ \ \  intersect, setdiff, setequal, union}}\begin{alltt}
-\hlstd{devtools}\hlopt{::}\hlkwd{load_all}\hlstd{(}\hlstr{"~/Wollongong/pkgs/FRK"}\hlstd{,}
-                   \hlkwc{export_all} \hlstd{=} \hlnum{FALSE}\hlstd{)}
-\end{alltt}
+\hlkwd{library}\hlstd{(FRK)}
+\hlcom{# devtools::load_all("~/Wollongong/pkgs/FRK",}
+\hlcom{#                    export_all = FALSE)}
 
-
-{\ttfamily\noindent\itshape\color{messagecolor}{\#\# Loading FRK}}\begin{alltt}
 \hlstd{opts_FRK}\hlopt{$}\hlkwd{set}\hlstd{(}\hlstr{"progress"}\hlstd{,}\hlnum{FALSE}\hlstd{)}
+\hlstd{opts_FRK}\hlopt{$}\hlkwd{set}\hlstd{(}\hlstr{"parallel"}\hlstd{,}\hlnum{0L}\hlstd{)}
 \hlkwd{set.seed}\hlstd{(}\hlnum{1}\hlstd{)}
 
 \hlcom{## Get data}
@@ -107,7 +109,7 @@
 \end{alltt}
 
 
-{\ttfamily\noindent\itshape\color{messagecolor}{\#\# Loading required package: splancs\\\#\# \\\#\# Spatial Point Pattern Analysis Code in S-Plus\\\#\#\ \ \\\#\#\ \ Version 2 - Spatial and Space-Time analysis}}\begin{verbatim}
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# Loading required package: INLA\\\#\# Loading required package: Matrix\\\#\# Loading required package: splines\\\#\# Loading required package: splancs\\\#\# \\\#\# Spatial Point Pattern Analysis Code in S-Plus\\\#\#\ \ \\\#\#\ \ Version 2 - Spatial and Space-Time analysis}}\begin{verbatim}
 ## [1] "Number of basis at resolution 1 = 6"
 ## [1] "Number of basis at resolution 2 = 27"
 \end{verbatim}
@@ -117,7 +119,7 @@
 \hlstd{S} \hlkwb{<-} \hlkwd{SRE}\hlstd{(f,}\hlkwd{list}\hlstd{(meuse,HexPols_df2),}\hlkwc{BAUs} \hlstd{= HexPols_df, G,}\hlkwc{est_error}\hlstd{=T)}
 \end{alltt}
 \begin{verbatim}
-## [1] "Binned data in 1.241 seconds"
+## [1] "Binned data in 1.286 seconds"
 \end{verbatim}
 
 
@@ -136,12 +138,18 @@
 \begin{verbatim}
 ## [1] "Maximum EM iterations reached"
 \end{verbatim}
-
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in SRE.fit(S, n\_EM = 10, print\_lik = T): Ignoring constants in log-likelihood computation}}\begin{alltt}
+\end{kframe}
+\includegraphics[width=\maxwidth]{figure/unnamed-chunk-1-1} 
+\begin{kframe}\begin{verbatim}
+## [1] "Warning: Ignoring constants in log-likelihood computation"
+\end{verbatim}
+\begin{alltt}
 \hlcom{## Point predict}
 \hlstd{HexPols_df} \hlkwb{<-} \hlkwd{SRE.predict}\hlstd{(S,}\hlkwc{use_centroid} \hlstd{= T)}
+\end{alltt}
 
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning in asMethod(object): as(.,"{}dsCMatrix"{}) is deprecated (since 2008); do use as(., "{}symmetricMatrix"{})}}\begin{alltt}
 \hlstd{X} \hlkwb{<-} \hlkwd{SpatialPolygonsDataFrame_to_df}\hlstd{(}\hlkwc{sp_polys} \hlstd{= HexPols_df,}
                                     \hlkwc{vars} \hlstd{=} \hlkwd{c}\hlstd{(}\hlstr{"mu"}\hlstd{,}\hlstr{"var"}\hlstd{))}
 \end{alltt}
@@ -167,17 +175,14 @@
     \hlkwd{coord_fixed}\hlstd{()}
 
 \hlkwd{print}\hlstd{(g1)}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=\maxwidth]{figure/unnamed-chunk-1-2} 
+\begin{kframe}\begin{alltt}
 \hlkwd{print}\hlstd{(g2)}
 \end{alltt}
 \end{kframe}
-
-{\centering \includegraphics[width=\maxwidth]{figure/minimal-unnamed-chunk-1-1} 
-\includegraphics[width=\maxwidth]{figure/minimal-unnamed-chunk-1-2} 
-\includegraphics[width=\maxwidth]{figure/minimal-unnamed-chunk-1-3} 
-
-}
-
-
+\includegraphics[width=\maxwidth]{figure/unnamed-chunk-1-3} 
 
 \end{knitrout}
 

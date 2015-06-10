@@ -2,12 +2,12 @@
 % Please edit documentation in R/geometryfns.R
 \name{auto_BAUs}
 \alias{auto_BAUs}
-\title{Auatomatic BAU generation}
+\title{Automatic BAU generation}
 \usage{
-auto_BAUs(manifold, res = 2, cellsize = c(1, 1), type = "hex",
-  data = NULL, convex = -0.05)
+auto_BAUs(manifold, res = 2, cellsize = rep(1, dimensions(manifold)),
+  type = "hex", data = NULL, convex = -0.05)
 }
 \description{
-Autoatic BAU generation
+Automatic BAU generation
 }
 

@@ -13,7 +13,17 @@ nbasis(.Object)
 
 \S4method{nbasis}{SRE}(.Object)
 }
+\arguments{
+\item{.Object}{object of class \code{Basis} or \code{SRE}}
+}
 \description{
-Number of basis functions
+Retrieve number of basis functions from \code{Basis} or \code{SRE} object
+}
+\examples{
+library(sp)
+data(meuse)
+coordinates(meuse) = ~x+y # change into an sp object
+G <- auto_basis(m = plane(),data=meuse,nres = 2,regular=2,prune=10,type = "Gaussian")
+print(nbasis(G))
 }
 

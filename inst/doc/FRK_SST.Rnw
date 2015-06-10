@@ -9,9 +9,9 @@
 library(sp)
 library(ggplot2)
 library(dplyr)
-library(FRK)
-# devtools::load_all("~/Wollongong/pkgs/FRK",
-#                    export_all = FALSE)
+#library(FRK)
+devtools::load_all("~/Wollongong/pkgs/FRK",
+                    export_all = FALSE)
 
 opts_FRK$set("progress",FALSE)
 
@@ -25,19 +25,20 @@ coordinates(SST) = ~lon+lat # change into an sp object
 proj4string(SST) <- CRS("+proj=longlat")
 
 ## Prediction (BAU) grid
-isea3h_sp_poldf <- auto_BAUs(manifold=sphere(),res=6,data=SST)
+isea3h_sp_poldf <- auto_BAUs(manifold=sphere(),res=6,data=SST,cellsize = c(1,1),type="grid")
+isea3h_sp_poldf$fs <- 1
 
-## Subset to region of interest
-sub_pols <- coordinates(SST) %>%
-    chull()
-conv_hull <- coordinates(SST)[c(sub_pols,sub_pols[1]),] %>%
-    data.frame() %>%
-    mutate(id=1) %>%
-    df_to_SpatialPolygons(keys="id",
-                          coords=c("lon","lat"),
-                          proj=CRS("+proj=longlat"))
-isea3h_sp_poldf$in_chull <- over(isea3h_sp_poldf,conv_hull)
-isea3h_sp_poldf <- subset(isea3h_sp_poldf,!is.na(in_chull))
+# ## Subset to region of interest
+# sub_pols <- coordinates(SST) %>%
+#     chull()
+# conv_hull <- coordinates(SST)[c(sub_pols,sub_pols[1]),] %>%
+#     data.frame() %>%
+#     mutate(id=1) %>%
+#     df_to_SpatialPolygons(keys="id",
+#                           coords=c("lon","lat"),
+#                           proj=CRS("+proj=longlat"))
+# isea3h_sp_poldf$in_chull <- over(isea3h_sp_poldf,conv_hull)
+# isea3h_sp_poldf <- subset(isea3h_sp_poldf,!is.na(in_chull))
 
 ## Set up SRE model
 G <- auto_basis(m = sphere(),data=SST,

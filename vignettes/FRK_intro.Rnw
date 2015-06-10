@@ -17,9 +17,9 @@ library(knitr)
 library(sp)
 library(ggplot2)
 library(dplyr)
-library(FRK)
-#  devtools::load_all("~/Wollongong/pkgs/FRK",
-#                     export_all = FALSE)
+# library(FRK)
+ devtools::load_all("~/Wollongong/pkgs/FRK",
+                    export_all = FALSE)
 
 opts_FRK$set("progress",FALSE)
 opts_FRK$set("parallel",0L)
@@ -46,10 +46,8 @@ HexPols_df2 <- SpatialPolygonsDataFrame(HexPols2,
 if(require(INLA)) { ## Need INLA from here on
 
         # Generate BAUs
-        HexPols_df <- auto_BAU(manifold = plane(),cellsize = c(50,50),type = "hex",data = meuse,convex=-0.05)
+        HexPols_df <- auto_BAUs(manifold = plane(),cellsize = c(50,50),type = "grid",data = meuse,convex=-0.05)
         HexPols_df$fs <- 1
-
-
 
         ## Generate basis functions
         G <- auto_basis(m = plane(),data=meuse,nres = 2,

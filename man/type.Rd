@@ -10,7 +10,14 @@ type(.Object)
 
 \S4method{type}{manifold}(.Object)
 }
+\arguments{
+\item{.Object}{object of class \code{Basis} or \code{manifold}}
+}
 \description{
-Type of manifold
+Retrieve slot \code{type} from object
+}
+\examples{
+S <- sphere()
+print(type(S))
 }
 

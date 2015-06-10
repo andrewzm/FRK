@@ -4,9 +4,17 @@
 \alias{dggrid_gen_to_df}
 \title{Convert dggrid gen file to data frame}
 \usage{
-dggrid_gen_to_df(filename)
+dggrid_gen_to_df(filename, res)
+}
+\arguments{
+\item{filename}{name of dggrid output file of type .gen}
+
+\item{res}{resolution of the dggrid (this numer is attached to the resulting data frame)}
 }
 \description{
 Convert dggrid gen file to data frame
+}
+\details{
+DGGRID produces .gen files with three columns, \code{id}, \code{lon} and \code{lat}. Polygons each have a unique identifier and following each polygon there is a line "END" that needs to be filtered out. This function takes the .gen file and converts into a data frame with fields \code{lon, lat, id} and \code{res}.
 }
 

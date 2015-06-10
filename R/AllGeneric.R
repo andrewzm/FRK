@@ -1,32 +1,84 @@
 #### GENERIC FUNCTIONS ######
 #' @title Show basis functions
+#' @description Generic plotting function for displaying the basis functions
+#' @param g object of class \code{gg} (a \code{ggplot} object)
+#' @param basis object of class \code{Basis}
+#' @details The function \code{show_basis} adapts its behaviour to the manifold being used. With \code{real_line}, the one-dimensional basis functions are plotted with colour distinguishing between the different resolutions. With \code{plane}, only radial basis functions are supported (at present). Each basis function is shown as a circle with diameter is equal to the \code{scale} parameter of the function. Linetype distinguishes the resolution. With \code{sphere}, the the centres of the basis functions are show as circles, with larger sizes corresponding to lower resolutions.
+#' @examples
+#' library(ggplot2)
+#' library(sp)
+#' data(meuse)
+#' coordinates(meuse) = ~x+y # change into an sp object
+#' G <- auto_basis(m = plane(),data=meuse,nres = 2,regular=2,prune=10,type = "Gaussian")
+#' show_basis(ggplot(),G) + geom_point(data=data.frame(meuse),aes(x,y))
 #' @export
 setGeneric("show_basis", function(g,basis,...) standardGeneric("show_basis"))
 
-#' @title Automatic BAU generation
-#' @export
-setGeneric("auto_BAU", function(manifold,cellsize,res,type,data,...) standardGeneric("auto_BAU"))
-
-
-#' @title Manifold
+#' @title Retrieve manifold
+#' @description Retrieve manifold from \code{FRK} object.
+#' @param .Object \code{FRK} object
+#' @examples
+#' G <-  radial_basis(manifold = plane(),
+#'                    loc=matrix(0,1,2),
+#'                    scale=0.2,
+#'                    type="bisquare")
+#' manifold(G)
 #' @export
 setGeneric("manifold", function(.Object) standardGeneric("manifold"))
 
 #' @title Number of basis functions
+#' @description Retrieve number of basis functions from \code{Basis} or \code{SRE} object
+#' @param .Object object of class \code{Basis} or \code{SRE}
+#' @examples
+#' library(sp)
+#' data(meuse)
+#' coordinates(meuse) = ~x+y # change into an sp object
+#' G <- auto_basis(m = plane(),data=meuse,nres = 2,regular=2,prune=10,type = "Gaussian")
+#' print(nbasis(G))
 #' @export
 setGeneric("nbasis", function(.Object) standardGeneric("nbasis"))
 
 #' @title Type of manifold
+#' @description Retrieve slot \code{type} from object
+#' @param .Object object of class \code{Basis} or \code{manifold}
+#' @examples
+#' S <- sphere()
+#' print(type(S))
 #' @export
 setGeneric("type", function(.Object) standardGeneric("type"))
 
-#' @title Retrieve distance measure used
+#' @title Compute distance
+#' @description Compute distance using object of class \code{measure} or \code{manifold}
+#' @param d object of class \code{measure} or \code{manifold}
+#' @param x1 first coordinate
+#' @param x2 second coordinate
+#' @examples
+#' distance(sphere(),matrix(0,1,2),matrix(10,1,2))
+#' distance(plane(),matrix(0,1,2),matrix(10,1,2))
 #' @export
 setGeneric("distance", function(d,x1,x2) standardGeneric("distance"))
 
-#' @title Evaluate basis functions at points or over polygons
+#' @title Evaluate basis functions
+#' @description  Evaluate basis functions at points or over polygons
+#' @param basis object of class \code{Basis}
+#' @param s object of class \code{matrix}, \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame}
+#' @param output either be "list" or "matrix", depending on desired output format.
+#' @details This function evaluates the basis functions at isolated points, or averages the basis functions over polygons, for computing the matrix \eqn{S}. The latter operation is carried out using Monte Carlo integration with 1000 samples per polygon. This function is embarassingly parallelisable and is thus Hadoop-enabled (provided a Hadoop backend is available and opts_FRK$get("Rhipe") is TRUE).
+#' @examples
+#' library(sp)
+#' data(meuse)
+#' coordinates(meuse) = ~x+y # change into an sp object
+#' G <- auto_basis(m = plane(),data=meuse,nres = 2,regular=2,prune=10,type = "Gaussian")
+#' S <- eval_basis(G,matrix(c(180000,332000),1,2))
 #' @export
-setGeneric("eval_basis", function(basis,s,output="list") standardGeneric("eval_basis"))
+setGeneric("eval_basis", function(basis,s,output="matrix") standardGeneric("eval_basis"))
+
+
+#### NOT EXPORTED ####
+
+#' @title Automatic BAU generation
+setGeneric("auto_BAU", function(manifold,cellsize,resl,type,d,convex,...) standardGeneric("auto_BAU"))
+
 
 #' @title Concatenation
 #' @description Concatenates MVST objects of the same class together. This is primarily used to join up \code{GMRF_basis} blocks and \code{Obs} blocks together.

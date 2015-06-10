@@ -74,8 +74,14 @@ draw_world <- function(g,inc_border = TRUE) {
     g + geom_path(data = worldmap, aes(x=X, y=Y, group=PID), colour="black",size=0.1)
 }
 
+
+#' @rdname show_basis
+#' @aliases show_basis,Basis-method
 setMethod("show_basis",signature(basis = "Basis"),  # GRBF basis with mean offset as last weight
           function(g=ggplot(),basis) {
+
+              warning("Note: show_basis assumes spherical distance functions when plotting")
+
               if(is(manifold(basis),"real_line")) {
                  s1min <- min(basis@df$loc1)  - max(basis@df$scale)*3
                  s1max <- max(basis@df$loc1)  + max(basis@df$scale)*3

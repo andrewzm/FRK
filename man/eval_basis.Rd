@@ -9,9 +9,9 @@
 \alias{eval_basis,Basis-SpatialPointsDataFrame-method}
 \alias{eval_basis,Basis-SpatialPolygonsDataFrame-method}
 \alias{eval_basis,Basis-matrix-method}
-\title{Evaluate basis functions at points or over polygons}
+\title{Evaluate basis functions}
 \usage{
-eval_basis(basis, s, output = "list")
+eval_basis(basis, s, output = "matrix")
 
 \S4method{eval_basis}{Basis,matrix}(basis, s, output = "matrix")
 
@@ -21,7 +21,24 @@ eval_basis(basis, s, output = "list")
 \S4method{eval_basis}{Basis,SpatialPolygonsDataFrame}(basis, s,
   output = "matrix")
 }
+\arguments{
+\item{basis}{object of class \code{Basis}}
+
+\item{s}{object of class \code{matrix}, \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame}}
+
+\item{output}{either be "list" or "matrix", depending on desired output format.}
+}
 \description{
 Evaluate basis functions at points or over polygons
+}
+\details{
+This function evaluates the basis functions at isolated points, or averages the basis functions over polygons, for computing the matrix \eqn{S}. The latter operation is carried out using Monte Carlo integration with 1000 samples per polygon. This function is embarassingly parallelisable and is thus Hadoop-enabled (provided a Hadoop backend is available and opts_FRK$get("Rhipe") is TRUE).
+}
+\examples{
+library(sp)
+data(meuse)
+coordinates(meuse) = ~x+y # change into an sp object
+G <- auto_basis(m = plane(),data=meuse,nres = 2,regular=2,prune=10,type = "Gaussian")
+S <- eval_basis(G,matrix(c(180000,332000),1,2))
 }
 

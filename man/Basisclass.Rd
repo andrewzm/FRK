@@ -3,14 +3,28 @@
 \docType{class}
 \name{Basis-class}
 \alias{Basis-class}
-\title{Parent class for basis functions}
+\title{Basis functions}
 \description{
-A basis function contains three slots, the first is a list of parameters (pars), the second is the number (n) of basis functions and the third is a list
-of functions (fn). The pars field usually contains parameters which appear in fn.
+An object of class \code{Basis} contains the basis functions used to construct the \eqn{S} matrix in fixed rank kriging. It contains five slots.
 }
 \details{
 
+
+Basis functions are a critical component of the \code{FRK} package and the package is designed to work with user-defined specifications of these. For convenience however, several functions aid the user to construct specific sets for a given set of data points. Please see \code{auto_basis} for more details. The function \code{radial_basis} helps the user construct a set of basis functions from a collection of locations and scale parameters.
 }
+\section{Slots}{
+
+\describe{
+\item{\code{manifold}}{an object of class \code{manifold} which contains information on the manifold and the distance metric used on the manifold. Type \code{help("manifold-class")} for more details}
+
+\item{\code{n}}{the number of basis functions in this set}
+
+\item{\code{fn}}{a list of length \code{n}, with each item the function of a specific basis function}
+
+\item{\code{pars}}{a list of parametersm where the \eqn{i}-th item in the list contains the parameters of the \eqn{i}-th basis function \code{fn[[i]]}}
+
+\item{\code{df}}{a data frame containing other attributes specific to each basis function (for example the geometric centre of the radial basis function)}
+}}
 \keyword{Basis}
 \keyword{functions}
 

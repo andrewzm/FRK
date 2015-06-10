@@ -4,13 +4,23 @@
 \name{manifold}
 \alias{manifold}
 \alias{manifold,Basis-method}
-\title{Manifold}
+\title{Retrieve manifold}
 \usage{
 manifold(.Object)
 
 \S4method{manifold}{Basis}(.Object)
 }
+\arguments{
+\item{.Object}{\code{FRK} object}
+}
 \description{
-Manifold
+Retrieve manifold from \code{FRK} object.
+}
+\examples{
+G <-  radial_basis(manifold = plane(),
+                   loc=matrix(0,1,2),
+                   scale=0.2,
+                   type="bisquare")
+manifold(G)
 }
 

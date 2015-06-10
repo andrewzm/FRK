@@ -2,11 +2,64 @@
 % Please edit documentation in R/SREutils.R
 \name{SRE}
 \alias{SRE}
-\title{Construct SRE object}
+\alias{SRE.fit}
+\title{Construct SRE object, fit and predict}
 \usage{
 SRE(f, data, basis, BAUs, est_error = T)
+
+SRE.fit(SRE_model, n_EM = 100L, tol = 1e-05, method = "EM",
+  print_lik = F)
+}
+\arguments{
+\item{f}{\code{R} formula relating the dependent variable (or transformations thereof) to covariates}
+
+\item{data}{list of objects of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame}}
+
+\item{basis}{object of class \code{Basis}}
+
+\item{BAUs}{object of class \code{SpatialPolygonsDataFrame}, the data frame in which must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality}
+
+\item{est_error}{a flag indicating whether the variance of the data should be estimated from variogram techniques. If this is set to 0, then \code{data} must contain a field \code{std}}
 }
 \description{
-Construct SRE object
+Main constructor of spatial random effects (SRE) object. Please type \code{help("SRE-class")} for more details on the object's properties and methods.
+}
+\details{
+\code{SRE()} is the main function in the program as it constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of basic aerial units (BAUs). The function first takes each object in the list \code{data} maps it to the BAUs -- this entails binning the point-referenced data into BAUs (and averaging within the BAU) and finding which BAUs are influenced by the polygon datasets. Following this the incidence matrix \code{Cmat} is constructed, which appears in the observation model \eqn{Z = CY + e}. All other required matrices are computed and returned as part of the object, please type \code{help("SRE-class")} for more details.
+}
+\examples{
+library(sp)
+library(ggplot2)
+library(dplyr)
+sim_process <- data.frame(x = seq(0.005,0.995,by=0.01)) \%>\%
+    mutate(y=0,proc = sin(x*10) + 0.3*rnorm(length(x)))
+sim_data <- sample_n(sim_process,50) \%>\%
+    mutate(z = proc + 0.1*rnorm(length(x)), std = 0.1)
+coordinates(sim_data) = ~x + y# change into an sp object
+grid_BAUs <- auto_BAUs(manifold=real_line(),data=sim_data,cellsize = c(0.01),type="grid")
+grid_BAUs$fs = 1
+
+## Set up SRE model
+G <- auto_basis(m = real_line(),
+                data=sim_data,
+                nres = 2,
+                regular = 6,
+                type = "bisquare",
+                subsamp = 20000)
+f <- z ~ 1
+S <- SRE(f,list(sim_data),G,
+         grid_BAUs,
+         est_error = FALSE)
+S <- SRE.fit(S,n_EM = 50,tol = 1e-5,print_lik=T)
+grid_BAUs <- SRE.predict(S,pred_locs = grid_BAUs,use_centroid = T)
+X <- slot(grid_BAUs,"data") \%>\%
+     filter(x >= 0 & x <= 1)
+
+g1 <- LinePlotTheme() +
+   geom_line(data=X,aes(x,y=mu)) +
+   geom_errorbar(data=X,aes(x=x,ymax = mu + 2*sqrt(var), ymin= mu - 2*sqrt(var))) +
+   geom_point(data = data.frame(sim_data),aes(x=x,y=z),size=3) +
+   geom_line(data=sim_process,aes(x=x,y=proc),col="red")
+print(g1)
 }
 

@@ -5,7 +5,7 @@
 \alias{distance}
 \alias{distance,manifold-method}
 \alias{distance,measure-method}
-\title{Retrieve distance measure used}
+\title{Compute distance}
 \usage{
 distance(d, x1, x2)
 
@@ -13,7 +13,18 @@ distance(d, x1, x2)
 
 \S4method{distance}{manifold}(d, x1, x2)
 }
+\arguments{
+\item{d}{object of class \code{measure} or \code{manifold}}
+
+\item{x1}{first coordinate}
+
+\item{x2}{second coordinate}
+}
 \description{
-Retrieve distance measure used
+Compute distance using object of class \code{measure} or \code{manifold}
+}
+\examples{
+distance(sphere(),matrix(0,1,2),matrix(10,1,2))
+distance(plane(),matrix(0,1,2),matrix(10,1,2))
 }
 

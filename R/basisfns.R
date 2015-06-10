@@ -24,7 +24,14 @@ radial_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,typ
 
 #' @title Automatic basis-function placement
 #' @export
-auto_basis <- function(m = plane(),data,nres=2,prune=0,subsamp=10000,type="Gaussian") {
+auto_basis <- function(m = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,type="Gaussian") {
+    if(!is(m,"manifold")) stop("m needs to be a manifold")
+    if(!is.numeric(nres) | nres < 0) stop("nres needs to be greater than zero")
+    if(!is.numeric(prune) | prune < 0) stop("prune needs to be greater than zero")
+    if(!is.numeric(subsamp) | subsamp < 0) stop("subsamp needs to be greater than zero")
+    if(!type %in% c("bisquare","Gaussian")) stop("type of basis functions can only be Gaussian or bisquare")
+    if((is(m,"sphere")  | is(m,"real_line")) & regular == 0) stop("Irregular basis only available on planes")
+
     isea3h <- centroid <- res <- NULL #(suppress warnings, these are loaded from data)
     coords <- coordinates(data)
 
@@ -35,25 +42,46 @@ auto_basis <- function(m = plane(),data,nres=2,prune=0,subsamp=10000,type="Gauss
     if(nrow(coords)>subsamp) {
         coords <- coords[sample(nrow(coords),size=subsamp,replace=FALSE),]
     }
-    if(is(m,"plane")) bndary_seg = inla.nonconvex.hull(coords,convex=-0.05)
-    loc <- scale <- NULL
-    G <- list()
-
-    if(is(m,"sphere")) load(system.file("extdata","isea3h.rda", package = "FRK"))
 
     xrange <- range(coords[,1])
     yrange <- range(coords[,2])
 
-    #         ## Find possible grid points for basis locations
+    if(is(m,"plane") & regular == 0) bndary_seg = INLA::inla.nonconvex.hull(coords,convex=-0.05)
+    if(is(m,"plane") & regular > 0) {
+        asp_ratio <- diff(yrange) / diff(xrange)
+        if(asp_ratio < 1) {
+            ny <- regular
+            nx <- round(ny / asp_ratio)
+        } else {
+            nx <- regular
+            ny <- round(nx * asp_ratio)
+        }
+    }
+
+    loc <- scale <- NULL
+    G <- list()
+
+    #if(is(m,"sphere")) load(system.file("extdata","isea3h.rda", package = "FRK"))
+    if(is(m,"sphere")) data(isea3h, envir=environment())
+
+    ## Find possible grid points for basis locations
     for(i in 1:nres) {
-        if(is(m,"plane")) {
+        if(is(m,"plane") & (regular == 0)) {
             ## Generate mesh and use these as centres
-            this_res_locs <- inla.mesh.2d(loc = matrix(apply(coords,2,mean),nrow=1),
+            this_res_locs <- INLA::inla.mesh.2d(loc = matrix(apply(coords,2,mean),nrow=1),
                                           boundary = list(bndary_seg),
                                           max.edge = max(diff(xrange),diff(yrange))/(2*2.5^(i-1)),
                                           cutoff = max(diff(xrange),diff(yrange))/(3*2.5^(i-1)))$loc[,1:2]
-        }  else if(is(m,"real_line")) {
-            this_res_locs <- matrix(seq(xrange[1],xrange[2],length=i*6))
+        } else if(is(m,"plane") & (regular> 0)) {
+            ## Generate mesh and use these as centres
+            xgrid <- seq(xrange[1] + diff(xrange)/(2*nx*i), xrange[2] - diff(xrange)/(2*nx*i), length =nx*i)
+            ygrid <- seq(yrange[1] + diff(yrange)/(2*ny*i), yrange[2] - diff(yrange)/(2*ny*i), length =ny*i)
+
+            this_res_locs <- xgrid %>%
+                expand.grid(ygrid) %>%
+                as.matrix()
+        } else if(is(m,"real_line")) {
+            this_res_locs <- matrix(seq(xrange[1],xrange[2],length=i*regular))
         } else if(is(m,"sphere")) {
             this_res_locs <- as.matrix(filter(isea3h,centroid==1,res==i)[c("lon","lat")])
         }
@@ -70,6 +98,7 @@ auto_basis <- function(m = plane(),data,nres=2,prune=0,subsamp=10000,type="Gauss
             if(prune > 0) {
                 if(j==1) {
                     rm_idx <- which(colSums(eval_basis(this_res_basis,coords)) < prune)
+                    if(length(rm_idx) == length(this_res_scales)) stop("prune is too large -- all functions at a resolution removed. Consider also removing number of resolutions.")
                     if(length(rm_idx) >0) this_res_locs <- this_res_locs[-rm_idx,,drop=FALSE]
                 }
             } else {
@@ -95,14 +124,16 @@ auto_basis <- function(m = plane(),data,nres=2,prune=0,subsamp=10000,type="Gauss
 #' @aliases eval_basis,Basis-matrix-method
 setMethod("eval_basis",signature(basis="Basis",s="matrix"),function(basis,s,output = "matrix"){
     stopifnot(output %in% c("list","matrix"))
-    .point_eval_fn(basis@fn,s,output)
+    space_dim <- dimensions(manifold(basis))
+    .point_eval_fn(basis@fn,s[,1:space_dim],output)
 })
 
 #' @rdname eval_basis
 #' @aliases eval_basis,Basis-SpatialPointsDataFrame-method
 setMethod("eval_basis",signature(basis="Basis",s="SpatialPointsDataFrame"),function(basis,s,output = "matrix"){
     stopifnot(output %in% c("matrix","list"))
-    .point_eval_fn(basis@fn,coordinates(s),output)
+    space_dim <- dimensions(manifold(basis))
+    .point_eval_fn(basis@fn,coordinates(s)[,1:space_dim],output)
 })
 
 #' @rdname eval_basis
@@ -113,12 +144,12 @@ setMethod("eval_basis",signature(basis="Basis",s="SpatialPolygonsDataFrame"),fun
     print("Averaging over polygons")
 
     if(opts_FRK$get("parallel") > 0) {
-            cl <- makeCluster(opts_FRK$parallel)
-            X <- mclapply(1:length(s), function(i) {
-                samps <- .samps_in_polygon(basis,s,i)
-                colSums(.point_eval_fn(basis@fn,samps))/nrow(samps)
-            },mc.cores = opts_FRK$get("parallel"))
-            stopCluster(cl)
+        cl <- makeCluster(opts_FRK$parallel)
+        X <- mclapply(1:length(s), function(i) {
+            samps <- .samps_in_polygon(basis,s,i)
+            colSums(.point_eval_fn(basis@fn,samps))/nrow(samps)
+        },mc.cores = opts_FRK$get("parallel"))
+        stopCluster(cl)
     } else  {
         X <- lapply(1:length(s), function(i) {
             samps <- .samps_in_polygon(basis,s,i)
@@ -135,18 +166,18 @@ setMethod("eval_basis",signature(basis="Basis",s="SpatialPolygonsDataFrame"),fun
     if(1) {
         x <- sapply(flist,function(f) f(s))
         as(x,"Matrix")
-     } else { ## The below works but likely to be slower.. whole prediction should be parallelised
-          envlist <- lapply(flist, function(f) environment(f))
-          flist <- lapply(flist, function(f) parse(text = deparse(f)))
-          x <- rhwrapper(Ntot = nrow(s),
-                        N = 4000,
-			            type="Matrix",
-                        f_expr = .rhpoint_eval_fn,
-                        flist=flist,
-                        envlist = envlist,
-                        s=s)
-         as(data.matrix(x),"Matrix")
-     }
+    } else { ## The below works but likely to be slower.. whole prediction should be parallelised
+        envlist <- lapply(flist, function(f) environment(f))
+        flist <- lapply(flist, function(f) parse(text = deparse(f)))
+        x <- rhwrapper(Ntot = nrow(s),
+                       N = 4000,
+                       type="Matrix",
+                       f_expr = .rhpoint_eval_fn,
+                       flist=flist,
+                       envlist = envlist,
+                       s=s)
+        as(data.matrix(x),"Matrix")
+    }
 }
 
 .samps_in_polygon <- function(basis,s,i) {
@@ -196,6 +227,7 @@ setMethod("eval_basis",signature(basis="Basis",s="SpatialPolygonsDataFrame"),fun
     }
 }
 
+# Gaussian Asymmetric Basis Function
 .bisquare_wrapper <- function(manifold,c,R) {
     stopifnot(dimensions(manifold) == ncol(c))
     stopifnot(is.numeric(R))

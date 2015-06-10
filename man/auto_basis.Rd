@@ -4,8 +4,8 @@
 \alias{auto_basis}
 \title{Automatic basis-function placement}
 \usage{
-auto_basis(m = plane(), data, nres = 2, prune = 0, subsamp = 10000,
-  type = "Gaussian")
+auto_basis(m = plane(), data, regular = 1, nres = 2, prune = 0,
+  subsamp = 10000, type = "Gaussian")
 }
 \description{
 Automatic basis-function placement

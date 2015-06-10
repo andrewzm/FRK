@@ -4,74 +4,70 @@
 #'  @docType class
 #'  @title measure
 #'
-#' @description An object of class measure contains a distance function and a variable \code{dim} with the dimensions of the Riemannian manifold over which the distance is computed. By default, the distance function used is inherited from the package fields.
-#'
+#' @description Measure class used for defining measures used to compute distances between points in objects constructed with the \code{FRK} package.
+#' @details An object of class measure contains a distance function and a variable \code{dim} with the dimensions of the Riemannian manifold over which the distance is computed. By default, the distance function used is inherited from the package fields.
 #' @keywords Manifolds, spheres, planes
 setClass("measure",representation(dist="function",dim="integer"),
          prototype(dist=fields::rdist,dim=2L))
 
 #'  @docType class
 #'  @title manifold
+#' @description The class \code{manifold} is virtual, which other manifold classes inherit from.
+#' @details A \code{manifold} object is characterised by a character variable \code{type} which contains a description of the manifold, and a variable \code{metric} of type \code{measure}. The typical measure is the Euclidean distance.
 #'
-#' @description Manifolds supported by the package.
+#' \code{FRK} supports three manifolds, the real line (in one dimensions), instantiated using \code{real_line()}, the 2D plane instantiated using \code{plane()} and the S2 sphere, instantiated using \code{sphere()}. User-specific manifolds can also be specified, however helper functions that are manifold specific, such as \code{auto_BAU} and \code{auto_BAUs} and \code{auto_basis} will not function with these. On the other hand, there one can always change the distance function used on the manifold, see vignettes for an example.
 #'
 #' @keywords Manifolds, spheres, planes
 setClass("manifold",representation(type="character", metric = "measure","VIRTUAL"))
 
-#'  @docType class
-#'  @title sphere
-#' @description Sphere manifold
-#'
-#' @keywords Manifolds, spheres, planes
+#' @rdname manifold-class
+#' @aliases sphere-class
 setClass("sphere",representation(radius="numeric"),contains="manifold")
 
-#'  @docType class
-#'  @title plane
-#'
-#' @description Plane
-#'
-#' @keywords Manifolds, spheres, planes
+#' @rdname manifold-class
+#' @aliases plane-class
 setClass("plane",contains="manifold")
 
-#'  @docType class
-#'  @title real_line
-#'
-#' @description 1D real line
-#'
-#' @keywords Manifolds, spheres, planes, lines
+#' @rdname manifold-class
+#' @aliases real_line-class
 setClass("real_line",contains="manifold")
-
 
 
 ####  Basis functions ####
 #'  @docType class
-#'  @title Parent class for basis functions
+#'  @title Basis functions
 #'
-#' @description A basis function contains three slots, the first is a list of parameters (pars), the second is the number (n) of basis functions and the third is a list
-#' of functions (fn). The pars field usually contains parameters which appear in fn.
-#'
+#' @description An object of class \code{Basis} contains the basis functions used to construct the \eqn{S} matrix in fixed rank kriging. It contains five slots.
+#' @slot manifold an object of class \code{manifold} which contains information on the manifold and the distance metric used on the manifold. Type \code{help("manifold-class")} for more details
+#' @slot n  the number of basis functions in this set
+#' @slot fn a list of length \code{n}, with each item the function of a specific basis function
+#' @slot pars a list of parametersm where the \eqn{i}-th item in the list contains the parameters of the \eqn{i}-th basis function \code{fn[[i]]}
+#' @slot df a data frame containing other attributes specific to each basis function (for example the geometric centre of the radial basis function)
+#' @details Basis functions are a critical component of the \code{FRK} package and the package is designed to work with user-defined specifications of these. For convenience however, several functions aid the user to construct specific sets for a given set of data points. Please see \code{auto_basis} for more details. The function \code{radial_basis} helps the user construct a set of basis functions from a collection of locations and scale parameters.
 #' @keywords Basis functions
 #' @rdname Basisclass
 setClass("Basis", representation(manifold="manifold",n = "numeric",fn="list",pars="list", df="data.frame"))
 
-#'  @docType class
-#'  @title Gaussian radial basis functions basis
-#'
-#' @description GRBFBasis inherits from the virtual class Basis. A GRBF basis functions is initialsied using the function \code{initGRBFbasis}.
-#'
-#' @keywords Basis functions, GRBF
-setClass("GRBFBasis",contains="Basis")
 
-#'  @title Bisquare radial basis functions basis
-#' @description bisquareBasis inherits from the virtual class Basis. A bisquare basis functions is initialsied using the function \code{initbisquarebasis}.
+#'  @title Spatial Random Effects class
+#' @description Central object of package, containing the model and all other information required for estimation and prediction.
+#' @details The spatial random effects (SRE) model is the model employed in fixed rank kriging, and the \code{SRE} object contains all information required for estimation and prediction from spatial data. Object slots contain both other objects (for example, an object of class \code{Basis}) and matrices derived from these objects (for example, the matrix \eqn{S}) in order to facilitate computations.
 #'
-#' @keywords Basis functions, GRBF
-setClass("bisquareBasis",contains="Basis")
-
-
-#'  @title SRE model
-#' @description SRE model
-#'
+#'@slot data the original data use to condition upon when training the model
+#'@slot basis object of class \code{Basis} used to construct the matrix \eqn{S}
+#'@slot BAUs object of class \code{SpatialPolygonsDataFrame} that contains the basic aerial units (BAUs) that are used to both (i) project the data onto a common discretisation if they are point-referenced and (ii) provide a BAU to data relationship if the data has a spatial footprint.
+#' @slot f formula used to define the SRE object. All covariates employed need to be specified in the object \code{BAUs}
+#' @slot S matrix constructed by evaluating the basis functions at all BAUs affected by the data
+#' @slot Ve observation variance-covariance matrix (typically diagonal)
+#' @slot Vfs fine-scale variance-covariance matrix (typically digonal) up to a constant of proportionality estimated in the framework
+#' @slot Z matrix of observations
+#' @slot Cmat incidence matrix mapping the observations to the BAUs
+#' @slot X matrix of covariates
+#' @slot mu_eta updated expectation of random effects (estimated)
+#' @slot S_eta updated covariance matrix of random effects (estimated)
+#' @slot Khat prior covariance matrix of random effects (estimated)
+#' @slot alphahat covariates weights (estimated)
+#' @slot sigma2fshat fine-scale variation scaler (estimated)
 #' @keywords Spatial random effects, fixed rank kriging
 setClass("SRE",representation(data="list",
                               basis="Basis",

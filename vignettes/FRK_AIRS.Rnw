@@ -11,9 +11,9 @@ Introduction
 library(sp)
 library(ggplot2)
 library(dplyr)
-library(FRK)
-#     devtools::load_all("~/Wollongong/pkgs/FRK",
-#                             export_all = FALSE)
+# library(FRK)
+      devtools::load_all("~/Wollongong/pkgs/FRK",
+                              export_all = FALSE)
 opts_FRK$set("progress",FALSE)
 opts_FRK$set("parallel",0L)
 @
@@ -32,7 +32,8 @@ proj4string(AIRS_05_2003)=CRS("+proj=longlat")
 
 <<eval=TRUE>>=
 ## Prediction (BAU) grid
-isea3h_sp_poldf <- auto_BAU(manifold=sphere(),res=6,data=NULL)
+isea3h_sp_poldf <- auto_BAUs(manifold=sphere(),res=6,data=NULL,cellsize = c(5,5),type="grid")
+isea3h_sp_poldf$fs = 1
 @
 
 

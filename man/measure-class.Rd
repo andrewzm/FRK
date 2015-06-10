@@ -5,10 +5,12 @@
 \alias{measure-class}
 \title{measure}
 \description{
-An object of class measure contains a distance function and a variable \code{dim} with the dimensions of the Riemannian manifold over which the distance is computed. By default, the distance function used is inherited from the package fields.
+Measure class used for defining measures used to compute distances between points in objects constructed with the \code{FRK} package.
 }
 \details{
 
+
+An object of class measure contains a distance function and a variable \code{dim} with the dimensions of the Riemannian manifold over which the distance is computed. By default, the distance function used is inherited from the package fields.
 }
 \keyword{Manifolds,}
 \keyword{planes}

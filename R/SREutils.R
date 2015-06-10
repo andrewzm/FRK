@@ -1,5 +1,46 @@
-#' @title Construct SRE object
+#' @title Construct SRE object, fit and predict
+#' @description Main constructor of spatial random effects (SRE) object. Please type \code{help("SRE-class")} for more details on the object's properties and methods.
+#' @param f \code{R} formula relating the dependent variable (or transformations thereof) to covariates
+#' @param data list of objects of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame}
+#' @param basis object of class \code{Basis}
+#' @param BAUs object of class \code{SpatialPolygonsDataFrame}, the data frame in which must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality
+#' @param est_error a flag indicating whether the variance of the data should be estimated from variogram techniques. If this is set to 0, then \code{data} must contain a field \code{std}
+#' @details \code{SRE()} is the main function in the program as it constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of basic aerial units (BAUs). The function first takes each object in the list \code{data} maps it to the BAUs -- this entails binning the point-referenced data into BAUs (and averaging within the BAU) and finding which BAUs are influenced by the polygon datasets. Following this the incidence matrix \code{Cmat} is constructed, which appears in the observation model \eqn{Z = CY + e}. All other required matrices are computed and returned as part of the object, please type \code{help("SRE-class")} for more details.
 #' @export
+#' @examples
+#' library(sp)
+#' library(ggplot2)
+#' library(dplyr)
+#' sim_process <- data.frame(x = seq(0.005,0.995,by=0.01)) %>%
+#'     mutate(y=0,proc = sin(x*10) + 0.3*rnorm(length(x)))
+#' sim_data <- sample_n(sim_process,50) %>%
+#'     mutate(z = proc + 0.1*rnorm(length(x)), std = 0.1)
+#' coordinates(sim_data) = ~x + y# change into an sp object
+#' grid_BAUs <- auto_BAUs(manifold=real_line(),data=sim_data,cellsize = c(0.01),type="grid")
+#' grid_BAUs$fs = 1
+#'
+#' ## Set up SRE model
+#' G <- auto_basis(m = real_line(),
+#'                 data=sim_data,
+#'                 nres = 2,
+#'                 regular = 6,
+#'                 type = "bisquare",
+#'                 subsamp = 20000)
+#' f <- z ~ 1
+#' S <- SRE(f,list(sim_data),G,
+#'          grid_BAUs,
+#'          est_error = FALSE)
+#' S <- SRE.fit(S,n_EM = 50,tol = 1e-5,print_lik=T)
+#' grid_BAUs <- SRE.predict(S,pred_locs = grid_BAUs,use_centroid = T)
+#' X <- slot(grid_BAUs,"data") %>%
+#'      filter(x >= 0 & x <= 1)
+#'
+#' g1 <- LinePlotTheme() +
+#'    geom_line(data=X,aes(x,y=mu)) +
+#'    geom_errorbar(data=X,aes(x=x,ymax = mu + 2*sqrt(var), ymin= mu - 2*sqrt(var))) +
+#'    geom_point(data = data.frame(sim_data),aes(x=x,y=z),size=3) +
+#'    geom_line(data=sim_process,aes(x=x,y=proc),col="red")
+#' print(g1)
 SRE <- function(f,data,basis,BAUs,est_error=T) {
 
     .check_args(f=f,data=data,basis=basis,BAUs=BAUs,est_error=est_error)
@@ -60,7 +101,7 @@ SRE <- function(f,data,basis,BAUs,est_error=T) {
         sigma2fshat = mean(diag(Ve)) / mean(diag(Vfs)))
 }
 
-#' @title Estimate SRE model parameters
+#' @rdname SRE
 #' @export
 SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM",print_lik=F) {
     if(!is.numeric(n_EM)) stop("n_EM needs to be an integer")
@@ -230,8 +271,9 @@ SRE.predict <- function(Sm,pred_locs = Sm@BAUs,use_centroid=T) {
         # Repeat until finding values on opposite sides of zero
         amp_factor <- 10; OK <- 0
         while(!OK) {
-            amp_factor <- amp_factor * 10
+           amp_factor <- amp_factor * 10
             if(!(sign(J(sigma2fs/amp_factor)) == sign(J(sigma2fs*amp_factor)))) OK <- 1
+            if(amp_factor > 1e12) browser() # stop("Cannot estimate sigma2fs. Please contact package administrator.")
         }
         sigma2fs_new <- uniroot(f = J,interval = c(sigma2fs/amp_factor,sigma2fs*amp_factor))$root
         D <- sigma2fs_new*Sm@Vfs + Sm@Ve

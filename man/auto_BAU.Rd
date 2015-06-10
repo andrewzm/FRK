@@ -3,16 +3,22 @@
 \docType{methods}
 \name{auto_BAU}
 \alias{auto-BAU,plane-method}
+\alias{auto-BAU,real_line-method}
+\alias{auto-BAU,sphere-method}
 \alias{auto_BAU}
 \alias{auto_BAU,plane-method}
+\alias{auto_BAU,real_line-method}
 \alias{auto_BAU,sphere-method}
 \title{Automatic BAU generation}
 \usage{
-auto_BAU(manifold, cellsize, res, type, data, ...)
+auto_BAU(manifold, cellsize, resl, type, d, convex, ...)
 
-\S4method{auto_BAU}{plane}(manifold, cellsize, res, type, data, ...)
+\S4method{auto_BAU}{plane}(manifold, cellsize = c(1, 1), resl = resl,
+  type = "hex", d = NULL, convex = -0.05, ...)
 
-\S4method{auto_BAU}{sphere}(manifold, cellsize, res, type, data, ...)
+\S4method{auto_BAU}{real_line}(manifold, cellsize, resl, type, d, convex, ...)
+
+\S4method{auto_BAU}{sphere}(manifold, cellsize, resl, type, d, convex, ...)
 }
 \description{
 Automatic BAU generation
