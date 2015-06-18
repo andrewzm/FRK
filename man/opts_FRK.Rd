@@ -10,8 +10,7 @@
   \item{\code{$}  }{\code{get:function(opt)}}
 }}
 \usage{
-opts_FRK$get()
-opts_FRK$set()
+opts_FRK
 }
 \description{
 The main options list for the FRK package.

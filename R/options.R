@@ -12,8 +12,6 @@ new_opts_FRK <- function(d = list(progress = TRUE, verbose = FALSE, parallel=6L,
 
 #' @title FRK options
 #' @description The main options list for the FRK package.
-#' @usage opts_FRK$get()
-#' opts_FRK$set()
 #' @format List of 2
 #' \itemize{
 #'   \item{\code{$}  }{\code{set:function(opt,value)}}

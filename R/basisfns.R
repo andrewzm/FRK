@@ -179,7 +179,7 @@ auto_basis <- function(m = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,t
 setMethod("eval_basis",signature(basis="Basis",s="matrix"),function(basis,s,output = "matrix"){
     stopifnot(output %in% c("list","matrix"))
     space_dim <- dimensions(manifold(basis))
-    .point_eval_fn(basis@fn,s[,1:space_dim],output)
+    .point_eval_fn(basis@fn,s[,1:space_dim,drop=F],output)
 })
 
 #' @rdname eval_basis
@@ -187,7 +187,7 @@ setMethod("eval_basis",signature(basis="Basis",s="matrix"),function(basis,s,outp
 setMethod("eval_basis",signature(basis="Basis",s="SpatialPointsDataFrame"),function(basis,s,output = "matrix"){
     stopifnot(output %in% c("matrix","list"))
     space_dim <- dimensions(manifold(basis))
-    .point_eval_fn(basis@fn,coordinates(s)[,1:space_dim],output)
+    .point_eval_fn(basis@fn,coordinates(s)[,1:space_dim,drop=F],output)
 })
 
 #' @rdname eval_basis
@@ -218,7 +218,8 @@ setMethod("eval_basis",signature(basis="Basis",s="SpatialPolygonsDataFrame"),fun
 .point_eval_fn <- function(flist,s,output="matrix") {
     #if(!opts_FRK$get("Rhipe")) {
     if(1) {
-        x <- sapply(flist,function(f) f(s))
+        #x <- sapply(flist,function(f) f(s))
+        x <- do.call("cbind",sapply(flist,function(f) f(s),simplify=FALSE))
         as(x,"Matrix")
     } else { ## The below works but likely to be slower.. whole prediction should be parallelised
         envlist <- lapply(flist, function(f) environment(f))

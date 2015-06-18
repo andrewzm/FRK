@@ -66,10 +66,22 @@ setGeneric("distance", function(d,x1,x2) standardGeneric("distance"))
 #' @details This function evaluates the basis functions at isolated points, or averages the basis functions over polygons, for computing the matrix \eqn{S}. The latter operation is carried out using Monte Carlo integration with 1000 samples per polygon. This function is embarassingly parallelisable and is thus Hadoop-enabled (provided a Hadoop backend is available and \code{opts_FRK$get("Rhipe")} is TRUE).
 #' @examples
 #' library(sp)
-#' data(meuse)
-#' coordinates(meuse) = ~x+y # change into an sp object
-#' G <- auto_basis(m = plane(),data=meuse,nres = 2,regular=2,prune=10,type = "Gaussian")
-#' S <- eval_basis(G,matrix(c(180000,332000),1,2))
+#'
+#' ### Create a synthetic dataset
+#' d <- data.frame(lon = runif(n=1000,min = -179, max = 179),
+#'                 lat = runif(n=1000,min = -90, max = 90),
+#'                 z = rnorm(5000))
+#' coordinates(d) <- ~lon + lat
+#' proj4string(d)=CRS("+proj=longlat")
+#'
+#' ### Now create basis functions over sphere
+#' G <- auto_basis(m = sphere(),data=d,
+#'                 nres = 2,prune=15,
+#'                 type = "bisquare",
+#'                 subsamp = 20000)
+#'
+#' ### Now evaluate basis functions at origin
+#' S <- eval_basis(G,matrix(c(0,0),1,2))
 #' @export
 setGeneric("eval_basis", function(basis,s,output="matrix") standardGeneric("eval_basis"))
 
