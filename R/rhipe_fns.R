@@ -24,8 +24,8 @@ rhwrapper <- function(Ntot = 20, N = 10,type="data.frame",f_expr,...) {
         map      = map1,
         input    = njobs,
         output   = Rhipe::rhfmt("reduced_data", type = "sequence"),
-        mapred   = list(mapred.map.tasks=njobs,
-			mapred.reduce.tasks=0),
+        mapred = list(mapreduce.job.maps=njobs, 
+                      mapreduce.job.reduces=0),
         readback = TRUE,
         parameters = c(list(...),f_expr=f_expr,N=N,Ntot=Ntot,type=type)
     )

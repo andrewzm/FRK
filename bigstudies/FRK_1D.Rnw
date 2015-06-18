@@ -1,5 +1,5 @@
 % !Rnw root = FRK_Master.Rnw
-% !TeX root = Master.Rnw
+\section{Test}
 
 <<eval=TRUE>>=
 library(sp)
