@@ -1,4 +1,5 @@
 % !Rnw root = FRK_Master.Rnw
+% !TeX root = Master.Rnw
 
 <<eval=TRUE>>=
 library(sp)

@@ -1,16 +1,17 @@
 \documentclass{article}
 
-%\VignetteEngine{knitr::knitr}
-%\VignetteIndexEntry{FRK for prediction of CO2 from AIRS data}
+% \VignetteEngine{knitr::knitr}
+% \VignetteIndexEntry{FRK for prediction of CO2 from AIRS data}
 
 \begin{document}
+\SweaveOpts{concordance=TRUE}
 
-<<include=FALSE>>=
-library(knitr)
-opts_chunk$set(
-concordance=TRUE
-)
-@
+%' <<include=FALSE>>=
+%' library(knitr)
+%' opts_chunk$set(
+%' concordance=TRUE
+%' )
+%' @
 
 \begin{abstract}
 
@@ -41,11 +42,13 @@ concordance=TRUE
 \subsection{Simple examples}
 
 
-<<'child-FRK_1D.Rnw', child='FRK_1D.Rnw'>>=
-@
+%' <<'child-FRK_1D.Rnw', child='FRK_1D.Rnw'>>=
+%' @
 
-<<'child-FRK_intro.Rnw', child='FRK_intro.Rnw'>>=
-@
+%' <<'child-FRK_intro.Rnw', child='FRK_intro.Rnw'>>=
+%' @
+
+\SweaveInput{FRK_1D.Rnw}
 
 1-d and 2-d
 
@@ -58,8 +61,8 @@ concordance=TRUE
 
 \section{Global prediction of global mid-tropospheric CO2 }
 
-<<'child-FRK_AIRS.Rnw', child='FRK_AIRS.Rnw'>>=
-@
+%' <<'child-FRK_AIRS.Rnw', child='FRK_AIRS.Rnw'>>=
+%' @
 
 \section{Global prediction of sea-surface temperatures using Hadoop}
 
