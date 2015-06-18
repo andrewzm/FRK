@@ -1,9 +1,4 @@
-\documentclass{article}
-
-%\VignetteEngine{knitr::knitr}
-%\VignetteIndexEntry{Introduction to the FRK package}
-
-\begin{document}
+% !Rnw root = FRK_Master.Rnw
 
 <<setup, include=FALSE, cache=FALSE>>=
 library(knitr)
@@ -86,7 +81,3 @@ if(require(INLA)) { ## Need INLA from here on
         print(g2)
 }
 @
-
-Error?
-
-\end{document}

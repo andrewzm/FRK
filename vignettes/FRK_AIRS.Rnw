@@ -1,12 +1,3 @@
-\documentclass{article}
-
-%\VignetteEngine{knitr::knitr}
-%\VignetteIndexEntry{FRK for prediction of CO2 from AIRS data}
-
-\begin{document}
-
-Introduction
-
 <<eval=TRUE>>=
 library(sp)
 library(ggplot2)
@@ -91,7 +82,3 @@ g2 <- (EmptyTheme() +
 print(g1)
 print(g2)
 @
-
-Need an end comment
-
-\end{document}

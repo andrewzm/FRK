@@ -41,14 +41,25 @@ concordance=TRUE
 \subsection{Simple examples}
 
 
-%' <<'child-FRK_1D.Rnw', child='FRK_1D.Rnw'>>=
-%' @
+<<'child-FRK_1D.Rnw', child='FRK_1D.Rnw'>>=
+@
+
+<<'child-FRK_intro.Rnw', child='FRK_intro.Rnw'>>=
+@
 
 1-d and 2-d
 
 \subsection{Modifying the distance measure - a 1D space-time example}
 
+% NO INLA
+% <<'child-FRK_1D_ST.Rnw', child='FRK_1D_ST.Rnw'>>=
+% @
+
+
 \section{Global prediction of global mid-tropospheric CO2 }
+
+<<'child-FRK_AIRS.Rnw', child='FRK_AIRS.Rnw'>>=
+@
 
 \section{Global prediction of sea-surface temperatures using Hadoop}
 

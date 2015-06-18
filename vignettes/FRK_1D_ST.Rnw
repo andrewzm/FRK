@@ -1,11 +1,4 @@
-\documentclass{article}
-
-%\VignetteEngine{knitr::knitr}
-%\VignetteIndexEntry{FRK for prediction of CO2 from AIRS data}
-
-\begin{document}
-
-Introduction
+% !Rnw root = FRK_Master.Rnw
 
 <<eval=TRUE>>=
 library(sp)
@@ -100,6 +93,3 @@ g1 <- EmptyTheme() +
 print(g1)
 @
 
-Need an end comment
-
-\end{document}
