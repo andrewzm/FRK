@@ -31,20 +31,31 @@ Two types of BAUs are supported by \code{FRK}: ``hex'' (hexagonal) and ``grid'' 
   If the object \code{data} is provided, then automatic domain selection is carried out by employing the \code{INLA} function \code{inla.nonconvex.hull}, which finds a (non-convex) hull surrounding the data points (or centroids of the data polygons). This domain is extended and smoothed using the \code{convex} parameter. The parameter \code{convex} should be negative, and a larger absolute value for \code{convex} results in a larger domain with smoother boundaries. Due to the dependency on hull construction, \code{INLA} needs to be installed in order to use this function unless BAUs on a sphere are desired (note that \code{INLA} is not available on CRAN at time of writing).
 }
 \examples{
+## First a 1D example
 library(sp)
+data <- data.frame(x = runif(10)*10, y = 0, z= runif(10)*10)
+coordinates(data) <- ~x+y
+Grid1D_df <- auto_BAUs(manifold = real_line(),
+                       cellsize = 1,
+                       data=data)
+spplot(Grid1D_df)
+
+## Now a 2D example
 data(meuse)
 coordinates(meuse) = ~x+y # change into an sp object
-GridPols_df <- auto_BAUs(manifold = plane(),
-                         cellsize = 200,
-                         type = "grid",
-                         data = meuse,
-                         convex=-0.05)
-plot(GridPols_df)
-HexPols_df <- auto_BAUs(manifold = plane(),
-                        cellsize = 200,
-                        type = "hex",
-                        data = meuse,
-                        convex=-0.05)
-plot(HexPols_df)
+if(require(INLA)) { # INLA is needed to find the non-convex hull
+     GridPols_df <- auto_BAUs(manifold = plane(),
+                             cellsize = 200,
+                             type = "grid",
+                             data = meuse,
+                             convex=-0.05)
+     plot(GridPols_df)
+     HexPols_df <- auto_BAUs(manifold = plane(),
+                            cellsize = 200,
+                            type = "hex",
+                            data = meuse,
+                            convex=-0.05)
+     plot(HexPols_df)
+ }
 }
 
