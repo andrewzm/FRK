@@ -4,7 +4,14 @@
 %\VignetteIndexEntry{FRK for prediction of CO2 from AIRS data}
 
 \begin{document}
-\SweaveOpts{concordance=TRUE}
+
+<<include=FALSE>>=
+library(knitr)
+opts_chunk$set(
+concordance=TRUE
+)
+@
+
 \begin{abstract}
 
 \end{abstract}
@@ -18,11 +25,11 @@
 \subsection{Estimation}
 
 \subsection{Prediction}
-\subsection{Validity of sparse matrix inversion}
+\subsection{Applicaiton of sparse matrix inversion}
 
 \section{Distributed computation with Hadoop}
 
-\subsection{Hadoop and Rhipe}
+\subsection{Hadoop and Rhipe for parallelising data and computations}
 
 \subsection{FRK Operations to parallelise}
 
@@ -33,7 +40,10 @@
 \subsection{Overall program structure}
 \subsection{Simple examples}
 
-\SweaveInput{FRK_1D.Rnw}
+
+%' <<'child-FRK_1D.Rnw', child='FRK_1D.Rnw'>>=
+%' @
+
 1-d and 2-d
 
 \subsection{Modifying the distance measure - a 1D space-time example}
