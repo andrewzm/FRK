@@ -1,4 +1,8 @@
 .Rproj.user
 .Rhistory
 .RData
+vignettes/*.log
+vignettes/*.tex
+vignettes/*.synctex.gz
+vignettes/figure
 src/*.o

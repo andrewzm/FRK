@@ -1,0 +1,47 @@
+\documentclass{article}
+
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{FRK for prediction of CO2 from AIRS data}
+
+\begin{document}
+\SweaveOpts{concordance=TRUE}
+\begin{abstract}
+
+\end{abstract}
+
+\section{Introduction}
+
+\section{Fixed Rank Kriging}
+
+\subsection{SRE model}
+
+\subsection{Estimation}
+
+\subsection{Prediction}
+\subsection{Validity of sparse matrix inversion}
+
+\section{Distributed computation with Hadoop}
+
+\subsection{Hadoop and Rhipe}
+
+\subsection{FRK Operations to parallelise}
+
+\section{Package layout}
+
+\subsection{Classes and methods}
+
+\subsection{Overall program structure}
+\subsection{Simple examples}
+
+\SweaveInput{FRK_1D.Rnw}
+1-d and 2-d
+
+\subsection{Modifying the distance measure - a 1D space-time example}
+
+\section{Global prediction of global mid-tropospheric CO2 }
+
+\section{Global prediction of sea-surface temperatures using Hadoop}
+
+\section{Conclusion}
+
+\end{document}
