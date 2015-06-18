@@ -1,19 +1,12 @@
-\documentclass{article}
-
-%\VignetteEngine{knitr::knitr}
-%\VignetteIndexEntry{FRK for prediction of CO2 from AIRS data}
-
-\begin{document}
-
-Introduction
+% !Rnw root = FRK_Master.Rnw
 
 <<eval=TRUE>>=
 library(sp)
 library(ggplot2)
 library(dplyr)
-#library(FRK)
-     devtools::load_all("~/Wollongong/pkgs/FRK",
-                             export_all = FALSE)
+library(FRK)
+#      devtools::load_all("~/Wollongong/pkgs/FRK",
+#                              export_all = FALSE)
 opts_FRK$set("progress",FALSE)
 opts_FRK$set("parallel",0L)
 @
@@ -55,11 +48,11 @@ S <- SRE(f,list(sim_data),G,
 @
 
 <<eval=TRUE>>=
-S <- SRE.fit(S,n_EM = 50,tol = 1e-5,print_lik=T)
+S <- SRE.fit(S,n_EM = 50,tol = 1e-5,print_lik=TRUE)
 @
 
 <<eval=TRUE>>=
-grid_BAUs <- SRE.predict(S,pred_locs = grid_BAUs,use_centroid = T)
+grid_BAUs <- SRE.predict(S,pred_locs = grid_BAUs,use_centroid = TRUE)
 @
 
 <<eval=TRUE>>=
@@ -76,5 +69,3 @@ print(g1)
 @
 
 Need an end comment
-
-\end{document}

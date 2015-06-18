@@ -82,4 +82,4 @@ int (*amd_printf) (const char *, ...) = printf ;
 int (*amd_printf) (const char *, ...) = NULL ;
 #endif */
 #include <stdio.h>
-int (*amd_printf) (const char *, ...) = printf ;
+int (*amd_printf) (const char *, ...) = NULL ;

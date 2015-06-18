@@ -7,7 +7,7 @@
 \alias{show_basis,Basis-method}
 \title{Show basis functions}
 \usage{
-show_basis(g, basis, ...)
+show_basis(g, basis)
 
 \S4method{show_basis}{ANY,Basis}(g = ggplot(), basis)
 }
@@ -17,10 +17,10 @@ show_basis(g, basis, ...)
 \item{basis}{object of class \code{Basis}}
 }
 \description{
-Generic plotting function for displaying the basis functions
+Generic plotting function for illustrating the basis functions.
 }
 \details{
-The function \code{show_basis} adapts its behaviour to the manifold being used. With \code{real_line}, the one-dimensional basis functions are plotted with colour distinguishing between the different resolutions. With \code{plane}, only radial basis functions are supported (at present). Each basis function is shown as a circle with diameter is equal to the \code{scale} parameter of the function. Linetype distinguishes the resolution. With \code{sphere}, the the centres of the basis functions are show as circles, with larger sizes corresponding to lower resolutions.
+The function \code{show_basis} adapts its behaviour to the manifold being used. With \code{real_line}, the one-dimensional basis functions are plotted with colour distinguishing between the different resolutions. With \code{plane}, only radial basis functions are supported (at present). Each basis function is shown as a circle with diameter equal to the \code{scale} parameter of the function. Linetype distinguishes the resolution. With \code{sphere}, the centres of the basis functions are shown as circles, with larger sizes corresponding to lower (i.e., coarser) resolutions.
 }
 \examples{
 library(ggplot2)

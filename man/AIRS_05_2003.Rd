@@ -19,10 +19,10 @@
 AIRS_05_2003
 }
 \description{
-Mid-troposheric CO2 measurements from the Atmospheric InfraRed Sounder (AIRS). The data represent measurements between 60 degrees S and 90 degrees North at roughly 1:30 pm local time on 1 May through 16 May 2003
+Mid-troposheric CO2 measurements from the Atmospheric InfraRed Sounder (AIRS). The data represent measurements between 60 degrees S and 90 degrees N at roughly 1:30 pm local time on 1 May through 16 May 2003.
 }
 \references{
-Chahine, M., et al. (2006). AIRS: Improving weather forecasting and providing new data on greenhouse gases. Bulletin of the American Meteorological Society 87, 911–26.
+Chahine, M. et al. (2006). AIRS: Improving weather forecasting and providing new data on greenhouse gases. Bulletin of the American Meteorological Society 87, 911--26.
 }
 \keyword{datasets}
 

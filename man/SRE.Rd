@@ -3,12 +3,15 @@
 \name{SRE}
 \alias{SRE}
 \alias{SRE.fit}
+\alias{SRE.predict}
 \title{Construct SRE object, fit and predict}
 \usage{
-SRE(f, data, basis, BAUs, est_error = T)
+SRE(f, data, basis, BAUs, est_error = TRUE)
 
 SRE.fit(SRE_model, n_EM = 100L, tol = 1e-05, method = "EM",
-  print_lik = F)
+  print_lik = FALSE)
+
+SRE.predict(SRE_model, pred_locs = SRE_model@BAUs, use_centroid = TRUE)
 }
 \arguments{
 \item{f}{\code{R} formula relating the dependent variable (or transformations thereof) to covariates}
@@ -17,20 +20,44 @@ SRE.fit(SRE_model, n_EM = 100L, tol = 1e-05, method = "EM",
 
 \item{basis}{object of class \code{Basis}}
 
-\item{BAUs}{object of class \code{SpatialPolygonsDataFrame}, the data frame in which must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality}
+\item{BAUs}{object of class \code{SpatialPolygonsDataFrame}, the data frame which must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality}
 
-\item{est_error}{a flag indicating whether the variance of the data should be estimated from variogram techniques. If this is set to 0, then \code{data} must contain a field \code{std}}
+\item{est_error}{flag indicating whether the variance of the data should be estimated from variogram techniques. If this is set to 0, then \code{data} must contain a field \code{std}}
+
+\item{SRE_model}{object returned from the constructor \code{SRE()}}
+
+\item{n_EM}{maximum number of iterations for the EM algorithm}
+
+\item{tol}{convergence tolerance for the EM algorithm}
+
+\item{method}{parameter estimation method to employ. Currently only \code{EM} is supported}
+
+\item{print_lik}{flag indicating whether likelihood should be printed or not on convergence of the estimation algorithm}
+
+\item{pred_locs}{object of class \code{SpatialPolygonsDataFrame} containing the prediction polygons. The data frame of \code{pred_locs} must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality. Ideally, \code{pred_locs} is identical to \code{BAUs} above}
+
+\item{use_centroid}{a flag indicating whether the prediction over a BAU can be simply taken as a point prediction at the BAU's centroid. This should only be done if the BAUs on which the model is trained coincide with the BAUs used in \code{SRE()}}
 }
 \description{
-Main constructor of spatial random effects (SRE) object. Please type \code{help("SRE-class")} for more details on the object's properties and methods.
+Main constructor of spatial random effects (SRE) object. Please see \code{\link{SRE-class}} for more details on the object's properties and methods.
 }
 \details{
-\code{SRE()} is the main function in the program as it constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of basic aerial units (BAUs). The function first takes each object in the list \code{data} maps it to the BAUs -- this entails binning the point-referenced data into BAUs (and averaging within the BAU) and finding which BAUs are influenced by the polygon datasets. Following this the incidence matrix \code{Cmat} is constructed, which appears in the observation model \eqn{Z = CY + e}. All other required matrices are computed and returned as part of the object, please type \code{help("SRE-class")} for more details.
+\code{SRE()} is the main function in the program as it constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of basic aerial units (BAUs). The function first takes each object in the list \code{data} and maps it to the BAUs -- this entails binning the point-referenced data into BAUs (and averaging within the BAU) and finding which BAUs are influenced by the polygon datasets. Following this the incidence matrix \code{Cmat} is constructed, which appears in the observation model \eqn{Z = CY + e}, where \eqn{C} is the incidence matrix. All other required matrices are computed and returned as part of the object, please see \code{\link{SRE-class}} for more details.
+
+\code{SRE.fit()} takes an object of class \code{SRE} and estimates all unknown parameters, namely the covariance matrix \eqn{K}, the fine scale variance \eqn{\sigma^2_{fs}} and the regression parameters \eqn{\alpha}. The only method currently implemented is the expectation maximisation (EM) algorithm, which the user configures through \code{n_EM} and \code{tol}. The latter parameter, \code{tol}, is used as in Katzfuss and Cressie (2011), that is, the log-likelihood (given in Equation (16) in that work) is evaluated at each iteration at the current parameter estimate and convergence is assumed reach when this quantity stops changing by more than \code{tol}.
+
+The actual computations for the E-step and M-step are relatively straightforward. The E-step contains an inverse of an \eqn{n \times n} matrix, where \code{n} is the number of basis functions which should not exceed 2000. The M-step first updates the matrix \eqn{K}, which only depends on the sufficient statistics of the basis weights \eqn{\eta}. Then, a line search is used to update the fine-scale variance \eqn{\sigma^2_{fs}} and the regression parameters \eqn{\alpha}. Since the udpates of these last two parameters are not independent, the updates are iterated until the change in \eqn{\sigma^2_{fs}} is no more than 0.1\%.
+
+Once the parameters are fitted, the \code{SRE} object is passed onto the function \code{SRE.predict()} in order to carry out optimal predictions over selected polygons, typically the same BAUs used to construct the SRE model with \code{SRE()}. The first part of the prediction process is to construct the matrix \eqn{S} by averaging the basis functions over the prediction polygons, using Monte Carlo integration with 1000 samples. This is a computationally-intensive process and can be distributed over the Hadoop backend if desired. On the other hand, one could set \code{use_centroid = TRUE} and treat the prediction over the entire polygon as that of a BAU at the centre of the polyon. This will yield valid results only if the polygon is itself a BAU (which many times it is) and if the BAUs are themselves relatively small. Once the matrix \eqn{S} is found, a standard Gaussian inversion using the estimated parameters is used. In order to take advantage of the sparsity of the matrices we carry out sparse matrix inversions using the theory of Erisman and Tinney (1975). For a proof of the validity of this technique please see the accompanying paper.
+
+\code{SRE.predict} returns the BAUs, which are of class \code{SpatialPolygonsDataFrame}, with two added attributes, \code{mu} and \code{var}. These can then be easily plotted using \code{spplot} or \code{ggplot2} (in conjunction with \code{\link{SpatialPolygonsDataFrame_to_df}}) as shown in the package vignettes.
 }
 \examples{
 library(sp)
 library(ggplot2)
 library(dplyr)
+
+### Generate process and data
 sim_process <- data.frame(x = seq(0.005,0.995,by=0.01)) \%>\%
     mutate(y=0,proc = sin(x*10) + 0.3*rnorm(length(x)))
 sim_data <- sample_n(sim_process,50) \%>\%
@@ -39,7 +66,7 @@ coordinates(sim_data) = ~x + y# change into an sp object
 grid_BAUs <- auto_BAUs(manifold=real_line(),data=sim_data,cellsize = c(0.01),type="grid")
 grid_BAUs$fs = 1
 
-## Set up SRE model
+### Set up SRE model
 G <- auto_basis(m = real_line(),
                 data=sim_data,
                 nres = 2,
@@ -50,16 +77,25 @@ f <- z ~ 1
 S <- SRE(f,list(sim_data),G,
          grid_BAUs,
          est_error = FALSE)
-S <- SRE.fit(S,n_EM = 50,tol = 1e-5,print_lik=T)
-grid_BAUs <- SRE.predict(S,pred_locs = grid_BAUs,use_centroid = T)
+
+### Fit with 5 EM iterations so as not to take too much time
+S <- SRE.fit(S,n_EM = 5,tol = 1e-5,print_lik=TRUE)
+
+### Predict over BAUs
+grid_BAUs <- SRE.predict(S,pred_locs = grid_BAUs,use_centroid = TRUE)
+
+### Plot
 X <- slot(grid_BAUs,"data") \%>\%
      filter(x >= 0 & x <= 1)
-
 g1 <- LinePlotTheme() +
    geom_line(data=X,aes(x,y=mu)) +
    geom_errorbar(data=X,aes(x=x,ymax = mu + 2*sqrt(var), ymin= mu - 2*sqrt(var))) +
    geom_point(data = data.frame(sim_data),aes(x=x,y=z),size=3) +
    geom_line(data=sim_process,aes(x=x,y=proc),col="red")
 print(g1)
+}
+\references{
+Katzfuss, M., & Cressie, N. (2011). Spatio-temporal smoothing and EM estimation for massive remote-sensing data sets. Journal of Time Series Analysis, 32(4), 430--446.
+Erisman, A. M., & Tinney, W. F. (1975). On computing certain elements of the inverse of a sparse matrix. Communications of the ACM, 18(3), 177--179.
 }
 

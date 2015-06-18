@@ -26,13 +26,13 @@ eval_basis(basis, s, output = "matrix")
 
 \item{s}{object of class \code{matrix}, \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame}}
 
-\item{output}{either be "list" or "matrix", depending on desired output format.}
+\item{output}{either a "list" or "matrix", depending on desired output format.}
 }
 \description{
-Evaluate basis functions at points or over polygons
+Evaluate basis functions at points or average functions over polygons
 }
 \details{
-This function evaluates the basis functions at isolated points, or averages the basis functions over polygons, for computing the matrix \eqn{S}. The latter operation is carried out using Monte Carlo integration with 1000 samples per polygon. This function is embarassingly parallelisable and is thus Hadoop-enabled (provided a Hadoop backend is available and opts_FRK$get("Rhipe") is TRUE).
+This function evaluates the basis functions at isolated points, or averages the basis functions over polygons, for computing the matrix \eqn{S}. The latter operation is carried out using Monte Carlo integration with 1000 samples per polygon. This function is embarassingly parallelisable and is thus Hadoop-enabled (provided a Hadoop backend is available and \code{opts_FRK$get("Rhipe")} is TRUE).
 }
 \examples{
 library(sp)

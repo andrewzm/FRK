@@ -1,6 +1,8 @@
 #' Global rhwrapper
 #' @noRd
 rhwrapper <- function(Ntot = 20, N = 10,type="data.frame",f_expr,...) {
+    if(!(require(Rhipe))) stop("Rhipe required for using Hadoop backend")
+
     njobs <- ceiling(Ntot/N)
 
     map1 <- expression({
@@ -18,10 +20,10 @@ rhwrapper <- function(Ntot = 20, N = 10,type="data.frame",f_expr,...) {
         })
     })
 
-    mapreduce1 <- rhwatch(
+    mapreduce1 <- Rhipe::rhwatch(
         map      = map1,
         input    = njobs,
-        output   = rhfmt("reduced_data", type = "sequence"),
+        output   = Rhipe::rhfmt("reduced_data", type = "sequence"),
         mapred   = list(mapred.map.tasks=njobs,
 			mapred.reduce.tasks=0),
         readback = TRUE,

@@ -7,7 +7,10 @@
 \usage{
 \S4method{initialize}{manifold}(.Object)
 }
+\arguments{
+\item{.Object}{\code{manfold} object passed up from lower-level constructor}
+}
 \description{
-Buffer manifold initialisation. This function should not be called directly.
+Manifold initialisation. This function should not be called directly as \code{manifold} is a virtual class.
 }
 

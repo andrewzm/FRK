@@ -7,7 +7,27 @@
 radial_basis(manifold = sphere(), loc = matrix(c(1, 0), nrow = 1),
   scale = 1, type = "Gaussian")
 }
+\arguments{
+\item{manifold}{object of class \code{manifold}, for example, a sphere}
+
+\item{loc}{a matrix of size \code{n} by \code{dimensions(manifold)} indicating centres of basis functions}
+
+\item{scale}{vector of length \code{n} containing the scale parameters of the basis functions. See details}
+
+\item{type}{either ``Gaussian'' or ``bisquare''}
+}
 \description{
-Construct a set of radial basis functions
+Construct a set of radial basis functions based on pre-specified location and scale parameters.
+}
+\details{
+This functions lays out radial basis functions in a domain of interest based on pre-specified location and scale parameters. If the type is ``Gaussian'', then the scale corresponds to a distance of one standard deviation. If the type is ``bisquare'', then the scale corresponds to the range of support of the bisquare function.
+}
+\examples{
+library(ggplot2)
+G <-  radial_basis(manifold = real_line(),
+                   loc=matrix(1:10,10,1),
+                   scale=rep(2,10),
+                   type="bisquare")
+show_basis(ggplot(),G)
 }
 

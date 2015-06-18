@@ -4,19 +4,30 @@
 \name{opts_FRK}
 \alias{opts_FRK}
 \title{FRK options}
-\format{\preformatted{List of 2
- $ set:function (opt, value)  
-  ..- attr(*, "srcref")=Class 'srcref'  atomic [1:8] 5 16 8 5 16 5 5 8
-  .. .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0xa7ce838> 
- $ get:function (opt)  
-  ..- attr(*, "srcref")=Class 'srcref'  atomic [1:8] 9 11 12 5 11 5 9 12
-  .. .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0xa7ce838> 
+\format{List of 2
+\itemize{
+  \item{\code{$}  }{\code{set:function(opt,value)}}
+  \item{\code{$}  }{\code{get:function(opt)}}
 }}
 \usage{
-opts_FRK
+opts_FRK$get()
+opts_FRK$set()
 }
 \description{
-The main options list for the FRK package
+The main options list for the FRK package.
+}
+\details{
+\code{opts_FRK} is a list containing two functions, \code{set} and \code{get}, which can be used to set options and retrieve options, respectively. Currently \code{FRK} uses four options.
+\itemize{
+ \item{"progress":}{ a flag indicating whether progress bars should be displayed or not}
+ \item{"verbose":}{ a flag indicating whether certain progress monitors should be shown or not}
+ \item{"parallel":}{ an integer indicating the number of cores to use. A number 0 or 1 indicates no parallelism}
+ \item{"Rhipe":}{ a flag indicating whether a Hadoop backend should be used. This is an advanced option and should only be used with massive models (and obviously only where Hadoop is installed and running)}
+}
+}
+\examples{
+opts_FRK$set("parallel",2L)
+opts_FRK$get("parallel")
 }
 \keyword{datasets}
 

@@ -16,7 +16,7 @@
 isea3h
 }
 \description{
-The data used here was obtained from http://webpages.sou.edu/~sahrk/dgg/isea.old/gen/isea3h.html and represent ISEA discrete global grids (DGGs) generated using the DGGRID software. The original .gen files were converted to a data frame using the function \code{dggrid_gen_to_df}, available with the \code{FRK} package.'
+The data used here was obtained from http://webpages.sou.edu/~sahrk/dgg/isea.old/gen/isea3h.html and represent ISEA discrete global grids (DGGRIDs) generated using the \code{DGGRID} software. The original .gen files were converted to a data frame using the function \code{dggrid_gen_to_df}, available with the \code{FRK} package.
 }
 \references{
 Sahr, K. (2008) Location coding on icosahedral aperture 3 hexagon discrete global grids. Computers, Environment and Urban Systems, 32(3):174-187.

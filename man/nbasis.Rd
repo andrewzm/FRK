@@ -17,7 +17,7 @@ nbasis(.Object)
 \item{.Object}{object of class \code{Basis} or \code{SRE}}
 }
 \description{
-Retrieve number of basis functions from \code{Basis} or \code{SRE} object
+Retrieve the number of basis functions from \code{Basis} or \code{SRE} object.
 }
 \examples{
 library(sp)

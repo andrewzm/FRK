@@ -7,7 +7,56 @@
 auto_basis(m = plane(), data, regular = 1, nres = 2, prune = 0,
   subsamp = 10000, type = "Gaussian")
 }
+\arguments{
+\item{m}{object of class \code{manifold}, for example, \code{sphere} or \code{plane}}
+
+\item{data}{oject of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame} containing the data on which basis-function placement is based, see details}
+
+\item{regular}{an integer indicating the number of regularly-placed basis functions at the first resolution. In two dimensions, this dictates smallest number of basis functions in a row or column at the lowest resolution. If \code{regular=0}, an irregular grid is used, one that is based on the triangulation of the domain with increased mesh density in areas of high data density, see details}
+
+\item{nres}{the number of basis-function resolutions to use}
+
+\item{prune}{a threshold parameter which dictates when a basis function is considered irrelevent or unidentifiable, and thus removed, see details}
+
+\item{subsamp}{the maximum amount of data points to consider when carrying out basis-function placement: these data objects are randomly sampled from the full dataset. Keep this number fairly high (on the order of 10^5) otherwise high resolution basis functions may be spuriously removed}
+
+\item{type}{the type of basis functions to use. Currently only ``Gaussian'' and ``bisquare'' are supported}
+}
 \description{
-Automatic basis-function placement
+Generate automatically a set of radial basis functions in the domain, and automatically prune in regions of sparse data.
+}
+\details{
+This function automatically places basis functions within the domain of interest. If the domain is a plane or the real line, then the object \code{data} is used to establish the domain boundary.
+
+If the manifold is the real line, the basis functions are placed regularly inside the domain, and the number of basis functions at the lowest resolution is dictated by the integer parameter \code{regular} which has to be greater than zero. Each subsequent resolution has twice as many basis functions. The scale of the basis function is set based on the minimum distance between the centre locations following placement. The scale is equal to the minimum distance if the type of basis function is Gaussian, and 1.5x this value if the function is bisquare. See \code{\link{radial_basis}} for details.
+
+If the manifold is a plane, and \code{regular > 0}, then basis functions are placed regularly within the bounding box of \code{data}, with the smallest number of basis functions in each row or column equal to the value of \code{regular} in the lowest resolution. Subsequent resolutions have twice the number of basis functions in each row or column. If \code{regular = 0}, then the function \code{INLA::inla.nonconvex.hull} is used to construct a (non-convex) hull around the data. The buffer and smoothness of the hull is determined by the parameter \code{convex}. Once the domain boundary is found,  \code{INLA::inla.mesh.2d} is used to construct a triangular mesh such that the node vertices coincide with data locations, subject to some minimum and maximum triangular side length constraints. The result is a mesh which is dense in regions of high data density and not dense in regions of sparse data. Even in this case, the scale is taken to be the minimum distance between basis function centres. This may be changed in a future revision.
+
+If the manifold is a sphere, then basis functions are placed on the centroids of the discrete global grid (DGG), with the first basis resolution corresponding to the second resolution of the DGG (32 globally).  It is not recommended to go above \code{nres == 4} which contains 812 locations (for a total of 1208 basis functions).
+
+Basis functions that are not influenced by data points may hinder convergence of the EM algorithm, since the associated hidden states are by and large unidentifiable. We hence provide a means to automatically remove such basis functions through the parameter \code{prune}. The final set only contains basis functions for which the column sums in the associated matrix \eqn{S} (which, recall, is the value/average of the basis functions at/over the data points/polygons) is greater than \code{prune}. If \code{prune == 0}, no basis functions are removed from the original design.
+}
+\examples{
+### Load and process the AIRS dataset
+
+library(dplyr)
+library(sp)
+library(ggplot2)
+
+### Create a synthetic dataset
+d <- data.frame(lon = runif(n=1000,min = -179, max = 179),
+                lat = runif(n=1000,min = -90, max = 90),
+                z = rnorm(5000))
+coordinates(d) <- ~lon + lat
+proj4string(d)=CRS("+proj=longlat")
+
+### Now create basis functions over sphere
+G <- auto_basis(m = sphere(),data=d,
+                nres = 2,prune=15,
+                type = "bisquare",
+                subsamp = 20000)
+
+### Plot and note how some basis functions are removed in Antarctica
+show_basis(draw_world(),G) + coord_map("mollweide")
 }
 
