@@ -41,7 +41,6 @@ concordance=TRUE
 \subsection{Overall program structure}
 \subsection{1D Simple example}
 
-
 <<eval=TRUE>>=
 library(sp)
 library(ggplot2)

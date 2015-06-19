@@ -4,7 +4,7 @@ rhwrapper <- function(Ntot = 20, N = 10,type="data.frame",f_expr,...) {
     if(!(require(Rhipe))) stop("Rhipe required for using Hadoop backend")
 
     njobs <- ceiling(Ntot/N)
-
+    browser()
     map1 <- expression({
         #suppressMessages(library(Matrix))
         #suppressMessages(library(sp))
@@ -29,6 +29,8 @@ rhwrapper <- function(Ntot = 20, N = 10,type="data.frame",f_expr,...) {
         readback = TRUE,
         parameters = c(list(...),f_expr=f_expr,N=N,Ntot=Ntot,type=type)
     )
+
+    browser()
 
     if(type=="Matrix") {
         Y <- do.call("rBind",lapply(mapreduce1,function(x) unserialize(x[[2]])))
