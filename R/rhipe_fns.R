@@ -8,14 +8,15 @@ rhwrapper <- function(Ntot = 20, N = 10,type="data.frame",f_expr,...) {
     map1 <- expression({
         #suppressMessages(library(Matrix))
         #suppressMessages(library(sp))
-        library(FRK)
+        #suppressMessages(library(FRK))
         lapply(seq_along(map.keys), function(r) {
-            idx <- as.numeric((map.values[[r]]-1)*N + (1:N))
-            idx <- idx[which(idx <= Ntot)]
+            #idx <- as.numeric((map.values[[r]]-1)*N + (1:N))
+            #idx <- idx[which(idx <= Ntot)]
             outputkey <- map.values[[r]]
-            f <- eval(f_expr)
-            outputvalue <- f(idx)
-            outputvalue <- serialize(outputvalue,NULL)
+            #f <- eval(f_expr)
+	    #outputvalue <- f(idx)
+	    outputvalue <- data.frame(x = rnorm(10),y=rnorm(10))
+            #outputvalue <- serialize(outputvalue,NULL)
             rhcollect(outputkey, outputvalue)
         })
     })
@@ -26,8 +27,8 @@ rhwrapper <- function(Ntot = 20, N = 10,type="data.frame",f_expr,...) {
         output   = Rhipe::rhfmt("reduced_data", type = "sequence"),
         mapred = list(mapreduce.job.maps=njobs, 
                       mapreduce.job.reduces=0),
-        readback = TRUE,
-        parameters = c(list(...),f_expr=f_expr,N=N,Ntot=Ntot,type=type)
+        readback = TRUE#,
+        #parameters = c(list(...),f_expr=f_expr,N=N,Ntot=Ntot,type=type)
     )
 
     browser()
