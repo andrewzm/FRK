@@ -15,7 +15,8 @@ Suggests:
     reshape2,
     shapefiles,
     knitr,
-    zoo
+    zoo,
+    covr
 Enhances:
     INLA,
     Rhipe

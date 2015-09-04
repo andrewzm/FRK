@@ -231,7 +231,7 @@ SRE.predict <- function(SRE_model,pred_locs = SRE_model@BAUs,use_centroid=TRUE) 
             Qx <- crossprod(solve(sqrt(Sm@Ve)) %*% C %*% PI) + LAMBDAinv
             #Qx <- t(PI) %*% t(C) %*% solve(Sm@Ve) %*% C %*% PI + LAMBDAinv
             ybar <- t(PI) %*%t(C) %*% solve(Sm@Ve) %*% (Sm@Z - C %*% X %*% alpha)
-            Partial_Cov <- chol2inv(chol(Qx))  # Actually all Cov, convenient for later
+            Partial_Cov <- as(chol2inv(chol(Qx)),"dgeMatrix")  # Actually all Cov, convenient for later
             x_mean <- Partial_Cov %*% ybar
             x_margvar <- diag(Partial_Cov)
             pred_locs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
