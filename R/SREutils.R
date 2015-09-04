@@ -212,18 +212,30 @@ SRE.predict <- function(SRE_model,pred_locs = SRE_model@BAUs,use_centroid=TRUE) 
 
         idx <- match(row.names(pred_locs),row.names(Sm@BAUs))
         C <- Sm@Cmat[,idx]
-
-        LAMBDA <- as(bdiag(Sm@Khat,sig2_Vfs_pred),"symmetricMatrix")
-        LAMBDAinv <- chol2inv(chol(LAMBDA))
-        PI <- cBind(S0, .symDiagonal(n=nrow(pred_locs)))
-        Qx <- t(PI) %*% t(C) %*% solve(Sm@Ve) %*% C %*% PI + LAMBDAinv
-        temp <- cholPermute(Qx)
-        ybar <- t(PI) %*%t(C) %*% solve(Sm@Ve) %*% (Sm@Z - C %*% X %*% alpha)
-        x_mean <- cholsolve(Qx,ybar,perm=TRUE,cholQp = temp$Qpermchol, P = temp$P)
-        Partial_Cov <- Takahashi_Davis(Qx,cholQp = temp$Qpermchol,P = temp$P)
-        x_margvar <- diag(Partial_Cov)
-
-        pred_locs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
+        
+        if(sigma2fs >0) {
+            LAMBDA <- as(bdiag(Sm@Khat,sig2_Vfs_pred),"symmetricMatrix")
+            LAMBDAinv <- chol2inv(chol(LAMBDA))
+            PI <- cBind(S0, .symDiagonal(n=nrow(pred_locs)))
+            Qx <- t(PI) %*% t(C) %*% solve(Sm@Ve) %*% C %*% PI + LAMBDAinv
+            temp <- cholPermute(Qx)
+            ybar <- t(PI) %*%t(C) %*% solve(Sm@Ve) %*% (Sm@Z - C %*% X %*% alpha)
+            x_mean <- cholsolve(Qx,ybar,perm=TRUE,cholQp = temp$Qpermchol, P = temp$P)
+            Partial_Cov <- Takahashi_Davis(Qx,cholQp = temp$Qpermchol,P = temp$P)
+            x_margvar <- diag(Partial_Cov)
+            pred_locs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
+        } else {
+            LAMBDA <- as(Sm@Khat,"symmetricMatrix")
+            LAMBDAinv <- chol2inv(chol(LAMBDA))
+            PI <- S0
+            Qx <- crossprod(solve(sqrt(Sm@Ve)) %*% C %*% PI) + LAMBDAinv
+            #Qx <- t(PI) %*% t(C) %*% solve(Sm@Ve) %*% C %*% PI + LAMBDAinv
+            ybar <- t(PI) %*%t(C) %*% solve(Sm@Ve) %*% (Sm@Z - C %*% X %*% alpha)
+            Partial_Cov <- chol2inv(chol(Qx))  # Actually all Cov, convenient for later
+            x_mean <- Sigma %*% ybar
+            x_margvar <- diag(Partial_Cov)
+            pred_locs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
+        }
 
         ## variance to hard to compute all at once -- do it in blocks of 1000
         temp <- rep(0,length(pred_locs))
@@ -233,6 +245,7 @@ SRE.predict <- function(SRE_model,pred_locs = SRE_model@BAUs,use_centroid=TRUE) 
             temp[idx] <- as.numeric(rowSums((PI[idx,] %*% Partial_Cov)*PI[idx,]))
         }
         pred_locs[["var"]] <- temp
+        
         #pred_locs[["var"]] <- as.numeric(rowSums((PI %*% Partial_Cov)*PI))
         pred_locs
 }
@@ -298,15 +311,24 @@ SRE.predict <- function(SRE_model,pred_locs = SRE_model@BAUs,use_centroid=TRUE) 
         while(!OK) {
            amp_factor <- amp_factor * 10
             if(!(sign(J(sigma2fs/amp_factor)) == sign(J(sigma2fs*amp_factor)))) OK <- 1
-            if(amp_factor > 1e12) browser() # stop("Cannot estimate sigma2fs. Please contact package administrator.")
+            if(amp_factor > 1e12) {
+                warning("sigma2fs is being estimated to zero. This might because because of an incorrect binnin procedure.")
+                OK <- 1
+            }
         }
-        sigma2fs_new <- uniroot(f = J,interval = c(sigma2fs/amp_factor,sigma2fs*amp_factor))$root
-        D <- sigma2fs_new*Sm@Vfs + Sm@Ve
-        Dinv <- Diagonal(x=1/diag(D))
-        alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*% (Sm@Z - Sm@S %*% mu_eta)
-
-        if(max(sigma2fs_new / sigma2fs, sigma2fs / sigma2fs_new) < 1.001) converged <- TRUE
+        if(amp_factor > 1e12) {
+            sigma2fs_new <- 0
+            converged <- TRUE
+        } else {
+            sigma2fs_new <- uniroot(f = J,interval = c(sigma2fs/amp_factor,sigma2fs*amp_factor))$root
+            D <- sigma2fs_new*Sm@Vfs + Sm@Ve
+            Dinv <- Diagonal(x=1/diag(D))
+            alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*% (Sm@Z - Sm@S %*% mu_eta)
+            if(max(sigma2fs_new / sigma2fs, sigma2fs / sigma2fs_new) < 1.001) converged <- TRUE
+        }
         sigma2fs <- sigma2fs_new
+
+        
     }
 
     Sm@Khat <- K
