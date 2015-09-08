@@ -88,7 +88,7 @@ auto_basis <- function(m = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,t
     isea3h <- centroid <- res <- NULL #(suppress warnings, these are loaded from data)
     coords <- coordinates(data)
 
-    if(is(m,"plane")) {
+    if(is(m,"plane") & regular==0) {
         if(!require(INLA)) stop("For automatic basis generation INLA needs to be installed. Please install it using install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\")")
     }
 
