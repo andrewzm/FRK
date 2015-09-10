@@ -184,7 +184,7 @@ sp_to_ST_basis <- function(G_spatial,t_knots = 1,manifold=STsphere()) {
             new_c <- cbind(this_c,t_knots[i])               # add time coordinate
             assign("c",new_c,environment(Gt@fn[[j]]))
         })
-        Gt@df <- cbind(Gt@df,t=t_knots[i])
+        Gt@df <- cbind(Gt@df,loc3=t_knots[i])
         Gt@manifold <- manifold
 
         G[[i]] <- Gt
