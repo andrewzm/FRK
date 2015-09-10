@@ -2,10 +2,14 @@
 % Please edit documentation in R/AllClass.R
 \docType{class}
 \name{manifold-class}
+\alias{STmanifold-class}
+\alias{STplane-class}
+\alias{STsphere-class}
 \alias{manifold-class}
 \alias{plane-class}
 \alias{real_line-class}
 \alias{sphere-class}
+\alias{timeline-class}
 \title{manifold}
 \description{
 The class \code{manifold} is virtual; other manifold classes inherit from this class.

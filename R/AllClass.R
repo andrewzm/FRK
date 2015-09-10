@@ -21,17 +21,35 @@ setClass("measure",representation(dist="function",dim="integer"),
 setClass("manifold",representation(type="character", metric = "measure","VIRTUAL"))
 
 #' @rdname manifold-class
+#' @aliases STmanifold-class
+setClass("STmanifold",contains="manifold")
+
+
+
+#' @rdname manifold-class
 #' @aliases sphere-class
 setClass("sphere",representation(radius="numeric"),contains="manifold")
+
+#' @rdname manifold-class
+#' @aliases STsphere-class
+setClass("STsphere",representation(radius="numeric"),contains="STmanifold")
+
 
 #' @rdname manifold-class
 #' @aliases plane-class
 setClass("plane",contains="manifold")
 
 #' @rdname manifold-class
+#' @aliases STplane-class
+setClass("STplane",contains="STmanifold")
+
+#' @rdname manifold-class
 #' @aliases real_line-class
 setClass("real_line",contains="manifold")
 
+#' @rdname manifold-class
+#' @aliases timeline-class
+setClass("timeline",contains="manifold")
 
 ####  Basis functions ####
 #'  @docType class
@@ -70,7 +88,7 @@ setClass("Basis", representation(manifold="manifold",n = "numeric",fn="list",par
 #' @keywords Spatial random effects, fixed rank kriging
 setClass("SRE",representation(data="list",
                               basis="Basis",
-                              BAUs="SpatialPolygonsDataFrame",
+                              BAUs="ANY",     # should be SpatialPolygonsDataFrame of STFDF
                               f = "formula",
                               S = "Matrix",
                               Ve = "Matrix",

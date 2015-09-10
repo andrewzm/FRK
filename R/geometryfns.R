@@ -79,8 +79,9 @@ dggrid_gen_to_df <- function(filename,res) {
 #'      plot(HexPols_df)
 #'  }
 #'  @export
-auto_BAUs <- function(manifold,res=2,cellsize = rep(1,dimensions(manifold)), type="hex",data=NULL,convex=-0.05) {
-    if(!(is(data,"Spatial") | is.null(data))) stop("Data needs to be of class 'Spatial' or NULL")
+auto_BAUs <- function(manifold,res=2,cellsize = rep(1,dimensions(manifold)), type="hex",data=NULL,convex=-0.05,tunit="days") {
+    if(!(is(data,"Spatial") | is(data,"ST") | is.null(data)))
+        stop("Data needs to be of class 'Spatial', 'ST', or NULL")
     if(!is(manifold,"manifold")) stop("manifold needs to be of class 'manifold'")
     if(!is.numeric(res) | is.integer(res)) stop("res needs to be of type 'numeric' or 'integer'")
     if(length(cellsize) == 1) cellsize <- rep(cellsize,dimensions(manifold))
@@ -88,12 +89,13 @@ auto_BAUs <- function(manifold,res=2,cellsize = rep(1,dimensions(manifold)), typ
     if(!(res >=0 & res <= 9)) stop("res needs to be between 0 and 9")
     resl <- round(res)
 
-   auto_BAU(manifold=manifold,resl=resl,cellsize=cellsize,type=type,d=data,convex=convex)
+   auto_BAU(manifold=manifold,resl=resl,cellsize=cellsize,type=type,d=data,convex=convex,tunit=tunit)
 
 }
 
 
-setMethod("auto_BAU",signature(manifold="plane"),function(manifold,cellsize = c(1,1),resl=resl,type="hex",d=NULL,convex=-0.05,...) {
+setMethod("auto_BAU",signature(manifold="plane"),
+          function(manifold,cellsize = c(1,1),resl=resl,type="hex",d=NULL,convex=-0.05,...) {
 
     X1 <- X2 <- NULL # Supress bindings warning
 
@@ -140,6 +142,70 @@ setMethod("auto_BAU",signature(manifold="plane"),function(manifold,cellsize = c(
 })
 
 
+setMethod("auto_BAU",signature(manifold="timeline"),
+          function(manifold,cellsize = c(1),resl=resl,type="grid",d=NULL,convex=-0.05,...) {
+
+              l <- list(...)
+              tunit <- l$tunit       #e.g. "days"
+              tpoints <- time(d)
+              trange <- range(tpoints)
+              dranget <- diff(trange)
+              tgrid <- seq(round(trange[1],tunit),
+                           round(trange[2],tunit),
+                           by=switch(tunit, secs    = cellsize,
+                                     mins    = cellsize*60,
+                                     hours   = cellsize*3600,
+                                     days    = cellsize*3600*24)) %>%
+                  round(tunit)
+              return(tgrid)
+          })
+
+
+
+setMethod("auto_BAU",signature(manifold = c("STmanifold")),
+          function(manifold,cellsize = c(1,1,1),resl=resl,type="hex",d=NULL,convex=-0.05,...) {
+
+              if(is(manifold,"STplane")) {
+                  spat_manifold <- plane()
+              } else {
+                  spat_manifold <- sphere()
+              }
+
+              spatial_BAUs <- auto_BAU(manifold=spat_manifold,cellsize=cellsize[1:2],
+                                       resl=resl,type=type,d=STobj@sp,convex=convex,...)
+              temporal_BAUs <- auto_BAU(manifold=timeline(), cellsize=cellsize[3],
+                                        resl=resl,type=type,d=d,convex=convex,...)
+
+              nt <- length(temporal_BAUs)
+              ns <- nrow(spatial_BAUs)
+              STBAUs <- STFDF(spatial_BAUs,
+                              temporal_BAUs,
+                              data = data.frame(n = 1:(nt *ns),
+                                                time = rep(temporal_BAUs,each=ns),
+                                                t = rep(1:nt,each=ns)))
+
+              return(STBAUs)
+
+          })
+
+# setMethod("auto_BAU",signature(manifold="STsphere"),
+#           function(manifold,cellsize = c(1,1,1),resl=resl,type="hex",d=NULL,convex=-0.05,...) {
+#
+#               spatial_BAUs <- auto_BAU(manifold=sphere(),cellsize=cellsize[1:2],
+#                                        resl=resl,type=type,d=STobj@sp,convex=convex,...)
+#               temporal_BAUs <- auto_BAU(manifold=sphere(), cellsize=cellsize[3],
+#                                         resl=resl,type=type,d=d,convex=convex,...)
+#
+#               nt <- length(temporal_BAUs)
+#               ns <- nrow(spatial_BAUs)
+#               STBAUs <- STFDF(spatial_BAUs,
+#                               temporal_BAUs,
+#                               data = data.frame(n = 1:(nt *ns),
+#                                                 time = rep(temporal_BAUs,each=ns),
+#                                                 t = rep(1:nt,each=ns)))
+#
+#               return(STBAUs)
+#           })
 
 setMethod("auto_BAU",signature(manifold="real_line"),function(manifold,cellsize = 1,resl=resl,type="grid",d=NULL,...) {
 
@@ -234,9 +300,6 @@ setMethod("auto_BAU",signature(manifold="sphere"),function(manifold,cellsize = c
 })
 
 
-
-
-
 #' @title sphere
 #'
 #' @description Sphere initialisation.
@@ -261,6 +324,32 @@ setMethod("initialize",signature="sphere",function(.Object,radius=1,metric=gc_di
     .Object@radius <- radius
     callNextMethod(.Object)})
 
+
+#' @title Space-time sphere
+#'
+#' @description Domain for modellng space-time fields over a sphere.
+#'
+#' @param radius radius of sphere
+#'
+#' @details As with the spatial-only sphere, the sphere is initialised using a \code{radius} parameter. By default, the radius \code{R} is equal to \code{R}=6371 km, the Earth's radius, while the measure used to compute distances on the sphere is the great-circle distance on a sphere of radius \code{R}. Distances are computed using functions from the \code{fields} package.
+#' @export
+#' @examples
+#' S <- STsphere()
+#' print(sp::dimensions(S))
+STsphere <- function(radius=6371) {
+    metric=gc_dist_time(R=radius)
+    stopifnot(dimensions(metric)==3)
+    stopifnot(radius>0)
+    new("STsphere",metric=metric,radius=radius)
+}
+
+setMethod("initialize",signature="STsphere",function(.Object,radius=6371,metric=gc_dist_time(R=radius)) {
+    .Object@type <- "STsphere"
+    .Object@metric <- metric
+    .Object@radius <- radius
+    callNextMethod(.Object)})
+
+
 #' @title plane
 #'
 #' @description Plane initialisation.
@@ -278,11 +367,58 @@ plane <- function(metric=Euclid_dist(dim=2L)) {
     new("plane",metric=metric)
 }
 
+
 setMethod("initialize",signature="plane",function(.Object,metric=Euclid_dist(dim=2L)) {
     .Object@type <- "plane"
     .Object@metric <- metric
     callNextMethod(.Object)})
 
+#' @title plane in space-time
+#'
+#' @description Space-time plane initialisation.
+#'
+#' @param metric an object of class \code{measure}
+#'
+#' @details A 2D plane with a time component added is initialised using a \code{measure} object. By default, the measure object (\code{metric}) is the Euclidean distance in 3 dimensions, \link{Euclid_dist}. Distances are computed using functions from the \code{fields} package.
+#' @export
+#' @examples
+#' P <- STplane()
+#' print(type(P))
+#' warning("CHECK: This may not work for ST plane")
+#' print(sp::dimensions(P))
+STplane <- function(metric=Euclid_dist(dim=3L)) {
+    stopifnot(dimensions(metric)==3L)
+    new("STplane",metric=metric)
+}
+
+setMethod("initialize",signature="STplane",function(.Object,metric=Euclid_dist(dim=3L)) {
+    .Object@type <- "STplane"
+    .Object@metric <- metric
+    callNextMethod(.Object)})
+
+
+#' @title timeline
+#'
+#' @description Timeline initialisation.
+#'
+#' @param metric an object of class \code{measure}
+#'
+#' @details A time axis initialised using a \code{measure} object. By default, the measure object (\code{metric}) is the absolute differences.
+#' @export
+#' @examples
+#' P <- timeline()
+#' print(type(P))
+#' warning("CHECK: This may not work for ST plane")
+#' print(sp::dimensions(P))
+timeline <- function(metric=Euclid_dist(dim=1L)) {
+    stopifnot(dimensions(metric)==1L)
+    new("timeline",metric=metric)
+}
+
+setMethod("initialize",signature="timeline",function(.Object,metric=Euclid_dist(dim=1L)) {
+    .Object@type <- "timeline"
+    .Object@metric <- metric
+    callNextMethod(.Object)})
 
 
 #' @title real line
@@ -312,6 +448,7 @@ setMethod("initialize",signature="real_line",function(.Object,metric=Euclid_dist
 #' @name distances
 #' @aliases Euclid_dist
 #' @aliases gc_dist
+#' @aliases gc_dist_time
 #' @title Pre-configured distances
 #'
 #' @description Distance objects included in package
@@ -331,6 +468,14 @@ gc_dist <- function(R=NULL) {
     new("measure",dist=function(x1,x2)  fields::rdist.earth(x1,x2,miles=F,R=R),dim=2L)
 }
 
+#' @rdname distances
+#' @export
+gc_dist_time <- function(R=NULL) {
+    new("measure",dist=function(x1,x2)  {
+        spatdist <- fields::rdist.earth(x1[,1:2,drop=FALSE],x2[,1:2,drop=FALSE],miles=F,R=R)
+        tdist <- fields::rdist(x1[,3],x2[,3])
+        sqrt(spatdist^2 + tdist^2) } ,dim=3L)
+}
 
 #' @title Convert data frame to SpatialPolygons
 #' @description Convert data frame to SpatialPolygons object
@@ -410,69 +555,132 @@ SpatialPolygonsDataFrame_to_df <- function(sp_polys,vars = names(sp_polys)) {
     X
 }
 
-#' @title Bin data into BAUs
-#' @description This is an internal function which bins data into BAUs or aggregates across BAUs if the data have a large footprint. If \code{est_error == TRUE}, the observation error is estimated as in Katzfuss & Cressie (2011)
-#' @param data_sp object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame}
-#' @param sp_pols object of class \code{SpatialPolygonsDataFrame} that contains the BAUs
-#' @param av_var variable to average into/over BAUs
-#' @param variogram.formula formula used for detrending the data for variogram estimation of the observation error. Should be identical to that used for \code{SRE()}
-#' @param est_error flag indicating whether variogram estimation of the observation error should be carried out or no. This can take a long time with large datasets
-#' @noRd
-map_data_to_BAUs <- function(data_sp,sp_pols,av_var,variogram.formula=NULL,est_error=T) {
-    if(is(data_sp,"SpatialPointsDataFrame")) {
+
+#' @aliases map_data_to_BAUs,Spatial-method
+setMethod("map_data_to_BAUs",signature(data_sp="Spatial"),
+          function(data_sp,sp_pols,av_var)
+          {
+
+              if(is(data_sp,"SpatialPointsDataFrame")) {
+                  Nobs <- NULL
+                  data_sp$Nobs <- 1
+
+                  if(!(opts_FRK$get("Rhipe"))) {
+                      timer <- system.time(Data_in_BAU <- over(sp_pols,data_sp[c(av_var,"Nobs","std")],fn=sum))
+                  } else {
+                      print("Using RHIPE to find overlays")
+                      timer <- system.time(
+                          Data_in_BAU <- rhwrapper(Ntot = length(sp_pols),
+                                                   N = 4000,
+                                                   f_expr = .rhover,
+                                                   sp_pols = sp_pols,
+                                                   data_sp = data_sp,
+                                                   av_var=av_var)
+                      )
+                  }
+                  print(paste0("Binned data in ",timer[3]," seconds"))
+
+                  sp_pols@data[av_var] <- Data_in_BAU[av_var]/Data_in_BAU$Nobs
+                  sp_pols@data["std"] <- Data_in_BAU["std"]/Data_in_BAU$Nobs
+                  sp_pols@data["Nobs"] <- Data_in_BAU$Nobs
+
+                  new_sp_pts <- SpatialPointsDataFrame(coords=sp_pols[coordnames(data_sp)]@data,
+                                                       data=sp_pols@data,
+                                                       proj4string = CRS(proj4string(data_sp)))
+                  #new_sp_pts$std <- sqrt(1 / new_sp_pts$Nobs)
+                  new_sp_pts$std <- sqrt(new_sp_pts$std^2 / new_sp_pts$Nobs)
+                  new_sp_pts <- subset(new_sp_pts,!is.na(Nobs))
+
+              } else {
+                  BAUs_aux_data <- over(data_sp,SpatialPointsDataFrame(coordinates(sp_pols),sp_pols@data))
+                  stopifnot(all(row.names(BAUs_aux_data) == row.names(data_sp)))
+                  data_sp@data <- cbind(data_sp@data,BAUs_aux_data)
+                  data_sp$Nobs <- 1
+                  new_sp_pts <- data_sp
+                  browser()
+              }
+
+              new_sp_pts
+          })
+
+setMethod("map_data_to_BAUs",signature(data_sp="ST"),
+          function(data_sp,sp_pols,av_var) {
+
+    sp_fields <- NULL
+
+    ## Bin every spatial frame separately
+    sp_fields <- lapply(seq_along(sp_pols@time),
+                        function(i) {
+                            t1 <- time(sp_pols)[i]
+                            data_spatial <- as(data_sp[,t1],"Spatial")
+                            BAU_spatial <- sp_pols[,i]
+                            BAU_spatial@data <- filter(BAU_spatial@data,time == t1)
+                            BAU_spatial@data <- cbind(BAU_spatial@data,coordinates(BAU_spatial))
+                            map_data_to_BAUs(data_spatial,
+                                             BAU_spatial,
+                                             av_var=av_var)})
 
 
-        Nobs <- NULL
-        data_sp$Nobs <- 1
-        if(est_error) data_sp$std <- 0 ## Just set it to something, this will be overwritten later on
+    if(is(data_sp@sp,"SpatialPolygons")) stop("ST not implemented for polygon observations yet.
+                                              Please contact package maintainer")
 
-        if(!(opts_FRK$get("Rhipe"))) {
-            timer <- system.time(Data_in_BAU <- over(sp_pols,data_sp[c(av_var,"Nobs","std")],fn=sum))
-        } else {
-            print("Using RHIPE to find overlays")
-            timer <- system.time(
-                Data_in_BAU <- rhwrapper(Ntot = length(sp_pols),
-                                         N = 4000,
-                                         f_expr = .rhover,
-                                         sp_pols = sp_pols,
-                                         data_sp = data_sp,
-                                         av_var=av_var)
-            )
-        }
-        print(paste0("Binned data in ",timer[3]," seconds"))
-
-        sp_pols@data[av_var] <- Data_in_BAU[av_var]/Data_in_BAU$Nobs
-        sp_pols@data["std"] <- Data_in_BAU["std"]/Data_in_BAU$Nobs
-        sp_pols@data["Nobs"] <- Data_in_BAU$Nobs
-
-        new_sp_pts <- SpatialPointsDataFrame(coords=sp_pols[coordnames(data_sp)]@data,
-                                             data=sp_pols@data,
-                                             proj4string = CRS(proj4string(data_sp)))
-        #new_sp_pts$std <- sqrt(1 / new_sp_pts$Nobs)
-        new_sp_pts$std <- sqrt(new_sp_pts$std^2 / new_sp_pts$Nobs)
-        new_sp_pts <- subset(new_sp_pts,!is.na(Nobs))
-
-    } else {
-        BAUs_aux_data <- over(data_sp,SpatialPointsDataFrame(coordinates(sp_pols),sp_pols@data))
-        stopifnot(all(row.names(BAUs_aux_data) == row.names(data_sp)))
-        data_sp@data <- cbind(data_sp@data,BAUs_aux_data)
-        data_sp$Nobs <- 1
-        new_sp_pts <- data_sp
-        browser()
+    ## Recast into a STIDF
+    time <- sp <- n <- NULL
+    for(i in seq_along(sp_pols@time)) {
+        sp <- rbind(sp,sp_fields[[i]]@data)
+        n <- nrow(sp_fields[[i]])
+        time[[i]] <- rep(time(sp_pols)[i],n)
     }
+    coordinates(sp) <- coordnames(sp_fields[[1]])
+    sp@data <- cbind(sp@data,coordinates(sp))
+    time <- do.call("c",time)
 
-    if(is(variogram.formula,"formula") & (est_error==TRUE)) {
-        g <- gstat::gstat(formula=variogram.formula,data=new_sp_pts)
+    STIDF(as(sp,"SpatialPoints"),
+          time,
+          data = sp@data)
+
+})
+
+est_obs_error <- function(sp_pts,variogram.formula) {
+
+      if(is(variogram.formula,"formula")) {
+        g <- gstat::gstat(formula=variogram.formula,data=sp_pts)
         v <- gstat::variogram(g,cressie=T)
-        warning("Not accounting for multiple data in the same grid box during variogram estimation. Need to see how to do this with gstat")
+        warning("Not accounting for multiple data in the same grid box during variogram estimation.
+                Need to see how to do this with gstat")
         vgm.fit = gstat::fit.variogram(v, model = gstat::vgm(1, "Lin", mean(v$dist), 1))
         plot(v,vgm.fit)
         print(paste0("sigma2e estimate = ",vgm.fit$psill[1]))
-        if(vgm.fit$psill[1] == 0) stop("Observational error estimated to be zero. Please consider using finer BAUs")
-        new_sp_pts$std <- sqrt(vgm.fit$psill[1] / new_sp_pts$Nobs)
+        if(vgm.fit$psill[1] == 0)
+            stop("Observational error estimated to be zero. Please consider using finer BAUs")
+        sp_pts$std <- sqrt(vgm.fit$psill[1] / sp_pts$Nobs)
     }
-    new_sp_pts
+    sp_pts
 }
+
+
+setMethod("BuildC",signature(data="SpatialPolygonsDataFrame"),
+          function(data,BAUs) {
+              data$id <- 1:length(data)
+              overlap <- over(SpatialPoints(coordinates(BAUs)),data)
+              i_idx <- as.numeric(na.exclude(overlap$id))
+              j_idx <- which(!is.na(overlap$id))
+              list(i_idx=i_idx,j_idx=j_idx)
+          })
+
+setMethod("BuildC",signature(data="SpatialPointsDataFrame"),
+          function(data,BAUs) {
+              i_idx <- 1:length(data)
+              j_idx <- which(row.names(BAUs) %in% row.names(data))
+              list(i_idx=i_idx,j_idx=j_idx)
+          })
+
+setMethod("BuildC",signature(data="STIDF"),
+          function(data,BAUs) {
+              i_idx <- 1:length(data)
+              j_idx <- which(BAUs@data$n %in% data@data$n)
+              list(i_idx=i_idx,j_idx=j_idx)
+          })
 
 setMethod("coordinates",signature(obj="SpatialPolygons"),function(obj){
     coord_vals <- t(sapply(1:length(obj),function(i) obj@polygons[[i]]@Polygons[[1]]@labpt))
@@ -506,6 +714,18 @@ setMethod("type",signature(.Object="manifold"),function(.Object) {
 #' @aliases manifold,Basis-method
 setMethod("manifold",signature(.Object="Basis"),function(.Object) {
     return(.Object@manifold)
+})
+
+#' @rdname coordnames
+#' @aliases coordnames,STFDF-method
+setMethod("coordnames",signature(x="STFDF"),function(x) {
+    return(coordnames(x@sp))
+})
+
+#' @rdname coordnames
+#' @aliases coordnames,STIDF-method
+setMethod("coordnames",signature(x="STIDF"),function(x) {
+    return(c(coordnames(x@sp),"t"))
 })
 
 

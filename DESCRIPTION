@@ -35,6 +35,7 @@ Imports:
     parallel,
     doParallel,
     sp,
+    spacetime,
     mapproj
 License: GPL (>= 2)
 NeedsCompilation: yes

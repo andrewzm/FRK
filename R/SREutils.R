@@ -74,29 +74,36 @@ SRE <- function(f,data,basis,BAUs,est_error=TRUE) {
 
     S <- Ve <- Vfs <- X <- Z <- Cmat <- list()
     for(i in 1:ndata) {
+        if(est_error) data[[i]]$std <- 0 ## Just set it to something, this will be overwritten later on
         data_proc <- map_data_to_BAUs(data[[i]],
-                                 BAUs,
-                                 av_var = av_var,
-                                 variogram.formula = f,
-                                 est_error=est_error)
-        if(any(is.na(data_proc@data))) stop("NAs found when mapping data to BAUs. Are you sure all your data are covered by BAUs?")
+                                     BAUs,
+                                     av_var = av_var)
+
+        if(any(is.na(data_proc@data)))
+            stop("NAs found when mapping data to BAUs. Are you sure all your data are covered by BAUs?")
+
+        if(est_error) {
+            if(is(data_proc,"ST")) stop("Estimation of error not yet implemented for spatio-temporal data")
+            data_proc <- est_obs_error(data_proc,variogram.formula=f)
+        }
+
 
         L <- .gstat.formula(f,data=data_proc)
         X[[i]] <- as(L$X,"Matrix")
         Z[[i]] <- Matrix(L$y)
         Ve[[i]] <- Diagonal(x=data_proc$std^2)
 
-        if(is(data_proc,"SpatialPolygonsDataFrame")) {
-            data_proc$id <- 1:length(data_proc)
-            overlap <- over(SpatialPoints(coordinates(BAUs)),data_proc)
-            i_idx <- as.numeric(na.exclude(overlap$id))
-            j_idx <- which(!is.na(overlap$id))
-        } else {
-             i_idx <- 1:length(data_proc)
-             j_idx <- which(row.names(BAUs) %in% row.names(data_proc))
-        }
-        Cmat[[i]] <- sparseMatrix(i=i_idx,j=j_idx,x=1,dims=c(length(data_proc),nrow(BAUs)))
-        Cmat[[i]] <- Cmat[[i]] / rowSums(Cmat[[i]])
+
+        C_idx <- BuildC(data_proc,BAUs)
+
+        Cmat[[i]] <- sparseMatrix(i=C_idx$i_idx,
+                                  j=C_idx$j_idx,
+                                  x=1,dims=c(length(data_proc),
+                                             length(BAUs)))
+
+        Cmat[[i]] <- Cmat[[i]] / rowSums(Cmat[[i]]) ## Average BAUs for polygon observations
+
+
         Vfs[[i]] <- Diagonal(x=as.numeric(Cmat[[i]]^2 %*% BAUs$fs )) # Assuming no obeservations overlap
         S[[i]] <- eval_basis(basis, s = data_proc)
 
@@ -167,8 +174,12 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM",print_lik=FAL
 #' @export
 SRE.predict <- function(SRE_model,pred_locs = SRE_model@BAUs,use_centroid=TRUE) {
 ### CHANGE INPUT TO IDX!!! OR NAMES OR SOMETHING SO THAT WE CAN PREDICT ON A SUBSET OF BAUs!!
-    if(!(is(pred_locs,"SpatialPolygonsDataFrame"))) stop("Predictions need to be over BAUs or spatial polygons")
-    if(!("fs" %in% names(pred_locs))) {
+    if(is(pred_locs,"Spatial") & !(is(pred_locs,"SpatialPolygonsDataFrame")))
+        stop("Predictions need to be over BAUs or spatial polygons")
+    if(is(pred_locs,"ST") & !(is(pred_locs,"STFDF")))
+       if(!(is(pred_locs@sp,"SpatialPolygonsDataFrame")))
+        stop("Predictions need to be over BAUs or STFDFs with spatial polygons")
+    if(!("fs" %in% names(pred_locs@data))) {
         warning("data should contain a field 'fs' containing a basis function for fine-scale variation. Setting basis function equal to one everywhere.")
         pred_locs$fs <- 1
     }
@@ -194,10 +205,18 @@ SRE.predict <- function(SRE_model,pred_locs = SRE_model@BAUs,use_centroid=TRUE) 
         pred_locs[[depname]] <- 0.1
         L <- .gstat.formula(Sm@f,data=pred_locs)
         X = as(L$X,"Matrix")
-        if(use_centroid) {
-            S0 <- eval_basis(Sm@basis,as.matrix(pred_locs[coordnames(Sm@data[[1]])]@data))
-        } else {
-            S0 <- eval_basis(Sm@basis,pred_locs)
+        if(is(pred_locs,"Spatial")) {
+            if(use_centroid) {
+                S0 <- eval_basis(Sm@basis,as.matrix(pred_locs[coordnames(Sm@data[[1]])]@data))
+            } else {
+                S0 <- eval_basis(Sm@basis,pred_locs)
+            }
+        } else if(is(pred_locs,"STFDF")) {
+            if(use_centroid) {
+                S0 <- eval_basis(Sm@basis,as.matrix(cbind(coordinates(pred_locs),pred_locs@data$t)))
+            } else {
+                stop("Can only use centroid when predicting with spatio-temporal data")
+            }
         }
         pred_locs[[depname]] <- NULL
 
@@ -207,16 +226,19 @@ SRE.predict <- function(SRE_model,pred_locs = SRE_model@BAUs,use_centroid=TRUE) 
         D <- sigma2fs*Sm@Vfs + Sm@Ve
         Dinv <- Diagonal(x=1/diag(D))
 
-        idx <- match(row.names(pred_locs),row.names(Sm@BAUs))
         sig2_Vfs_pred <- Diagonal(x=sigma2fs*pred_locs$fs)
 
-        idx <- match(row.names(pred_locs),row.names(Sm@BAUs))
+        if(is(pred_locs,"Spatial")) {
+            idx <- match(row.names(pred_locs),row.names(Sm@BAUs))
+        } else if (is(pred_locs,"STFDF")){
+            idx <- match(pred_locs@data$n,Sm@BAUs@data$n)
+        }
         C <- Sm@Cmat[,idx]
-        
+
         if(sigma2fs >0) {
             LAMBDA <- as(bdiag(Sm@Khat,sig2_Vfs_pred),"symmetricMatrix")
             LAMBDAinv <- chol2inv(chol(LAMBDA))
-            PI <- cBind(S0, .symDiagonal(n=nrow(pred_locs)))
+            PI <- cBind(S0, .symDiagonal(n=length(pred_locs)))
             Qx <- t(PI) %*% t(C) %*% solve(Sm@Ve) %*% C %*% PI + LAMBDAinv
             temp <- cholPermute(Qx)
             ybar <- t(PI) %*%t(C) %*% solve(Sm@Ve) %*% (Sm@Z - C %*% X %*% alpha)
@@ -245,7 +267,7 @@ SRE.predict <- function(SRE_model,pred_locs = SRE_model@BAUs,use_centroid=TRUE) 
             temp[idx] <- as.numeric(rowSums((PI[idx,] %*% Partial_Cov)*PI[idx,]))
         }
         pred_locs[["var"]] <- temp
-        
+
         #pred_locs[["var"]] <- as.numeric(rowSums((PI %*% Partial_Cov)*PI))
         pred_locs
 }
@@ -328,7 +350,7 @@ SRE.predict <- function(SRE_model,pred_locs = SRE_model@BAUs,use_centroid=TRUE) 
         }
         sigma2fs <- sigma2fs_new
 
-        
+
     }
 
     Sm@Khat <- K
@@ -355,27 +377,30 @@ SRE.predict <- function(SRE_model,pred_locs = SRE_model@BAUs,use_centroid=TRUE) 
 
 .check_args <- function(f,data,basis,BAUs,est_error) {
     if(!is(f,"formula")) stop("f needs to be a formula.")
-    if(!all(all.vars(f)[-1] %in% names(BAUs))) stop("All covariates need to be in the SpatialPolygons BAU object")
+    if(is(BAUs,"Spatial"))
+        if(!all(all.vars(f)[-1] %in% names(BAUs@data)))
+            stop("All covariates need to be in the SpatialPolygons BAU object")
+    if(is(BAUs,"ST"))
+        if(!all(all.vars(f)[-1] %in% c(names(BAUs@data),coordnames(BAUs))))
+            stop("All covariates need to be in the SpatialPolygons BAU object")
     if(!is(data,"list")) stop("Please supply a list of Spatial objects.")
-    if(!all(sapply(data,function(x) is(x,"Spatial")))) stop("All data list elements need to be of class Spatial")
-    if(!all(sapply(data,function(x) all.vars(f)[1] %in% names(x)))) stop("All data list elements to have values for the dependent variable")
+    if(!all(sapply(data,function(x) is(x,"Spatial") | is(x,"ST")))) stop("All data list elements need to be of class Spatial or ST")
+    if(!all(sapply(data,function(x) all.vars(f)[1] %in% names(x@data)))) stop("All data list elements to have values for the dependent variable")
     if(!all(sapply(data,function(x) identical(proj4string(x), proj4string(BAUs))))) stop("Please ensure all data items and BAUs have the same coordinate reference system")
     if(!is(basis,"Basis")) stop("basis needs to be of class Basis (package FRK)")
     #if(is(data,"SpatialPolygonsDataFrame") & !("std" %in% names(data))) stop("Polygon data needs to contain a field 'std' denoting the observation error")
-    if(!("fs" %in% names(BAUs))) {
+    if(!("fs" %in% names(BAUs@data))) {
         warning("BAUs should contain a field 'fs' containing a basis function for fine-scale variation. Setting basis function equal to one everywhere.")
         BAUs$fs <- 1
     }
-    if(!is(BAUs,"SpatialPolygonsDataFrame")) stop("fine-scale variation basis function needs to be nonnegative everywhere")
+    if(!(is(BAUs,"SpatialPolygonsDataFrame") | is(BAUs,"STFDF"))) stop("BAUs should be a SpatialPolygonsDataFrame or a STFDF object")
+    if(is(BAUs,"STFDF")) if(!is(BAUs@sp,"SpatialPolygonsDataFrame")) stop("The spatial component of the BAUs should be a SpatialPolygonsDataFrame")
     if((is(basis@manifold,"sphere")) & !all((coordnames(BAUs) == c("lon","lat")))) stop("Since a sphere is being used, please ensure that all coordinates (including those of BAUs) are in (lon,lat)")
-    if(!est_error & !all(sapply(data,function(x) "std" %in% names(x)))) stop("If observational error is not going to be estimated, please supply a field 'std' in the data objects")
+    if(!est_error & !all(sapply(data,function(x) "std" %in% names(x@data)))) stop("If observational error is not going to be estimated, please supply a field 'std' in the data objects")
 }
 
 .gstat.formula <- function (formula, data)
 {
-    if (is(data, "SpatialPixels") && anyDuplicated(data@grid.index) !=
-        0)
-        gridded(data) = FALSE
     m = model.frame(terms(formula), as(data, "data.frame"), na.action = na.fail)
     Y = model.extract(m, "response")
     if (length(Y) == 0)
@@ -383,9 +408,7 @@ SRE.predict <- function(SRE_model,pred_locs = SRE_model@BAUs,use_centroid=TRUE) 
     Terms = attr(m, "terms")
     X = model.matrix(Terms, m)
     has.intercept = attr(Terms, "intercept")
-    if (gridded(data))
-        grid = gridparameters(data)
-    else grid = numeric(0)
+    grid = numeric(0)
     xlevels = .getXlevels(Terms, m)
     list(y = Y, locations = coordinates(data), X = X, call = call,
          has.intercept = has.intercept, grid = as.double(unlist(grid)),

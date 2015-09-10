@@ -8,6 +8,7 @@
 #' @import ggplot2
 #' @import Matrix
 #' @import sp
+#' @import spacetime
 #' @import parallel
 #' @import gstat
 #' @import dplyr

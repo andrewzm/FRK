@@ -173,6 +173,24 @@ auto_basis <- function(m = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,t
     G_basis
 }
 
+#' @export
+sp_to_ST_basis <- function(G_spatial,t_knots = 1,manifold=STsphere()) {
+    n <- G_spatial@n
+    G <- list()
+    for(i in seq_along(t_knots)) {
+        Gt <- G_spatial
+        sapply(1:n, function(j) {
+            this_c <-   get("c",environment(Gt@fn[[j]]))    # retrieve centroid
+            new_c <- cbind(this_c,t_knots[i])               # add time coordinate
+            assign("c",new_c,environment(Gt@fn[[j]]))
+        })
+        Gt@df <- cbind(Gt@df,t=t_knots[i])
+        Gt@manifold <- manifold
+
+        G[[i]] <- Gt
+    }
+    G <- Reduce("concat",G)
+}
 
 #' @rdname eval_basis
 #' @aliases eval_basis,Basis-matrix-method
@@ -214,6 +232,13 @@ setMethod("eval_basis",signature(basis="Basis",s="SpatialPolygonsDataFrame"),fun
     as(X,"Matrix")
 })
 
+#' @rdname eval_basis
+#' @aliases eval_basis,Basis-STIDF-method
+setMethod("eval_basis",signature(basis="Basis",s="STIDF"),function(basis,s,output = "matrix"){
+    stopifnot(output %in% c("matrix","list"))
+    space_dim <- dimensions(manifold(basis))
+    .point_eval_fn(basis@fn,cbind(coordinates(s),t=s@data$t)[,1:space_dim,drop=F],output)
+})
 
 .point_eval_fn <- function(flist,s,output="matrix") {
     #if(!opts_FRK$get("Rhipe")) {

@@ -101,10 +101,26 @@ setGeneric("eval_basis", function(basis,s,output="matrix") standardGeneric("eval
 #' @details This generic function is not called directly. Please refer to \code{auto_BAUs} for more details.
 setGeneric("auto_BAU", function(manifold,cellsize,resl,type,d,convex,...) standardGeneric("auto_BAU"))
 
+#' @title Bin data into BAUs
+#' @description This is an internal function which bins data into BAUs or aggregates across BAUs if the data have a large footprint. If \code{est_error == TRUE}, the observation error is estimated as in Katzfuss & Cressie (2011)
+#' @param data_sp object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame}
+#' @param sp_pols object of class \code{SpatialPolygonsDataFrame} that contains the BAUs
+#' @param av_var variable to average into/over BAUs
+#' @param variogram.formula formula used for detrending the data for variogram estimation of the observation error. Should be identical to that used for \code{SRE()}
+#' @param est_error flag indicating whether variogram estimation of the observation error should be carried out or no. This can take a long time with large datasets
+#' @details This generic function is not called directly. It is called in the SER function for binning data in BAUs
+#' @noRd
+setGeneric("map_data_to_BAUs", function(data_sp,sp_pols,av_var,variogram.formula=NULL,est_error=T) standardGeneric("map_data_to_BAUs"))
 
 #' @title Concatenation
 #' @description Concatenates FRK objects of the same class together. This is primarily used to join up \code{Basis} blocks together.
 #' @param ... a series of \code{FRK} objects
 #' @noRd
 setGeneric("concat", function(...) standardGeneric("concat"))
+
+#' @title Construct incidence matrix
+#' @description Construct incidence matrix for Spatial and Spatiotemporal fields.
+#' @param ... a series of \code{FRK} objects
+#' @noRd
+setGeneric("BuildC", function(data,BAUs) standardGeneric("BuildC"))
 

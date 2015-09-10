@@ -5,7 +5,7 @@
 \title{Automatic BAU generation}
 \usage{
 auto_BAUs(manifold, res = 2, cellsize = rep(1, dimensions(manifold)),
-  type = "hex", data = NULL, convex = -0.05)
+  type = "hex", data = NULL, convex = -0.05, tunit = "days")
 }
 \arguments{
 \item{manifold}{object of class \code{manifold}}

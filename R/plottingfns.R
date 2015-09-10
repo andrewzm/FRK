@@ -118,6 +118,22 @@ setMethod("show_basis",signature(basis = "Basis"),  # GRBF basis with mean offse
                   g <- g + geom_point(data=df,aes(x=lon,y=lat,size=res),shape=1) +
                            scale_size_continuous(trans="reverse",breaks =1:10)
 
+              } else  if(is(manifold(basis),"STplane")) {
+                  df <-basis@df
+                  df <- df[rev(rownames(df)),]
+                  names(df)[1:2] <- c("x","y")
+                  g <- g + geom_point(data=df,aes(x=x,y=y,size=res),shape=1) +
+                      scale_size_continuous(trans="reverse",breaks =1:10) +
+                      facet_wrap(~t)
+
+              } else  if(is(manifold(basis),"STsphere")) {
+                  df <-basis@df
+                  df <- df[rev(rownames(df)),]
+                  names(df)[1:2] <- c("lon","lat")
+                  g <- g + geom_point(data=df,aes(x=lon,y=lat,size=res),shape=1) +
+                      scale_size_continuous(trans="reverse",breaks =1:10) +
+                      facet_wrap(~t)
+
               }
                return(g)
 

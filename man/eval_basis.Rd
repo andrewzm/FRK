@@ -3,9 +3,11 @@
 \docType{methods}
 \name{eval_basis}
 \alias{eval_basis}
+\alias{eval_basis,Basis,STIDF-method}
 \alias{eval_basis,Basis,SpatialPointsDataFrame-method}
 \alias{eval_basis,Basis,SpatialPolygonsDataFrame-method}
 \alias{eval_basis,Basis,matrix-method}
+\alias{eval_basis,Basis-STIDF-method}
 \alias{eval_basis,Basis-SpatialPointsDataFrame-method}
 \alias{eval_basis,Basis-SpatialPolygonsDataFrame-method}
 \alias{eval_basis,Basis-matrix-method}
@@ -20,6 +22,8 @@ eval_basis(basis, s, output = "matrix")
 
 \S4method{eval_basis}{Basis,SpatialPolygonsDataFrame}(basis, s,
   output = "matrix")
+
+\S4method{eval_basis}{Basis,STIDF}(basis, s, output = "matrix")
 }
 \arguments{
 \item{basis}{object of class \code{Basis}}

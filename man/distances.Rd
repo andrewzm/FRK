@@ -4,11 +4,14 @@
 \alias{Euclid_dist}
 \alias{distances}
 \alias{gc_dist}
+\alias{gc_dist_time}
 \title{Pre-configured distances}
 \usage{
 Euclid_dist(dim = 2L)
 
 gc_dist(R = NULL)
+
+gc_dist_time(R = NULL)
 }
 \arguments{
 \item{dim}{dimension of Eucledian space}
