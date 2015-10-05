@@ -66,6 +66,10 @@ setClass("timeline",contains="manifold")
 #' @rdname Basisclass
 setClass("Basis", representation(manifold="manifold",n = "numeric",fn="list",pars="list", df="data.frame"))
 
+#' @rdname Basisclass
+setClass("TensorP_Basis", representation(Basis1="Basis",Basis2="Basis",n="numeric"))
+
+
 #'  @title Spatial Random Effects class
 #' @description Central object of package, containing the model and all other information required for estimation and prediction.
 #' @details The spatial random effects (SRE) model is the model employed in fixed rank kriging, and the \code{SRE} object contains all information required for estimation and prediction from spatial data. Object slots contain both other objects (for example, an object of class \code{Basis}) and matrices derived from these objects (for example, the matrix \eqn{S}) in order to facilitate computations.

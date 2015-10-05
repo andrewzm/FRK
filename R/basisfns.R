@@ -184,6 +184,7 @@ auto_basis <- function(m = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,t
 #'                    scale=rep(20,10),
 #'                    type="bisquare")
 #' G_space_time <- sp_to_ST_basis(G_spatial,1:10,manifold=STsphere())
+#' library(ggplot2)
 #' show_basis(ggplot(),G_space_time)
 #' @export
 sp_to_ST_basis <- function(G_spatial,t_knots = 1,manifold=STsphere()) {
@@ -207,6 +208,13 @@ sp_to_ST_basis <- function(G_spatial,t_knots = 1,manifold=STsphere()) {
     }
     G <- Reduce("concat",G)
 }
+
+#' @rdname TensorP
+#' @aliases TensorP,Basis-Basis-method
+setMethod("TensorP",signature(Basis1="Basis",Basis2="Basis"),function(Basis1,Basis2) {
+    new("TensorP_Basis",Basis1=Basis1, Basis2=Basis2, n = Basis1@n)
+})
+
 
 #' @rdname eval_basis
 #' @aliases eval_basis,Basis-matrix-method
