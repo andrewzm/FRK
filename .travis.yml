@@ -16,9 +16,15 @@ notifications:
 install:
     - Rscript -e "if (!require('covr')) install.packages('covr',repos='http://cran.us.r-project.org')"
 
+r_binary_packages:
+  - knitr
+
 r_github_packages:
   - jimhester/covr
+
 after_success:
-  - Rscript -e 'library(covr);codecov()'
-  - Rscript -e 'library(covr);coveralls()'
+#  - Rscript -e 'library(covr);codecov()'
+#  - Rscript -e 'library(covr);coveralls()'
+#   run test coverage only for the travis build
+  - "[ $TARGET = travis ] && Rscript -e 'covr::coveralls()'"
 
