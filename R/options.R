@@ -1,4 +1,4 @@
-new_opts_FRK <- function(d = list(progress = TRUE, verbose = FALSE, parallel=6L, Rhipe=FALSE)) {
+new_opts_FRK <- function(d = list(progress = TRUE, verbose = FALSE, parallel=1L, Rhipe=FALSE)) {
     defaults = d
     list(set = function(opt,value) {
         if(!(opt %in% c("progress","verbose","parallel","Rhipe"))) stop("opt needs to be one of ('progress','verbose','parallel')")

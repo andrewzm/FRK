@@ -716,13 +716,11 @@ setMethod("manifold",signature(.Object="Basis"),function(.Object) {
     return(.Object@manifold)
 })
 
-#' @rdname coordnames
 #' @aliases coordnames,STFDF-method
 setMethod("coordnames",signature(x="STFDF"),function(x) {
     return(coordnames(x@sp))
 })
 
-#' @rdname coordnames
 #' @aliases coordnames,STIDF-method
 setMethod("coordnames",signature(x="STIDF"),function(x) {
     return(c(coordnames(x@sp),"t"))

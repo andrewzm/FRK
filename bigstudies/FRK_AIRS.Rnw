@@ -14,7 +14,8 @@ opts_FRK$set("parallel",0L)
 <<eval=TRUE>>=
 ## Load data
 data(AIRS_05_2003)
-AIRS_05_2003 <- filter(AIRS_05_2003,day %in% 1:1) %>%
+#AIRS_05_2003$co2std <- sqrt(5.6)
+AIRS_05_2003 <- filter(AIRS_05_2003,day %in% 1:5) %>%
     mutate(std=co2std) %>%
     select(lon,lat,co2avgret,std)
 coordinates(AIRS_05_2003) = ~lon+lat # change into an sp object
@@ -23,7 +24,11 @@ proj4string(AIRS_05_2003)=CRS("+proj=longlat")
 
 <<eval=TRUE>>=
 ## Prediction (BAU) grid
-isea3h_sp_poldf <- auto_BAUs(manifold=sphere(),res=6,data=NULL,cellsize = c(5,5),type="grid")
+isea3h_sp_poldf <- auto_BAUs(manifold=sphere(),
+                             res=7,
+                             data=NULL,
+                             cellsize = c(5,5),
+                             type="hex")
 isea3h_sp_poldf$fs = 1
 @
 
@@ -31,7 +36,7 @@ isea3h_sp_poldf$fs = 1
 <<eval=TRUE>>=
 ## Set up SRE model
 G <- auto_basis(m = sphere(),data=AIRS_05_2003,
-                nres = 2,prune=15,
+                nres = 4,prune=15,
                 type = "bisquare",
                 subsamp = 20000)
 @
@@ -44,7 +49,7 @@ S <- SRE(f,list(AIRS_05_2003),G,
 @
 
 <<eval=TRUE>>=
-S <- SRE.fit(S,n_EM = 3,tol = 1e-5,print_lik=TRUE)
+S <- SRE.fit(S,n_EM = 200,tol = 1e-5,print_lik=TRUE)
 @
 
 <<eval=TRUE>>=

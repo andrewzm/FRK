@@ -136,7 +136,7 @@ auto_basis <- function(m = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,t
         } else if(is(m,"real_line")) {
             this_res_locs <- matrix(seq(xrange[1],xrange[2],length=i*regular))
         } else if(is(m,"sphere")) {
-            this_res_locs <- as.matrix(filter(isea3h,centroid==1,res==i)[c("lon","lat")])
+            this_res_locs <- as.matrix(filter(isea3h,centroid==1,res==(i-1))[c("lon","lat")])
         }
         ## Set scales: To 1.5x the distance to nearest basis
         ## Refine: Remove basis which are not influenced by data and re-find the scales
