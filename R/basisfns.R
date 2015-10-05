@@ -173,8 +173,24 @@ auto_basis <- function(m = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,t
     G_basis
 }
 
+#' @title Add the time coordinate to 2D spatial basis functions
+#' @description Given a set of 2D spatial basis functions and a vector of knots in time, this function repeats the spatial basis at every temporal knot, adding the third dimension to the centroid as appopriate.
+#' @param G_spatial an object of class Basis on a 2D manifold
+#' @param t_knots a vector of numbers locating the knots in time
+#' @param manifold a 3D space-time manifold, typically STsphere or STplane
+#' @examples
+#' G_spatial <-  radial_basis(manifold = sphere(),
+#'                    loc=matrix(runif(20,min=-90,max=90),10,2),
+#'                    scale=rep(20,10),
+#'                    type="bisquare")
+#' G_space_time <- sp_to_ST_basis(G_spatial,1:10,manifold=STsphere())
+#' show_basis(ggplot(),G_space_time)
 #' @export
 sp_to_ST_basis <- function(G_spatial,t_knots = 1,manifold=STsphere()) {
+    stopifnot(dimensions(manifold(G_spatial))==2)
+    stopifnot(dimensions(manifold)==3)
+    stopifnot(is.numeric(t_knots))
+
     n <- G_spatial@n
     G <- list()
     for(i in seq_along(t_knots)) {

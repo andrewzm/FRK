@@ -13,6 +13,9 @@ notifications:
     on_success: change
     on_failure: change
 
+install:
+    - Rscript -e "if (!require('covr')) install.packages('covr')"
+
 r_github_packages:
   - jimhester/covr
 after_success:
