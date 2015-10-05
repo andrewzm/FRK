@@ -19,6 +19,8 @@ auto_BAUs(manifold, res = 2, cellsize = rep(1, dimensions(manifold)),
 \item{data}{object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame}. Provision of \code{data} implies that the domain is bounded, and is thus necessary when the manifold is a \code{real_line} or a \code{plane} but is not necessary when the manifold is a \code{sphere}}
 
 \item{convex}{convex parameter used for smoothing an extended boundary when working on a finite domain (that is, when the object \code{d} is supplied), see details.}
+
+\item{tunit}{temporal unit when requiring space-time BAUs. Can be either "secs", "mins", "hours" or "days".}
 }
 \description{
 This function calls the generic function \code{auto_BAU} (currently not exported) after a series of checks and is the easiest way to generate a set of BAUs on the manifold being used.
