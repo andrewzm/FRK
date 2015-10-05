@@ -14,7 +14,7 @@ notifications:
     on_failure: change
 
 install:
-    - Rscript -e "if (!require('covr')) install.packages('covr')"
+    - Rscript -e "if (!require('covr')) install.packages("covr",repos='http://cran.us.r-project.org')"
 
 r_github_packages:
   - jimhester/covr
