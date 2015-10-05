@@ -717,6 +717,11 @@ setMethod("manifold",signature(.Object="Basis"),function(.Object) {
     return(.Object@manifold)
 })
 
+setMethod("manifold",signature(.Object="TensorP_Basis"),function(.Object) {
+    return(NA)
+})
+
+
 #' @aliases coordnames,STFDF-method
 setMethod("coordnames",signature(x="STFDF"),function(x) {
     return(coordnames(x@sp))

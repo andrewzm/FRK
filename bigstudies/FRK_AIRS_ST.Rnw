@@ -53,7 +53,10 @@ G_spatial <- auto_basis(m = sphere(),
                         type = "bisquare",
                         subsamp = 20000)
 
-G_spacetime <- sp_to_ST_basis(G_spatial,t_knots = c(2,7,12),manifold = TwoD_ST)
+G_temporal <- radial_basis(manifold=real_line(),loc = matrix(c(2,7,12)),scale = rep(3,3))
+G_spacetime <- TensorP(G_spatial,G_temporal)
+
+#G_spacetime <- sp_to_ST_basis(G_spatial,t_knots = c(2,7,12),manifold = TwoD_ST)
 @
 
 <<eval=TRUE>>=

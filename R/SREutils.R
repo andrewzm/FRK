@@ -387,7 +387,7 @@ SRE.predict <- function(SRE_model,pred_locs = SRE_model@BAUs,use_centroid=TRUE) 
     if(!all(sapply(data,function(x) is(x,"Spatial") | is(x,"ST")))) stop("All data list elements need to be of class Spatial or ST")
     if(!all(sapply(data,function(x) all.vars(f)[1] %in% names(x@data)))) stop("All data list elements to have values for the dependent variable")
     if(!all(sapply(data,function(x) identical(proj4string(x), proj4string(BAUs))))) stop("Please ensure all data items and BAUs have the same coordinate reference system")
-    if(!is(basis,"Basis")) stop("basis needs to be of class Basis (package FRK)")
+    if(!(is(basis,"Basis") | is(basis,"TensorP_Basis"))) stop("basis needs to be of class Basis  or TensorP_Basis (package FRK)")
     #if(is(data,"SpatialPolygonsDataFrame") & !("std" %in% names(data))) stop("Polygon data needs to contain a field 'std' denoting the observation error")
     if(!("fs" %in% names(BAUs@data))) {
         warning("BAUs should contain a field 'fs' containing a basis function for fine-scale variation. Setting basis function equal to one everywhere.")
@@ -395,7 +395,7 @@ SRE.predict <- function(SRE_model,pred_locs = SRE_model@BAUs,use_centroid=TRUE) 
     }
     if(!(is(BAUs,"SpatialPolygonsDataFrame") | is(BAUs,"STFDF"))) stop("BAUs should be a SpatialPolygonsDataFrame or a STFDF object")
     if(is(BAUs,"STFDF")) if(!is(BAUs@sp,"SpatialPolygonsDataFrame")) stop("The spatial component of the BAUs should be a SpatialPolygonsDataFrame")
-    if((is(basis@manifold,"sphere")) & !all((coordnames(BAUs) == c("lon","lat")))) stop("Since a sphere is being used, please ensure that all coordinates (including those of BAUs) are in (lon,lat)")
+    if((is(manifold(basis),"sphere")) & !all((coordnames(BAUs) == c("lon","lat")))) stop("Since a sphere is being used, please ensure that all coordinates (including those of BAUs) are in (lon,lat)")
     if(!est_error & !all(sapply(data,function(x) "std" %in% names(x@data)))) stop("If observational error is not going to be estimated, please supply a field 'std' in the data objects")
 }
 

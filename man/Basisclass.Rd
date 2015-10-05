@@ -3,6 +3,7 @@
 \docType{class}
 \name{Basis-class}
 \alias{Basis-class}
+\alias{TensorP_Basis-class}
 \title{Basis functions}
 \description{
 An object of class \code{Basis} contains the basis functions used to construct the \eqn{S} matrix in fixed-rank kriging. It contains five slots, described below.

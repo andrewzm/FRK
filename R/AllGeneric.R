@@ -128,6 +128,5 @@ setGeneric("BuildC", function(data,BAUs) standardGeneric("BuildC"))
 #' @description Constructs a new set of basis by finding the tensor product of two sets of basis functions. The product is carried out on the basis functions elementwise. Hence, \code{Basis1} and \code{Basis2} need to contain the same number of basis functions.
 #' @param Basis1 first set of basis functions
 #' @param Basis2 second set of basis functions
-#' @noRd
 setGeneric("TensorP", function(Basis1,Basis2) standardGeneric("TensorP"))
 
