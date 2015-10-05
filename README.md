@@ -54,3 +54,4 @@ LazyData: true
 
 
 [![Coverage Status](https://img.shields.io/coveralls/andrewzm/FRK.svg)](https://coveralls.io/r/andrewzm/FRK?branch=master)
+[![Build Status](https://travis-ci.org/andrewzm/FRK.svg)](https://travis-ci.org/andrewzm/FRK)

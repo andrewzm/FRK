@@ -7,3 +7,4 @@ vignettes/*.synctex.gz
 vignettes/figure
 src/*.o
 src/*.so
+..pdf
