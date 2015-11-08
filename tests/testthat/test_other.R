@@ -36,7 +36,7 @@ test_that("coordnames_SpaceTime",{
     time2 <- unique(time1)
     space2 <- unique(sim_process[,c("x","y")])
     coordinates(space2) <- ~x+y
-    STobj2 <- STIDF(space2,time2,data=sim_data)
+    STobj2 <- STIDF(space2,time2,data=sim_process)
     expect_equal(coordnames(STobj2),c("x","y","t"))
 })
 
@@ -49,3 +49,31 @@ test_that("Estimate observation error from variogram",{
     expect_is(meuse,"SpatialPointsDataFrame")
 
 })
+
+
+test_that("Can convert SPDF to DF", {
+    sphere_grid <- auto_BAUs(manifold=sphere(),
+                             data=NULL,
+                             cellsize=c(20,10),
+                             type="grid")
+    expect_is(sphere_grid,"SpatialPolygonsDataFrame")
+    df <- SpatialPolygonsDataFrame_to_df(sphere_grid,vars = c("lon","lat"))
+    expect_is(df,"data.frame")
+    expect_equal(names(df),c("lon","lat","id"))
+    expect_equal(length(unique(df$id)),length(sphere_grid))
+
+})
+
+test_that("Can convert DF to SPDF", {
+    sphere_grid <- auto_BAUs(manifold=sphere(),
+                             data=NULL,
+                             cellsize=c(20,10),
+                             type="grid")
+    expect_is(sphere_grid,"SpatialPolygonsDataFrame")
+    df <- SpatialPolygonsDataFrame_to_df(sphere_grid,vars = c("lon","lat"))
+    expect_is(df,"data.frame")
+    expect_equal(names(df),c("lon","lat","id"))
+    expect_equal(length(unique(df$id)),length(sphere_grid))
+
+})
+
