@@ -57,7 +57,7 @@ data(meuse)
 data(meuse.grid)
 coordinates(meuse) = ~x+y # change into an sp object
 gridded(meuse.grid) = ~x + y
-HexPts <- spsample(meuse.grid, type = "hexagonal", cellsize = 50)
+HexPts <- spsample(meuse.grid, type = "hexagonal", cellsize = 400)
 HexPols <- HexPoints2SpatialPolygons(HexPts)
 HexPols_df <- SpatialPolygonsDataFrame(HexPols,
                                        cbind(over(HexPols,meuse.grid),
@@ -66,7 +66,7 @@ HexPols_df <- SpatialPolygonsDataFrame(HexPols,
 G <- auto_basis(m = plane(),data=meuse,nres = 2,prune=10,type = "Gaussian")
 test_that("can average basis over polygons in plane", {
         expect_true({eval_basis(G,coordinates(HexPts)); TRUE})
-        expect_true({eval_basis(G,HexPols_df); TRUE})
+        expect_true({eval_basis(G,HexPols_df[1:3]); TRUE})
         #plot(as.numeric(S1))
         #lines(as.numeric(S2),col='red')
 })
