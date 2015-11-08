@@ -66,7 +66,7 @@ HexPols_df <- SpatialPolygonsDataFrame(HexPols,
 G <- auto_basis(m = plane(),data=meuse,nres = 2,prune=10,type = "Gaussian")
 test_that("can average basis over polygons in plane", {
         expect_true({eval_basis(G,coordinates(HexPts)); TRUE})
-        expect_true({eval_basis(G,HexPols_df[1:3]); TRUE})
+        expect_true({eval_basis(G,HexPols_df); TRUE})
         #plot(as.numeric(S1))
         #lines(as.numeric(S2),col='red')
 })
