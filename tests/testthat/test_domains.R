@@ -7,6 +7,8 @@ test_that("dimensions work", {
     expect_equal(dimensions(sphere()), 2L)
     expect_equal(dimensions(plane()), 2L)
     expect_equal(dimensions(real_line()), 1L)
+    expect_equal(dimensions(STplane()), 3L)
+    expect_equal(dimensions(STsphere()), 3L)
 })
 
 test_that("sphere distance works", {

@@ -218,9 +218,10 @@ setMethod("auto_BAU",signature(manifold="real_line"),function(manifold,cellsize 
         cbind(y=0) %>%
         SpatialPoints()
 
-    xy <- xgrid %>%
+    suppressWarnings(xy <- xgrid %>%
         points2grid() %>%
-        as.SpatialPolygons.GridTopology()
+        as.SpatialPolygons.GridTopology())
+    ## Suppress warning of unknown y grid cell size
     xy_df <- SpatialPolygonsDataFrame(xy,data.frame(coordinates(xy),
                                                     row.names = row.names(xy)))
     return(xy_df)
@@ -514,7 +515,7 @@ df_to_SpatialPolygons <- function(df,keys,coords,proj) {
                              coords=coords,
                              dfun=parse(text = deparse(dfun)))
     } else {
-        if(opts_FRK$get("parallel") > 0) {
+        if(opts_FRK$get("parallel") > 1) {
             cl <- makeCluster(opts_FRK$get("parallel"))
             doParallel::registerDoParallel(opts_FRK$get("parallel"))
             df_poly <- plyr::dlply(df,keys,dfun,.parallel=TRUE)

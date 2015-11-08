@@ -3,13 +3,13 @@
 \docType{methods}
 \name{nbasis}
 \alias{nbasis}
-\alias{nbasis,Basis-method}
+\alias{nbasis,Basis_obj-method}
 \alias{nbasis,SRE-method}
 \title{Number of basis functions}
 \usage{
 nbasis(.Object)
 
-\S4method{nbasis}{Basis}(.Object)
+\S4method{nbasis}{Basis_obj}(.Object)
 
 \S4method{nbasis}{SRE}(.Object)
 }

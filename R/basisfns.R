@@ -212,7 +212,7 @@ sp_to_ST_basis <- function(G_spatial,t_knots = 1,manifold=STsphere()) {
 #' @rdname TensorP
 #' @aliases TensorP,Basis-Basis-method
 setMethod("TensorP",signature(Basis1="Basis",Basis2="Basis"),function(Basis1,Basis2) {
-    new("TensorP_Basis",Basis1=Basis1, Basis2=Basis2, n = Basis1@n)
+    new("TensorP_Basis",Basis1=Basis1, Basis2=Basis2, n = Basis1@n * Basis2@n)
 })
 
 
@@ -263,6 +263,53 @@ setMethod("eval_basis",signature(basis="Basis",s="STIDF"),function(basis,s,outpu
     space_dim <- dimensions(manifold(basis))
     .point_eval_fn(basis@fn,cbind(coordinates(s),t=s@data$t)[,1:space_dim,drop=F],output)
 })
+
+
+#' @rdname eval_basis
+#' @aliases eval_basis,TensorP_Basis-matrix-method
+setMethod("eval_basis",signature(basis="TensorP_Basis",s="matrix"),function(basis,s,output = "matrix"){
+    n1 <- dimensions(manifold(basis@Basis1))
+    S1 <- eval_basis(basis@Basis1,s[,1:n1,drop=FALSE],output)
+    S2 <- eval_basis(basis@Basis2,s[,-(1:n1),drop=FALSE],output)
+
+    S <- foreach(i = 1:ncol(S1),.combine="cBind") %do% {
+        S1[,i] * S2
+    } %>% as("dgCMatrix")
+
+    S
+})
+
+#' @rdname eval_basis
+#' @aliases eval_basis,TensorP_Basis-STIDF-method
+setMethod("eval_basis",signature(basis="TensorP_Basis",s = "STIDF"),function(basis,s,output = "matrix"){
+    n1 <- dimensions(manifold(basis@Basis1))
+    slocs <- coordinates(s)
+    tlocs <- matrix(s@data$t)
+
+    S1 <- eval_basis(basis@Basis1,slocs[,,drop=FALSE],output)
+    S2 <- eval_basis(basis@Basis2,tlocs[,,drop=FALSE],output)
+
+    S <- foreach(i = 1:ncol(S1),.combine="cBind") %do% {
+        S1[,i] * S2
+    } %>% as("dgCMatrix")
+
+    S
+})
+
+
+
+#' @rdname eval_basis
+#' @aliases eval_basis,Basis-STIDF-method
+setMethod("eval_basis",signature(basis="Basis",s="STIDF"),function(basis,s,output = "matrix"){
+    stopifnot(output %in% c("matrix","list"))
+    space_dim <- dimensions(manifold(basis))
+    .point_eval_fn(basis@fn,cbind(coordinates(s),t=s@data$t)[,1:space_dim,drop=F],output)
+})
+
+
+
+
+
 
 .point_eval_fn <- function(flist,s,output="matrix") {
     #if(!opts_FRK$get("Rhipe")) {
@@ -365,8 +412,9 @@ setMethod("concat",signature = "Basis",function(...) {
 })
 
 #' @rdname nbasis
-#' @aliases nbasis,Basis-method
-setMethod("nbasis",signature(.Object="Basis"),function(.Object) {return(.Object@n)})
+#' @aliases nbasis,Basis_obj-method
+setMethod("nbasis",signature(.Object="Basis_obj"),function(.Object) {return(.Object@n)})
+
 
 #' @rdname nbasis
 #' @aliases nbasis,SRE-method

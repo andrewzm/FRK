@@ -11,6 +11,10 @@
 \alias{eval_basis,Basis-SpatialPointsDataFrame-method}
 \alias{eval_basis,Basis-SpatialPolygonsDataFrame-method}
 \alias{eval_basis,Basis-matrix-method}
+\alias{eval_basis,TensorP_Basis,STIDF-method}
+\alias{eval_basis,TensorP_Basis,matrix-method}
+\alias{eval_basis,TensorP_Basis-STIDF-method}
+\alias{eval_basis,TensorP_Basis-matrix-method}
 \title{Evaluate basis functions}
 \usage{
 eval_basis(basis, s, output = "matrix")
@@ -22,6 +26,12 @@ eval_basis(basis, s, output = "matrix")
 
 \S4method{eval_basis}{Basis,SpatialPolygonsDataFrame}(basis, s,
   output = "matrix")
+
+\S4method{eval_basis}{Basis,STIDF}(basis, s, output = "matrix")
+
+\S4method{eval_basis}{TensorP_Basis,matrix}(basis, s, output = "matrix")
+
+\S4method{eval_basis}{TensorP_Basis,STIDF}(basis, s, output = "matrix")
 
 \S4method{eval_basis}{Basis,STIDF}(basis, s, output = "matrix")
 }

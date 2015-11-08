@@ -64,10 +64,13 @@ setClass("timeline",contains="manifold")
 #' @details Basis functions are a critical component of the \code{FRK} package and the package is designed to work with user-defined specifications of these. For convenience however, several functions aid the user to construct specific sets for a given set of data points. Please see \code{\link{auto_basis}} for more details. The function \code{\link{radial_basis}} helps the user construct a set of radial basis functions from a collection of locations and scale parameters.
 #' @keywords Basis functions
 #' @rdname Basisclass
-setClass("Basis", representation(manifold="manifold",n = "numeric",fn="list",pars="list", df="data.frame"))
+setClass("Basis_obj", representation(n = "numeric","VIRTUAL"))
 
 #' @rdname Basisclass
-setClass("TensorP_Basis", representation(Basis1="Basis",Basis2="Basis",n="numeric"))
+setClass("Basis",contains="Basis_obj", representation(manifold="manifold",fn="list",pars="list", df="data.frame"))
+
+#' @rdname Basisclass
+setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Basis2="Basis"))
 
 
 #'  @title Spatial Random Effects class
@@ -91,7 +94,7 @@ setClass("TensorP_Basis", representation(Basis1="Basis",Basis2="Basis",n="numeri
 #' @slot sigma2fshat fine-scale variation scaler (estimated)
 #' @keywords Spatial random effects, fixed rank kriging
 setClass("SRE",representation(data="list",
-                              basis="Basis",
+                              basis="Basis_obj",
                               BAUs="ANY",     # should be SpatialPolygonsDataFrame of STFDF
                               f = "formula",
                               S = "Matrix",

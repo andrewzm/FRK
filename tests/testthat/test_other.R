@@ -1,0 +1,9 @@
+context("other")
+test_that("opts",{
+    expect_is(opts_FRK$get,"function")
+    expect_is(opts_FRK$set,"function")
+    expect_is(opts_FRK$get("progress"),"logical")
+    expect_is(opts_FRK$get("parallel"),"integer")
+    expect_is(opts_FRK$get("verbose"),"logical")
+    expect_is(opts_FRK$get("Rhipe"),"logical")
+})

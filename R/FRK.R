@@ -13,6 +13,7 @@
 #' @import gstat
 #' @import dplyr
 #' @import mapproj
+#' @import foreach
 #' @importFrom plyr ddply dlply rbind.fill
 #' @importFrom PBSmapping clipPolys
 #' @importFrom digest digest
