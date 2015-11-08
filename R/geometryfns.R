@@ -645,19 +645,23 @@ setMethod("map_data_to_BAUs",signature(data_sp="ST"),
 
 est_obs_error <- function(sp_pts,variogram.formula) {
 
-      if(is(variogram.formula,"formula")) {
-        g <- gstat::gstat(formula=variogram.formula,data=sp_pts)
-        v <- gstat::variogram(g,cressie=T)
-        warning("Not accounting for multiple data in the same grid box during variogram estimation.
-                Need to see how to do this with gstat")
-        vgm.fit = gstat::fit.variogram(v, model = gstat::vgm(1, "Lin", mean(v$dist), 1))
-        plot(v,vgm.fit)
-        print(paste0("sigma2e estimate = ",vgm.fit$psill[1]))
-        if(vgm.fit$psill[1] == 0)
-            stop("Observational error estimated to be zero. Please consider using finer BAUs")
-        sp_pts$std <- sqrt(vgm.fit$psill[1] / sp_pts$Nobs)
-    }
-    sp_pts
+    stopifnot(is(variogram.formula,"formula"))
+    stopifnot(is(sp_pts,"SpatialPointsDataFrame"))
+    if(!("Nobs" %in% names(sp_pts))) stop("Nobs (number of observations in grid cell) needs to be a field of the Spatial object")
+
+    g <- gstat::gstat(formula=variogram.formula,data=sp_pts)
+    v <- gstat::variogram(g,cressie=T)
+    vgm.fit = gstat::fit.variogram(v, model = gstat::vgm(1, "Lin", mean(v$dist), 1))
+    plot(v,vgm.fit)
+    print(paste0("sigma2e estimate = ",vgm.fit$psill[1]))
+    if(vgm.fit$psill[1] == 0)
+        stop("Observational error estimated to be zero. Please consider using finer BAUs or do not attempt to estimate observation error")
+    sp_pts$std <- sqrt(vgm.fit$psill[1] / sp_pts$Nobs)
+
+    warning("Error estimation could be improved. Currently a variogram is fitted to the data, and then the error variance of a single observation is assumed to be the partial sill. Then the variance of the averaged observations in the BAU is divided by Nobs. Currently there is no accounting for multiple data in the same grid box during variogram fitting as it's not straightforward with gstat.")
+
+        sp_pts
+
 }
 
 

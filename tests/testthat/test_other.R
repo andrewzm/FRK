@@ -39,3 +39,13 @@ test_that("coordnames_SpaceTime",{
     STobj2 <- STIDF(space2,time2,data=sim_data)
     expect_equal(coordnames(STobj2),c("x","y","t"))
 })
+
+test_that("Estimate observation error from variogram",{
+    data(meuse)
+    meuse$Nobs <- 1
+    coordinates(meuse) = ~x+y # change into an sp object
+    suppressWarnings(meuse <- est_obs_error(meuse,variogram.formula = log(zinc)~1))
+    expect_true("std" %in% names(meuse))
+    expect_is(meuse,"SpatialPointsDataFrame")
+
+})
