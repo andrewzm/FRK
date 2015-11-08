@@ -64,16 +64,16 @@ test_that("Can convert SPDF to DF", {
 
 })
 
-test_that("Can convert DF to SPDF", {
-    sphere_grid <- auto_BAUs(manifold=sphere(),
-                             data=NULL,
-                             cellsize=c(20,10),
-                             type="grid")
-    expect_is(sphere_grid,"SpatialPolygonsDataFrame")
-    df <- SpatialPolygonsDataFrame_to_df(sphere_grid,vars = c("lon","lat"))
-    expect_is(df,"data.frame")
-    expect_equal(names(df),c("lon","lat","id"))
-    expect_equal(length(unique(df$id)),length(sphere_grid))
+test_that("Can convert DF to SP", {
+    library(sp)
+    opts_FRK$set("parallel",0L)
+    df <- data.frame(id = c(rep(1,4),rep(2,4)),
+                     x = c(0,1,0,0,2,3,2,2),
+                     y=c(0,0,1,0,0,1,1,0))
+    pols <- df_to_SpatialPolygons(df,"id",c("x","y"),CRS())
+    expect_is(pols,"SpatialPolygons")
+    expect_equal(length(pols),2)
+    expect_equal(coordnames(pols),c("x","y"))
 
 })
 

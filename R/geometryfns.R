@@ -545,7 +545,7 @@ df_to_SpatialPolygons <- function(df,keys,coords,proj) {
 #' df2 <- SpatialPolygonsDataFrame_to_df(polsdf)
 #' ggplot(df2,aes(x=x,y=y,group=id)) + geom_polygon()
 SpatialPolygonsDataFrame_to_df <- function(sp_polys,vars = names(sp_polys)) {
-    if(!("id" %in% names(sp_polys))) stop("sp_polys has to have an id columns in its data frame")
+    if(!("id" %in% names(sp_polys@data))) stop("sp_polys has to have an id columns in its data frame")
     if("id" %in% vars) stop("vars should not contain the variable 'id' (this is implicitly assumed)")
     sp_polys$id <- 1 : length(sp_polys)
     polynames <- 1 : length(sp_polys)
