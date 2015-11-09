@@ -138,7 +138,7 @@ cholsolveAQinvAT <- function(Q,A,Lp,P) {
 Takahashi_Davis <- function(Q,return_perm_chol = 0,cholQp = matrix(0,0,0),P=0) {
 
   n <- nrow(Q)
-  rm(Q)
+
 
   if (dim(cholQp)[1] == 0) {
     symchol <- Cholesky(forceSymmetric(Q))
@@ -150,7 +150,7 @@ Takahashi_Davis <- function(Q,return_perm_chol = 0,cholQp = matrix(0,0,0),P=0) {
     L <- cholQp
     P <- P
   }
-
+  rm(Q)
   if (return_perm_chol == 0) rm(cholQp)
 
   d <- diag (L)
