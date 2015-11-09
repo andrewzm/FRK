@@ -152,7 +152,7 @@ HexPols_df2 <- SpatialPolygonsDataFrame(HexPols2,
                                             select(zinc)) %>%
     subset(!is.na(zinc))
 
-if(require(INLA)) { ## Need INLA from here on
+if(0) { ## Need INLA from here on
 
         # Generate BAUs
         HexPols_df <- auto_BAUs(manifold = plane(),cellsize = c(50,50),type = "grid",data = meuse,convex=-0.05)
