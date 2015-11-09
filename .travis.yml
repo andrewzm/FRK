@@ -27,7 +27,7 @@ r_github_packages:
   - jimhester/covr
   - hadley/testthat
   - jimhester/lintr
-  - grantbrown/inla
+  - andrewzm/inla
 
 #after_success:
 #  - Rscript -e 'library(covr);codecov()'
