@@ -18,7 +18,8 @@ Suggests:
     zoo,
     covr,
     splancs,
-    INLA
+    INLA,
+    rgeos
 Enhances:
     Rhipe
 Imports:
