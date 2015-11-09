@@ -173,7 +173,7 @@ setMethod("auto_BAU",signature(manifold = c("STmanifold")),
               }
 
               spatial_BAUs <- auto_BAU(manifold=spat_manifold,cellsize=cellsize[1:2],
-                                       resl=resl,type=type,d=STobj@sp,convex=convex,...)
+                                       resl=resl,type=type,d=d@sp,convex=convex,...)
               temporal_BAUs <- auto_BAU(manifold=timeline(), cellsize=cellsize[3],
                                         resl=resl,type=type,d=d,convex=convex,...)
 
@@ -601,7 +601,6 @@ setMethod("map_data_to_BAUs",signature(data_sp="Spatial"),
                   data_sp@data <- cbind(data_sp@data,BAUs_aux_data)
                   data_sp$Nobs <- 1
                   new_sp_pts <- data_sp
-                  browser()
               }
 
               new_sp_pts
@@ -647,8 +646,8 @@ setMethod("map_data_to_BAUs",signature(data_sp="ST"),
 
 est_obs_error <- function(sp_pts,variogram.formula) {
 
-    stopifnot(is(variogram.formula,"formula"))
-    stopifnot(is(sp_pts,"SpatialPointsDataFrame"))
+    #stopifnot(is(variogram.formula,"formula"))
+    stopifnot(is(sp_pts,"Spatial"))
     if(!("Nobs" %in% names(sp_pts))) stop("Nobs (number of observations in grid cell) needs to be a field of the Spatial object")
 
     g <- gstat::gstat(formula=variogram.formula,data=sp_pts)
@@ -660,7 +659,7 @@ est_obs_error <- function(sp_pts,variogram.formula) {
         stop("Observational error estimated to be zero. Please consider using finer BAUs or do not attempt to estimate observation error")
     sp_pts$std <- sqrt(vgm.fit$psill[1] / sp_pts$Nobs)
 
-    warning("Error estimation could be improved. Currently a variogram is fitted to the data, and then the error variance of a single observation is assumed to be the partial sill. Then the variance of the averaged observations in the BAU is divided by Nobs. Currently there is no accounting for multiple data in the same grid box during variogram fitting as it's not straightforward with gstat.")
+    warning("Observational error estimation could be improved. Currently a variogram is fitted to the data, and then the error variance of a single observation is assumed to be the partial sill. Then the variance of the averaged observations in the BAU is divided by Nobs. Currently there is no accounting for multiple data in the same grid box during variogram fitting as it's not straightforward with gstat.")
 
         sp_pts
 
