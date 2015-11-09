@@ -16,7 +16,8 @@ Suggests:
     shapefiles,
     knitr,
     zoo,
-    covr
+    covr,
+    splancs
 Enhances:
     INLA,
     Rhipe
