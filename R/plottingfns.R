@@ -1,56 +1,3 @@
-.check_plot_args <- function(args,z=0) {
-
-  if ("max" %in% names(args)) {
-    stopifnot(is.numeric(args$max))
-  } else {
-    args$max <- max(z,na.rm=T)
-  }
-
-  if ("min" %in% names(args)) {
-    stopifnot(is.numeric(args$min))
-  } else {
-    args$min <- min(z,na.rm=T)
-  }
-
-  if("leg_title" %in% names(args)) {
-    stopifnot(is.character(args$leg_title))
-  } else {
-    args$leg_title <- ""
-  }
-
-  if ("plot_dots" %in% names(args)) {
-    stopifnot(is.logical(args$plot_dots))
-  } else {
-    args$plot_dots <- T
-  }
-
-  if ("g" %in% names(args)) {
-    stopifnot(is.ggplot(args$g))
-  } else {
-    args$g <- NULL
-  }
-
-  if("pt_size" %in% names(args)) {
-    stopifnot(is.numeric(args$pt_size))
-  } else {
-    args$pt_size <- 1
-  }
-
-  if("size" %in% names(args)) {
-    args$pt_size <- args$size
-  }
-
-  if(!("palette" %in% names(args))) {
-    args$palette <- "RdYlBu"
-  }
-
-  if(!("reverse" %in% names(args))) {
-    args$reverse <- FALSE
-  }
-
-  return(args)
-}
-
 circleFun <- function(center = c(0,0),diameter = 1, npoints = 100){
     r = diameter / 2
     tt <- seq(0,2*pi,length.out = npoints)
@@ -188,11 +135,6 @@ clip_polygons_lonlat <- function(d,key) {
         } else {
             df
         }})
-}
-
-spy <-function(X) {
-  Y <- which(t(X)!=0,arr.ind=TRUE)
-  plot(Y[,1],-Y[,2],pch=".")
 }
 
 

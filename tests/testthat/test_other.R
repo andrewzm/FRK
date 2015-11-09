@@ -77,3 +77,20 @@ test_that("Can convert DF to SP", {
 
 })
 
+test_that("Options work", {
+    opts <- new_opts_FRK()
+    expect_is(opts,"list")
+    expect_equal(names(opts),c("set","get"))
+    expect_is(opts$set,"function")
+    expect_is(opts$get,"function")
+    opts$set("progress",1)
+    expect_equal(opts$get("progress"),1)
+})
+
+test_that("Plotting works", {
+    expect_true({draw_world(); TRUE})
+    expect_true({LinePlotTheme() + geom_point(data=data.frame(x=1,y=1),aes(x,y));TRUE})
+    expect_true({EmptyTheme() + geom_point(data=data.frame(x=1,y=1),aes(x,y));TRUE})
+
+
+})
