@@ -17,9 +17,9 @@ Suggests:
     knitr,
     zoo,
     covr,
-    splancs
+    splancs,
+    INLA
 Enhances:
-    INLA,
     Rhipe
 Imports:
     methods,

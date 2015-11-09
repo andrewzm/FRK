@@ -41,7 +41,7 @@ test_that("plane_BAUs",{
     f <- z ~ 1
     binned_data <- map_data_to_BAUs(data,Grid2D,av_var=all.vars(f)[1])
     expect_is(binned_data,"SpatialPointsDataFrame")
-    expect_true(nrow(binned_data) <= nrow(Grid1D_df))
+    expect_true(nrow(binned_data) <= nrow(Grid2D))
 
     C <- BuildC(binned_data,Grid2D)
     expect_is(C,"list")

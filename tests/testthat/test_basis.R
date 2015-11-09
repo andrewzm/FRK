@@ -80,7 +80,7 @@ test_that("can get ST basis using time repetition", {
                                type="bisquare")
     G_space_time <- sp_to_ST_basis(G_spatial,1:10,manifold=STsphere())
     expect_is(G_space_time,"Basis")
-    expect_is(manifold(G),"plane")
+    expect_is(manifold(G_space_time),"STsphere")
     expect_equal(nbasis(G_space_time),100)
 
 })
