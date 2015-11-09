@@ -35,10 +35,11 @@ Suggests:
     reshape2,
     shapefiles,
     knitr,
-    zoo
+    zoo,
+    INLA,
+    splancs
 
 Enhances:
-    INLA,
     Rhipe
 
 Imports:
