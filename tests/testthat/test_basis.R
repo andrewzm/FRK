@@ -51,22 +51,51 @@ test_that("we can have multiple functions in a Basis object on real line and plo
     expect_true({show_basis(ggplot(),G_basis); TRUE})
 })
 
-## Get data
-library(sp)
-data(meuse)
-data(meuse.grid)
-coordinates(meuse) = ~x+y # change into an sp object
-gridded(meuse.grid) = ~x + y
-HexPts <- spsample(meuse.grid, type = "hexagonal", cellsize = 400)
-HexPols <- HexPoints2SpatialPolygons(HexPts)
-HexPols_df <- SpatialPolygonsDataFrame(HexPols,
-                                       cbind(over(HexPols,meuse.grid),
-                                             coordinates(HexPts)))
-## Generate basis functions
-G <- auto_basis(m = plane(),data=meuse,nres = 2,prune=10,type = "Gaussian")
 test_that("can average basis over polygons in plane", {
+
+    ## Get data
+    library(sp)
+    data(meuse)
+    data(meuse.grid)
+    coordinates(meuse) = ~x+y # change into an sp object
+    gridded(meuse.grid) = ~x + y
+    HexPts <- spsample(meuse.grid, type = "hexagonal", cellsize = 400)
+    HexPols <- HexPoints2SpatialPolygons(HexPts)
+    HexPols_df <- SpatialPolygonsDataFrame(HexPols,
+                                           cbind(over(HexPols,meuse.grid),
+                                                 coordinates(HexPts)))
+    ## Generate basis functions
+    G <- auto_basis(m = plane(),data=meuse,nres = 2,prune=10,type = "Gaussian")
+
         expect_true({eval_basis(G,coordinates(HexPts)); TRUE})
         expect_true({eval_basis(G,HexPols_df); TRUE})
         #plot(as.numeric(S1))
         #lines(as.numeric(S2),col='red')
+})
+
+test_that("can get ST basis using time repetition", {
+    G_spatial <-  radial_basis(manifold = sphere(),
+                               loc=matrix(runif(20,min=-90,max=90),10,2),
+                               scale=rep(20,10),
+                               type="bisquare")
+    G_space_time <- sp_to_ST_basis(G_spatial,1:10,manifold=STsphere())
+    expect_is(G_space_time,"Basis")
+    expect_is(manifold(G),"plane")
+    expect_equal(nbasis(G_space_time),100)
+
+})
+
+test_that("can get ST basis using tensor product", {
+    G_spatial <-  radial_basis(manifold = sphere(),
+                               loc=matrix(runif(20,min=-90,max=90),10,2),
+                               scale=rep(20,10),
+                               type="bisquare")
+
+    G_temporal <- radial_basis(manifold=real_line(),loc = matrix(c(2,7,12)),scale = rep(3,3))
+    G_spacetime <- TensorP(G_spatial,G_temporal)
+    expect_is(G_spacetime,"TensorP_Basis")
+    expect_is(G_spacetime@Basis1,"Basis")
+    expect_is(G_spacetime@Basis2,"Basis")
+    expect_equal(nbasis(G_spacetime),30)
+
 })
