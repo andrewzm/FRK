@@ -103,7 +103,6 @@ SRE <- function(f,data,basis,BAUs,est_error=TRUE) {
 
         Cmat[[i]] <- Cmat[[i]] / rowSums(Cmat[[i]]) ## Average BAUs for polygon observations
 
-
         Vfs[[i]] <- Diagonal(x=as.numeric(Cmat[[i]]^2 %*% BAUs$fs )) # Assuming no obeservations overlap
         S[[i]] <- eval_basis(basis, s = data_proc)
 
@@ -162,7 +161,7 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM",print_lik=FAL
 
     if(i == n_EM) print("Maximum EM iterations reached")
     if(print_lik) {
-        plot(lk[1:i][-1],ylab="log likelihood")
+        plot(lk[1:i],ylab="log likelihood")
         print("Warning: Ignoring constants in log-likelihood computation")
     }
     SRE_model

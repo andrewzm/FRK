@@ -3,18 +3,17 @@
 \docType{methods}
 \name{show_basis}
 \alias{show_basis}
-\alias{show_basis,ANY,Basis-method}
 \alias{show_basis,Basis-method}
 \title{Show basis functions}
 \usage{
-show_basis(g, basis)
+show_basis(basis, g)
 
-\S4method{show_basis}{ANY,Basis}(g = ggplot(), basis)
+\S4method{show_basis}{Basis}(basis, g = ggplot())
 }
 \arguments{
-\item{g}{object of class \code{gg} (a \code{ggplot} object)}
-
 \item{basis}{object of class \code{Basis}}
+
+\item{g}{object of class \code{gg} (a \code{ggplot} object)}
 }
 \description{
 Generic plotting function for illustrating the basis functions.
@@ -28,6 +27,6 @@ library(sp)
 data(meuse)
 coordinates(meuse) = ~x+y # change into an sp object
 G <- auto_basis(m = plane(),data=meuse,nres = 2,regular=2,prune=10,type = "Gaussian")
-show_basis(ggplot(),G) + geom_point(data=data.frame(meuse),aes(x,y))
+show_basis(G,ggplot()) + geom_point(data=data.frame(meuse),aes(x,y))
 }
 

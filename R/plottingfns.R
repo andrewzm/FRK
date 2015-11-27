@@ -33,7 +33,7 @@ draw_world <- function(g = ggplot(),inc_border = TRUE) {
 #' @rdname show_basis
 #' @aliases show_basis,Basis-method
 setMethod("show_basis",signature(basis = "Basis"),  # GRBF basis with mean offset as last weight
-          function(g=ggplot(),basis) {
+          function(basis,g=ggplot()) {
 
               message("Note: show_basis assumes spherical distance functions when plotting")
 
@@ -46,7 +46,7 @@ setMethod("show_basis",signature(basis = "Basis"),  # GRBF basis with mean offse
                  for (i in 1:basis@n) {
                      S <- basis@fn[[i]](s)
                      df <- data.frame(s=as.numeric(s), y = as.numeric(S),res=basis@df$res[i])
-                     g <- g + geom_line(data=df,aes(x=s,y=y,col=as.factor(res)))
+                     g <- g + geom_line(data=df,aes(x=s,y=y,col=as.factor(res))) + labs(colour="res")
                  }
               } else  if(is(manifold(basis),"plane")) {
                   for (i in 1:basis@n) {

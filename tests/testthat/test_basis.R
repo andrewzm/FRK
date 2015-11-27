@@ -25,7 +25,7 @@ mu[,1] <- mu[,1]*2
 std <- rep(500,50)
 G_basis <- radial_basis(manifold = sphere(),loc = mu,scale=std,type="Gaussian")
 test_that("we can show basis locations on sphere", {
-    expect_true({show_basis(ggplot(),G_basis); TRUE})
+    expect_true({show_basis(G_basis); TRUE})
 })
 
 mu <- matrix(rnorm(10),5,2)
@@ -36,7 +36,7 @@ test_that("we can have multiple functions in a Basis object on plane and plot th
     expect_equal(nrow(G_basis@df), 5)
     expect_equal(G_basis@fn[[1]](mu)[1,1],1) # Value of basis at mean is 1
     expect_equal(diag(eval_basis(G_basis,s = mu)),rep(1,5))
-    expect_true({show_basis(ggplot(),G_basis); TRUE})
+    expect_true({show_basis(G_basis); TRUE})
 })
 
 mu <- matrix(runif(10),10,1)
@@ -48,7 +48,7 @@ test_that("we can have multiple functions in a Basis object on real line and plo
     expect_equal(G_basis@fn[[1]](mu)[1,1],1) # Value of basis at mean is 1
     expect_equal(diag(eval_basis(G_basis,s = mu)),rep(1,10))
     expect_is(eval_basis(G_basis,s = mu),"Matrix")
-    expect_true({show_basis(ggplot(),G_basis); TRUE})
+    expect_true({show_basis(G_basis); TRUE})
 })
 
 test_that("can average basis over polygons in plane", {

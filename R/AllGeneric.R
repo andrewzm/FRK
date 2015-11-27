@@ -1,8 +1,8 @@
 #### GENERIC FUNCTIONS ######
 #' @title Show basis functions
 #' @description Generic plotting function for illustrating the basis functions.
-#' @param g object of class \code{gg} (a \code{ggplot} object)
 #' @param basis object of class \code{Basis}
+#' @param g object of class \code{gg} (a \code{ggplot} object)
 #' @details The function \code{show_basis} adapts its behaviour to the manifold being used. With \code{real_line}, the one-dimensional basis functions are plotted with colour distinguishing between the different resolutions. With \code{plane}, only radial basis functions are supported (at present). Each basis function is shown as a circle with diameter equal to the \code{scale} parameter of the function. Linetype distinguishes the resolution. With \code{sphere}, the centres of the basis functions are shown as circles, with larger sizes corresponding to lower (i.e., coarser) resolutions.
 #' @examples
 #' library(ggplot2)
@@ -10,9 +10,9 @@
 #' data(meuse)
 #' coordinates(meuse) = ~x+y # change into an sp object
 #' G <- auto_basis(m = plane(),data=meuse,nres = 2,regular=2,prune=10,type = "Gaussian")
-#' show_basis(ggplot(),G) + geom_point(data=data.frame(meuse),aes(x,y))
+#' show_basis(G,ggplot()) + geom_point(data=data.frame(meuse),aes(x,y))
 #' @export
-setGeneric("show_basis", function(g,basis) standardGeneric("show_basis"))
+setGeneric("show_basis", function(basis,...) standardGeneric("show_basis"))
 
 #' @title Retrieve manifold
 #' @description Retrieve manifold from \code{FRK} object.

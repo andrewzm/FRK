@@ -142,8 +142,13 @@ auto_basis <- function(m = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,t
         ## Refine: Remove basis which are not influenced by data and re-find the scales
         for(j in 1:2) {
             D <- FRK::distance(m,this_res_locs,this_res_locs)
-            diag(D) <- Inf
-            this_res_scales <- apply(D,1,min)
+            if(nrow(D) == 1) {
+                this_res_scales <-max(diff(xrange),diff(yrange))/2
+            } else {
+                diag(D) <- Inf
+                this_res_scales <- apply(D,1,min)    
+            }
+            
             this_res_basis <- radial_basis(manifold = m,
                                            loc=this_res_locs,
                                            scale=ifelse(type=="Gaussian",1,1.5)*this_res_scales,
