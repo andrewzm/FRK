@@ -28,6 +28,6 @@ G <-  radial_basis(manifold = real_line(),
                    loc=matrix(1:10,10,1),
                    scale=rep(2,10),
                    type="bisquare")
-show_basis(ggplot(),G)
+show_basis(G)
 }
 

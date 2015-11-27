@@ -6,7 +6,7 @@
 \alias{show_basis,Basis-method}
 \title{Show basis functions}
 \usage{
-show_basis(basis, g)
+show_basis(basis, ...)
 
 \S4method{show_basis}{Basis}(basis, g = ggplot())
 }
