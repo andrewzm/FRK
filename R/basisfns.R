@@ -11,7 +11,7 @@
 #'                    loc=matrix(1:10,10,1),
 #'                    scale=rep(2,10),
 #'                    type="bisquare")
-#' show_basis(ggplot(),G)
+#' show_basis(G)
 #' @export
 radial_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type="Gaussian") {
     stopifnot(is.matrix(loc))
@@ -74,7 +74,7 @@ radial_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,typ
 #'                 subsamp = 20000)
 #'
 #' ### Plot and note how some basis functions are removed in Antarctica
-#' show_basis(draw_world(),G) + coord_map("mollweide")
+#' show_basis(G,draw_world()) + coord_map("mollweide")
 #'
 #' @export
 auto_basis <- function(m = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,type="Gaussian") {
@@ -146,9 +146,9 @@ auto_basis <- function(m = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,t
                 this_res_scales <-max(diff(xrange),diff(yrange))/2
             } else {
                 diag(D) <- Inf
-                this_res_scales <- apply(D,1,min)    
+                this_res_scales <- apply(D,1,min)
             }
-            
+
             this_res_basis <- radial_basis(manifold = m,
                                            loc=this_res_locs,
                                            scale=ifelse(type=="Gaussian",1,1.5)*this_res_scales,
@@ -190,7 +190,7 @@ auto_basis <- function(m = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,t
 #'                    type="bisquare")
 #' G_space_time <- sp_to_ST_basis(G_spatial,1:10,manifold=STsphere())
 #' library(ggplot2)
-#' show_basis(ggplot(),G_space_time)
+#' show_basis(G_space_time)
 #' @export
 sp_to_ST_basis <- function(G_spatial,t_knots = 1,manifold=STsphere()) {
     stopifnot(dimensions(manifold(G_spatial))==2)
