@@ -15,7 +15,6 @@ Suggests:
     reshape2,
     shapefiles,
     knitr,
-    zoo,
     covr,
     splancs,
     INLA,
@@ -23,6 +22,7 @@ Suggests:
 Enhances:
     Rhipe
 Imports:
+    zoo,
     Hmisc,
     methods,
     Matrix,
