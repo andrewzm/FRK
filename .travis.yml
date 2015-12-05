@@ -4,9 +4,15 @@ language: r
 warnings_are_errors: false
 sudo: required
 
+#env:
+# global:
+#   - CRAN: http://cran.rstudio.com
+
 env:
- global:
-   - CRAN: http://cran.rstudio.com
+  global:
+    - NOT_CRAN=true
+before_install: echo "options(repos = c(CRAN='http://cran.rstudio.com'))" > ~/.Rprofile
+
 
 notifications:
   email:
