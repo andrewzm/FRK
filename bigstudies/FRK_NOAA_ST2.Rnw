@@ -11,13 +11,14 @@ opts_FRK$set("parallel",0L)
 
 ## Load dataset
 load("./data/NOAA_df_1990.Rdata")
-Tmax <- subset(NOAA_df_1990,     # subset the data
-              proc=="Tmax" &     # only max temperature
-              month == 7 &   # May to July
-              year == 1993) %>%     # year of 1993
-        mutate(time = as.Date(paste(year,month,day,sep="-"))) %>%
+Tmax <- subset(NOAA_df_1990,    # subset the data
+              proc=="Tmax") %>%     # year of 1993
+        group_by(year,id) %>%
+        summarise(z = mean(z),lon=lon[1],lat=lat[1]) %>%
+        mutate(time = as.Date(paste(year,06,01,sep="-"))) %>%
         mutate(std = 3) %>%   ## Set measurement error to some value (this needs to be known)
-        dplyr::select(z,lon,lat,time,time,id,std)
+        dplyr::select(z,lon,lat,time,id,std) %>%
+        as.data.frame()
 
 STObj <- stConstruct(x = Tmax,                  # dataset
                  space = c("lon","lat"),        # spatial fields
@@ -31,10 +32,10 @@ proj4string(STObj) <- ""
 ## Construct space-time BAUs on the plane
 grid_BAUs <- auto_BAUs(manifold=STplane(),    # Planar ST process
                        data=STObj,            # data
-                       cellsize = c(1,1,5),   # BAU cell size
+                       cellsize = c(1,1,1),   # BAU cell size
                        type="grid",           # grid or hex?
                        convex=-0.1,           # hull construction par.
-                       tunit="days")          # time unit
+                       tunit="year")          # time unit
 
 ## Plot first three space-time BAUs
 stplot(grid_BAUs[,1:2,"t"],main="",layout=c(3,1))
@@ -50,8 +51,8 @@ G_spatial <- auto_basis(m = plane(),               # on R^2
 
 ## Construct temporal basis functions
 G_temporal <- radial_basis(manifold=real_line(),         # on R^1
-                           loc = matrix(seq(2,28,by=4)), # locations
-                           scale = rep(3,7))             # scales
+                           loc = matrix(c(2,4,6)), # locations
+                           scale = rep(1.5,3))             # scales
 
 ## Plot spatial and temporal basis functions
 basis_s_plot <- show_basis(G_spatial) + xlab("lon") + ylab("lat")
