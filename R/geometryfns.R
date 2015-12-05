@@ -18,7 +18,7 @@ setMethod("initialize",signature="manifold",function(.Object) {
 dggrid_gen_to_df <- function(filename,res) {
     if(!require(zoo)) stop("Please install package zoo") ## needed for na.locf
     lat <- lon <- isna <- NULL # Suppress bindings warning
-    
+
     if(!is.character(filename)) stop("filename needs to of type 'character'")
     if(!require(zoo)) stop("zoo is needed for this function. Please install it separately")
     if(!is.numeric(res)) stop("res needs to be of type character")
@@ -89,17 +89,17 @@ auto_BAUs <- function(manifold,res=2,cellsize = rep(1,dimensions(manifold)), typ
     if(!length(cellsize) == dimensions(manifold)) stop("cellsize needs to be of length equal to dimension of manifold")
     if(!(res >=0 & res <= 9)) stop("res needs to be between 0 and 9")
     resl <- round(res)
-    
+
     auto_BAU(manifold=manifold,resl=resl,cellsize=cellsize,type=type,d=data,convex=convex,tunit=tunit)
-    
+
 }
 
 
 setMethod("auto_BAU",signature(manifold="plane"),
           function(manifold,cellsize = c(1,1),resl=resl,type="hex",d=NULL,convex=-0.05,...) {
-              
+
               X1 <- X2 <- NULL # Suppress bindings warning
-              
+
               coords <- coordinates(d)
               xrange <- range(coords[,1])
               yrange <- range(coords[,2])
@@ -108,16 +108,16 @@ setMethod("auto_BAU",signature(manifold="plane"),
                   mutate(x=X1,y=X2,id = 1) %>%
                   select(-X1,-X2) %>%
                   df_to_SpatialPolygons(keys="id",coords=c("x","y"),proj=CRS())
-              
-              
+
+
               drangex <- diff(xrange)
               drangey <- diff(yrange)
               xgrid <- seq(xrange[1] - drangex*1.2,xrange[2] + drangex*1.2,by=cellsize[1])
               ygrid <- seq(yrange[1] - drangey*1.2,yrange[2] + drangey*1.2,by=cellsize[2])
-              
+
               xy <- expand.grid(x=xgrid,y=ygrid)  %>%
                   SpatialPoints()
-              
+
               if(type == "hex") {
                   HexPts <- spsample(xy,type="hexagonal",cellsize = cellsize[1])
                   idx <- which(!is.na(over(HexPts,bndary_seg)))
@@ -142,29 +142,37 @@ setMethod("auto_BAU",signature(manifold="plane"),
                                                         row.names = row.names(xy)))
                   return(xy_df)
               }
-              
+
           })
 
 
 setMethod("auto_BAU",signature(manifold="timeline"),
           function(manifold,cellsize = c(1),resl=resl,type="grid",d=NULL,convex=-0.05,...) {
-              
+
               l <- list(...)
-              tunit <- l$tunit       #e.g. "days"
+
+              if(!"tunit" %in% names(l)) stop("Need to supply argument tunit with value secs, mins, hours, days, months or years")
+
+              tunit <- l$tunit
               tpoints <- time(d)
-              
+
               if(is(tpoints,"Date"))
                   tpoints <- as.POSIXct(tpoints)
-              
+
               trange <- range(tpoints)
               dranget <- diff(trange)
-              
-              tgrid <- seq(round(trange[1],tunit),
-                           round(trange[2],tunit),
-                           by=switch(tunit, secs    = cellsize,
-                                     mins    = cellsize*60,
-                                     hours   = cellsize*3600,
-                                     days    = cellsize*3600*24)) %>%
+
+              tspacing <- paste(cellsize,tunit)
+              tgrid <- seq(trunc(trange[1],tunit),
+                           trunc(trange[2],tunit),
+                           by=tspacing) %>%
+                               # switch(tunit,
+                               #       secs    = cellsize,
+                               #       mins    = cellsize*60,
+                               #       hours   = cellsize*3600,
+                               #       days    = cellsize*3600*24,
+                               #       months  = "mon",
+                               #       years   = "year")) %>%
                   round(tunit)
               return(tgrid)
           })
@@ -173,18 +181,18 @@ setMethod("auto_BAU",signature(manifold="timeline"),
 
 setMethod("auto_BAU",signature(manifold = c("STmanifold")),
           function(manifold,cellsize = c(1,1,1),resl=resl,type="hex",d=NULL,convex=-0.05,...) {
-              
+
               if(is(manifold,"STplane")) {
                   spat_manifold <- plane()
               } else {
                   spat_manifold <- sphere()
               }
-              
+
               spatial_BAUs <- auto_BAU(manifold=spat_manifold,cellsize=cellsize[1:2],
                                        resl=resl,type=type,d=d@sp,convex=convex,...)
               temporal_BAUs <- auto_BAU(manifold=timeline(), cellsize=cellsize[3],
                                         resl=resl,type=type,d=d,convex=convex,...)
-              
+
               nt <- length(temporal_BAUs)
               ns <- nrow(spatial_BAUs)
               STBAUs <- STFDF(spatial_BAUs,
@@ -192,9 +200,9 @@ setMethod("auto_BAU",signature(manifold = c("STmanifold")),
                               data = data.frame(n = 1:(nt *ns),
                                                 time = rep(temporal_BAUs,each=ns),
                                                 t = rep(1:nt,each=ns)))
-              
+
               return(STBAUs)
-              
+
           })
 
 # setMethod("auto_BAU",signature(manifold="STsphere"),
@@ -217,15 +225,15 @@ setMethod("auto_BAU",signature(manifold = c("STmanifold")),
 #           })
 
 setMethod("auto_BAU",signature(manifold="real_line"),function(manifold,cellsize = 1,resl=resl,type="grid",d=NULL,...) {
-    
+
     coords <- coordinates(d)
     xrange <- range(coords[,1])
-    
+
     drangex <- diff(xrange)
     xgrid <- seq(xrange[1] - drangex*0.2,xrange[2] + drangex*0.2,by=cellsize[1]) %>%
         cbind(y=0) %>%
         SpatialPoints()
-    
+
     suppressWarnings(xy <- xgrid %>%
                          points2grid() %>%
                          as.SpatialPolygons.GridTopology())
@@ -245,13 +253,13 @@ setMethod("auto_BAU",signature(manifold="sphere"),function(manifold,cellsize = c
             group_by(id) %>%
             filter(diff(range(lon)) < 90) %>%
             data.frame()
-        
+
         isea3h_sp_pol <- df_to_SpatialPolygons(
             df=filter(isea3h_res,centroid==0),
             keys=c("id"),
             coords=c("lon","lat"),
             proj=CRS("+proj=longlat"))
-        
+
         isea3h_sp_poldf <- SpatialPolygonsDataFrame(
             isea3h_sp_pol,
             cbind(data.frame(row.names=names(isea3h_sp_pol)),
@@ -275,17 +283,17 @@ setMethod("auto_BAU",signature(manifold="sphere"),function(manifold,cellsize = c
             ymin <- -90
             ymax <- 90
         }
-        
-        
+
+
         longrid <- seq(xmin + cellsize[1]/2,xmax - cellsize[1]/2,by=cellsize[1])
         latgrid <- seq(ymin + cellsize[2]/2,ymax - cellsize[2]/2,by=cellsize[2])
         lonlat <- expand.grid(lon=longrid,lat=latgrid) %>%
             SpatialPoints() %>%
             points2grid() %>%
             as.SpatialPolygons.GridTopology(proj4string = CRS("+proj=longlat"))
-        
+
         coordnames(lonlat) <- c("lon","lat")
-        
+
         sphere_BAUs <- lonlat %>%
             SpatialPolygonsDataFrame(data.frame(
                 lon = coordinates(lonlat)[,1],
@@ -306,7 +314,7 @@ setMethod("auto_BAU",signature(manifold="sphere"),function(manifold,cellsize = c
         sphere_BAUs <- subset(sphere_BAUs,!is.na(in_chull))
     }
     sphere_BAUs
-    
+
 })
 
 
@@ -510,7 +518,7 @@ df_to_SpatialPolygons <- function(df,keys,coords,proj) {
     if(!all(keys %in% names(df))) stop("All keys needs to be labels in data frame")
     if(!all(coords %in% names(df))) stop("All coordinate labels needs to be labels in data frame")
     if(!is(proj,"CRS")) stop("proj needs to be of class CRS")
-    
+
     dfun <- function(d) {
         Polygons(list(Polygon(d[coords])),digest::digest(d[keys]))
     }
@@ -575,7 +583,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="Spatial"),
               if(is(data_sp,"SpatialPointsDataFrame")) {
                   Nobs <- NULL
                   data_sp$Nobs <- 1
-                  
+
                   if(!(opts_FRK$get("Rhipe"))) {
                       timer <- system.time(Data_in_BAU <- over(sp_pols,data_sp[c(av_var,"Nobs","std")],fn=sum))
                   } else {
@@ -590,18 +598,18 @@ setMethod("map_data_to_BAUs",signature(data_sp="Spatial"),
                       )
                   }
                   print(paste0("Binned data in ",timer[3]," seconds"))
-                  
+
                   sp_pols@data[av_var] <- Data_in_BAU[av_var]/Data_in_BAU$Nobs
                   sp_pols@data["std"] <- Data_in_BAU["std"]/Data_in_BAU$Nobs
                   sp_pols@data["Nobs"] <- Data_in_BAU$Nobs
-                  
+
                   new_sp_pts <- SpatialPointsDataFrame(coords=sp_pols[coordnames(data_sp)]@data,
                                                        data=sp_pols@data,
                                                        proj4string = CRS(proj4string(data_sp)))
                   #new_sp_pts$std <- sqrt(1 / new_sp_pts$Nobs)
                   new_sp_pts$std <- sqrt(new_sp_pts$std^2 / new_sp_pts$Nobs)
                   new_sp_pts <- subset(new_sp_pts,!is.na(Nobs))
-                  
+
               } else {
                   BAUs_aux_data <- over(data_sp,SpatialPointsDataFrame(coordinates(sp_pols),sp_pols@data))
                   stopifnot(all(row.names(BAUs_aux_data) == row.names(data_sp)))
@@ -609,31 +617,37 @@ setMethod("map_data_to_BAUs",signature(data_sp="Spatial"),
                   data_sp$Nobs <- 1
                   new_sp_pts <- data_sp
               }
-              
+
               new_sp_pts
           })
 
 setMethod("map_data_to_BAUs",signature(data_sp="ST"),
           function(data_sp,sp_pols,av_var) {
-              
+
               sp_fields <- NULL
-              
+
               ## Bin every spatial frame separately
               sp_fields <- lapply(seq_along(sp_pols@time),
                                   function(i) {
                                       t1 <- time(sp_pols)[i]
-                                      data_spatial <- as(data_sp[,format(t1)],"Spatial")
+                                      if(i < last(sp_pols@time)) {
+                                          t2 <- time(sp_pols)[i+1]
+                                          trange <- paste0(format(t1),"::",format(t2-1))
+                                      } else {
+                                          trange <- paste0(format(t1),"::",format(last(data_sp@endTime)))
+                                      }
+                                      data_spatial <- as(data_sp[,trange],"Spatial")
                                       BAU_spatial <- sp_pols[,i]
                                       BAU_spatial@data <- filter(BAU_spatial@data,time == t1)
                                       BAU_spatial@data <- cbind(BAU_spatial@data,coordinates(BAU_spatial))
                                       map_data_to_BAUs(data_spatial,
                                                        BAU_spatial,
                                                        av_var=av_var)})
-              
-              
+
+
               if(is(data_sp@sp,"SpatialPolygons")) stop("ST not implemented for polygon observations yet.
                                                         Please contact package maintainer")
-              
+
               ## Recast into a STIDF
               time <- sp <- n <- NULL
               for(i in seq_along(sp_pols@time)) {
@@ -644,19 +658,19 @@ setMethod("map_data_to_BAUs",signature(data_sp="ST"),
               coordinates(sp) <- coordnames(sp_fields[[1]])
               sp@data <- cbind(sp@data,coordinates(sp))
               time <- do.call("c",time)
-              
+
               STIDF(as(sp,"SpatialPoints"),
                     time,
                     data = sp@data)
-              
+
           })
 
 est_obs_error <- function(sp_pts,variogram.formula) {
-    
+
     #stopifnot(is(variogram.formula,"formula"))
     stopifnot(is(sp_pts,"Spatial"))
     if(!("Nobs" %in% names(sp_pts))) stop("Nobs (number of observations in grid cell) needs to be a field of the Spatial object")
-    
+
     g <- gstat::gstat(formula=variogram.formula,data=sp_pts)
     v <- gstat::variogram(g,cressie=T)
     vgm.fit = gstat::fit.variogram(v, model = gstat::vgm(1, "Lin", mean(v$dist), 1))
@@ -665,11 +679,11 @@ est_obs_error <- function(sp_pts,variogram.formula) {
     if(vgm.fit$psill[1] == 0)
         stop("Observational error estimated to be zero. Please consider using finer BAUs or do not attempt to estimate observation error")
     sp_pts$std <- sqrt(vgm.fit$psill[1] / sp_pts$Nobs)
-    
+
     warning("Observational error estimation could be improved. Currently a variogram is fitted to the data, and then the error variance of a single observation is assumed to be the partial sill. Then the variance of the averaged observations in the BAU is divided by Nobs. Currently there is no accounting for multiple data in the same grid box during variogram fitting as it's not straightforward with gstat.")
-    
+
     sp_pts
-    
+
 }
 
 

@@ -23,6 +23,7 @@ Suggests:
 Enhances:
     Rhipe
 Imports:
+    Hmisc,
     methods,
     Matrix,
     digest,
