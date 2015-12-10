@@ -1,12 +1,12 @@
 <<eval=TRUE>>=
+library(FRK)
 library(sp)
 library(ggplot2)
 library(dplyr)
 library(spacetime)
 library(gridExtra)
-library(FRK)
-# devtools::load_all("~/Wollongong/pkgs/FRK",
-#                    export_all = FALSE)
+#  devtools::load_all("~/Wollongong/pkgs/FRK",
+#                     export_all = FALSE)
 opts_FRK$set("progress",TRUE)
 opts_FRK$set("parallel",0L)
 
@@ -26,7 +26,7 @@ Tmax <- subset(NOAA_df_1990,    # subset the data
 STObj <- stConstruct(x = Tmax,                  # dataset
                  space = c("lon","lat"),        # spatial fields
                  time="time",                   # time field
-                 crs=CRS("+proj=longlat"),      # projection (lon-lat)
+                 crs=CRS("+proj=longlat +ellps=WGS84"),      # projection (lon-lat)
                  interval=TRUE)                 # time is an interval
 
 ## Remove projection information

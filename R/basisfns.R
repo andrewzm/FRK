@@ -370,7 +370,7 @@ setMethod("eval_basis",signature(basis="Basis",s="STIDF"),function(basis,s,outpu
     samps
 }
 
-
+# Gaussian Asymmetric Basis Function
 .GRBF_wrapper <- function(manifold,mu,std) {
     stopifnot(is.matrix(mu))
     stopifnot(dimensions(manifold) == ncol(mu))
@@ -383,7 +383,7 @@ setMethod("eval_basis",signature(basis="Basis",s="STIDF"),function(basis,s,outpu
     }
 }
 
-# Gaussian Asymmetric Basis Function
+# Bisquare Asymmetric Basis Function
 .bisquare_wrapper <- function(manifold,c,R) {
     stopifnot(dimensions(manifold) == ncol(c))
     stopifnot(is.numeric(R))
