@@ -20,7 +20,6 @@
 #' @importFrom PBSmapping clipPolys
 #' @importFrom digest digest
 #' @importFrom scales brewer_pal gradient_n_pal muted
-#' @importFrom grid unit grid.newpage pushViewport viewport grid.layout
 #' @importFrom doParallel registerDoParallel
 #' @name FRK
 NULL

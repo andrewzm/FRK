@@ -42,7 +42,6 @@ Imports:
     ggplot2,
     dplyr,
     scales,
-    grid,
     plyr,
     foreach,
     PBSmapping,
