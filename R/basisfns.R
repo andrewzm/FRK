@@ -116,7 +116,7 @@ auto_basis <- function(m = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,t
 
     #if(is(m,"sphere")) load(system.file("extdata","isea3h.rda", package = "FRK"))
     if(is(m,"sphere")) {
-        isea3h <- load_dggrids
+        isea3h <- load_dggrids(res = nres)
     }
 
 
