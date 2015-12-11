@@ -773,7 +773,7 @@ rdist <- function (x1, x2 = NULL, compact = FALSE)
         storage.mode(x1) <- "double"
         if (compact)
             return(dist(x1))
-        else return(.Call("RdistC", x1, x1, PACKAGE = "fields"))
+        else return(.Call("RdistC", x1, x1, PACKAGE = "FRK"))
     }
     else {
         if (!is.matrix(x2)) {

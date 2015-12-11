@@ -32,7 +32,9 @@ Suggests:
     splancs,
     INLA,
     rgeos
-Enhances: Rhipe
+Enhances:
+    Rhipe,
+    dggrids
 Imports:
     zoo,
     Hmisc,
