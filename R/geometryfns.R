@@ -478,21 +478,21 @@ setMethod("initialize",signature="real_line",function(.Object,metric=Euclid_dist
 #' @export
 Euclid_dist <- function(dim=2L) {
     stopifnot(is.integer(dim))
-    new("measure",dist=function(x1,x2)  fields::rdist(x1,x2), dim=dim)
+    new("measure",dist=function(x1,x2)  rdist(x1,x2), dim=dim)
 }
 
 #' @rdname distances
 #' @export
 gc_dist <- function(R=NULL) {
-    new("measure",dist=function(x1,x2)  fields::rdist.earth(x1,x2,miles=F,R=R),dim=2L)
+    new("measure",dist=function(x1,x2)  rdist.earth(x1,x2,miles=F,R=R),dim=2L)
 }
 
 #' @rdname distances
 #' @export
 gc_dist_time <- function(R=NULL) {
     new("measure",dist=function(x1,x2)  {
-        spatdist <- fields::rdist.earth(x1[,1:2,drop=FALSE],x2[,1:2,drop=FALSE],miles=F,R=R)
-        tdist <- fields::rdist(x1[,3],x2[,3])
+        spatdist <- rdist.earth(x1[,1:2,drop=FALSE],x2[,1:2,drop=FALSE],miles=F,R=R)
+        tdist <- rdist(x1[,3],x2[,3])
         sqrt(spatdist^2 + tdist^2) } ,dim=3L)
 }
 
@@ -761,3 +761,51 @@ setMethod("coordnames",signature(x="STIDF"),function(x) {
 })
 
 
+rdist <- function (x1, x2 = NULL, compact = FALSE)
+{
+    if (!is.matrix(x1)) {
+        x1 <- as.matrix(x1)
+    }
+    if (is.null(x2)) {
+        storage.mode(x1) <- "double"
+        if (compact)
+            return(dist(x1))
+        else return(.Call("RdistC", x1, x1, PACKAGE = "fields"))
+    }
+    else {
+        if (!is.matrix(x2)) {
+            x2 <- as.matrix(x2)
+        }
+        storage.mode(x1) <- "double"
+        storage.mode(x2) <- "double"
+        return(.Call("RdistC", x1, x2))
+    }
+}
+
+
+rdist.earth <- function (x1, x2 = NULL, miles = TRUE, R = NULL)
+{
+    if (is.null(R)) {
+        if (miles)
+            R <- 3963.34
+        else R <- 6378.388
+    }
+    coslat1 <- cos((x1[, 2] * pi)/180)
+    sinlat1 <- sin((x1[, 2] * pi)/180)
+    coslon1 <- cos((x1[, 1] * pi)/180)
+    sinlon1 <- sin((x1[, 1] * pi)/180)
+    if (is.null(x2)) {
+        pp <- cbind(coslat1 * coslon1, coslat1 * sinlon1, sinlat1) %*%
+            t(cbind(coslat1 * coslon1, coslat1 * sinlon1, sinlat1))
+        return(R * acos(ifelse(abs(pp) > 1, 1 * sign(pp), pp)))
+    }
+    else {
+        coslat2 <- cos((x2[, 2] * pi)/180)
+        sinlat2 <- sin((x2[, 2] * pi)/180)
+        coslon2 <- cos((x2[, 1] * pi)/180)
+        sinlon2 <- sin((x2[, 1] * pi)/180)
+        pp <- cbind(coslat1 * coslon1, coslat1 * sinlon1, sinlat1) %*%
+            t(cbind(coslat2 * coslon2, coslat2 * sinlon2, sinlat2))
+        return(R * acos(ifelse(abs(pp) > 1, 1 * sign(pp), pp)))
+    }
+}

@@ -43,7 +43,6 @@ Imports:
     dplyr,
     scales,
     grid,
-    fields,
     plyr,
     foreach,
     PBSmapping,

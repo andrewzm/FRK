@@ -8,7 +8,7 @@
 #' @details An object of class \code{measure} contains a distance function and a variable \code{dim} with the dimensions of the Riemannian manifold over which the distance is computed. By default, the distance function used is inherited from the package \code{fields}.
 #' @keywords Manifolds, spheres, planes
 setClass("measure",representation(dist="function",dim="integer"),
-         prototype(dist=fields::rdist,dim=2L))
+         prototype(dist=dist,dim=2L))
 
 #'  @docType class
 #'  @title manifold

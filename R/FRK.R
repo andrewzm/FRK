@@ -21,7 +21,6 @@
 #' @importFrom digest digest
 #' @importFrom scales brewer_pal gradient_n_pal muted
 #' @importFrom grid unit grid.newpage pushViewport viewport grid.layout
-#' @importFrom fields rdist fields.rdist.near rdist.earth
 #' @importFrom doParallel registerDoParallel
 #' @name FRK
 NULL
