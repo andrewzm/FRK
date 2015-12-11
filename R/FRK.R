@@ -14,8 +14,6 @@
 #' @import dplyr
 #' @import mapproj
 #' @import foreach
-#' @import zoo
-#' @import Hmisc
 #' @importFrom plyr ddply dlply rbind.fill
 #' @importFrom PBSmapping clipPolys
 #' @importFrom digest digest

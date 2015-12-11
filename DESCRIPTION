@@ -36,8 +36,6 @@ Enhances:
     Rhipe,
     dggrids
 Imports:
-    zoo,
-    Hmisc,
     methods,
     Matrix,
     gstat,

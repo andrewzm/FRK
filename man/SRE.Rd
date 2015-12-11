@@ -38,6 +38,8 @@ SRE.predict(SRE_model, pred_locs = SRE_model@BAUs, use_centroid = TRUE,
 \item{pred_locs}{object of class \code{SpatialPolygonsDataFrame} containing the prediction polygons. The data frame of \code{pred_locs} must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality. Ideally, \code{pred_locs} is identical to \code{BAUs} above}
 
 \item{use_centroid}{a flag indicating whether the prediction over a BAU can be simply taken as a point prediction at the BAU's centroid. This should only be done if the BAUs on which the model is trained coincide with the BAUs used in \code{SRE()}}
+
+\item{include_fs}{flag indicating whether to assume prediction locations coincide with observations in BAUs (where applicable) or not.}
 }
 \description{
 Main constructor of spatial random effects (SRE) object. Please see \code{\link{SRE-class}} for more details on the object's properties and methods.
