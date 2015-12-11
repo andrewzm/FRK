@@ -193,6 +193,8 @@ setMethod("auto_BAU",signature(manifold = c("STmanifold")),
               temporal_BAUs <- auto_BAU(manifold=timeline(), cellsize=cellsize[3],
                                         resl=resl,type=type,d=d,convex=convex,...)
 
+              attr(temporal_BAUs,"tzone") <- attr(d@time,"tzone")
+
               nt <- length(temporal_BAUs)
               ns <- nrow(spatial_BAUs)
               STBAUs <- STFDF(spatial_BAUs,
@@ -200,7 +202,6 @@ setMethod("auto_BAU",signature(manifold = c("STmanifold")),
                               data = data.frame(n = 1:(nt *ns),
                                                 time = rep(temporal_BAUs,each=ns),
                                                 t = rep(1:nt,each=ns)))
-
               return(STBAUs)
 
           })

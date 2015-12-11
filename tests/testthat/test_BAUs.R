@@ -103,6 +103,6 @@ test_that("SpaceTime_BAUs",{
     expect_equal(length(C$i_idx),as.numeric(nrow(binned_data)))
     expect_equal(length(C$j_idx),as.numeric(nrow(binned_data)))
 
-
+    expect_equal(attr(space_time_grid@time,"tzone"),attr(STobj1@time,"tzone"))
 })
 

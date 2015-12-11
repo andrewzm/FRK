@@ -1,12 +1,12 @@
 <<eval=TRUE>>=
-#library(FRK)
+# library(FRK)
 library(sp)
 library(ggplot2)
 library(dplyr)
 library(spacetime)
 library(gridExtra)
-devtools::load_all("~/Wollongong/pkgs/FRK",
-                 export_all = FALSE)
+ devtools::load_all("~/Wollongong/pkgs/FRK",
+                  export_all = FALSE)
 opts_FRK$set("progress",TRUE)
 opts_FRK$set("parallel",0L)
 
@@ -39,6 +39,8 @@ grid_BAUs <- auto_BAUs(manifold=STplane(),    # Planar ST process
                        type="grid",           # grid or hex?
                        convex=-0.1,           # hull construction par.
                        tunit="year")          # time unit
+
+breakme
 
 ## Plot first three space-time BAUs
 stplot(grid_BAUs[,1:2,"t"],main="",layout=c(3,1))
@@ -80,7 +82,7 @@ S <- SRE.fit(SRE_model = S,    # estimate parameters in the SRE model S
              tol = 0.1)        # tolerance on log-likelihood
 
 ## Predict field at BAUs
-grid_BAUs <- SRE.predict(S,pred_locs = grid_BAUs,use_centroid = TRUE)
+grid_BAUs <- SRE.predict(S,pred_locs = grid_BAUs,use_centroid = TRUE,include_fs=FALSE)
 
 ## Use stplot to plot predictions at BAUs
 grid_BAUs@sp          <- SpatialPoints(grid_BAUs@sp)   # convert to Spatial points object
