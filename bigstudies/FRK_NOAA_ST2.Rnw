@@ -1,12 +1,12 @@
 <<eval=TRUE>>=
-library(FRK)
+#library(FRK)
 library(sp)
 library(ggplot2)
 library(dplyr)
 library(spacetime)
 library(gridExtra)
-#  devtools::load_all("~/Wollongong/pkgs/FRK",
-#                     export_all = FALSE)
+devtools::load_all("~/Wollongong/pkgs/FRK",
+                 export_all = FALSE)
 opts_FRK$set("progress",TRUE)
 opts_FRK$set("parallel",0L)
 
@@ -19,7 +19,7 @@ Tmax <- subset(NOAA_df_1990,    # subset the data
         group_by(year,id) %>%   # group by year and station
         summarise(z = mean(z),lon=lon[1],lat=lat[1]) %>%   # find average at each station
         mutate(time = as.Date(paste(year,06,01,sep="-"))) %>%   # create date object
-        mutate(std = 2) %>%     # Set measurement error to some value (this needs to be known)
+        mutate(std = 0.001) %>%     # Set measurement error to some value (this needs to be known)
         dplyr::select(z,lon,lat,time,id,std) %>%  # select subset of columns
         as.data.frame()         # convert to data frame
 

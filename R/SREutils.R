@@ -200,6 +200,47 @@ SRE.predict <- function(SRE_model,pred_locs = SRE_model@BAUs,use_centroid=TRUE) 
     pred_locs
 }
 
+setMethod("summary",signature(object="SRE"),
+          function(object,...) {
+              cat("SRE Object\n")
+              cat("==========\n")
+              cat("\n")
+              cat(paste0("Formula: ",deparse(object@f)))
+              cat("\n")
+              cat(paste0("Number of datasets: ",length(object@data)))
+              cat("\n")
+              cat(paste0("Number of basis functions: ",object@basis@n))
+              cat("\n")
+              cat(paste0("Class of basis functions: ",class(object@basis)[1]))
+              cat("\n")
+              cat(paste0("Number of BAUs [extract using object@BAUs]: ",length(object@BAUs)))
+              cat("\n")
+              cat(paste0("Number of observations [extract using object@Z]: ",length(object@Z)))
+              cat("\n")
+              cat(paste0("Mean obs. variance at BAU level [extract using object@Ve]: ",mean(object@Ve@x)))
+              cat("\n")
+              cat(paste0("Fine-scale variatinal proportionality constant [extract using object@sigma2fshat]: ",object@sigma2fshat))
+              cat("\n")
+              cat(paste0("Dimensions of C in Z = C*Y + e [extract using object@Cmat]: ",deparse(dim(object@Cmat))))
+              cat("\n")
+              cat(paste0("Dimensions of S in Y = X*alpha + S*eta + delta [extract using object@S]: ",deparse(dim(object@S))))
+              cat("\n")
+              cat(paste0("Number of covariates: ",ncol(object@X)))
+              cat("\n\n")
+              cat(paste0("Summary of E(eta | Z) [extract using object@mu_eta]: \n"))
+              cat("\n")
+              print(summary(object@mu_eta[,1]))
+              cat("\n\n")
+              cat(paste0("Summary of Var(eta | Z) [extract using object@S_eta]: \n"))
+              print(summary(diag(object@S_eta)))
+              cat("\n\n")
+              cat(paste0("Summary of Var(eta) [extract using object@Khat]: \n"))
+              print(summary(diag(object@Khat)))
+              cat("\n\n")
+              cat(paste0("Regression coefficients [extract using object@alpha]: \n"))
+              cat(deparse(as.vector(object@alphahat)))
+})
+
 
 .SRE.predict <- function(Sm,pred_locs,use_centroid) {
         depname <- all.vars(Sm@f)[1]
