@@ -174,6 +174,8 @@ setMethod("auto_BAU",signature(manifold="timeline"),
                                #       months  = "mon",
                                #       years   = "year")) %>%
                   round(tunit)
+
+              attr(tgrid,"tzone") <- attr(d@time,"tzone")
               return(tgrid)
           })
 
@@ -192,8 +194,6 @@ setMethod("auto_BAU",signature(manifold = c("STmanifold")),
                                        resl=resl,type=type,d=d@sp,convex=convex,...)
               temporal_BAUs <- auto_BAU(manifold=timeline(), cellsize=cellsize[3],
                                         resl=resl,type=type,d=d,convex=convex,...)
-
-              attr(temporal_BAUs,"tzone") <- attr(d@time,"tzone")
 
               nt <- length(temporal_BAUs)
               ns <- nrow(spatial_BAUs)
