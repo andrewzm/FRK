@@ -25,7 +25,7 @@ coordinates(SST) = ~lon+lat # change into an sp object
 proj4string(SST) <- CRS("+proj=longlat")
 
 ## Prediction (BAU) grid
-isea3h_sp_poldf <- auto_BAUs(manifold=sphere(),res=6,data=SST,cellsize = c(1,1),type="grid")
+isea3h_sp_poldf <- auto_BAUs(manifold=sphere(),res=8,data=SST,cellsize = c(1,1),type="grid")
 isea3h_sp_poldf$fs <- 1
 
 # ## Subset to region of interest

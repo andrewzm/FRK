@@ -115,7 +115,10 @@ auto_basis <- function(m = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,t
     G <- list()
 
     #if(is(m,"sphere")) load(system.file("extdata","isea3h.rda", package = "FRK"))
-    if(is(m,"sphere")) data(isea3h, envir=environment())
+    if(is(m,"sphere")) {
+        isea3h <- load_dggrids
+    }
+
 
     ## Find possible grid points for basis locations
     for(i in 1:nres) {

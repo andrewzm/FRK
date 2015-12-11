@@ -248,7 +248,10 @@ setMethod("auto_BAU",signature(manifold="real_line"),function(manifold,cellsize 
 setMethod("auto_BAU",signature(manifold="sphere"),function(manifold,cellsize = c(1,1),resl=2,type="hex",d=NULL,...) {
     if(type == "hex") {
         isea3h <- res <- lon <- centroid <- lat <- in_chull <- NULL # Suppress bindings warnings
-        data(isea3h,envir = environment())
+
+
+        isea3h <- load_dggrids(res=resl)
+
         isea3h_res <- filter(isea3h,res == resl) %>%
             arrange(id) %>%
             group_by(id) %>%
@@ -808,4 +811,20 @@ rdist.earth <- function (x1, x2 = NULL, miles = TRUE, R = NULL)
             t(cbind(coslat2 * coslon2, coslat2 * sinlon2, sinlat2))
         return(R * acos(ifelse(abs(pp) > 1, 1 * sign(pp), pp)))
     }
+}
+
+load_dggrids <- function (res = 3L){
+    if(res <= 6L)  {
+        data(isea3h, envir=environment(),package="FRK")
+    } else {
+        if(!require(dggrids)) {
+            stop("Such high DGGRID resolutions are not
+                                       shipped with the package FRK. For this
+                                       resolution please download and install the
+                                       package dggrids from github/andrewzm")
+        } else {
+            data(isea3h,envir=environment(),package = "dggrids")
+        }
+    }
+    return(isea3h)
 }
