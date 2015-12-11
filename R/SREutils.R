@@ -173,7 +173,7 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM",print_lik=FAL
 
 #' @rdname SRE
 #' @export
-SRE.predict <- function(SRE_model,pred_locs = SRE_model@BAUs,use_centroid=TRUE) {
+SRE.predict <- function(SRE_model,pred_locs = SRE_model@BAUs,use_centroid=TRUE,include_fs=TRUE) {
 ### CHANGE INPUT TO IDX!!! OR NAMES OR SOMETHING SO THAT WE CAN PREDICT ON A SUBSET OF BAUs!!
     if(is(pred_locs,"Spatial") & !(is(pred_locs,"SpatialPolygonsDataFrame")))
         stop("Predictions need to be over BAUs or spatial polygons")
@@ -195,7 +195,7 @@ SRE.predict <- function(SRE_model,pred_locs = SRE_model@BAUs,use_centroid=TRUE) 
                                use_centroid = use_centroid)
     } else {
 
-        pred_locs <- .SRE.predict(Sm=SRE_model,pred_locs=pred_locs,use_centroid=use_centroid)
+        pred_locs <- .SRE.predict(Sm=SRE_model,pred_locs=pred_locs,use_centroid=use_centroid,include_fs=include_fs)
     }
     pred_locs
 }
@@ -242,7 +242,7 @@ setMethod("summary",signature(object="SRE"),
 })
 
 
-.SRE.predict <- function(Sm,pred_locs,use_centroid) {
+.SRE.predict <- function(Sm,pred_locs,use_centroid,include_fs = TRUE) {
         depname <- all.vars(Sm@f)[1]
         pred_locs[[depname]] <- 0.1
         L <- .gstat.formula(Sm@f,data=pred_locs)
@@ -267,6 +267,8 @@ setMethod("summary",signature(object="SRE"),
         sigma2fs <- Sm@sigma2fshat
         D <- sigma2fs*Sm@Vfs + Sm@Ve
         Dinv <- Diagonal(x=1/diag(D))
+        mu_eta <- Sm@mu_eta
+        S_eta <- Sm@S_eta
 
         sig2_Vfs_pred <- Diagonal(x=sigma2fs*pred_locs$fs)
 
@@ -277,41 +279,50 @@ setMethod("summary",signature(object="SRE"),
         }
         C <- Sm@Cmat[,idx]
 
-        if(sigma2fs >0) {
-            LAMBDA <- as(bdiag(Sm@Khat,sig2_Vfs_pred),"symmetricMatrix")
-            LAMBDAinv <- chol2inv(chol(LAMBDA))
-            PI <- cBind(S0, .symDiagonal(n=length(pred_locs)))
-            Qx <- t(PI) %*% t(C) %*% solve(Sm@Ve) %*% C %*% PI + LAMBDAinv
-            temp <- cholPermute(Qx)
-            ybar <- t(PI) %*%t(C) %*% solve(Sm@Ve) %*% (Sm@Z - C %*% X %*% alpha)
-            x_mean <- cholsolve(Qx,ybar,perm=TRUE,cholQp = temp$Qpermchol, P = temp$P)
-            Partial_Cov <- Takahashi_Davis(Qx,cholQp = temp$Qpermchol,P = temp$P)
-            x_margvar <- diag(Partial_Cov)
-            pred_locs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
-        } else {
-            LAMBDA <- as(Sm@Khat,"symmetricMatrix")
-            LAMBDAinv <- chol2inv(chol(LAMBDA))
-            PI <- S0
-            Qx <- crossprod(solve(sqrt(Sm@Ve)) %*% C %*% PI) + LAMBDAinv
-            #Qx <- t(PI) %*% t(C) %*% solve(Sm@Ve) %*% C %*% PI + LAMBDAinv
-            ybar <- t(PI) %*%t(C) %*% solve(Sm@Ve) %*% (Sm@Z - C %*% X %*% alpha)
-            Partial_Cov <- as(chol2inv(chol(Qx)),"dgeMatrix")  # Actually all Cov, convenient for later
-            x_mean <- Partial_Cov %*% ybar
-            x_margvar <- diag(Partial_Cov)
-            pred_locs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
+        if(include_fs) {
+            if(sigma2fs >0) {
+                LAMBDA <- as(bdiag(Sm@Khat,sig2_Vfs_pred),"symmetricMatrix")
+                LAMBDAinv <- chol2inv(chol(LAMBDA))
+                PI <- cBind(S0, .symDiagonal(n=length(pred_locs)))
+                Qx <- t(PI) %*% t(C) %*% solve(Sm@Ve) %*% C %*% PI + LAMBDAinv
+                temp <- cholPermute(Qx)
+                ybar <- t(PI) %*%t(C) %*% solve(Sm@Ve) %*% (Sm@Z - C %*% X %*% alpha)
+                x_mean <- cholsolve(Qx,ybar,perm=TRUE,cholQp = temp$Qpermchol, P = temp$P)
+                Partial_Cov <- Takahashi_Davis(Qx,cholQp = temp$Qpermchol,P = temp$P)
+                x_margvar <- diag(Partial_Cov)
+                pred_locs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
+            } else {
+                LAMBDA <- as(Sm@Khat,"symmetricMatrix")
+                LAMBDAinv <- chol2inv(chol(LAMBDA))
+                PI <- S0
+                Qx <- crossprod(solve(sqrt(Sm@Ve)) %*% C %*% PI) + LAMBDAinv
+                #Qx <- t(PI) %*% t(C) %*% solve(Sm@Ve) %*% C %*% PI + LAMBDAinv
+                ybar <- t(PI) %*%t(C) %*% solve(Sm@Ve) %*% (Sm@Z - C %*% X %*% alpha)
+                Partial_Cov <- as(chol2inv(chol(Qx)),"dgeMatrix")  # Actually all Cov, convenient for later
+                x_mean <- Partial_Cov %*% ybar
+                x_margvar <- diag(Partial_Cov)
+                pred_locs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
+            }
+
+            ## variance to hard to compute all at once -- do it in blocks of 1000
+            temp <- rep(0,length(pred_locs))
+            batching=cut(1:nrow(PI),breaks = seq(0,nrow(PI)+1000,by=1000),labels=F)
+            for(i in 1:max(unique(batching))) {
+                idx = which(batching==i)
+                temp[idx] <- as.numeric(rowSums((PI[idx,] %*% Partial_Cov)*PI[idx,]))
+            }
+            pred_locs[["var"]] <- temp
+
+            #pred_locs[["var"]] <- as.numeric(rowSums((PI %*% Partial_Cov)*PI))
+
+        }
+        if(!include_fs) {
+            pred_locs[["mu"]] <- as.numeric(X %*% alpha + S0 %*% mu_eta)
+            pred_locs[["var"]] <- rowSums((S0 %*% S_eta) * S0) + sigma2fs
         }
 
-        ## variance to hard to compute all at once -- do it in blocks of 1000
-        temp <- rep(0,length(pred_locs))
-        batching=cut(1:nrow(PI),breaks = seq(0,nrow(PI)+1000,by=1000),labels=F)
-        for(i in 1:max(unique(batching))) {
-            idx = which(batching==i)
-            temp[idx] <- as.numeric(rowSums((PI[idx,] %*% Partial_Cov)*PI[idx,]))
-        }
-        pred_locs[["var"]] <- temp
-
-        #pred_locs[["var"]] <- as.numeric(rowSums((PI %*% Partial_Cov)*PI))
         pred_locs
+
 }
 
 .SRE.Estep <- function(Sm) {
