@@ -12,10 +12,7 @@
 #' @import parallel
 #' @import gstat
 #' @import dplyr
-#' @import mapproj
 #' @importFrom plyr ddply dlply rbind.fill
-#' @importFrom PBSmapping clipPolys
 #' @importFrom digest digest
-#' @importFrom doParallel registerDoParallel
 #' @name FRK
 NULL

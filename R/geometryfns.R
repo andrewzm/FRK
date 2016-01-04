@@ -109,7 +109,6 @@ setMethod("auto_BAU",signature(manifold="plane"),
                   select(-X1,-X2) %>%
                   df_to_SpatialPolygons(keys="id",coords=c("x","y"),proj=CRS())
 
-
               drangex <- diff(xrange)
               drangey <- diff(yrange)
               xgrid <- seq(xrange[1] - drangex*1.2,xrange[2] + drangex*1.2,by=cellsize[1])
@@ -133,7 +132,12 @@ setMethod("auto_BAU",signature(manifold="plane"),
                   xy <- xy %>%
                       points2grid() %>%
                       as.SpatialPolygons.GridTopology()
-                  coordnames(xy) <- coordnames(d)
+                  if(!all(coordnames(xy) == coordnames(d))) {
+                      warning("Coordinate names different from (x,y).
+                              Renaming polygons might take a while due to
+                              structure of the function as.SpatialPolygons.GridTopology.")
+                      coordnames(xy) <- coordnames(d)
+                  }
                   idx <- which(!is.na(over(xy,bndary_seg)))
                   xy <- xy[idx,]
                   xy_df <- SpatialPolygonsDataFrame(xy,
@@ -537,8 +541,14 @@ df_to_SpatialPolygons <- function(df,keys,coords,proj) {
     } else {
         if(opts_FRK$get("parallel") > 1) {
             cl <- makeCluster(opts_FRK$get("parallel"))
-            doParallel::registerDoParallel(opts_FRK$get("parallel"))
-            df_poly <- plyr::dlply(df,keys,dfun,.parallel=TRUE)
+
+            #doParallel::registerDoParallel(opts_FRK$get("parallel"))
+            #df_poly <- plyr::dlply(df,keys,dfun,.parallel=TRUE)
+
+            df_poly <- mclapply(unique(df[keys])[,1],
+                                function(key) {
+                                    dfun(df[df[keys]==key,])},
+                                mc.cores = opts_FRK$get("parallel"))
             stopCluster(cl)
         } else {
             df_poly <- plyr::dlply(df,keys,dfun)

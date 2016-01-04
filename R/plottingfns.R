@@ -10,7 +10,7 @@ circleFun <- function(center = c(0,0),diameter = 1, npoints = 100){
 #' @description Generates a ggplot2 map of the world
 #' @param g initial ggplot object
 #' @param inc_border flag indicating whether a map border should be drawn or not. See details.
-#' @details This function uses \code{ggplot2::map_data} in order to create a world map. Since, by default, this creates lines crossing the world at the (-180,180) longitude boundary, function \code{PBSmapping::clipPolys} is used to split the polygons at this boundary into two. If \code{inc_border} is TRUE, then a border is drawn around the lon/lat space; this option is most useful for projections which do not yeild rectangular plots (e.g., the sinusoidal projection).
+#' @details This function uses \code{ggplot2::map_data} in order to create a world map. Since, by default, this creates lines crossing the world at the (-180,180) longitude boundary, function \code{clipPolys} from the package \code{PBSmapping} is used to split the polygons at this boundary into two. If \code{inc_border} is TRUE, then a border is drawn around the lon/lat space; this option is most useful for projections which do not yeild rectangular plots (e.g., the sinusoidal projection).
 #' @export
 #' @examples
 #' library(ggplot2)
@@ -22,7 +22,7 @@ draw_world <- function(g = ggplot(),inc_border = TRUE) {
     X <- Y <- PID <- NULL
     worldmap = map_data("world")
     names(worldmap) <- c("X","Y","PID","POS","region","subregion")
-    worldmap = PBSmapping::clipPolys(worldmap, xlim=c(-180,180),ylim=c(-90,90), keepExtra=TRUE)
+    worldmap = clipPolys(worldmap, xlim=c(-180,180),ylim=c(-90,90), keepExtra=TRUE)
     if(inc_border) {
         border <- data.frame(X=c(-179.99,-179.99,179.99,179.99),Y=c(-89.99,89.99,89.99,-89.99),PID=1e5,region="border")
         worldmap <- plyr::rbind.fill(worldmap,border)

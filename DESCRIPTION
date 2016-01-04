@@ -38,16 +38,13 @@ Enhances:
 Imports:
     methods,
     Matrix,
-    gstat,
     ggplot2,
     dplyr,
     plyr,
-    PBSmapping,
     parallel,
-    doParallel,
+    gstat,
     sp,
     spacetime,
-    mapproj,
     digest
 License: GPL (>= 2)
 NeedsCompilation: yes
