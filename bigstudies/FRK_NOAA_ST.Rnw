@@ -10,7 +10,7 @@ opts_FRK$set("progress",FALSE)
 opts_FRK$set("parallel",0L)
 
 ## Load dataset
-load("./data/NOAA_df_1990.Rdata")
+data(NOAA_df_1990)
 Tmax <- subset(NOAA_df_1990,     # subset the data
               proc=="Tmax" &     # only max temperature
               month == 7 &   # May to July
@@ -22,7 +22,7 @@ Tmax <- subset(NOAA_df_1990,     # subset the data
 STObj <- stConstruct(x = Tmax,                  # dataset
                  space = c("lon","lat"),        # spatial fields
                  time="time",                   # time field
-                 crs=CRS("+proj=longlat"),      # projection (lon-lat)
+                 crs=CRS("+proj=longlat +ellps=WGS84"),      # projection (lon-lat)
                  interval=TRUE)
 
 ## Remove projection information
@@ -76,7 +76,7 @@ S <- SRE.fit(SRE_model = S,    # estimate parameters in the SRE model S
              tol = 0.1)        # tolerance on log-likelihood
 
 ## Predict field at BAUs
-grid_BAUs <- SRE.predict(S,pred_locs = grid_BAUs,use_centroid = TRUE)
+grid_BAUs <- SRE.predict(S,pred_locs = grid_BAUs,use_centroid = TRUE,include_fs = FALSE)
 
 ## Use stplot to plot predictions at BAUs
 grid_BAUs@sp          <- SpatialPoints(grid_BAUs@sp)   # convert to Spatial points object

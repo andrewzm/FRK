@@ -89,7 +89,7 @@ auto_basis <- function(m = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,t
     coords <- coordinates(data)
 
     if(is(m,"plane") & regular==0) {
-        if(!require(INLA)) stop("For automatic basis generation INLA needs to be installed. Please install it using install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\")")
+        if(!requireNamespace("INLA")) stop("For automatic basis generation INLA needs to be installed for constructing basis function centres. Please install it using install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\")")
     }
 
     if(nrow(coords)>subsamp) {
@@ -279,6 +279,7 @@ setMethod("eval_basis",signature(basis="TensorP_Basis",s="matrix"),function(basi
     n1 <- dimensions(manifold(basis@Basis1))
     S1 <- eval_basis(basis@Basis1,s[,1:n1,drop=FALSE],output)
     S2 <- eval_basis(basis@Basis2,s[,-(1:n1),drop=FALSE],output)
+    i <- 1 #suppress binding warning
 
     S <- foreach(i = 1:ncol(S1),.combine="cBind") %do% {
         S1[,i] * S2
@@ -297,6 +298,7 @@ setMethod("eval_basis",signature(basis="TensorP_Basis",s = "STIDF"),function(bas
     S1 <- eval_basis(basis@Basis1,slocs[,,drop=FALSE],output)
     S2 <- eval_basis(basis@Basis2,tlocs[,,drop=FALSE],output)
 
+    i <- 1 #suppress binding warning
     S <- foreach(i = 1:ncol(S1),.combine="cBind") %do% {
         S1[,i] * S2
     } %>% as("dgCMatrix")

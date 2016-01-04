@@ -3,6 +3,7 @@
 #' @description Generic plotting function for illustrating the basis functions.
 #' @param basis object of class \code{Basis}
 #' @param g object of class \code{gg} (a \code{ggplot} object)
+#' @param ... not in use
 #' @details The function \code{show_basis} adapts its behaviour to the manifold being used. With \code{real_line}, the one-dimensional basis functions are plotted with colour distinguishing between the different resolutions. With \code{plane}, only radial basis functions are supported (at present). Each basis function is shown as a circle with diameter equal to the \code{scale} parameter of the function. Linetype distinguishes the resolution. With \code{sphere}, the centres of the basis functions are shown as circles, with larger sizes corresponding to lower (i.e., coarser) resolutions.
 #' @examples
 #' library(ggplot2)
@@ -85,6 +86,12 @@ setGeneric("distance", function(d,x1,x2) standardGeneric("distance"))
 #' @export
 setGeneric("eval_basis", function(basis,s,output="matrix") standardGeneric("eval_basis"))
 
+#' @title Tensor product of basis functions
+#' @description Constructs a new set of basis by finding the tensor product of two sets of basis functions. The product is carried out on the basis functions elementwise. Hence, \code{Basis1} and \code{Basis2} need to contain the same number of basis functions.
+#' @param Basis1 first set of basis functions
+#' @param Basis2 second set of basis functions
+#' @export
+setGeneric("TensorP", function(Basis1,Basis2) standardGeneric("TensorP"))
 
 #### NOT EXPORTED ####
 
@@ -124,10 +131,5 @@ setGeneric("concat", function(...) standardGeneric("concat"))
 #' @noRd
 setGeneric("BuildC", function(data,BAUs) standardGeneric("BuildC"))
 
-#' @title Tensor product of basis functions
-#' @description Constructs a new set of basis by finding the tensor product of two sets of basis functions. The product is carried out on the basis functions elementwise. Hence, \code{Basis1} and \code{Basis2} need to contain the same number of basis functions.
-#' @param Basis1 first set of basis functions
-#' @param Basis2 second set of basis functions
-#' @export
-setGeneric("TensorP", function(Basis1,Basis2) standardGeneric("TensorP"))
+
 

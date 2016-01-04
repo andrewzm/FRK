@@ -16,11 +16,9 @@ setMethod("initialize",signature="manifold",function(.Object) {
 #'
 #' @export
 dggrid_gen_to_df <- function(filename,res) {
-    if(!require(zoo)) stop("Please install package zoo") ## needed for na.locf
     lat <- lon <- isna <- NULL # Suppress bindings warning
 
     if(!is.character(filename)) stop("filename needs to of type 'character'")
-    if(!require(zoo)) stop("zoo is needed for this function. Please install it separately")
     if(!is.numeric(res)) stop("res needs to be of type character")
     X <- read.table(filename,
                     sep=" ",fill=T,
@@ -35,7 +33,7 @@ dggrid_gen_to_df <- function(filename,res) {
         mutate(res = res,
                id = as.numeric(as.character(id)),
                centroid = as.numeric(!is.na(id))) %>%
-        transform(id = zoo::na.locf(id))
+        transform(id = spacetime::na.locf(id))
 }
 
 #' @title Automatic BAU generation
@@ -97,6 +95,8 @@ auto_BAUs <- function(manifold,res=2,cellsize = rep(1,dimensions(manifold)), typ
 
 setMethod("auto_BAU",signature(manifold="plane"),
           function(manifold,cellsize = c(1,1),resl=resl,type="hex",d=NULL,convex=-0.05,...) {
+
+              if(!requireNamespace("INLA")) stop("For automatic BAU generation INLA needs to be installed for constructing non-convex hull. Please install it using install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\")")
 
               X1 <- X2 <- NULL # Suppress bindings warning
 
@@ -748,8 +748,11 @@ setMethod("manifold",signature(.Object="Basis"),function(.Object) {
     return(.Object@manifold)
 })
 
+#' @rdname manifold
+#' @aliases manifold,TensorP_Basis-method
 setMethod("manifold",signature(.Object="TensorP_Basis"),function(.Object) {
-    return(NA)
+    return(list(manifold(.Object@Basis1),
+                manifold(.Object@Basis2)))
 })
 
 
@@ -814,10 +817,11 @@ rdist.earth <- function (x1, x2 = NULL, miles = TRUE, R = NULL)
 }
 
 load_dggrids <- function (res = 3L){
+    isea3h <- NA # suppress binding warning
     if(res <= 6L)  {
         data(isea3h, envir=environment(),package="FRK")
     } else {
-        if(!require(dggrids)) {
+        if(!requireNamespace("dggrids")) {
             stop("Such high DGGRID resolutions are not
                                        shipped with the package FRK. For this
                                        resolution please download and install the

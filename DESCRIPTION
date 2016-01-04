@@ -6,7 +6,7 @@ Date: 2015-12-05
 Author: Andrew Zammit-Mangion
 Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
 VignetteBuilder: knitr
-Description: This package implements fixed rank kriging, a tool used for
+Description: Fixed rank kriging is a tool used for
     spatial modelling and prediction with large detasets. The approach,
     discussed in Cressie and Johannesson (2008), decomposes the field, and
     hence the covariance function, using a fixed set of n basis functions,
@@ -28,10 +28,10 @@ Suggests:
     reshape2,
     shapefiles,
     knitr,
-    covr,
     splancs,
     INLA,
-    rgeos
+    rgeos,
+    covr
 Enhances:
     Rhipe,
     dggrids

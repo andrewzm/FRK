@@ -13,6 +13,8 @@ show_basis(basis, ...)
 \arguments{
 \item{basis}{object of class \code{Basis}}
 
+\item{...}{not in use}
+
 \item{g}{object of class \code{gg} (a \code{ggplot} object)}
 }
 \description{

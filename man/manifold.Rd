@@ -4,11 +4,14 @@
 \name{manifold}
 \alias{manifold}
 \alias{manifold,Basis-method}
+\alias{manifold,TensorP_Basis-method}
 \title{Retrieve manifold}
 \usage{
 manifold(.Object)
 
 \S4method{manifold}{Basis}(.Object)
+
+\S4method{manifold}{TensorP_Basis}(.Object)
 }
 \arguments{
 \item{.Object}{\code{FRK} object}

@@ -2,3 +2,7 @@
 ^\.Rproj\.user$
 ^\.travis\.yml$
 bigstudies
+^vignettes/figure$
+^\.travis.yml$
+^\.\.Rcheck$
+^\.git$

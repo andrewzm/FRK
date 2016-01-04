@@ -216,7 +216,7 @@ amd_test <- function() {
          2, 20, 21, 22,
          6, 11, 12, 23 )
   Q <- as(sparseMatrix(i=Ai,p=Ap,index1=F,x=1),"dgTMatrix")
-  write.table(data.frame(i=Q@i,j=Q@j,x=1),file="Chol_test.csv")
+  #write.table(data.frame(i=Q@i,j=Q@j,x=1),file="Chol_test.csv")
   X <- .C("AMD_order_wrapper",as.integer(n),as.integer(Ap),as.integer(Ai),
           P = integer(n), Control=double(5),Info=double(20))
 }
