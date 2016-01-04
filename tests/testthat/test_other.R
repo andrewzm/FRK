@@ -91,6 +91,15 @@ test_that("Plotting works", {
     expect_true({draw_world(); TRUE})
     expect_true({LinePlotTheme() + geom_point(data=data.frame(x=1,y=1),aes(x,y));TRUE})
     expect_true({EmptyTheme() + geom_point(data=data.frame(x=1,y=1),aes(x,y));TRUE})
+})
 
-
+test_that("Date sequencing works", {
+    tspacing <- paste(1,"year")
+    tstart <- as.POSIXct("1990-06-01 10:00:00 AEST")
+    tend <- as.POSIXct("1993-06-01 10:00:00 AEST")
+    tgrid <- seq(trunc(tstart,"year"),
+                 trunc(tend,"year"),
+                 by=tspacing)
+    expect_is(tgrid,"POSIXct")
+    expect_equal(length(tgrid),4L)
 })

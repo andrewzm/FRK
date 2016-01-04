@@ -281,9 +281,16 @@ setMethod("eval_basis",signature(basis="TensorP_Basis",s="matrix"),function(basi
     S2 <- eval_basis(basis@Basis2,s[,-(1:n1),drop=FALSE],output)
     i <- 1 #suppress binding warning
 
-    S <- foreach(i = 1:ncol(S1),.combine="cBind") %do% {
-        S1[,i] * S2
-    } %>% as("dgCMatrix")
+    S <- list()
+    for(i in 1:ncol(S1)) {
+        S[[i]] <- S1[,i] * S2
+    }
+    S <- do.call("cBind",S)
+    S <- as(S,"dgCMatrix")
+
+    # S <- foreach(i = 1:ncol(S1),.combine="cBind") %do% {
+    #     S1[,i] * S2
+    # } %>% as("dgCMatrix")
 
     S
 })
@@ -299,9 +306,17 @@ setMethod("eval_basis",signature(basis="TensorP_Basis",s = "STIDF"),function(bas
     S2 <- eval_basis(basis@Basis2,tlocs[,,drop=FALSE],output)
 
     i <- 1 #suppress binding warning
-    S <- foreach(i = 1:ncol(S1),.combine="cBind") %do% {
-        S1[,i] * S2
-    } %>% as("dgCMatrix")
+
+    S <- list()
+    for(i in 1:ncol(S1)) {
+        S[[i]] <- S1[,i] * S2
+    }
+    S <- do.call("cBind",S)
+    S <- as(S,"dgCMatrix")
+
+    # S <- foreach(i = 1:ncol(S1),.combine="cBind") %do% {
+    #     S1[,i] * S2
+    # } %>% as("dgCMatrix")
 
     S
 })
