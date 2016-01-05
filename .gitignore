@@ -8,3 +8,4 @@ vignettes/figure
 src/*.o
 src/*.so
 ..pdf
+vignettes/*.Rnw
