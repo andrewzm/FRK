@@ -14,7 +14,7 @@ circleFun <- function(center = c(0,0),diameter = 1, npoints = 100){
 #' @export
 #' @examples
 #' library(ggplot2)
-#' draw_world(g = ggplot()) + coord_map("sinusoidal")
+#' draw_world(g = ggplot())
 draw_world <- function(g = ggplot(),inc_border = TRUE) {
     ### Polygon split solution thanks to http://cameron.bracken.bz/finally-an-easy-way-to-fix-the-horizontal-lines-in-ggplot2-maps
     if(!(is(g, "ggplot"))) stop("g has to be of class ggplot")

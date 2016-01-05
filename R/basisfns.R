@@ -3,7 +3,7 @@
 #' @param manifold object of class \code{manifold}, for example, a sphere
 #' @param loc a matrix of size \code{n} by \code{dimensions(manifold)} indicating centres of basis functions
 #' @param scale vector of length \code{n} containing the scale parameters of the basis functions. See details
-#' @param type either ``Gaussian'' or ``bisquare''
+#' @param type either ``Gaussian'', ``bisquare,'' ``exp,'' or ``Matern32''.
 #' @details This functions lays out radial basis functions in a domain of interest based on pre-specified location and scale parameters. If the type is ``Gaussian'', then the scale corresponds to a distance of one standard deviation. If the type is ``bisquare'', then the scale corresponds to the range of support of the bisquare function.
 #' @examples
 #' library(ggplot2)
@@ -17,7 +17,7 @@ radial_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,typ
     stopifnot(is.matrix(loc))
     stopifnot(dimensions(manifold) == ncol(loc))
     stopifnot(length(scale) == nrow(loc))
-    stopifnot(type %in% c("Gaussian","bisquare"))
+    stopifnot(type %in% c("Gaussian","bisquare","exp","Matern32"))
     n <- nrow(loc)
     colnames(loc) <- c(outer("loc",1:ncol(loc),FUN = paste0))
 
@@ -25,9 +25,14 @@ radial_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,typ
     for (i in 1:n) {
         if(type=="Gaussian") {
             fn[[i]] <-  .GRBF_wrapper(manifold,matrix(loc[i,],nrow=1),scale[i])
-        } else {
+        } else if (type=="bisquare") {
             fn[[i]] <-  .bisquare_wrapper(manifold,matrix(loc[i,],nrow=1),scale[i])
+        } else if (type=="exp") {
+            fn[[i]] <-  .exp_wrapper(manifold,matrix(loc[i,],nrow=1),scale[i])
+        } else if (type=="Matern32") {
+            fn[[i]] <-  .Matern32_wrapper(manifold,matrix(loc[i,],nrow=1),scale[i])
         }
+
         pars[[i]] <- list(loc = matrix(loc[i,],nrow=1), scale=scale[i])
     }
     df <- data.frame(loc,scale,res=1)
@@ -74,7 +79,7 @@ radial_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,typ
 #'                 subsamp = 20000)
 #'
 #' ### Plot and note how some basis functions are removed in Antarctica
-#' show_basis(G,draw_world()) + coord_map("mollweide")
+#' show_basis(G,draw_world())
 #'
 #' @export
 auto_basis <- function(m = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,type="Gaussian") {
@@ -82,7 +87,7 @@ auto_basis <- function(m = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,t
     if(!is.numeric(nres) | nres < 0) stop("nres needs to be greater than zero")
     if(!is.numeric(prune) | prune < 0) stop("prune needs to be greater than zero")
     if(!is.numeric(subsamp) | subsamp < 0) stop("subsamp needs to be greater than zero")
-    if(!type %in% c("bisquare","Gaussian")) stop("type of basis functions can only be Gaussian or bisquare")
+    if(!type %in% c("bisquare","Gaussian","exp","Matern32")) stop("type of basis functions must be 'Gaussian,' 'bisquare,' 'exp,' or 'Matern32'.")
     if((is(m,"sphere")  | is(m,"real_line")) & regular == 0) stop("Irregular basis only available on planes")
 
     isea3h <- centroid <- res <- NULL #(suppress warnings, these are loaded from data)
@@ -385,17 +390,21 @@ setMethod("eval_basis",signature(basis="Basis",s="STIDF"),function(basis,s,outpu
         pip <- over(SpatialPoints(samps),
                     SpatialPolygons(list(s@polygons[[i]]),1L))
         samps <- samps[which(pip==1),]
-        #             ggplot(X) + geom_point(aes(X1,X2),pch=".") + coord_map() + geom_path(data=coords,aes(lon,lat)) + coord_map("ortho",xlim=c(-180,180),ylim=c(-90,90),orientation=c(-180,-45,45))
+        #             ggplot(X) + geom_point(aes(X1,X2),pch=".") + geom_path(data=coords,aes(lon,lat)) + coord_map("ortho",xlim=c(-180,180),ylim=c(-90,90),orientation=c(-180,-45,45))
     }
     samps
 }
 
-# Gaussian Asymmetric Basis Function
+.check_bisquare_args <- function(manifold,loc,R) {
+    stopifnot(is.matrix(loc))
+    stopifnot(dimensions(manifold) == ncol(loc))
+    stopifnot(is.numeric(R))
+    stopifnot(R > 0)
+}
+
+# Gaussian Basis Function
 .GRBF_wrapper <- function(manifold,mu,std) {
-    stopifnot(is.matrix(mu))
-    stopifnot(dimensions(manifold) == ncol(mu))
-    stopifnot(is.numeric(std))
-    stopifnot(std > 0)
+    .check_bisquare_args(manifold,mu,std)
     function(s) {
         stopifnot(ncol(s) == dimensions(manifold))
         dist_sq <- distance(manifold,s,mu)^2
@@ -403,18 +412,35 @@ setMethod("eval_basis",signature(basis="Basis",s="STIDF"),function(basis,s,outpu
     }
 }
 
-# Bisquare Asymmetric Basis Function
+# Bisquare Basis Function
 .bisquare_wrapper <- function(manifold,c,R) {
-    stopifnot(dimensions(manifold) == ncol(c))
-    stopifnot(is.numeric(R))
-    stopifnot(R > 0)
+    .check_bisquare_args(manifold,c,R)
     function(s) {
+        stopifnot(ncol(s) == dimensions(manifold))
         y <- distance(manifold,s,c)
         (1-(y/R)^2)^2 * (y < R)
     }
 }
 
+# Exponential Basis Function
+.exp_wrapper <- function(manifold,c,tau) {
+    .check_bisquare_args(manifold,c,tau)
+    function(s) {
+        stopifnot(ncol(s) == dimensions(manifold))
+        y <- distance(manifold,s,c)
+        exp(-y/tau)
+    }
+}
 
+# Exponential Basis Function
+.Matern32_wrapper <- function(manifold,c,kappa) {
+    .check_bisquare_args(manifold,c,kappa)
+    function(s) {
+        stopifnot(ncol(s) == dimensions(manifold))
+        y <- distance(manifold,s,c)
+        (1 + sqrt(3)*y/kappa)*exp(-sqrt(3)*y/kappa)
+    }
+}
 
 #' @rdname concat
 #' @aliases concat,Basis-method

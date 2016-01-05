@@ -8,6 +8,13 @@ mu1 <- mu2 <- matrix(c(1,1),1,2)
 mu3 <- matrix(1,1,1)
 std <- 1
 
+test_that("basis can be generated", {
+    expect_true({ .GRBF_wrapper(m1,mu1,std); TRUE})
+    expect_true({ .bisquare_wrapper(m1,mu1,std); TRUE})
+    expect_true({ .exp_wrapper(m1,mu1,std); TRUE})
+    expect_true({ .Matern32_wrapper(m1,mu1,std); TRUE})
+})
+
 G1 <- .GRBF_wrapper(m1,mu1,std)
 G2 <- .GRBF_wrapper(m2,mu2,std)
 G3 <- .GRBF_wrapper(m3,mu3,std)
