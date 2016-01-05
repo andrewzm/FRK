@@ -14,7 +14,7 @@ radial_basis(manifold = sphere(), loc = matrix(c(1, 0), nrow = 1),
 
 \item{scale}{vector of length \code{n} containing the scale parameters of the basis functions. See details}
 
-\item{type}{either ``Gaussian'' or ``bisquare''}
+\item{type}{either ``Gaussian'', ``bisquare,'' ``exp,'' or ``Matern32''.}
 }
 \description{
 Construct a set of radial basis functions based on pre-specified location and scale parameters.

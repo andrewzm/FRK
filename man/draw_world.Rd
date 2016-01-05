@@ -19,6 +19,6 @@ This function uses \code{ggplot2::map_data} in order to create a world map. Sinc
 }
 \examples{
 library(ggplot2)
-draw_world(g = ggplot()) + coord_map("sinusoidal")
+draw_world(g = ggplot())
 }
 

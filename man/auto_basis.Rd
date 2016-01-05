@@ -57,6 +57,6 @@ G <- auto_basis(m = sphere(),data=d,
                 subsamp = 20000)
 
 ### Plot and note how some basis functions are removed in Antarctica
-show_basis(G,draw_world()) + coord_map("mollweide")
+show_basis(G,draw_world())
 }
 

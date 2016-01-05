@@ -645,7 +645,7 @@ PBSprint <- FALSE
                 outOrientation = double(outCapacity),
                 outRows = as.integer(outCapacity),
                 outStatus = integer(1),
-                PACKAGE = "PBSmapping");
+                PACKAGE = "FRK");
   # note: outRows is set to how much space is allocated -- the C function
   #       should consider this
 
@@ -1435,7 +1435,7 @@ The function '", caller, "' requires the package(s) '", err, "'.\n",
                 closedPolys = as.integer(closedPolys),
                 addRetrace = as.integer(addRetrace),
                 outStatus = integer(1),
-                PACKAGE = "PBSmapping");
+                PACKAGE = "FRK");
   # note: outRows is set to how much space is allocated -- the C function
   #       should take this into consideration
 
@@ -3130,7 +3130,7 @@ calcArea <- function(polys, rollup = 3)
                 outArea = double(outCapacity),
                 outRows = as.integer(outCapacity),
                 outStatus = integer(1),
-                PACKAGE = "PBSmapping");
+                PACKAGE = "FRK");
   # note: outRows is set to how much space is allocated -- the C function
   #       should consider this
 
@@ -3221,7 +3221,7 @@ calcCentroid <- function(polys, rollup = 3)
                 outXY = double(2 * outCapacity),
                 outRows = as.integer(outCapacity),
                 outStatus = integer(1),
-                PACKAGE = "PBSmapping");
+                PACKAGE = "FRK");
   # note: outRows is set to how much space is allocated -- the C function
   #       should consider this
 
@@ -3472,208 +3472,208 @@ calcSummary <- function(polys, rollup = 3, FUN, ...)
 
   return (result);
 }
-
-#==============================================================================
-calcVoronoi <- function(xydata, xlim = NULL, ylim = NULL, eps = 1e-09,
-                        frac = 0.0001) {
-  .checkRDeps ("calcVoronoi", c("deldir"))
-
-  xydata <- .validateXYData(xydata)
-  if (is.character(xydata))
-    stop(paste("Invalid X/Y data 'xydata'.\n", xydata, sep=""))
-  if (nrow(xydata) < 2)
-    stop("This function requires two or more input points.\n")
-
-  if (!is.null(xlim) && (length(xlim) != 2 || diff(xlim) < 0))
-    stop("Invalid 'xlim' argument.\n")
-  if (!is.null(ylim) && (length(ylim) != 2 || diff(ylim) < 0))
-    stop("Invalid 'xlim' argument.\n")
-
-  # if limits null, calculate them by increasing each extent by 10% of its
-  # range
-  if (is.null(xlim))
-    xlim <- range(xydata$X) + (rep(diff(range(xydata$X)) * 0.10, 2) * c(-1, 1))
-  if (is.null(ylim))
-    ylim <- range(xydata$Y) + (rep(diff(range(xydata$Y)) * 0.10, 2) * c(-1, 1))
-
-  if (!is.null(attr(xydata, "projection"))
-      && attr(xydata, "projection") == "LL")
-    warning(paste(
-"When the projection is \"LL\", this function naively treats the data as",
-"a one-to-one projection. Consider converting it to UTM before running",
-"this function.", sep="\n"));
-
-  dd <- deldir::deldir(xydata$X, xydata$Y, rw=c(xlim, ylim), eps=eps, frac=frac,
-               digits=7)
-  if (is.null(dd))
-    stop(paste(
-"The call to \"deldir\", this function's dependency, failed.  The function",
-"does not support linear (horizontal/vertical) data and that could be the",
-"cause.", sep="\n"));
-
-  # dd$dirsgs:
-  #  (x1, y1) -> (x2, y2): a line segment in a Dirichlet tile
-  #  ind1 and ind2: indices of the two points separated by this line segment
-  dirsgs <- dd$dirsgs
-
-  # dd$summary:
-  #  (x, y): points used in the tesselation; may be less than input if some
-  #          points judged to be the same (see "frac" argument)
-  #  n.tside: number of side of the Dirichlet tile surrounding the point
-  summary <- dd$summary
-
-  # we will use "summary" below AND in ".addCorners" to determine closest
-  # polygon for adding corners
-
-  # each line segment belongs to two tiles (ind1 and ind2); create a data
-  # structure with two copies of each point (i.e., a copy for each tile)
-  pt1tile1 <- dirsgs[, c("x1", "y1", "ind1", "bp1")]
-  pt1tile2 <- dirsgs[, c("x1", "y1", "ind2", "bp1")]
-  pt2tile1 <- dirsgs[, c("x2", "y2", "ind1", "bp2")]
-  pt2tile2 <- dirsgs[, c("x2", "y2", "ind2", "bp2")]
-  names(pt1tile1) <- names(pt1tile2) <- names(pt2tile1) <-
-    names(pt2tile2) <- c("X", "Y", "tile", "bp")
-  res <- rbind(pt1tile1, pt1tile2, pt2tile1, pt2tile2)
-  res <- res[order(res$tile), ]
-
-  # the points in "res" are ordered by "tile" -- the same order of the
-  # points in "summary"
-
-  # add the "origin" point (twice) for each tile to the data structure
-  res$Xo <- rep(summary[, "x"], times=2*summary[, "n.tside"])
-  res$Yo <- rep(summary[, "y"], times=2*summary[, "n.tside"])
-  # compute offset from each "origin"
-  res$Xdiff <- res$X - res$Xo
-  res$Ydiff <- res$Y - res$Yo
-  # compute the arctan for each offset, so that we know the order
-  # when building polygons
-  res$atan2 <- atan2(res$Ydiff, res$Xdiff)
-
-  # NOTE: the order set below is paramount to the next section of code.
-  # DO NOT change the ordering unless you revise the next section as well.
-
-  # order them and then eliminate duplicates
-  res <- res[order(res$tile, res$atan2), ]
-  res <- res[!duplicated(paste(res$tile, res$atan2)), ]
-
-  # number of vertices in each polygon
-  nVerts <- diff(c(which(!duplicated(res$tile)), length(res$tile)+1))
-
-  #----------------------------------------------------------------------------
-  # At this point, the order of points in each tile is sometimes inappropriate
-  # for plotting. To obtain the best results, tiles with boundary points should
-  # have one boundary point appear first in the tile and one last.
-  #
-  # Here is the idea:
-  # We have two types of tiles:
-  #   (1) "correct" tiles (completely interior OR boundary points in the first
-  #       and last position) and
-  #   (2) "incorrect" tiles (boundary points adjacent to each other in a given
-  #       tile).
-  # We only need to reorder vertices of the "incorrect" tiles. We can think of
-  # the reordering as "rotating" the vertices until the first and last are the
-  # boundary points.
-  #
-  # If F is a non-boundary point and T is a boundary point, a tile with seven
-  # vertices may initially look like FFFTTFF.  If we rotate these vertices right
-  # three times
-  #   FFFFTTF (1st rotation)
-  #   FFFFFTT (2nd rotation)
-  #   TFFFFFT (3rd rotation)
-  # we achieve the desired ordering.
-  #
-  # To calculate the rotation, we look at the index of the first boundary point
-  # in the tile.  If we subtract its index from the number of vertices and add
-  # one, we obtain the number of right rotations (e.g., 7 - 5 + 1 = 3 in the
-  # above example).
-  #
-  # Given the number of right rotations, we can build a new index vector that
-  # will "rotate" points within the desired tiles.
-
-  # divide 'res' into two data frames, one where tiles touch two or fewer
-  # boundary points and one where tiles touch more than two boundary points
-  bpByTile <- split(res$bp, res$tile)
-  noRotate <- rep((lapply(bpByTile, "sum") > 2),
-                  times=lapply(bpByTile, "length"))
-  resNoRotate <- res[noRotate, ]        # touch more than two
-  res <- res[!noRotate, ]               # touch two or fewer
-
-  # vertices in each tile
-  tileLen <- diff(c(which(!duplicated(res$tile)), nrow(res)+1))
-  # find the tiles to rotate
-  bpByTile <- split(res$bp, res$tile)
-  bpByTileWhich <- lapply(bpByTile, "which")
-  toRotate <- (lapply(bpByTileWhich, "diff") == 1)
-  toRotate[is.na(toRotate)] <- FALSE
-
-  # focus on the tiles to fix
-  toFix <- bpByTileWhich[toRotate]
-  toFixLen <- tileLen[toRotate]
-  toFixMin <- lapply(toFix, "min")
-
-  # setup a "rotation" vector
-  rotR <- unlist(toFixLen) - unlist(toFixMin)
-  rotR <- -1 - rotR
-
-  # a "-1" rotation means no change, "-2" means one to the right, ...
-  rot <- rep(-1, length(tileLen))
-  rot[toRotate] <- rotR
-
-  # start with an index of 1 .. len for each tile
-  newIDX <- unlist(lapply(tileLen, "seq"))
-
-  # rotate those indices
-  rot <- rep(rot, times=unlist(tileLen))
-  newIDX <- newIDX + rot
-  mod <- rep(unlist(tileLen), times=unlist(tileLen))
-  newIDX <- (newIDX %% mod) + 1
-
-  # adjust indices from 1 .. len to reflect their position in the
-  # data frame
-  base <- rep(which(!duplicated(res$tile)) - 1, times=unlist(tileLen))
-  newIDX <- newIDX + base
-
-  # reorder
-  res <- res[newIDX, ]
-
-  # combine the two 'res' data frames (the no rotate and rotate one)
-  if (any(noRotate)) {
-    res <- rbind(resNoRotate, res)
-    # it is safe to 'order' by tile: according to the R help on 'order',
-    # "any unresolved ties will be left in their original ordering."
-    res <- res[order(res$tile), ]
-  }
-  #----------------------------------------------------------------------------
-
-  # build the POS column
-  maxPos <- max(nVerts);
-  POS <- rep(seq(from=1, to=maxPos), times=length(nVerts));
-  n <- vector();
-  n[seq(1, by=2, length.out=length(nVerts))] <- nVerts;
-  n[seq(2, by=2, length.out=length(nVerts))] <- maxPos - nVerts;
-  b <- rep(c(TRUE, FALSE), length.out=length(n));
-  POS <- POS[rep(b, n)];
-
-  names(res)[is.element(names(res), "tile")] <- "PID"
-  res$POS <- POS
-
-  res <- res[, c("PID", "POS", "X", "Y")]
-  class(res) <- c("PolySet", class(res))
-
-  # polygons that straddle corners will be missing the corner points; add
-  # the missing corner points now
-  res <- .addCorners(res, summary)
-
-  # ensure edges reach the proper extents
-  res <- .expandEdges(res, data.frame(X=summary[, "x"], Y=summary[, "y"]),
-                      xlim, ylim)
-
-  # set attributes appropriate to the result
-  attr(res, "projection") <- 1;
-  attr(res, "zone") <- NULL;
-
-  return (res);
-}
+#
+# #==============================================================================
+# calcVoronoi <- function(xydata, xlim = NULL, ylim = NULL, eps = 1e-09,
+#                         frac = 0.0001) {
+#   .checkRDeps ("calcVoronoi", c("deldir"))
+#
+#   xydata <- .validateXYData(xydata)
+#   if (is.character(xydata))
+#     stop(paste("Invalid X/Y data 'xydata'.\n", xydata, sep=""))
+#   if (nrow(xydata) < 2)
+#     stop("This function requires two or more input points.\n")
+#
+#   if (!is.null(xlim) && (length(xlim) != 2 || diff(xlim) < 0))
+#     stop("Invalid 'xlim' argument.\n")
+#   if (!is.null(ylim) && (length(ylim) != 2 || diff(ylim) < 0))
+#     stop("Invalid 'xlim' argument.\n")
+#
+#   # if limits null, calculate them by increasing each extent by 10% of its
+#   # range
+#   if (is.null(xlim))
+#     xlim <- range(xydata$X) + (rep(diff(range(xydata$X)) * 0.10, 2) * c(-1, 1))
+#   if (is.null(ylim))
+#     ylim <- range(xydata$Y) + (rep(diff(range(xydata$Y)) * 0.10, 2) * c(-1, 1))
+#
+#   if (!is.null(attr(xydata, "projection"))
+#       && attr(xydata, "projection") == "LL")
+#     warning(paste(
+# "When the projection is \"LL\", this function naively treats the data as",
+# "a one-to-one projection. Consider converting it to UTM before running",
+# "this function.", sep="\n"));
+#
+#   dd <- deldir::deldir(xydata$X, xydata$Y, rw=c(xlim, ylim), eps=eps, frac=frac,
+#                digits=7)
+#   if (is.null(dd))
+#     stop(paste(
+# "The call to \"deldir\", this function's dependency, failed.  The function",
+# "does not support linear (horizontal/vertical) data and that could be the",
+# "cause.", sep="\n"));
+#
+#   # dd$dirsgs:
+#   #  (x1, y1) -> (x2, y2): a line segment in a Dirichlet tile
+#   #  ind1 and ind2: indices of the two points separated by this line segment
+#   dirsgs <- dd$dirsgs
+#
+#   # dd$summary:
+#   #  (x, y): points used in the tesselation; may be less than input if some
+#   #          points judged to be the same (see "frac" argument)
+#   #  n.tside: number of side of the Dirichlet tile surrounding the point
+#   summary <- dd$summary
+#
+#   # we will use "summary" below AND in ".addCorners" to determine closest
+#   # polygon for adding corners
+#
+#   # each line segment belongs to two tiles (ind1 and ind2); create a data
+#   # structure with two copies of each point (i.e., a copy for each tile)
+#   pt1tile1 <- dirsgs[, c("x1", "y1", "ind1", "bp1")]
+#   pt1tile2 <- dirsgs[, c("x1", "y1", "ind2", "bp1")]
+#   pt2tile1 <- dirsgs[, c("x2", "y2", "ind1", "bp2")]
+#   pt2tile2 <- dirsgs[, c("x2", "y2", "ind2", "bp2")]
+#   names(pt1tile1) <- names(pt1tile2) <- names(pt2tile1) <-
+#     names(pt2tile2) <- c("X", "Y", "tile", "bp")
+#   res <- rbind(pt1tile1, pt1tile2, pt2tile1, pt2tile2)
+#   res <- res[order(res$tile), ]
+#
+#   # the points in "res" are ordered by "tile" -- the same order of the
+#   # points in "summary"
+#
+#   # add the "origin" point (twice) for each tile to the data structure
+#   res$Xo <- rep(summary[, "x"], times=2*summary[, "n.tside"])
+#   res$Yo <- rep(summary[, "y"], times=2*summary[, "n.tside"])
+#   # compute offset from each "origin"
+#   res$Xdiff <- res$X - res$Xo
+#   res$Ydiff <- res$Y - res$Yo
+#   # compute the arctan for each offset, so that we know the order
+#   # when building polygons
+#   res$atan2 <- atan2(res$Ydiff, res$Xdiff)
+#
+#   # NOTE: the order set below is paramount to the next section of code.
+#   # DO NOT change the ordering unless you revise the next section as well.
+#
+#   # order them and then eliminate duplicates
+#   res <- res[order(res$tile, res$atan2), ]
+#   res <- res[!duplicated(paste(res$tile, res$atan2)), ]
+#
+#   # number of vertices in each polygon
+#   nVerts <- diff(c(which(!duplicated(res$tile)), length(res$tile)+1))
+#
+#   #----------------------------------------------------------------------------
+#   # At this point, the order of points in each tile is sometimes inappropriate
+#   # for plotting. To obtain the best results, tiles with boundary points should
+#   # have one boundary point appear first in the tile and one last.
+#   #
+#   # Here is the idea:
+#   # We have two types of tiles:
+#   #   (1) "correct" tiles (completely interior OR boundary points in the first
+#   #       and last position) and
+#   #   (2) "incorrect" tiles (boundary points adjacent to each other in a given
+#   #       tile).
+#   # We only need to reorder vertices of the "incorrect" tiles. We can think of
+#   # the reordering as "rotating" the vertices until the first and last are the
+#   # boundary points.
+#   #
+#   # If F is a non-boundary point and T is a boundary point, a tile with seven
+#   # vertices may initially look like FFFTTFF.  If we rotate these vertices right
+#   # three times
+#   #   FFFFTTF (1st rotation)
+#   #   FFFFFTT (2nd rotation)
+#   #   TFFFFFT (3rd rotation)
+#   # we achieve the desired ordering.
+#   #
+#   # To calculate the rotation, we look at the index of the first boundary point
+#   # in the tile.  If we subtract its index from the number of vertices and add
+#   # one, we obtain the number of right rotations (e.g., 7 - 5 + 1 = 3 in the
+#   # above example).
+#   #
+#   # Given the number of right rotations, we can build a new index vector that
+#   # will "rotate" points within the desired tiles.
+#
+#   # divide 'res' into two data frames, one where tiles touch two or fewer
+#   # boundary points and one where tiles touch more than two boundary points
+#   bpByTile <- split(res$bp, res$tile)
+#   noRotate <- rep((lapply(bpByTile, "sum") > 2),
+#                   times=lapply(bpByTile, "length"))
+#   resNoRotate <- res[noRotate, ]        # touch more than two
+#   res <- res[!noRotate, ]               # touch two or fewer
+#
+#   # vertices in each tile
+#   tileLen <- diff(c(which(!duplicated(res$tile)), nrow(res)+1))
+#   # find the tiles to rotate
+#   bpByTile <- split(res$bp, res$tile)
+#   bpByTileWhich <- lapply(bpByTile, "which")
+#   toRotate <- (lapply(bpByTileWhich, "diff") == 1)
+#   toRotate[is.na(toRotate)] <- FALSE
+#
+#   # focus on the tiles to fix
+#   toFix <- bpByTileWhich[toRotate]
+#   toFixLen <- tileLen[toRotate]
+#   toFixMin <- lapply(toFix, "min")
+#
+#   # setup a "rotation" vector
+#   rotR <- unlist(toFixLen) - unlist(toFixMin)
+#   rotR <- -1 - rotR
+#
+#   # a "-1" rotation means no change, "-2" means one to the right, ...
+#   rot <- rep(-1, length(tileLen))
+#   rot[toRotate] <- rotR
+#
+#   # start with an index of 1 .. len for each tile
+#   newIDX <- unlist(lapply(tileLen, "seq"))
+#
+#   # rotate those indices
+#   rot <- rep(rot, times=unlist(tileLen))
+#   newIDX <- newIDX + rot
+#   mod <- rep(unlist(tileLen), times=unlist(tileLen))
+#   newIDX <- (newIDX %% mod) + 1
+#
+#   # adjust indices from 1 .. len to reflect their position in the
+#   # data frame
+#   base <- rep(which(!duplicated(res$tile)) - 1, times=unlist(tileLen))
+#   newIDX <- newIDX + base
+#
+#   # reorder
+#   res <- res[newIDX, ]
+#
+#   # combine the two 'res' data frames (the no rotate and rotate one)
+#   if (any(noRotate)) {
+#     res <- rbind(resNoRotate, res)
+#     # it is safe to 'order' by tile: according to the R help on 'order',
+#     # "any unresolved ties will be left in their original ordering."
+#     res <- res[order(res$tile), ]
+#   }
+#   #----------------------------------------------------------------------------
+#
+#   # build the POS column
+#   maxPos <- max(nVerts);
+#   POS <- rep(seq(from=1, to=maxPos), times=length(nVerts));
+#   n <- vector();
+#   n[seq(1, by=2, length.out=length(nVerts))] <- nVerts;
+#   n[seq(2, by=2, length.out=length(nVerts))] <- maxPos - nVerts;
+#   b <- rep(c(TRUE, FALSE), length.out=length(n));
+#   POS <- POS[rep(b, n)];
+#
+#   names(res)[is.element(names(res), "tile")] <- "PID"
+#   res$POS <- POS
+#
+#   res <- res[, c("PID", "POS", "X", "Y")]
+#   class(res) <- c("PolySet", class(res))
+#
+#   # polygons that straddle corners will be missing the corner points; add
+#   # the missing corner points now
+#   res <- .addCorners(res, summary)
+#
+#   # ensure edges reach the proper extents
+#   res <- .expandEdges(res, data.frame(X=summary[, "x"], Y=summary[, "y"]),
+#                       xlim, ylim)
+#
+#   # set attributes appropriate to the result
+#   attr(res, "projection") <- 1;
+#   attr(res, "zone") <- NULL;
+#
+#   return (res);
+# }
 
 #==============================================================================
 clipLines <- function(polys, xlim, ylim, keepExtra = FALSE)
@@ -3748,7 +3748,7 @@ closePolys <- function(polys)
                 outXY = double(2 * outCapacity),
                 outRows = as.integer(outCapacity),
                 outStatus = integer(1),
-                PACKAGE = "PBSmapping");
+                PACKAGE = "FRK");
   # note: outRows is set to how much space is allocated -- the C function
   #       should consider this
 
@@ -4170,7 +4170,7 @@ convUL <- function(xydata, km=TRUE, southern=NULL)
                 outXY = double(2 * outCapacity),
                 outVerts = as.integer(outCapacity),
                 outStatus = integer(1),
-                PACKAGE = "PBSmapping");
+                PACKAGE = "FRK");
   # note: outVerts is set to how much space is allocated -- the C function
   #       should consider this
 
@@ -4357,7 +4357,7 @@ findCells <- function (events, polys, includeBdry=NULL)
 		outCell = integer(nEvents),
 		outBdry = integer(nEvents),
 		outStatus = integer(1),
-		PACKAGE = "PBSmapping");
+		PACKAGE = "FRK");
 	# call the C function for the Y's
 	resultsY <- .C("findCells",
 		inPt = as.double(events$Y),
@@ -4367,7 +4367,7 @@ findCells <- function (events, polys, includeBdry=NULL)
 		outCell = integer(nEvents),
 		outBdry = integer(nEvents),
 		outStatus = integer(1),
-		PACKAGE = "PBSmapping");
+		PACKAGE = "FRK");
 
 	# build the output data structures
 	d <- data.frame(EID = events$EID,
@@ -4473,7 +4473,7 @@ findPolys <- function(events, polys, maxRows=1e+05, includeBdry=NULL)
 		outID = integer(4 * outCapacity),
 		outRows = as.integer(outCapacity),
 		outStatus = integer(1),
-		PACKAGE = "PBSmapping");
+		PACKAGE = "FRK");
 	# note: outRows is set to how much space is allocated -- the C function should consider this
 
 	if (results$outStatus == 1) {
@@ -4662,7 +4662,7 @@ importGSHHS <- function(gshhsDB, xlim, ylim, maxLevel=4, n=0, useWest=FALSE)
 		#DBinfo = readLines(paste0(DBdir,"/README.TXT"))
 		#DBver  = strsplit(sub("^[[:space:]]+","",DBinfo[grep("Version",DBinfo)[1]]),split=" ")[[1]][2]
 		xres <- .Call("importGSHHS", as.character(gshhsDB), as.numeric(c(0,360,-90,90)),
-			as.integer(maxLevel), as.integer(n), PACKAGE = "PBSmapping")
+			as.integer(maxLevel), as.integer(n), PACKAGE = "FRK")
 		xPS  = refocusWorld(as.PolySet(as.data.frame(xres),projection="LL"),xlim=xlim,ylim=ylim)
 		if (is.null(xPS) || !length(xPS$PID)) return(NULL)
 #browser()
@@ -4683,7 +4683,7 @@ importGSHHS <- function(gshhsDB, xlim, ylim, maxLevel=4, n=0, useWest=FALSE)
 	if (abs(diff(xlim)) >= 360) {
 		xlim.orig <- xlim
 		xres <- .Call("importGSHHS", as.character(gshhsDB), as.numeric(c(0,360,ylim)),
-			as.integer(maxLevel), as.integer(n), PACKAGE = "PBSmapping")
+			as.integer(maxLevel), as.integer(n), PACKAGE = "FRK")
 		xPS  = refocusWorld(as.PolySet(as.data.frame(xres),projection="LL"),xlim=xlim,ylim=ylim)
 		if (is.null(xPS) || !length(xPS$PID)) return(NULL)
 #browser();return()
@@ -4747,10 +4747,10 @@ importGSHHS <- function(gshhsDB, xlim, ylim, maxLevel=4, n=0, useWest=FALSE)
 		for (i in 1:length(limits)) {
 			.checkClipLimits(limits[[i]])
 			# return an R object -- C call unfortunately converts western hemisphere to negative
-			#xres <- .Call("importGSHHS", as.character(gshhsDB), as.numeric(c(0,360,0,90)), as.integer(maxLevel), as.integer(n), PACKAGE = "PBSmapping") # debug only
+			#xres <- .Call("importGSHHS", as.character(gshhsDB), as.numeric(c(0,360,0,90)), as.integer(maxLevel), as.integer(n), PACKAGE = "FRK") # debug only
 			#browser();return()
 			xres <- .Call("importGSHHS", as.character(gshhsDB), as.numeric(limits[[i]]),
-				as.integer(maxLevel), as.integer(n), PACKAGE = "PBSmapping")
+				as.integer(maxLevel), as.integer(n), PACKAGE = "FRK")
 			if (is.null(xres) || !length(xres$PID)) next
 #if(i==2){browser();return()}
 
@@ -4919,7 +4919,7 @@ isConvex <- function(polys)
                 outResult = integer(outCapacity),
                 outRows = as.integer(outCapacity),
                 outStatus = integer(1),
-                PACKAGE = "PBSmapping");
+                PACKAGE = "FRK");
   # note: outRows is set to how much space is allocated -- the C function
   #       should consider this
 
@@ -4990,7 +4990,7 @@ isIntersecting <- function(polys, numericResult = FALSE)
                 outResult = integer(outCapacity),
                 outRows = as.integer(outCapacity),
                 outStatus = integer(1),
-                PACKAGE = "PBSmapping");
+                PACKAGE = "FRK");
   # note: outRows is set to how much space is allocated -- the C function
   #       should consider this
 
@@ -5075,7 +5075,7 @@ joinPolys <- function(polysA, polysB = NULL, operation = "INT")
                    cPOS = as.integer(polysB$POS),
                    cX   = as.numeric(polysB$X),
                    cY   = as.numeric(polysB$Y),
-                   PACKAGE = "PBSmapping")
+                   PACKAGE = "FRK")
 
   if (is.null(results)){
     return(NULL)
@@ -5833,7 +5833,7 @@ thickenPolys <- function(polys, tol = 1, filter = 3, keepOrig = TRUE,
                 outXY = double(2 * outCapacity),
                 outRows = as.integer(outCapacity),
                 outStatus = integer(1),
-                PACKAGE = "PBSmapping");
+                PACKAGE = "FRK");
   # note: outRows is set to how much space is allocated -- the C function
   #       should take this into consideration
 
@@ -5930,7 +5930,7 @@ thinPolys <- function(polys, tol = 1, filter = 3)
                 outXY = integer(2 * outCapacity),
                 outRows = as.integer(outCapacity),
                 outStatus = integer(1),
-                PACKAGE = "PBSmapping");
+                PACKAGE = "FRK");
   # note: outRows is set to how much space is allocated -- the C function
   #       should take this into consideration
 
@@ -5977,175 +5977,175 @@ thinPolys <- function(polys, tol = 1, filter = 3)
     return(NULL);
   }
 }
-
-#importShapefile------------------------2013-12-19
-# importShapefile (Nick Boers)
-# This function has several slow parts:
-# 1) conversion of the matrix (verts) to X and Y columns in a data frame
-# 2) 'lapply's to create POS columns
-# Changes 2008-07-15:
-#   Nick's loop to extract data from 'shapeList' has been replaced
-#     by Rowan's series of 'sapply' calls.
-#   Rowan added check for polygons with 0 vertices.
-# 2012-04-04: Rowan created function 'placeHoles'
-#   to place holes under correct solids.
-#--------------------------------------------NB/RH
-importShapefile <- function (fn, readDBF=TRUE, projection=NULL, zone=NULL,
-     placeholes=FALSE, minverts=3)
-{
-	# initialization
-	.checkRDeps("importShapefile", c("maptools", "foreign"))
-	# call to normalizePath added to perform ~ expansion; otherwise,
-	# pathnames beginning with a ~ fail in the later call to
-	# Rshapeget
-	fn <- normalizePath(fn, mustWork=FALSE)
-	fn <- .getBasename(fn, "shp")
-
-	# test for the required '.shx' file
-	shxFile <- paste(fn, ".shx", sep="")
-	if (!file.exists(shxFile))
-		stop(paste(
-		"Cannot find the index file (\"", shxFile, "\") required to import\n",
-		"the shapefile.\n", sep=""))
-
-	# read shapefile
-	eval(parse(text="shapeList <- .Call(\"Rshapeget\",as.character(fn),as.logical(FALSE),PACKAGE = \"maptools\")"))
-	if (length(shapeList) < 1)
-		stop("The shapefile is empty or an error occurred while importing.\n")
-	shpType=unique(sapply(shapeList,function(x){x$shp.type}))
-	if (length(shpType) != 1)
-		stop ("Supports only a single shape type per shapefile.\n")
-	nVerts=sapply(shapeList,function(x){x$nVerts})
-	v0=is.element(nVerts,0) # any shapefiles with 0 vertices?
-	if (any(v0==TRUE)) {
-		nVerts=nVerts[!v0]; shapeList=shapeList[!v0] }
-	shpID=sapply(shapeList,function(x){x$shpID})
-	nParts=sapply(shapeList,function(x){x$nParts})
-	pStarts=sapply(shapeList,function(x){x$Pstart},simplify=FALSE)
-	if (length(pStarts)!=length(nParts) && all((nParts==sapply(pStarts,length))!=TRUE))
-		stop ("Mismatch in 'nParts' and 'pStarts'.\n")
-	pStarts=unlist(pStarts)
-	v1=unlist(sapply(shapeList,function(x){x$verts[,1]},simplify=FALSE))
-	v2=unlist(sapply(shapeList,function(x){x$verts[,2]},simplify=FALSE))
-	verts=cbind(v1,v2)
-
-	# Keep track of parents and children
-	PC=pStarts
-	zP=is.element(PC,0); PC[zP]=1; PC[!zP]=0
-
-	# reformat results
-	#if (shpType == 3 || shpType == 5) {  # PolySet
-	if (shpType %in% c(3,13,23, 5,15,25)) {  # PolyLine, PolyLineZ, PolyLineM, Polygon, PolygonZ, PolygonM
-		# create preliminary PID/SID columns
-		PID <- rep(1:(length(unique(shpID))), times=nParts)
-		SID <- unlist(lapply(split(nParts, 1:(length(nParts))), "seq"))
-
-		# to determine the number of vertices in each part, we divide the problem
-		# into two cases:
-		# 1) last component/hole of each polygon: the total vertices in the polygon
-		#    less the starting POS of that last component/hole
-		# 2) otherwise: use a "diff" on the starting POS's of each part
-		lastComp <- rev(!duplicated(rev(PID)))
-		nv <- vector()
-		nv[lastComp] <- rep(nVerts, times=nParts)[lastComp] - pStarts[lastComp]
-		nv[!lastComp] <- diff(pStarts)[diff(pStarts) > 0]
-
-		# create PID/SID columns
-		PID <- rep(PID, times=nv)
-		SID <- rep(SID, times=nv)
-		# create POS column; we'll fix the ordering for holes later
-		POS <- unlist(lapply(split(nv, 1:(length(nv))), "seq"))
-		# build the data frame
-		df <- data.frame(PID=PID, SID=SID, POS=POS, X=verts[, 1], Y=verts[, 2])
-
-		#if (shpType == 5) {
-		if (shpType %in% c(5,15,25)) {
-			# PolySet: polygons: reorder vertices for holes
-			or <- .calcOrientation (df)
-			# where "orientation" == -1, we need to reverse the POS
-			or$solid <- is.element(or$orientation,1); or$hole <- !or$solid
-			if (any(or$hole)) {
-				or$nv <- nv
-				toFix <- rep(or$hole, times=or$nv)
-				o <- or$nv[or$hole]
-				newPOS <- unlist(lapply(lapply(split(o, 1:length(o)), "seq"), "rev"))
-				df[toFix, "POS"] <- newPOS  }
-
-			if (placeholes) {
-				# Fix to the problem where ArcPew does not put solid shapes before holes
-				df = placeHoles(df,minVerts=minverts)
-			}
-		}
-		class(df) <- c("PolySet", class(df))
-	#} else if (shpType == 1) {  # EventData
-	} else if (shpType %in% c(1,11,21)) {  # Point, PointZ, PointM
-		EID <- 1:(length(unique(shpID)))
-		df <- data.frame(EID=EID, X=verts[, 1], Y=verts[, 2])
-		class(df) <- c("EventData", class(df))
-	} else {
-		stop ("Shape type not supported.\n");
-	}
-
-	# "cbind" the DBF for EventData or attach as an attribute for PolySets:
-	# According to the "ESRI Shapefile Technical Description", any set of fields
-	# may be present in the DBF file.
-	# The (relevant) requirements are:
-	#   (1) one record per shape feature (i.e., per PID or EID), and
-	#   (2) same order as in shape (*.shp) file.
-	dbfFile <- paste(fn, ".dbf", sep="")
-	if (readDBF && !file.exists(dbfFile)) {
-		warning(paste(
-		"The argument 'readDBF' is true but the attribute database\n",
-		"(\"", dbfFile, "\") does not exist.\n", sep=""))
-	} else if (readDBF) {
-		dbf <- foreign::read.dbf (dbfFile)
-		if (shpType == 1) {  # EventData
-			if (nrow(df) != nrow(dbf)) {
-				warning(paste(
-				"The shapefile and its associated DBF do not contain the",
-				"same number of records. DBF ignored.\n", sep = "\n"))
-				return (df)
-			}
-			df.class = class(df)
-			df <- cbind(df, dbf)
-			class(df) <- df.class
-		} else if (shpType == 3 || shpType == 5) {
-			# add index to result
-			dbf <- cbind(1:nrow(dbf), dbf)
-			names(dbf)[1] <- "PID"
-			class(dbf) <- c("PolyData", class(dbf))
-			attr(df, "PolyData") <- dbf
-		}
-	# At this point, shpTypes != 1, 3, 5 caused the "stop" above; we do not
-	# need an "else" to check here
-	}
-	attr(df,"parent.child") = PC
-	attr(df,"shpType") = shpType
-	prjFile <- paste(fn, ".prj", sep="")
-	if (file.exists(prjFile)) {
-		prj=scan(prjFile,what="character",quiet=TRUE)
-		prj=prj[!is.element(prj,"")][1]
-		if (length(prj)==0 || is.na(prj) || is.null(prj)) prj="Unknown" }
-	else prj="Unknown"
-	attr(df,"prj") = prj
-	xmlFile <- paste(fn, ".shp.xml", sep="")
-	if (file.exists(xmlFile)) {
-		xml=readLines(xmlFile); attr(df,"xml") = xml }
-
-	if (regexpr("GEO",prj)>0 | regexpr("Degree",prj)>0) proj="LL"
-	else if (regexpr("PROJ",prj)>0 && regexpr("UTM",prj)>0) proj="UTM"
-	else proj=1
-	attr(df,"projection")=proj
-
-	if (proj=="UTM" && any(df$X>500))
-		{df$X=df$X/1000; df$Y=df$Y/1000}
-	if (!is.null(zone))
-		attr(df, "zone") <- zone
-	if (!is.null(projection))
-		attr(df,"projection")=projection
-	return (df) }
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~importShapefile
-
+#
+# #importShapefile------------------------2013-12-19
+# # importShapefile (Nick Boers)
+# # This function has several slow parts:
+# # 1) conversion of the matrix (verts) to X and Y columns in a data frame
+# # 2) 'lapply's to create POS columns
+# # Changes 2008-07-15:
+# #   Nick's loop to extract data from 'shapeList' has been replaced
+# #     by Rowan's series of 'sapply' calls.
+# #   Rowan added check for polygons with 0 vertices.
+# # 2012-04-04: Rowan created function 'placeHoles'
+# #   to place holes under correct solids.
+# #--------------------------------------------NB/RH
+# importShapefile <- function (fn, readDBF=TRUE, projection=NULL, zone=NULL,
+#      placeholes=FALSE, minverts=3)
+# {
+# 	# initialization
+# 	.checkRDeps("importShapefile", c("maptools", "foreign"))
+# 	# call to normalizePath added to perform ~ expansion; otherwise,
+# 	# pathnames beginning with a ~ fail in the later call to
+# 	# Rshapeget
+# 	fn <- normalizePath(fn, mustWork=FALSE)
+# 	fn <- .getBasename(fn, "shp")
+#
+# 	# test for the required '.shx' file
+# 	shxFile <- paste(fn, ".shx", sep="")
+# 	if (!file.exists(shxFile))
+# 		stop(paste(
+# 		"Cannot find the index file (\"", shxFile, "\") required to import\n",
+# 		"the shapefile.\n", sep=""))
+#
+# 	# read shapefile
+# 	eval(parse(text="shapeList <- .Call(\"Rshapeget\",as.character(fn),as.logical(FALSE),PACKAGE = \"maptools\")"))
+# 	if (length(shapeList) < 1)
+# 		stop("The shapefile is empty or an error occurred while importing.\n")
+# 	shpType=unique(sapply(shapeList,function(x){x$shp.type}))
+# 	if (length(shpType) != 1)
+# 		stop ("Supports only a single shape type per shapefile.\n")
+# 	nVerts=sapply(shapeList,function(x){x$nVerts})
+# 	v0=is.element(nVerts,0) # any shapefiles with 0 vertices?
+# 	if (any(v0==TRUE)) {
+# 		nVerts=nVerts[!v0]; shapeList=shapeList[!v0] }
+# 	shpID=sapply(shapeList,function(x){x$shpID})
+# 	nParts=sapply(shapeList,function(x){x$nParts})
+# 	pStarts=sapply(shapeList,function(x){x$Pstart},simplify=FALSE)
+# 	if (length(pStarts)!=length(nParts) && all((nParts==sapply(pStarts,length))!=TRUE))
+# 		stop ("Mismatch in 'nParts' and 'pStarts'.\n")
+# 	pStarts=unlist(pStarts)
+# 	v1=unlist(sapply(shapeList,function(x){x$verts[,1]},simplify=FALSE))
+# 	v2=unlist(sapply(shapeList,function(x){x$verts[,2]},simplify=FALSE))
+# 	verts=cbind(v1,v2)
+#
+# 	# Keep track of parents and children
+# 	PC=pStarts
+# 	zP=is.element(PC,0); PC[zP]=1; PC[!zP]=0
+#
+# 	# reformat results
+# 	#if (shpType == 3 || shpType == 5) {  # PolySet
+# 	if (shpType %in% c(3,13,23, 5,15,25)) {  # PolyLine, PolyLineZ, PolyLineM, Polygon, PolygonZ, PolygonM
+# 		# create preliminary PID/SID columns
+# 		PID <- rep(1:(length(unique(shpID))), times=nParts)
+# 		SID <- unlist(lapply(split(nParts, 1:(length(nParts))), "seq"))
+#
+# 		# to determine the number of vertices in each part, we divide the problem
+# 		# into two cases:
+# 		# 1) last component/hole of each polygon: the total vertices in the polygon
+# 		#    less the starting POS of that last component/hole
+# 		# 2) otherwise: use a "diff" on the starting POS's of each part
+# 		lastComp <- rev(!duplicated(rev(PID)))
+# 		nv <- vector()
+# 		nv[lastComp] <- rep(nVerts, times=nParts)[lastComp] - pStarts[lastComp]
+# 		nv[!lastComp] <- diff(pStarts)[diff(pStarts) > 0]
+#
+# 		# create PID/SID columns
+# 		PID <- rep(PID, times=nv)
+# 		SID <- rep(SID, times=nv)
+# 		# create POS column; we'll fix the ordering for holes later
+# 		POS <- unlist(lapply(split(nv, 1:(length(nv))), "seq"))
+# 		# build the data frame
+# 		df <- data.frame(PID=PID, SID=SID, POS=POS, X=verts[, 1], Y=verts[, 2])
+#
+# 		#if (shpType == 5) {
+# 		if (shpType %in% c(5,15,25)) {
+# 			# PolySet: polygons: reorder vertices for holes
+# 			or <- .calcOrientation (df)
+# 			# where "orientation" == -1, we need to reverse the POS
+# 			or$solid <- is.element(or$orientation,1); or$hole <- !or$solid
+# 			if (any(or$hole)) {
+# 				or$nv <- nv
+# 				toFix <- rep(or$hole, times=or$nv)
+# 				o <- or$nv[or$hole]
+# 				newPOS <- unlist(lapply(lapply(split(o, 1:length(o)), "seq"), "rev"))
+# 				df[toFix, "POS"] <- newPOS  }
+#
+# 			if (placeholes) {
+# 				# Fix to the problem where ArcPew does not put solid shapes before holes
+# 				df = placeHoles(df,minVerts=minverts)
+# 			}
+# 		}
+# 		class(df) <- c("PolySet", class(df))
+# 	#} else if (shpType == 1) {  # EventData
+# 	} else if (shpType %in% c(1,11,21)) {  # Point, PointZ, PointM
+# 		EID <- 1:(length(unique(shpID)))
+# 		df <- data.frame(EID=EID, X=verts[, 1], Y=verts[, 2])
+# 		class(df) <- c("EventData", class(df))
+# 	} else {
+# 		stop ("Shape type not supported.\n");
+# 	}
+#
+# 	# "cbind" the DBF for EventData or attach as an attribute for PolySets:
+# 	# According to the "ESRI Shapefile Technical Description", any set of fields
+# 	# may be present in the DBF file.
+# 	# The (relevant) requirements are:
+# 	#   (1) one record per shape feature (i.e., per PID or EID), and
+# 	#   (2) same order as in shape (*.shp) file.
+# 	dbfFile <- paste(fn, ".dbf", sep="")
+# 	if (readDBF && !file.exists(dbfFile)) {
+# 		warning(paste(
+# 		"The argument 'readDBF' is true but the attribute database\n",
+# 		"(\"", dbfFile, "\") does not exist.\n", sep=""))
+# 	} else if (readDBF) {
+# 		dbf <- foreign::read.dbf (dbfFile)
+# 		if (shpType == 1) {  # EventData
+# 			if (nrow(df) != nrow(dbf)) {
+# 				warning(paste(
+# 				"The shapefile and its associated DBF do not contain the",
+# 				"same number of records. DBF ignored.\n", sep = "\n"))
+# 				return (df)
+# 			}
+# 			df.class = class(df)
+# 			df <- cbind(df, dbf)
+# 			class(df) <- df.class
+# 		} else if (shpType == 3 || shpType == 5) {
+# 			# add index to result
+# 			dbf <- cbind(1:nrow(dbf), dbf)
+# 			names(dbf)[1] <- "PID"
+# 			class(dbf) <- c("PolyData", class(dbf))
+# 			attr(df, "PolyData") <- dbf
+# 		}
+# 	# At this point, shpTypes != 1, 3, 5 caused the "stop" above; we do not
+# 	# need an "else" to check here
+# 	}
+# 	attr(df,"parent.child") = PC
+# 	attr(df,"shpType") = shpType
+# 	prjFile <- paste(fn, ".prj", sep="")
+# 	if (file.exists(prjFile)) {
+# 		prj=scan(prjFile,what="character",quiet=TRUE)
+# 		prj=prj[!is.element(prj,"")][1]
+# 		if (length(prj)==0 || is.na(prj) || is.null(prj)) prj="Unknown" }
+# 	else prj="Unknown"
+# 	attr(df,"prj") = prj
+# 	xmlFile <- paste(fn, ".shp.xml", sep="")
+# 	if (file.exists(xmlFile)) {
+# 		xml=readLines(xmlFile); attr(df,"xml") = xml }
+#
+# 	if (regexpr("GEO",prj)>0 | regexpr("Degree",prj)>0) proj="LL"
+# 	else if (regexpr("PROJ",prj)>0 && regexpr("UTM",prj)>0) proj="UTM"
+# 	else proj=1
+# 	attr(df,"projection")=proj
+#
+# 	if (proj=="UTM" && any(df$X>500))
+# 		{df$X=df$X/1000; df$Y=df$Y/1000}
+# 	if (!is.null(zone))
+# 		attr(df, "zone") <- zone
+# 	if (!is.null(projection))
+# 		attr(df,"projection")=projection
+# 	return (df) }
+# #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~importShapefile
+#
 
 #2008-08-25----------------------------------NB/RH
 # 'projection' should equal "LL" (for longitude/latitude),
