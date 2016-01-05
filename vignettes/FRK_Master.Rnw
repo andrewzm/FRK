@@ -15,6 +15,8 @@ concordance=TRUE
 
 \begin{abstract}
 
+Fixed Rank Kriging (FRK) is a spatial or spatio-temporal prediction method for large datasets. FRK hinges on the use of a spatial random effects (SRE) model, in which the spatially correlated random effect is decomposed using a set of basis functions. Dimensionality reduction ensures computationally efficient prediction, while the reconstructed random spatial field is, in general, non-stationary. Although FRK is relatively straightforward to implement, and despite its extensive use in remote sensing contexts, to date no software package has been developed to facilitate this task. The present article discusses the development or a new \emph{R} package, \texttt{FRK}, that facilitiates FRK on the most commonly used manifolds ($\mathbb{R}^1, \mathbb{R}^2$ and $\mathbb{S}^2$), both for spatial and spatio-temporal fields. In particular, it provides automatic basis function generation, automatic basic areal unit construction, functionality to incorporate multiple datasets with different supports, an expectation maximisation algorithm for parameter estimation, and functionality for point- or area-prediction. The package also has the capability for carrying out FRK on massive datasets on a distributed file system using a Hadoop backend. Use of the package is illustrated on several small examples and a massive dataset, implemented on the Amazon Elastic MapReduce web service.
+
 \end{abstract}
 
 \section{Introduction}

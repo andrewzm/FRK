@@ -5394,49 +5394,49 @@ plotPolys <- function(polys, xlim = NULL, ylim = NULL, projection = FALSE,
   invisible(r)
 }
 
-#==============================================================================
-print.EventData <- function(x, ...)
-{
-  if (exists("PBSprint") && (PBSprint || .PBSmapEnv$PBSprint)) {
-    print(summary.EventData(x), ...);
-  } else {
-    print(data.frame(unclass(x)));
-  }
-  invisible(x);
-}
-
-#==============================================================================
-print.LocationSet <- function(x, ...)
-{
-  if (exists("PBSprint") && (PBSprint || .PBSmapEnv$PBSprint)) {
-    print(summary.LocationSet(x), ...);
-  } else {
-    print(data.frame(unclass(x)));
-  }
-  invisible(x);
-}
-
-#==============================================================================
-print.PolyData <- function(x, ...)
-{
-  if (exists("PBSprint") && (PBSprint || .PBSmapEnv$PBSprint)) {
-    print(summary.PolyData(x), ...);
-  } else {
-    print(data.frame(unclass(x)));
-  }
-  invisible(x);
-}
-
-#==============================================================================
-print.PolySet <- function(x, ...)
-{
-  if (exists("PBSprint") && (PBSprint || .PBSmapEnv$PBSprint)) {
-    print(summary.PolySet(x), ...);
-  } else {
-    print(data.frame(unclass(x)));
-  }
-  invisible(x);
-}
+# #==============================================================================
+# print.EventData <- function(x, ...)
+# {
+#   if (exists("PBSprint") && (PBSprint || .PBSmapEnv$PBSprint)) {
+#     print(summary.EventData(x), ...);
+#   } else {
+#     print(data.frame(unclass(x)));
+#   }
+#   invisible(x);
+# }
+#
+# #==============================================================================
+# print.LocationSet <- function(x, ...)
+# {
+#   if (exists("PBSprint") && (PBSprint || .PBSmapEnv$PBSprint)) {
+#     print(summary.LocationSet(x), ...);
+#   } else {
+#     print(data.frame(unclass(x)));
+#   }
+#   invisible(x);
+# }
+#
+# #==============================================================================
+# print.PolyData <- function(x, ...)
+# {
+#   if (exists("PBSprint") && (PBSprint || .PBSmapEnv$PBSprint)) {
+#     print(summary.PolyData(x), ...);
+#   } else {
+#     print(data.frame(unclass(x)));
+#   }
+#   invisible(x);
+# }
+#
+# #==============================================================================
+# print.PolySet <- function(x, ...)
+# {
+#   if (exists("PBSprint") && (PBSprint || .PBSmapEnv$PBSprint)) {
+#     print(summary.PolySet(x), ...);
+#   } else {
+#     print(data.frame(unclass(x)));
+#   }
+#   invisible(x);
+# }
 
 #==============================================================================
 print.summary.PBS <- function(x, ...)
