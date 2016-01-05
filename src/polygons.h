@@ -158,25 +158,6 @@ short isPolyConvex(double *inX, double *inY, PBSINT inVerts);
 PBSINT nPolyIntersects(double *inX, double *inY, PBSINT inVerts,
                      short numericResult);
 
-/*-----------------------------------------------------------------------------
-  pointInPolygon:
-
-  Author:  Nicholas Boers (June 13, 2003)
-
-  Algorithm source: 
-    - http://www.ecse.rpi.edu/Homepages/wrf/misc_notes/pnpoly.html
-    - modified by Nicholas Boers to handle boundary points
-
-  Description:
-    This function computes whether or not a point lies outside, on the
-    boundary of, or inside a polygon.
-    The polygon can optionally be closed: (x_0, y_0) == (x_n, y_n).
-
-  Returns:
-    One of OUTSIDE, BOUNDARY, or INSIDE.
-  ---------------------------------------------------------------------------*/
-short pointInPolygon(double *inX, double *inY, PBSINT inVerts, double x,
-                     double y);
 
 /*-----------------------------------------------------------------------------
   thickenPoly:
