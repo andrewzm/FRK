@@ -3,8 +3,32 @@
 % \VignetteEngine{knitr::knitr}
 % \VignetteIndexEntry{FRK for prediction of CO2 from AIRS data}
 
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{amssymb,amsmath}
+\usepackage{bm}
+\usepackage{bbm}
+\usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{natbib}
+\usepackage{setspace}
+\usepackage{multirow}
+%\usepackage{lineno}
+\usepackage{array}
+\usepackage[normalem]{ulem}
+\usepackage{tikz}
+\usepackage{endnotes}
+
+\usepackage{authblk}
+\title{Fixed Rank Kriging}
+\author[1]{Andrew Zammit Mangion}
+\author[1]{Noel Cressie}
+\affil[1]{National Institute for Applied Statistics Research Australia~(NIASRA), School of Mathematics and Applied Statistics, University of Wollongong, New South Wales 2522, Australia}
+
 \begin{document}
 % \SweaveOpts{concordance=TRUE}
+
+\maketitle
 
 <<include=FALSE>>=
 library(knitr)
