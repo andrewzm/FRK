@@ -19,6 +19,175 @@
 \usepackage{tikz}
 \usepackage{endnotes}
 
+
+\newtheorem{proposition}{Proposition}
+\newtheorem{theorem}{Theorem}[section]
+
+\newcommand{\red}{\textcolor{red}}%
+\newcommand{\blue}{\textcolor{blue}}
+
+
+\newcommand{\zerob} {{\bf 0}}
+\newcommand{\oneb} {{\bf 1}}
+\newcommand{\expect} {{\mathbb{E}}}
+\newcommand{\pt} {\tilde{p}}
+\newcommand{\alphat} {\tilde{\alpha}}
+\newcommand{\betat} {\tilde{\beta}}
+\newcommand{\pb} {\bar{p}}
+\newcommand{\thetab} {{\boldsymbol{\theta}}}
+\newcommand{\alphab} {{\boldsymbol{\alpha}}}
+\newcommand{\kappab} {{\boldsymbol{\kappa}}}
+\newcommand{\sigmab} {{\boldsymbol{\sigma}}}
+\newcommand{\nub} {{\boldsymbol{\nub}}}
+\newcommand{\gammab} {{\boldsymbol{\gamma}}}
+\newcommand{\deltab} {{\boldsymbol{\delta}}}
+\newcommand{\Deltab} {{\boldsymbol{\Delta}}}
+\newcommand{\etab} {{\boldsymbol{\eta}}}
+\newcommand{\Thetab} {{\boldsymbol{\Theta}}}
+\newcommand{\varthetab} {{\boldsymbol{\vartheta}}}
+\newcommand{\Yset} {\mathcal{Y}}
+\newcommand{\Xset} {\mathcal{X}}
+\newcommand{\intd} {\textrm{d}}
+\newcommand{\phib} {\boldsymbol{\phi}}
+\newcommand{\zetab} {\boldsymbol{\zeta}}
+\newcommand{\psib} {\boldsymbol{\psi}}
+\newcommand{\Sigmawinv} {{\boldsymbol{\it \Sigma}}_w^{-1}}
+\newcommand{\Sigmamat} {{\bm \Sigma}}
+\newcommand{\Sigmamatt} {\widetilde{\boldsymbol{\Sigma}}}
+\newcommand{\Qmatt} {\widetilde{\textbf{Q}}}
+\newcommand{\muvect} {\widetilde{\boldsymbol{\mu}}}
+\newcommand{\Psib} {{\bm \Psi}}
+\newcommand{\Upsilonmat} {{\boldsymbol{\it \Upsilon}}}
+\newcommand{\Lambdamat} {\mathbf{\Lambda}}
+\newcommand{\Gammamat} {{\boldsymbol{\it \Gamma}}}
+\renewcommand{\Gammamat} {{\boldsymbol{\Gamma}}}
+\newcommand{\Pimat} {{\boldsymbol{\it \Pi}}}
+\newcommand{\Amat} {\textbf{A}}
+\newcommand{\Bmat} {\textbf{B}}
+\newcommand{\Dmat} {\textbf{D}}
+\newcommand{\Dvec} {\textbf{D}}
+\newcommand{\Gmat} {\textbf{G}}
+\newcommand{\Lmat} {\textbf{L}}
+\newcommand{\Qmat} {\textbf{Q}}
+\newcommand{\Rmat} {\textbf{R}}
+\newcommand{\Tmat} {\textbf{T}}
+\newcommand{\Qt} {\widetilde{\textbf{Q}}}
+\newcommand{\Qtinv} {\widetilde{\textbf{Q}}^{-1}}
+\newcommand{\Mmat} {\textbf{M}}
+\newcommand{\Cmat} {\mathbf{C}}
+\newcommand{\Jmat} {\mathbf{J}}
+\newcommand{\cmat} {\textbf{c}}
+\newcommand{\Kmat} {\textbf{K}}
+\newcommand{\im} {\iota}
+\newcommand{\Zmat} {\textbf{Z}}
+\newcommand{\Xmat} {\textbf{X}}
+\newcommand{\Xvec} {\mathbf{X}}
+\newcommand{\Rvec} {\mathbf{R}}
+\newcommand{\Imat} {\textbf{I}}
+\newcommand{\Umat} {\textbf{U}}
+\newcommand{\Pmat} {\textbf{P}}
+\newcommand{\Hmat} {\textbf{H}}
+\newcommand{\Vmat} {\textbf{V}}
+\newcommand{\bvec} {\textbf{b}}
+\newcommand{\dvec} {\textbf{d}}
+\newcommand{\avec} {\textbf{a}}
+\newcommand{\evec} {\textbf{e}}
+\newcommand{\hvec} {\textbf{h}}
+\newcommand{\xvec} {\textbf{x}}
+\newcommand{\yvec} {\textbf{y}}
+\newcommand{\zvec} {\textbf{z}}
+\newcommand{\wvec} {\textbf{w}}
+\newcommand{\vvec} {\textbf{v}}
+\newcommand{\svec} {\textbf{s}}
+\newcommand{\tvec} {\textbf{t}}
+\newcommand{\uvec} {\textbf{u}}
+\newcommand{\gvec} {\textbf{g}}
+\newcommand{\fvec} {\textbf{f}}
+\newcommand{\rvec} {\textbf{r}}
+\newcommand{\muvec} {\boldsymbol{\mu}}
+\newcommand{\Psix} {{\boldsymbol{\it \Psi}}_{\xvec}}
+\newcommand{\Phimat} {{\boldsymbol{\it \Phi}}}
+\newcommand{\Psitheta} {{\boldsymbol{\it \Psi}}_{\varthetab}}
+\newcommand{\Psia} {{\boldsymbol{\it \Psi}}_{A}}
+\newcommand{\Psixinv} {{\boldsymbol{\it \Psi}}_{\xvec}^{-1}}
+\newcommand{\vvm} {\boldsymbol {\mathcal \upsilon}}
+\newcommand{\upsilonb} {\boldsymbol {\upsilon}}
+\newcommand{\betab} {\boldsymbol {\beta}}
+\newcommand{\omegab} {\boldsymbol {\omega}}
+\newcommand{\Aop}{\boldsymbol{\mathcal{A}}}
+\newcommand{\ICE} {\textit{ICE}}
+\newcommand{\GIA} {\textit{GIA}}
+\newcommand{\GPS} {\textit{GPS}}
+\newcommand{\ERS} {\textit{ERS}}
+\newcommand{\GR} {\textit{GR}}
+\newcommand{\IS} {\textit{IS}}
+\newcommand{\ES} {\textit{ES}}
+\newcommand{\zeroes}{\mathop{\textrm{zeroes}}}
+\newcommand{\odd}{\mathop{\textrm{odd}}}
+\newcommand{\even}{\mathop{\textrm{even}}}
+\newcommand{\ff} {\textit{ff}}
+\newcommand{\fm} {\textit{fm}}
+\newcommand{\mf} {\textit{mf}}
+\newcommand{\inv} {\textit{inv}}
+
+\renewcommand{\zerob}{\mathbf{0}}
+\renewcommand{\v}{\mathbf{v}}
+\renewcommand{\u}{\mathbf{u}}
+\newcommand{\w}{\mathbf{w}}
+\renewcommand{\d}{\mathrm{d}}
+\newcommand{\Z}{\mathbf{Z}}
+\newcommand{\X}{\mathbf{X}}
+\newcommand{\x}{\mathbf{x}}
+\newcommand{\Y}{\mathbf{Y}}
+\newcommand{\Yvec}{\mathbf{Y}}
+\newcommand{\Wvec}{\mathbf{W}}
+\newcommand{\Gvec}{\mathbf{G}}
+\newcommand{\Yt}{\widetilde{\mathbf{Y}}}
+\newcommand{\Zvec}{\mathbf{Z}}
+%\newcommand{\epsilonb}{\mbox{\boldmath{$\varepsilon$}}}
+\newcommand{\epsilonb}{\boldsymbol{\varepsilon}}
+\newcommand{\bS}{\mathbf{S}}
+\newcommand{\bK}{\mathbf{K}}
+\newcommand{\bI}{\mathbf{I}}
+\newcommand{\bR}{\mathbf{R}}
+\newcommand{\bC}{\mathbf{C}}
+\newcommand{\bB}{\mathbf{B}}
+\newcommand{\bP}{\mathbf{P}}
+\newcommand{\bQ}{\mathbf{Q}}
+\renewcommand{\L}{\mathbf{L}}
+
+\newcommand{\E}{\mathrm{E}}
+\newcommand{\cov}{\mathrm{cov}}
+\newcommand{\var}{\mathrm{var}}
+\newcommand{\Dist}{\mathrm{Dist}}
+\renewcommand{\prec}{\mathrm{prec}}
+\newcommand{\tr}{\mathrm{tr}}
+\newcommand{\diag}{\mathrm{diag}}
+\newcommand{\sgn}{\mathrm{sgn}}
+\newcommand{\trace}{\mathrm{tr}}
+\newcommand{\vect}{\mathrm{vec}}
+\newcommand{\Gau}{\mathrm{Gau}}
+
+\newcommand{\RR}{\mathbb{R}}
+
+\newcommand{\s}{\mathbf{s}}
+\newcommand{\p}{\mathbf{p}}
+\renewcommand{\a}{\mathbf{a}}
+\newcommand{\h}{\mathbf{h}}
+\renewcommand{\b}{\mathbf{b}}
+\renewcommand{\c}{\mathbf{c}}
+\newcommand{\z}{\mathbf{z}}
+
+
+\newcommand{\blambda}{\boldsymbol{\lambda}}
+\newcommand{\btheta}{\boldsymbol{\theta}}
+\newcommand{\balpha}{\boldsymbol{\alpha}}
+\newcommand{\bgamma}{\boldsymbol{\gamma}}
+\newcommand{\bbeta}{\boldsymbol{\beta}}
+\newcommand{\bzero}{\boldsymbol{0}}
+\newcommand{\bmu}{\boldsymbol{\mu}}
+\newcommand{\bSigma}{\bm{\Sigma}}
+
 \usepackage{authblk}
 \title{Fixed Rank Kriging}
 \author[1]{Andrew Zammit Mangion}
@@ -39,7 +208,7 @@ concordance=TRUE
 
 \begin{abstract}
 
-Fixed Rank Kriging (FRK) is a spatial or spatio-temporal prediction method for large datasets. FRK hinges on the use of a spatial random effects (SRE) model, in which the spatially correlated random effect is decomposed using a set of basis functions. Dimensionality reduction ensures computationally efficient prediction, while the reconstructed random spatial field is, in general, non-stationary. Although FRK is relatively straightforward to implement, and despite its extensive use in remote sensing contexts, to date no software package has been developed to facilitate this task. The present article discusses the development or a new \emph{R} package, \texttt{FRK}, that facilitiates FRK on the most commonly used manifolds ($\mathbb{R}^1, \mathbb{R}^2$ and $\mathbb{S}^2$), both for spatial and spatio-temporal fields. In particular, it provides automatic basis function generation, automatic basic areal unit construction, functionality to incorporate multiple datasets with different supports, an expectation maximisation algorithm for parameter estimation, and functionality for point- or area-prediction. The package also has the capability for carrying out FRK on massive datasets on a distributed file system using a Hadoop backend. Use of the package is illustrated on several small examples and a massive dataset, implemented on the Amazon Elastic MapReduce web service.
+Fixed Rank Kriging (FRK) is a spatial or spatio-temporal prediction method for large datasets. FRK hinges on the use of a spatial random effects (SRE) model, in which the spatially correlated random effect is decomposed using a set of basis functions. Dimensionality reduction ensures computationally efficient prediction, while the reconstructed random spatial field is, in general, non-stationary. Although FRK is relatively straightforward to implement, and despite its extensive use in remote sensing contexts, to date no software package has been developed to facilitate this task. The present article discusses the development of a new \emph{R} package, \texttt{FRK}, that facilitiates FRK on the most commonly used manifolds ($\mathbb{R}^1, \mathbb{R}^2$ and $\mathbb{S}^2$), both for spatial and spatio-temporal fields. In particular, it provides automatic basis function generation, automatic basic areal unit construction, functionality to incorporate multiple datasets with different supports, an expectation maximisation algorithm for parameter estimation, and functionality for point- or area-prediction. The package also has the capability for carrying out FRK on massive datasets on a distributed file system using a Hadoop backend. Use of the package is illustrated on several small examples and a massive dataset, implemented on the Amazon Elastic MapReduce web service.
 
 \end{abstract}
 
@@ -47,12 +216,15 @@ Fixed Rank Kriging (FRK) is a spatial or spatio-temporal prediction method for l
 
 \section{Fixed Rank Kriging}
 
+
 \subsection{SRE model}
+
+Let
 
 \subsection{Estimation}
 
 \subsection{Prediction}
-\subsection{Applicaiton of sparse matrix inversion}
+\subsection{Application of sparse matrix inversion}
 
 \section{Distributed computation with Hadoop}
 
