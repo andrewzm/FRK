@@ -31,7 +31,8 @@ Suggests:
     splancs,
     INLA,
     rgeos,
-    covr
+    covr,
+    maps
 Enhances:
     Rhipe,
     dggrids
