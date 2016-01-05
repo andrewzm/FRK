@@ -26,11 +26,11 @@ Tmax <- subset(NOAA_df_1990,    # subset the data
 STObj <- stConstruct(x = Tmax,                  # dataset
                  space = c("lon","lat"),        # spatial fields
                  time="time",                   # time field
-                 crs=CRS("+proj=longlat +ellps=WGS84"),      # projection (lon-lat)
+                 crs=CRS("+proj=longlat +ellps=sphere"),      # projection (lon-lat)
                  interval=TRUE)                 # time is an interval
 
 ## Remove projection information
-proj4string(STObj) <- ""                        # we are not working on the sphere
+proj4string(STObj) <- ""                        # we are not working on the sphere, use directly the lon-lat coordinates (not recommended, use spTransform instead)
 
 ## Construct space-time BAUs on the plane
 grid_BAUs <- auto_BAUs(manifold=STplane(),    # Planar ST process

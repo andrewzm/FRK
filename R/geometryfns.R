@@ -266,7 +266,7 @@ setMethod("auto_BAU",signature(manifold="sphere"),function(manifold,cellsize = c
             df=filter(isea3h_res,centroid==0),
             keys=c("id"),
             coords=c("lon","lat"),
-            proj=CRS("+proj=longlat"))
+            proj=CRS("+proj=longlat +ellps=sphere"))
 
         isea3h_sp_poldf <- SpatialPolygonsDataFrame(
             isea3h_sp_pol,
@@ -298,7 +298,7 @@ setMethod("auto_BAU",signature(manifold="sphere"),function(manifold,cellsize = c
         lonlat <- expand.grid(lon=longrid,lat=latgrid) %>%
             SpatialPoints() %>%
             points2grid() %>%
-            as.SpatialPolygons.GridTopology(proj4string = CRS("+proj=longlat"))
+            as.SpatialPolygons.GridTopology(proj4string = CRS("+proj=longlat +ellps=sphere"))
 
         coordnames(lonlat) <- c("lon","lat")
 
@@ -317,7 +317,7 @@ setMethod("auto_BAU",signature(manifold="sphere"),function(manifold,cellsize = c
             mutate(id=1) %>%
             df_to_SpatialPolygons(keys="id",
                                   coords=c("lon","lat"),
-                                  proj=CRS("+proj=longlat"))
+                                  proj=CRS("+proj=longlat +ellps=sphere"))
         sphere_BAUs$in_chull <- over(sphere_BAUs,conv_hull)
         sphere_BAUs <- subset(sphere_BAUs,!is.na(in_chull))
     }

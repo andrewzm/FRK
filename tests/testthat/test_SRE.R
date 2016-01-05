@@ -91,7 +91,7 @@ test_that("SRE sphere works",{
     sim_data <- sample_n(sim_process,100) %>%
         mutate(z = proc + 0.1*rnorm(length(lon)), std = 0.1)
     coordinates(sim_data) = ~lon + lat# change into an sp object
-    proj4string(sim_data)=CRS("+proj=longlat")
+    proj4string(sim_data)=CRS("+proj=longlat +ellps=sphere")
     grid_BAUs <- auto_BAUs(manifold=sphere(),data=sim_data,res = 2,type="hex")
     grid_BAUs$fs = 1
 
@@ -136,7 +136,7 @@ test_that("SRE space-time sphere works",{
     time <- as.POSIXct("2003-05-01",tz="") + 3600*24*(sim_data$t-1)
     space <- sim_data[,c("lon","lat")]
     coordinates(space) = ~lon+lat # change into an sp object
-    proj4string(space)=CRS("+proj=longlat")
+    proj4string(space)=CRS("+proj=longlat +ellps=sphere")
     STobj <- STIDF(space,time,data=sim_data)
 
     grid_BAUs <- auto_BAUs(manifold=STsphere(),res=1,data=STobj,type="hex")
