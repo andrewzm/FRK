@@ -100,7 +100,14 @@ setMethod("auto_BAU",signature(manifold="plane"),
 
               X1 <- X2 <- NULL # Suppress bindings warning
 
-              coords <- coordinates(d)
+              if(is(d,"SpatialPoints")){
+                coords <- coordinates(d)
+              } else if(is(d,"SpatialPolygons")){
+                 ## get out all edges
+                 coords <- do.call("rbind",
+                         lapply(1:length(d),
+                                function(i) coordinates(d@polygons[[i]]@Polygons[[1]])))
+              }
               xrange <- range(coords[,1])
               yrange <- range(coords[,2])
               bndary_seg = INLA::inla.nonconvex.hull(coords,convex=convex)$loc %>%
@@ -625,7 +632,20 @@ setMethod("map_data_to_BAUs",signature(data_sp="Spatial"),
                   new_sp_pts <- subset(new_sp_pts,!is.na(Nobs))
 
               } else {
-                  BAUs_aux_data <- over(data_sp,SpatialPointsDataFrame(coordinates(sp_pols),sp_pols@data))
+                  data_sp$id <- rownames(data_sp@data)
+                  BAU_as_points <- SpatialPointsDataFrame(coordinates(sp_pols),sp_pols@data)
+                  BAUs_aux_data <- over(data_sp,BAU_as_points)
+                  ## The covariates are not averaged using this method... only the covariate in the last BAU
+                  ## is recorded. In the following we find the average covariate over support
+                  ## (needs to be done separately as my have overlapping observations)
+                  for (i in 1L:length(data_sp)) {
+                      this_poly <- SpatialPolygons(list(data_sp@polygons[[i]]),1L) #extract poly (a bit long-winded)
+                      overlap <- which(over(BAU_as_points,this_poly) == 1) # find which points overlap observations
+                      BAU_data <- BAU_as_points[names(overlap),1:ncol(BAU_as_points)] # extract BAU data at these points
+                      this_attr <- data.frame(t(apply(BAU_data@data,2,mean))) # average over BAU data
+                      BAUs_aux_data[data_sp[["id"]][i],] <- this_attr # assign to data
+                  }
+
                   stopifnot(all(row.names(BAUs_aux_data) == row.names(data_sp)))
                   data_sp@data <- cbind(data_sp@data,BAUs_aux_data)
                   data_sp$Nobs <- 1

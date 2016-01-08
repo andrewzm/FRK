@@ -49,7 +49,8 @@ if(require(INLA)) { ## Need INLA from here on
                         prune=10,type = "Gaussian")
 
         ## Setup SRE model
-        f <- log(zinc) ~ 1
+        HexPols_df$dist.m <- rnorm(2463)
+        f <- log(zinc) ~ 1 + dist.m
         S <- SRE(f,list(meuse,HexPols_df2),BAUs = HexPols_df, G,est_error=T)
         S <- SRE.fit(S,n_EM = 10,print_lik=TRUE)
 
