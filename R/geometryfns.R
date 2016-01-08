@@ -724,9 +724,21 @@ est_obs_error <- function(sp_pts,variogram.formula) {
 setMethod("BuildC",signature(data="SpatialPolygonsDataFrame"),
           function(data,BAUs) {
               data$id <- 1:length(data)
-              overlap <- over(SpatialPoints(coordinates(BAUs)),data)
-              i_idx <- as.numeric(na.exclude(overlap$id))
-              j_idx <- which(!is.na(overlap$id))
+              BAU_as_points <- SpatialPoints(coordinates(BAUs))
+              i_idx <- j_idx <-  NULL
+              for (i in 1L:length(data)) {
+                  this_poly <- SpatialPolygons(list(data@polygons[[i]]),1L) #extract poly (a bit long-winded)
+                  overlap <- which(over(BAU_as_points,this_poly) == 1) # find which points overlap observations
+                  i_idx <- c(i_idx,rep(i,length(overlap)))
+                  j_idx <- c(j_idx,as.numeric(overlap))
+              }
+              if(any(is.na(j_idx))) stop("NAs when constructing observation from
+                                         large support observations. Are you sure all
+                                         observations are covered by BAUs?")
+              # data$id <- 1:length(data)
+              # overlap <- over(SpatialPoints(coordinates(BAUs)),data)
+              # i_idx <- as.numeric(na.exclude(overlap$id))
+              # j_idx <- which(!is.na(overlap$id))
               list(i_idx=i_idx,j_idx=j_idx)
           })
 
