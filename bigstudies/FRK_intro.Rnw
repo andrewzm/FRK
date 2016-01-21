@@ -31,7 +31,7 @@ gridded(meuse.grid) = ~x + y
 
 HexPts2 <- spsample(meuse.grid,
                     type = "hexagonal",
-                    cellsize = 100)
+                    cellsize = 200)
 HexPols2 <- HexPoints2SpatialPolygons(HexPts2)
 HexPols_df2 <- SpatialPolygonsDataFrame(HexPols2,
                                         over(HexPols2,meuse) %>%

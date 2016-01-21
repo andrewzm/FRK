@@ -10,7 +10,6 @@
 #' @import sp
 #' @import spacetime
 #' @import parallel
-#' @import gstat
 #' @import dplyr
 #' @importFrom plyr ddply dlply rbind.fill
 #' @importFrom digest digest

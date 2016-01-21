@@ -342,23 +342,25 @@ setMethod("eval_basis",signature(basis="Basis",s="STIDF"),function(basis,s,outpu
 
 
 .point_eval_fn <- function(flist,s,output="matrix") {
-    #if(!opts_FRK$get("Rhipe")) {
-    if(1) {
-        #x <- sapply(flist,function(f) f(s))
-        x <- do.call("cbind",sapply(flist,function(f) f(s),simplify=FALSE))
-        as(x,"Matrix")
-    } else { ## The below works but likely to be slower.. whole prediction should be parallelised
-        envlist <- lapply(flist, function(f) environment(f))
-        flist <- lapply(flist, function(f) parse(text = deparse(f)))
-        x <- rhwrapper(Ntot = nrow(s),
-                       N = 4000,
-                       type="Matrix",
-                       f_expr = .rhpoint_eval_fn,
-                       flist=flist,
-                       envlist = envlist,
-                       s=s)
-        as(data.matrix(x),"Matrix")
-    }
+
+    #x <- sapply(flist,function(f) f(s))
+    x <- do.call("cbind",sapply(flist,function(f) f(s),simplify=FALSE))
+    as(x,"Matrix")
+
+    ## Rhipe Hadoop version (currently disabled)
+    ## The below works but likely to be slower.. whole prediction should be parallelised
+
+    # envlist <- lapply(flist, function(f) environment(f))
+    # flist <- lapply(flist, function(f) parse(text = deparse(f)))
+    # x <- rhwrapper(Ntot = nrow(s),
+    #                N = 4000,
+    #                type="Matrix",
+    #                f_expr = .rhpoint_eval_fn,
+    #                flist=flist,
+    #                envlist = envlist,
+    #                s=s)
+    # as(data.matrix(x),"Matrix")
+
 }
 
 .samps_in_polygon <- function(basis,s,i) {

@@ -1,11 +1,13 @@
-new_opts_FRK <- function(d = list(progress = TRUE, verbose = FALSE, parallel=1L, Rhipe=FALSE)) {
+new_opts_FRK <- function(d = list(progress = TRUE, verbose = FALSE, parallel=1L)) {
     defaults = d
     list(set = function(opt,value) {
-        if(!(opt %in% c("progress","verbose","parallel","Rhipe"))) stop("opt needs to be one of ('progress','verbose','parallel')")
+        if(!(opt %in% c("progress","verbose","parallel")))
+            stop("opt needs to be one of ('progress','verbose','parallel')")
         defaults[[opt]] <<- value
     },
     get = function(opt) {
-        if(!(opt %in% c("progress","verbose","parallel","Rhipe"))) stop("opt needs to be one of ('progress','verbose','parallel')")
+        if(!(opt %in% c("progress","verbose","parallel","Rhipe")))
+            stop("opt needs to be one of ('progress','verbose','parallel')")
         defaults[[opt]]
     }
     )}
@@ -22,7 +24,6 @@ new_opts_FRK <- function(d = list(progress = TRUE, verbose = FALSE, parallel=1L,
 #'  \item{"progress":}{ a flag indicating whether progress bars should be displayed or not}
 #'  \item{"verbose":}{ a flag indicating whether certain progress monitors should be shown or not}
 #'  \item{"parallel":}{ an integer indicating the number of cores to use. A number 0 or 1 indicates no parallelism}
-#'  \item{"Rhipe":}{ a flag indicating whether a Hadoop backend should be used. This is an advanced option and should only be used with massive models (and obviously only where Hadoop is installed and running)}
 #' }
 #' @examples
 #' opts_FRK$set("parallel",2L)

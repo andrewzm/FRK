@@ -96,7 +96,8 @@ auto_BAUs <- function(manifold,res=2,cellsize = rep(1,dimensions(manifold)), typ
 setMethod("auto_BAU",signature(manifold="plane"),
           function(manifold,cellsize = c(1,1),resl=resl,type="hex",d=NULL,convex=-0.05,...) {
 
-              if(!requireNamespace("INLA")) stop("For automatic BAU generation INLA needs to be installed for constructing non-convex hull. Please install it using install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\")")
+              if(!requireNamespace("INLA"))
+                  stop("For automatic BAU generation INLA needs to be installed for constructing non-convex hull. Please install it using install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\")")
 
               X1 <- X2 <- NULL # Suppress bindings warning
 
@@ -537,30 +538,32 @@ df_to_SpatialPolygons <- function(df,keys,coords,proj) {
     dfun <- function(d) {
         Polygons(list(Polygon(d[coords])),digest::digest(d[keys]))
     }
-    if(0) {
-        df_poly <- rhwrapper(Ntot = nrow(df),
-                             N = 4000,
-                             f_expr = .rhdlply,
-                             df=df,
-                             keys=keys,
-                             coords=coords,
-                             dfun=parse(text = deparse(dfun)))
+
+    if(opts_FRK$get("parallel") > 1) {
+        cl <- makeCluster(opts_FRK$get("parallel"))
+
+        #doParallel::registerDoParallel(opts_FRK$get("parallel"))
+        #df_poly <- plyr::dlply(df,keys,dfun,.parallel=TRUE)
+
+        df_poly <- mclapply(unique(df[keys])[,1],
+                            function(key) {
+                                dfun(df[df[keys]==key,])},
+                            mc.cores = opts_FRK$get("parallel"))
+        stopCluster(cl)
     } else {
-        if(opts_FRK$get("parallel") > 1) {
-            cl <- makeCluster(opts_FRK$get("parallel"))
-
-            #doParallel::registerDoParallel(opts_FRK$get("parallel"))
-            #df_poly <- plyr::dlply(df,keys,dfun,.parallel=TRUE)
-
-            df_poly <- mclapply(unique(df[keys])[,1],
-                                function(key) {
-                                    dfun(df[df[keys]==key,])},
-                                mc.cores = opts_FRK$get("parallel"))
-            stopCluster(cl)
-        } else {
-            df_poly <- plyr::dlply(df,keys,dfun)
-        }
+        df_poly <- plyr::dlply(df,keys,dfun)
     }
+
+    ## Rhipe version (currently disabled)
+
+    # df_poly <- rhwrapper(Ntot = nrow(df),
+    #                      N = 4000,
+    #                      f_expr = .rhdlply,
+    #                      df=df,
+    #                      keys=keys,
+    #                      coords=coords,
+    #                      dfun=parse(text = deparse(dfun)))
+
     Sr <- SpatialPolygons(df_poly,1:length(df_poly),proj4string=proj)
 }
 
@@ -605,19 +608,19 @@ setMethod("map_data_to_BAUs",signature(data_sp="Spatial"),
                   Nobs <- NULL
                   data_sp$Nobs <- 1
 
-                  if(!(opts_FRK$get("Rhipe"))) {
-                      timer <- system.time(Data_in_BAU <- over(sp_pols,data_sp[c(av_var,"Nobs","std")],fn=sum))
-                  } else {
-                      print("Using RHIPE to find overlays")
-                      timer <- system.time(
-                          Data_in_BAU <- rhwrapper(Ntot = length(sp_pols),
-                                                   N = 4000,
-                                                   f_expr = .rhover,
-                                                   sp_pols = sp_pols,
-                                                   data_sp = data_sp,
-                                                   av_var=av_var)
-                      )
-                  }
+                  timer <- system.time(Data_in_BAU <- over(sp_pols,data_sp[c(av_var,"Nobs","std")],fn=sum))
+
+                  ## Rhipe VERSION (Currently disabled)
+                  # print("Using RHIPE to find overlays")
+                  # timer <- system.time(
+                  # Data_in_BAU <- rhwrapper(Ntot = length(sp_pols),
+                  #                                  N = 4000,
+                  #                                  f_expr = .rhover,
+                  #                                  sp_pols = sp_pols,
+                  #                                  data_sp = data_sp,
+                  #                                  av_var=av_var)
+                  #     )
+
                   print(paste0("Binned data in ",timer[3]," seconds"))
 
                   sp_pols@data[av_var] <- Data_in_BAU[av_var]/Data_in_BAU$Nobs
@@ -703,7 +706,10 @@ est_obs_error <- function(sp_pts,variogram.formula) {
 
     #stopifnot(is(variogram.formula,"formula"))
     stopifnot(is(sp_pts,"Spatial"))
-    if(!("Nobs" %in% names(sp_pts))) stop("Nobs (number of observations in grid cell) needs to be a field of the Spatial object")
+    if(!("Nobs" %in% names(sp_pts)))
+        stop("Nobs (number of observations in grid cell) needs to be a field of the Spatial object")
+    if(!requireNamespace("gstat"))
+        stop("gstat is required for variogram estimation. Please install gstat")
 
     g <- gstat::gstat(formula=variogram.formula,data=sp_pts)
     v <- gstat::variogram(g,cressie=T)

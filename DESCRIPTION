@@ -27,15 +27,15 @@ Suggests:
     testthat,
     reshape2,
     shapefiles,
+    gstat,
     knitr,
     splancs,
     INLA,
     rgeos,
-    covr,
     maps
 Enhances:
-    Rhipe,
-    dggrids
+    dggrids,
+    covr
 Imports:
     methods,
     Matrix,
@@ -43,7 +43,6 @@ Imports:
     dplyr,
     plyr,
     parallel,
-    gstat,
     sp,
     spacetime,
     digest

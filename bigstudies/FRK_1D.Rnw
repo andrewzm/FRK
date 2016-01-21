@@ -34,7 +34,8 @@ grid_BAUs$fs = 1
 
 <<eval=TRUE>>=
 ## Set up SRE model
-G <- auto_basis(m = real_line(),data=sim_data,
+G <- auto_basis(m = real_line(),
+                data=sim_data,
                 nres = 2,
                 regular=6,
                 type = "bisquare",

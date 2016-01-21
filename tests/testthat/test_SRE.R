@@ -116,6 +116,7 @@ test_that("SRE sphere works",{
 
     ### Predict over BAUs
     grid_BAUs <- SRE.predict(S,pred_locs = grid_BAUs,use_centroid = TRUE)
+    grid_BAUs <- SRE.predict(S,pred_locs = grid_BAUs,use_centroid = FALSE)
     expect_is(grid_BAUs,"SpatialPolygonsDataFrame")
 
     ### summary works?

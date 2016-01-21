@@ -79,8 +79,8 @@ SRE <- function(f,data,basis,BAUs,est_error=TRUE) {
     for(i in 1:ndata) {
         if(est_error) data[[i]]$std <- 0 ## Just set it to something, this will be overwritten later on
         data_proc <- map_data_to_BAUs(data[[i]],
-                                     BAUs,
-                                     av_var = av_var)
+                                      BAUs,
+                                      av_var = av_var)
 
         if(any(is.na(data_proc@data)))
             stop("NAs found when mapping data to BAUs. Are you sure all your data are covered by BAUs?")
@@ -108,7 +108,10 @@ SRE <- function(f,data,basis,BAUs,est_error=TRUE) {
 
         Vfs[[i]] <- Diagonal(x=as.numeric(Cmat[[i]]^2 %*% BAUs$fs )) # Assuming no obeservations overlap
         S[[i]] <- eval_basis(basis, s = data_proc)
-
+        ## Note that S constructed in this way is similar to Cmat %*% S_BAUs where S_BAUs is the
+        ## basis functions evaluated at the BAUs. Verify this by checking the following are similar
+        ## S2 <- eval_basis(basis, s = BAUs)
+        ## (Cmat[[i]] %*% S2) - S[[i]]
     }
 
     S <- do.call("rBind",S)
@@ -164,8 +167,7 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM",print_lik=FAL
 
     if(i == n_EM) print("Maximum EM iterations reached")
     if(print_lik) {
-        plot(lk[1:i],ylab="log likelihood")
-        print("Warning: Ignoring constants in log-likelihood computation")
+        plot(2:i,lk[2:i],ylab="log likelihood",xlab="EM iteration (from #2)")
     }
     SRE_model
 }
@@ -175,29 +177,29 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM",print_lik=FAL
 #' @rdname SRE
 #' @export
 SRE.predict <- function(SRE_model,pred_locs = SRE_model@BAUs,use_centroid=TRUE,include_fs=TRUE) {
-### CHANGE INPUT TO IDX!!! OR NAMES OR SOMETHING SO THAT WE CAN PREDICT ON A SUBSET OF BAUs!!
+    ### CHANGE INPUT TO IDX!!! OR NAMES OR SOMETHING SO THAT WE CAN PREDICT ON A SUBSET OF BAUs!!
     if(is(pred_locs,"Spatial") & !(is(pred_locs,"SpatialPolygonsDataFrame")))
         stop("Predictions need to be over BAUs or spatial polygons")
     if(is(pred_locs,"ST") & !(is(pred_locs,"STFDF")))
-       if(!(is(pred_locs@sp,"SpatialPolygonsDataFrame")))
-        stop("Predictions need to be over BAUs or STFDFs with spatial polygons")
+        if(!(is(pred_locs@sp,"SpatialPolygonsDataFrame")))
+            stop("Predictions need to be over BAUs or STFDFs with spatial polygons")
     if(!("fs" %in% names(pred_locs@data))) {
         warning("data should contain a field 'fs' containing a basis function for fine-scale variation. Setting basis function equal to one everywhere.")
         pred_locs$fs <- 1
     }
     if(!(all(pred_locs$fs > 0))) stop("fine-scale variation basis function needs to be nonnegative everywhere")
 
-    if(opts_FRK$get("Rhipe")) {
-        pred_locs <- rhwrapper(Ntot = length(pred_locs),
-                               N = 4000,
-                               f_expr = .rhSRE.predict,
-                               Sm = SRE_model,
-                               pred_locs = pred_locs,
-                               use_centroid = use_centroid)
-    } else {
 
-        pred_locs <- .SRE.predict(Sm=SRE_model,pred_locs=pred_locs,use_centroid=use_centroid,include_fs=include_fs)
-    }
+    pred_locs <- .SRE.predict(Sm=SRE_model,pred_locs=pred_locs,use_centroid=use_centroid,include_fs=include_fs)
+
+    ## Rhipe VERSION (currently disabled)
+    # pred_locs <- rhwrapper(Ntot = length(pred_locs),
+    #                        N = 4000,
+    #                        f_expr = .rhSRE.predict,
+    #                        Sm = SRE_model,
+    #                        pred_locs = pred_locs,
+    #                        use_centroid = use_centroid)
+
     pred_locs
 }
 
@@ -240,89 +242,90 @@ setMethod("summary",signature(object="SRE"),
               cat("\n\n")
               cat(paste0("Regression coefficients [extract using object@alpha]: \n"))
               cat(deparse(as.vector(object@alphahat)))
-})
+          })
 
 
 .SRE.predict <- function(Sm,pred_locs,use_centroid,include_fs = TRUE) {
-        depname <- all.vars(Sm@f)[1]
-        pred_locs[[depname]] <- 0.1
-        L <- .gstat.formula(Sm@f,data=pred_locs)
-        X = as(L$X,"Matrix")
-        if(is(pred_locs,"Spatial")) {
-            if(use_centroid) {
-                S0 <- eval_basis(Sm@basis,as.matrix(pred_locs[coordnames(Sm@data[[1]])]@data))
-            } else {
-                S0 <- eval_basis(Sm@basis,pred_locs)
-            }
-        } else if(is(pred_locs,"STFDF")) {
-            if(use_centroid) {
-                S0 <- eval_basis(Sm@basis,as.matrix(cbind(coordinates(pred_locs),pred_locs@data$t)))
-            } else {
-                stop("Can only use centroid when predicting with spatio-temporal data")
-            }
+    depname <- all.vars(Sm@f)[1]
+    pred_locs[[depname]] <- 0.1
+    L <- .gstat.formula(Sm@f,data=pred_locs)
+    X = as(L$X,"Matrix")
+    if(is(pred_locs,"Spatial")) {
+        if(use_centroid) {
+            S0 <- eval_basis(Sm@basis,as.matrix(pred_locs[coordnames(Sm@data[[1]])]@data))
+        } else {
+            S0 <- eval_basis(Sm@basis,pred_locs)
         }
-        pred_locs[[depname]] <- NULL
-
-        alpha <- Sm@alphahat
-        K <- Sm@Khat
-        sigma2fs <- Sm@sigma2fshat
-        D <- sigma2fs*Sm@Vfs + Sm@Ve
-        Dinv <- Diagonal(x=1/diag(D))
-        mu_eta <- Sm@mu_eta
-        S_eta <- Sm@S_eta
-
-        sig2_Vfs_pred <- Diagonal(x=sigma2fs*pred_locs$fs)
-
-        if(is(pred_locs,"Spatial")) {
-            idx <- match(row.names(pred_locs),row.names(Sm@BAUs))
-        } else if (is(pred_locs,"STFDF")){
-            idx <- match(pred_locs@data$n,Sm@BAUs@data$n)
+    } else if(is(pred_locs,"STFDF")) {
+        if(use_centroid) {
+            S0 <- eval_basis(Sm@basis,as.matrix(cbind(coordinates(pred_locs),pred_locs@data$t)))
+        } else {
+            stop("Can only use centroid when predicting with spatio-temporal data")
         }
-        C <- Sm@Cmat[,idx]
+    }
+    pred_locs[[depname]] <- NULL
 
-        if(include_fs) {
-            if(sigma2fs >0) {
-                LAMBDA <- as(bdiag(Sm@Khat,sig2_Vfs_pred),"symmetricMatrix")
-                LAMBDAinv <- chol2inv(chol(LAMBDA))
-                PI <- cBind(S0, .symDiagonal(n=length(pred_locs)))
-                Qx <- t(PI) %*% t(C) %*% solve(Sm@Ve) %*% C %*% PI + LAMBDAinv
-                temp <- cholPermute(Qx)
-                ybar <- t(PI) %*%t(C) %*% solve(Sm@Ve) %*% (Sm@Z - C %*% X %*% alpha)
-                x_mean <- cholsolve(Qx,ybar,perm=TRUE,cholQp = temp$Qpermchol, P = temp$P)
-                Partial_Cov <- Takahashi_Davis(Qx,cholQp = temp$Qpermchol,P = temp$P)
-                x_margvar <- diag(Partial_Cov)
-                pred_locs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
-            } else {
-                LAMBDA <- as(Sm@Khat,"symmetricMatrix")
-                LAMBDAinv <- chol2inv(chol(LAMBDA))
-                PI <- S0
-                Qx <- crossprod(solve(sqrt(Sm@Ve)) %*% C %*% PI) + LAMBDAinv
-                #Qx <- t(PI) %*% t(C) %*% solve(Sm@Ve) %*% C %*% PI + LAMBDAinv
-                ybar <- t(PI) %*%t(C) %*% solve(Sm@Ve) %*% (Sm@Z - C %*% X %*% alpha)
-                Partial_Cov <- as(chol2inv(chol(Qx)),"dgeMatrix")  # Actually all Cov, convenient for later
-                x_mean <- Partial_Cov %*% ybar
-                x_margvar <- diag(Partial_Cov)
-                pred_locs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
-            }
+    alpha <- Sm@alphahat
+    K <- Sm@Khat
+    sigma2fs <- Sm@sigma2fshat
+    D <- sigma2fs*Sm@Vfs + Sm@Ve
+    Dinv <- Diagonal(x=1/diag(D))
+    mu_eta <- Sm@mu_eta
+    S_eta <- Sm@S_eta
 
-            ## variance to hard to compute all at once -- do it in blocks of 1000
-            temp <- rep(0,length(pred_locs))
-            batching=cut(1:nrow(PI),breaks = seq(0,nrow(PI)+1000,by=1000),labels=F)
-            for(i in 1:max(unique(batching))) {
-                idx = which(batching==i)
-                temp[idx] <- as.numeric(rowSums((PI[idx,] %*% Partial_Cov)*PI[idx,]))
-            }
-            pred_locs[["var"]] <- temp
+    sig2_Vfs_pred <- Diagonal(x=sigma2fs*pred_locs$fs)
 
-            #pred_locs[["var"]] <- as.numeric(rowSums((PI %*% Partial_Cov)*PI))
+    if(is(pred_locs,"Spatial")) {
+        idx <- match(row.names(pred_locs),row.names(Sm@BAUs))
+    } else if (is(pred_locs,"STFDF")){
+        idx <- match(pred_locs@data$n,Sm@BAUs@data$n)
+    }
+    C <- Sm@Cmat[,idx]
 
-        }
-        if(!include_fs) {
-            pred_locs[["mu"]] <- as.numeric(X %*% alpha + S0 %*% mu_eta)
-            pred_locs[["var"]] <- rowSums((S0 %*% S_eta) * S0) + sigma2fs
+    if(include_fs) {
+        if(sigma2fs >0) {
+            LAMBDA <- as(bdiag(Sm@Khat,sig2_Vfs_pred),"symmetricMatrix")
+            LAMBDAinv <- chol2inv(chol(LAMBDA))  #block diagonal so straightforward
+            PI <- cBind(S0, .symDiagonal(n=length(pred_locs)))
+            Qx <- t(PI) %*% t(C) %*% solve(Sm@Ve) %*% C %*% PI + LAMBDAinv
+            temp <- cholPermute(Qx)
+            ybar <- t(PI) %*%t(C) %*% solve(Sm@Ve) %*% (Sm@Z - C %*% X %*% alpha)
+            x_mean <- cholsolve(Qx,ybar,perm=TRUE,cholQp = temp$Qpermchol, P = temp$P)
+            Partial_Cov <- Takahashi_Davis(Qx,cholQp = temp$Qpermchol,P = temp$P)
+            x_margvar <- diag(Partial_Cov)
+            pred_locs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
+        } else {
+            LAMBDA <- as(Sm@Khat,"symmetricMatrix")
+            LAMBDAinv <- chol2inv(chol(LAMBDA))
+            PI <- S0
+            Qx <- crossprod(solve(sqrt(Sm@Ve)) %*% C %*% PI) + LAMBDAinv
+            #Qx <- t(PI) %*% t(C) %*% solve(Sm@Ve) %*% C %*% PI + LAMBDAinv
+            ybar <- t(PI) %*%t(C) %*% solve(Sm@Ve) %*% (Sm@Z - C %*% X %*% alpha)
+            Partial_Cov <- as(chol2inv(chol(Qx)),"dgeMatrix")  # Actually all Cov, convenient for later
+            x_mean <- Partial_Cov %*% ybar
+            x_margvar <- diag(Partial_Cov)
+            pred_locs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
         }
 
-        pred_locs
+        ## variance too hard to compute all at once -- do it in blocks of 1000
+        temp <- rep(0,length(pred_locs))
+        batching=cut(1:nrow(PI),breaks = seq(0,nrow(PI)+1000,by=1000),labels=F)
+
+        for(i in 1:max(unique(batching))) {
+            idx = which(batching==i)
+            temp[idx] <- as.numeric(rowSums((PI[idx,] %*% Partial_Cov)*PI[idx,]))
+        }
+        pred_locs[["var"]] <- temp
+
+        #pred_locs[["var"]] <- as.numeric(rowSums((PI %*% Partial_Cov)*PI))
+
+    }
+    if(!include_fs) {
+        pred_locs[["mu"]] <- as.numeric(X %*% alpha + S0 %*% mu_eta)
+        pred_locs[["var"]] <- rowSums((S0 %*% S_eta) * S0)
+    }
+
+    pred_locs
 
 }
 
@@ -360,7 +363,14 @@ setMethod("summary",signature(object="SRE"),
     converged <- FALSE
 
     Omega_diag1 <- diag2(Sm@S %*% as.matrix(S_eta),t(Sm@S)) +
-                   diag2(Sm@S %*% mu_eta %*% t(mu_eta), t(Sm@S))
+        diag2(Sm@S %*% mu_eta %*% t(mu_eta), t(Sm@S))
+
+    if(all((a <- diag(Sm@Ve)) == a[1]) &
+       all((b <- diag(Sm@Vfs)) == b[1])) {
+        homoscedastic <- TRUE
+    } else {
+        homoscedastic <- FALSE
+    }
 
     while(!converged) {
         J <- function(sigma2fs) {
@@ -382,30 +392,35 @@ setMethod("summary",signature(object="SRE"),
             diag2(resid,t(resid))
         Omega_diag <- Diagonal(x=Omega_diag)
 
-        # Repeat until finding values on opposite sides of zero
-        amp_factor <- 10; OK <- 0
-        while(!OK) {
-           amp_factor <- amp_factor * 10
-            if(!(sign(J(sigma2fs/amp_factor)) == sign(J(sigma2fs*amp_factor)))) OK <- 1
-            if(amp_factor > 1e12) {
-                warning("sigma2fs is being estimated to zero. This might because because of an incorrect binnin procedure.")
-                OK <- 1
+
+
+        # Repeat until finding values on opposite sides of zero if heteroscedastic
+        if(!homoscedastic) {
+            amp_factor <- 10; OK <- 0
+            while(!OK) {
+                amp_factor <- amp_factor * 10
+                if(!(sign(J(sigma2fs/amp_factor)) == sign(J(sigma2fs*amp_factor)))) OK <- 1
+                if(amp_factor > 1e12) {
+                    warning("sigma2fs is being estimated to zero.
+                            This might because because of an incorrect binning procedure.")
+                    OK <- 1
+                }
             }
-        }
-        if(amp_factor > 1e12) {
-            sigma2fs_new <- 0
-            converged <- TRUE
-        } else {
+
+            if(amp_factor > 1e12) {
+                sigma2fs_new <- 0
+                converged <- TRUE
+            }
             sigma2fs_new <- uniroot(f = J,interval = c(sigma2fs/amp_factor,sigma2fs*amp_factor))$root
-            D <- sigma2fs_new*Sm@Vfs + Sm@Ve
-            Dinv <- Diagonal(x=1/diag(D))
-            alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*% (Sm@Z - Sm@S %*% mu_eta)
-            if(max(sigma2fs_new / sigma2fs, sigma2fs / sigma2fs_new) < 1.001) converged <- TRUE
-        }
+            } else {
+                sigma2fs_new <- 1/b[1]*(sum(Omega_diag)/length(Sm@Z) - a[1])
+            }
+        D <- sigma2fs_new*Sm@Vfs + Sm@Ve
+        Dinv <- Diagonal(x=1/diag(D))
+        alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*% (Sm@Z - Sm@S %*% mu_eta)
+        if(max(sigma2fs_new / sigma2fs, sigma2fs / sigma2fs_new) < 1.001) converged <- TRUE
         sigma2fs <- sigma2fs_new
-
-
-    }
+        }
 
     Sm@Khat <- K
     Sm@alphahat <- alpha
@@ -419,13 +434,36 @@ setMethod("summary",signature(object="SRE"),
 
 
 .loglik <- function(Sm) {
-
     D <- Sm@sigma2fshat*Sm@Vfs + Sm@Ve
+    S <- Sm@S
+    K <- Sm@Khat
+    chol_K <- chol(K)
+    Kinv <- chol2inv(chol_K)
+    resid <- Sm@Z - Sm@X %*% Sm@alphahat
+    N <- length(Sm@Z)
     Dinv <- solve(D)
-    r <- Sm@Z - Sm@X %*% Sm@alphahat  - Sm@S %*% Sm@mu_eta
+    S_Dinv_S <-  crossprod(sqrt(Dinv) %*% S)
 
-    as.numeric(-0.5*determinant(D)$modulus -
-                   0.5 * t(r) %*% Dinv %*% r)
+    log_det_SigmaZ <- determinant(Kinv + S_Dinv_S,logarithm = TRUE)$modulus +
+        determinant(K,logarithm = TRUE)$modulus +
+        sum(log(diag(D)))
+
+    #SigmaZ_inv <- Dinv - Dinv %*% S %*% solve(Kinv + S_Dinv_S) %*% t(S) %*% Dinv
+    #SigmaZ_inv2 <- Dinv - tcrossprod(Dinv %*% S %*% solve(R))
+    R <- chol(Kinv + S_Dinv_S)
+    rDinv <- t(resid) %*% Dinv
+
+    quad_bit <- rDinv %*% resid - tcrossprod(rDinv %*% S %*% solve(R))
+
+    llik <- -0.5 * N * log(2*pi) -
+        0.5 * log_det_SigmaZ -
+        0.5 * quad_bit
+    as.numeric(llik)
+
+    # OLD APPROXIMATE VERSION
+    # r <- Sm@Z - Sm@X %*% Sm@alphahat  - Sm@S %*% Sm@mu_eta
+    # as.numeric(-0.5*determinant(D)$modulus -
+    #                0.5 * t(r) %*% Dinv %*% r)
 }
 
 

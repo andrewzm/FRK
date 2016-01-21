@@ -259,9 +259,9 @@ PBSprint <- FALSE
     # data.  To ensure it exists in the data, make it a requiredCol.
 {
     # convert matrix to data frame
-    if (is.matrix(data)) {
-        data <- .mat2df(data);
-    }
+    ## if (is.matrix(data)) {
+    ##     data <- .mat2df(data);
+    ## }
 
     if (is.data.frame(data) && (nrow(data) > 0)) {
         # validate optional class name
@@ -503,11 +503,11 @@ extractPolyData <- function(polys)
 #==============================================================================
 is.PolyData <- function(x, fullValidation = TRUE)
 {
-    if (fullValidation) {
-        msg <- .validatePolyData(x)
-        if (is.character(msg))
-            return (FALSE)
-    }
+    # if (fullValidation) {
+    #     msg <- .validatePolyData(x)
+    #     if (is.character(msg))
+    #         return (FALSE)
+    # }
 
     return (inherits(x, "PolyData", which = TRUE) == 1);
 }

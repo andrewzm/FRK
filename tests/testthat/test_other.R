@@ -5,7 +5,6 @@ test_that("opts",{
     expect_is(opts_FRK$get("progress"),"logical")
     expect_is(opts_FRK$get("parallel"),"integer")
     expect_is(opts_FRK$get("verbose"),"logical")
-    expect_is(opts_FRK$get("Rhipe"),"logical")
 })
 
 test_that("coordinates",{
