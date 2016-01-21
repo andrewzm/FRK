@@ -69,7 +69,7 @@ test_that("SRE 2D plane works",{
     expect_is(S,"SRE")
 
     ### Fit with 5 EM iterations so as not to take too much time
-    S <- SRE.fit(S,n_EM = 3,tol = 1e-5,print_lik=TRUE)
+    S <- SRE.fit(S,n_EM = 3,tol = 1e-5,print_lik=FALSE)
     expect_is(S,"SRE")
 
     ### Predict over BAUs
