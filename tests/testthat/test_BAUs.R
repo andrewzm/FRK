@@ -53,18 +53,19 @@ test_that("plane_BAUs",{
 
 test_that("sphere_BAUs",{
     isea3h_1 <- auto_BAUs(manifold=sphere(),
-                                 res=1,
-                                 data=NULL,
-                                 type="hex")
+                          type="hex",
+                          isea3h_res=1,
+                          data=NULL,
+    )
     expect_is(isea3h_1,"SpatialPolygonsDataFrame")
     expect_equal(nrow(isea3h_1@data),23)
     expect_equal(names(isea3h_1@data),c("id","lon","lat"))
     expect_true(grepl("+proj=longlat",proj4string(isea3h_1)))
 
     sphere_grid <- auto_BAUs(manifold=sphere(),
+                             type="grid",
                              data=NULL,
-                             cellsize=c(20,10),
-                             type="grid")
+                             cellsize=c(20,10))
     expect_is(sphere_grid,"SpatialPolygonsDataFrame")
     expect_equal(nrow(sphere_grid@data),324)
     expect_equal(names(sphere_grid@data),c("lon","lat","id"))
@@ -87,10 +88,17 @@ test_that("SpaceTime_BAUs",{
     coordinates(space1) <- ~x+y
     STobj1 <- STIDF(space1,time1,data=sim_process)
 
-    time_grid <- auto_BAUs(timeline(),cellsize = 1,d = STobj1,tunit="days")
+    time_grid <- auto_BAUs(timeline(),
+                           cellsize = 1,
+                           d = STobj1,
+                           tunit="days")
     expect_is(time_grid,"POSIXt")
 
-    space_time_grid <- auto_BAUs(STplane(),cellsize = c(0.4,0.4,1),type="hex",data = STobj1,tunit="days")
+    space_time_grid <- auto_BAUs(STplane(),
+                                 type="hex",
+                                 cellsize = c(0.4,0.4,1),
+                                 data = STobj1,
+                                 tunit="days")
     expect_is(space_time_grid,"STFDF")
 
     f <- z ~ 1

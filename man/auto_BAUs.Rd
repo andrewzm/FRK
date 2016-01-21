@@ -4,17 +4,17 @@
 \alias{auto_BAUs}
 \title{Automatic BAU generation}
 \usage{
-auto_BAUs(manifold, res = 2, cellsize = rep(1, dimensions(manifold)),
-  type = "hex", data = NULL, convex = -0.05, tunit = "days")
+auto_BAUs(manifold, type = "grid", cellsize = rep(1, dimensions(manifold)),
+  isea3h_res = 2, data = NULL, convex = -0.05, tunit = "days")
 }
 \arguments{
 \item{manifold}{object of class \code{manifold}}
 
-\item{res}{resolution number of the isea3h DGGRID cells for when type is ``hex'' and manifold is a \code{sphere}}
-
-\item{cellsize}{denotes size of gridcell when \code{type} = ``grid''. Needs to be f length 1 (isotropic grid) or a vector of length \code{dimensions(manifold)}}
-
 \item{type}{either ``hex'' or ``grid'', indicating whether gridded or hexagonal BAUs should be used}
+
+\item{cellsize}{denotes size of gridcell when \code{type} = ``grid''. Needs to be of length 1 (isotropic grid) or a vector of length \code{dimensions(manifold)}}
+
+\item{isea3h_res}{resolution number of the isea3h DGGRID cells for when type is ``hex'' and manifold is a \code{sphere}}
 
 \item{data}{object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame}. Provision of \code{data} implies that the domain is bounded, and is thus necessary when the manifold is a \code{real_line} or a \code{plane} but is not necessary when the manifold is a \code{sphere}}
 

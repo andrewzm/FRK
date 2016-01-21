@@ -8,7 +8,10 @@ test_that("SRE 1D works",{
     sim_data <- sample_n(sim_process,50) %>%
         mutate(z = proc + 0.1*rnorm(length(x)), std = 0.1)
     coordinates(sim_data) = ~x + y# change into an sp object
-    grid_BAUs <- auto_BAUs(manifold=real_line(),data=sim_data,cellsize = c(0.01),type="grid")
+    grid_BAUs <- auto_BAUs(manifold=real_line(),
+                           type="grid",
+                           data=sim_data,
+                           cellsize = c(0.01))
     grid_BAUs$fs = 1
 
     ### Set up SRE model
@@ -49,7 +52,10 @@ test_that("SRE 2D plane works",{
     sim_data <- sample_n(sim_process,10) %>%
         mutate(z = proc + 0.1*rnorm(length(x)), std = 0.1)
     coordinates(sim_data) = ~x + y# change into an sp object
-    grid_BAUs <- auto_BAUs(manifold=plane(),data=sim_data,cellsize = c(0.4),type="grid")
+    grid_BAUs <- auto_BAUs(manifold=plane(),
+                           type="grid",
+                           data=sim_data,
+                           cellsize = c(0.4))
     grid_BAUs$fs = 1
 
     ### Set up SRE model
@@ -92,7 +98,10 @@ test_that("SRE sphere works",{
         mutate(z = proc + 0.1*rnorm(length(lon)), std = 0.1)
     coordinates(sim_data) = ~lon + lat# change into an sp object
     proj4string(sim_data)=CRS("+proj=longlat +ellps=sphere")
-    grid_BAUs <- auto_BAUs(manifold=sphere(),data=sim_data,res = 2,type="hex")
+    grid_BAUs <- auto_BAUs(manifold=sphere(),
+                           type="hex",
+                           data=sim_data,
+                           isea3h_res = 2)
     grid_BAUs$fs = 1
 
     ### Set up SRE model
@@ -140,7 +149,10 @@ test_that("SRE space-time sphere works",{
     proj4string(space)=CRS("+proj=longlat +ellps=sphere")
     STobj <- STIDF(space,time,data=sim_data)
 
-    grid_BAUs <- auto_BAUs(manifold=STsphere(),res=1,data=STobj,type="hex")
+    grid_BAUs <- auto_BAUs(manifold=STsphere(),
+                           type="hex",
+                           isea3h_res=1,
+                           data=STobj)
     grid_BAUs$fs = 1
 
 

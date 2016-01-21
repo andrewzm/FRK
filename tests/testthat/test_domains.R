@@ -1,4 +1,5 @@
 print("Entering test_domains.R")
+library(sp)
 
 test_that("dimensions work", {
     S <- sphere(radius = 1)

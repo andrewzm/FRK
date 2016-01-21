@@ -106,7 +106,7 @@ setGeneric("TensorP", function(Basis1,Basis2) standardGeneric("TensorP"))
 #' @param convex convex parameter used for smoothing an extended boundary when working on a finite domain (that is, when the object \code{d} is supplied), see details
 #' @param ... currently unused
 #' @details This generic function is not called directly. Please refer to \code{auto_BAUs} for more details.
-setGeneric("auto_BAU", function(manifold,cellsize,resl,type,d,convex,...) standardGeneric("auto_BAU"))
+setGeneric("auto_BAU", function(manifold,type,cellsize,resl,d,convex,...) standardGeneric("auto_BAU"))
 
 #' @title Bin data into BAUs
 #' @description This is an internal function which bins data into BAUs or aggregates across BAUs if the data have a large footprint. If \code{est_error == TRUE}, the observation error is estimated as in Katzfuss & Cressie (2011)

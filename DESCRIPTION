@@ -24,16 +24,15 @@ Depends:
 Suggests:
     testthat,
     reshape2,
-    shapefiles,
     gstat,
     knitr,
     splancs,
     INLA,
-    covr
+    covr,
+    rgeos
 Enhances:
     dggrids,
 Imports:
-    methods,
     Matrix,
     ggplot2,
     dplyr,

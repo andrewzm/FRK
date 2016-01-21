@@ -39,9 +39,9 @@ dggrid_gen_to_df <- function(filename,res) {
 #' @title Automatic BAU generation
 #' @description This function calls the generic function \code{auto_BAU} (currently not exported) after a series of checks and is the easiest way to generate a set of BAUs on the manifold being used.
 #' @param manifold object of class \code{manifold}
-#' @param res resolution number of the isea3h DGGRID cells for when type is ``hex'' and manifold is a \code{sphere}
-#' @param cellsize denotes size of gridcell when \code{type} = ``grid''. Needs to be f length 1 (isotropic grid) or a vector of length \code{dimensions(manifold)}
 #' @param type either ``hex'' or ``grid'', indicating whether gridded or hexagonal BAUs should be used
+#' @param cellsize denotes size of gridcell when \code{type} = ``grid''. Needs to be of length 1 (isotropic grid) or a vector of length \code{dimensions(manifold)}
+#' @param isea3h_res resolution number of the isea3h DGGRID cells for when type is ``hex'' and manifold is a \code{sphere}
 #' @param data object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame}. Provision of \code{data} implies that the domain is bounded, and is thus necessary when the manifold is a \code{real_line} or a \code{plane} but is not necessary when the manifold is a \code{sphere}
 #' @param convex convex parameter used for smoothing an extended boundary when working on a finite domain (that is, when the object \code{d} is supplied), see details.
 #' @param tunit temporal unit when requiring space-time BAUs. Can be either "secs", "mins", "hours" or "days".
@@ -78,23 +78,24 @@ dggrid_gen_to_df <- function(filename,res) {
 #'      plot(HexPols_df)
 #'  }
 #'  @export
-auto_BAUs <- function(manifold,res=2,cellsize = rep(1,dimensions(manifold)), type="hex",data=NULL,convex=-0.05,tunit="days") {
+auto_BAUs <- function(manifold, type="grid",cellsize = rep(1,dimensions(manifold)),
+                      isea3h_res=2,data=NULL,convex=-0.05,tunit="days") {
     if(!(is(data,"Spatial") | is(data,"ST") | is.null(data)))
         stop("Data needs to be of class 'Spatial', 'ST', or NULL")
     if(!is(manifold,"manifold")) stop("manifold needs to be of class 'manifold'")
-    if(!is.numeric(res) | is.integer(res)) stop("res needs to be of type 'numeric' or 'integer'")
+    if(!is.numeric(isea3h_res) | is.integer(isea3h_res)) stop("isea3h_res needs to be of type 'numeric' or 'integer'")
     if(length(cellsize) == 1) cellsize <- rep(cellsize,dimensions(manifold))
     if(!length(cellsize) == dimensions(manifold)) stop("cellsize needs to be of length equal to dimension of manifold")
-    if(!(res >=0 & res <= 9)) stop("res needs to be between 0 and 9")
-    resl <- round(res)
+    if(!(isea3h_res >=0 & isea3h_res <= 9)) stop("isea3h_res needs to be between 0 and 9")
+    resl <- round(isea3h_res)
 
-    auto_BAU(manifold=manifold,resl=resl,cellsize=cellsize,type=type,d=data,convex=convex,tunit=tunit)
+    auto_BAU(manifold=manifold,type=type,cellsize=cellsize,resl=resl,d=data,convex=convex,tunit=tunit)
 
 }
 
 
 setMethod("auto_BAU",signature(manifold="plane"),
-          function(manifold,cellsize = c(1,1),resl=resl,type="hex",d=NULL,convex=-0.05,...) {
+          function(manifold,type="grid",cellsize = c(1,1),resl=resl,d=NULL,convex=-0.05,...) {
 
               if(!requireNamespace("INLA"))
                   stop("For automatic BAU generation INLA needs to be installed for constructing non-convex hull. Please install it using install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\")")
@@ -159,7 +160,7 @@ setMethod("auto_BAU",signature(manifold="plane"),
 
 
 setMethod("auto_BAU",signature(manifold="timeline"),
-          function(manifold,cellsize = c(1),resl=resl,type="grid",d=NULL,convex=-0.05,...) {
+          function(manifold,type="grid",cellsize = c(1),resl=resl,d=NULL,convex=-0.05,...) {
 
               l <- list(...)
 
@@ -194,7 +195,7 @@ setMethod("auto_BAU",signature(manifold="timeline"),
 
 
 setMethod("auto_BAU",signature(manifold = c("STmanifold")),
-          function(manifold,cellsize = c(1,1,1),resl=resl,type="hex",d=NULL,convex=-0.05,...) {
+          function(manifold,type="grid",cellsize = c(1,1,1),resl=resl,d=NULL,convex=-0.05,...) {
 
               if(is(manifold,"STplane")) {
                   spat_manifold <- plane()
@@ -237,7 +238,8 @@ setMethod("auto_BAU",signature(manifold = c("STmanifold")),
 #               return(STBAUs)
 #           })
 
-setMethod("auto_BAU",signature(manifold="real_line"),function(manifold,cellsize = 1,resl=resl,type="grid",d=NULL,...) {
+setMethod("auto_BAU",signature(manifold="real_line"),
+          function(manifold,type="grid",cellsize = 1,resl=resl,d=NULL,...) {
 
     coords <- coordinates(d)
     xrange <- range(coords[,1])
@@ -257,7 +259,8 @@ setMethod("auto_BAU",signature(manifold="real_line"),function(manifold,cellsize 
 })
 
 
-setMethod("auto_BAU",signature(manifold="sphere"),function(manifold,cellsize = c(1,1),resl=2,type="hex",d=NULL,...) {
+setMethod("auto_BAU",signature(manifold="sphere"),
+          function(manifold,type="grid",cellsize = c(1,1),resl=2,d=NULL,...) {
     if(type == "hex") {
         isea3h <- res <- lon <- centroid <- lat <- in_chull <- NULL # Suppress bindings warnings
 
