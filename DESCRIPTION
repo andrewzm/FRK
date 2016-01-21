@@ -29,7 +29,6 @@ Suggests:
     knitr,
     splancs,
     INLA,
-    rgeos,
     covr
 Enhances:
     dggrids,
