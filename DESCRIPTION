@@ -2,7 +2,7 @@ Package: FRK
 Type: Package
 Title: Fixed Rank Kriging
 Version: 0.1.0
-Date: 2015-12-05
+Date: 2015-01-21
 Author: Andrew Zammit-Mangion
 Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
 VignetteBuilder: knitr
@@ -32,10 +32,10 @@ Suggests:
     splancs,
     INLA,
     rgeos,
-    maps
+    maps,
+    covr
 Enhances:
     dggrids,
-    covr
 Imports:
     methods,
     Matrix,
