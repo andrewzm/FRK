@@ -11,6 +11,5 @@
 #' @import parallel
 #' @import dplyr
 #' @importFrom plyr ddply dlply rbind.fill
-#' @importFrom digest digest
 #' @name FRK
 NULL

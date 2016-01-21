@@ -3,6 +3,7 @@ new_opts_FRK <- function(d = list(progress = TRUE, verbose = FALSE, parallel=1L)
     list(set = function(opt,value) {
         if(!(opt %in% c("progress","verbose","parallel")))
             stop("opt needs to be one of ('progress','verbose','parallel')")
+        .option_check(opt,value)
         defaults[[opt]] <<- value
     },
     get = function(opt) {
@@ -11,6 +12,29 @@ new_opts_FRK <- function(d = list(progress = TRUE, verbose = FALSE, parallel=1L)
         defaults[[opt]]
     }
     )}
+
+.option_check <- function(opt,value) {
+    if(opt == "progress")
+        if(!(value == TRUE | value == FALSE))
+            stop("progress should be TRUE or FALSE")
+
+    if(opt == "verbose")
+        if(!(value == TRUE | value == FALSE))
+            stop("verbose should be TRUE or FALSE")
+
+    if(opt == "parallel")
+        if(!is.integer(value))
+            stop("parallel should be a nonnegative integer")
+
+    if(opt == "parallel")
+        if(!(value >= 0))
+            stop("parallel should be a nonnegative integer")
+    if(opt == "parallel")
+
+    if(!requireNamespace("parallel"))
+        stop("package parallel is required for using multiple cores. Please install parallel")
+
+}
 
 #' @title FRK options
 #' @description The main options list for the FRK package.

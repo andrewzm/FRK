@@ -270,7 +270,7 @@ setMethod("eval_basis",signature(basis="Basis",s="SpatialPolygonsDataFrame"),fun
     X <- list()
     print("Averaging over polygons")
 
-    if(opts_FRK$get("parallel") > 0) {
+    if(opts_FRK$get("parallel") > 1L) {
         cl <- makeCluster(opts_FRK$parallel)
         X <- mclapply(1:length(s), function(i) {
             samps <- .samps_in_polygon(basis,s,i)
