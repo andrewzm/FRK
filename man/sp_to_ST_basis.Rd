@@ -17,7 +17,7 @@ sp_to_ST_basis(G_spatial, t_knots = 1, manifold = STsphere())
 Given a set of 2D spatial basis functions and a vector of knots in time, this function repeats the spatial basis at every temporal knot, adding the third dimension to the centroid as appopriate.
 }
 \examples{
-G_spatial <-  radial_basis(manifold = sphere(),
+G_spatial <-  local_basis(manifold = sphere(),
                    loc=matrix(runif(20,min=-90,max=90),10,2),
                    scale=rep(20,10),
                    type="bisquare")

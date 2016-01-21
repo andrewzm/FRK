@@ -4,7 +4,7 @@
 #' @param basis object of class \code{Basis}
 #' @param g object of class \code{gg} (a \code{ggplot} object)
 #' @param ... not in use
-#' @details The function \code{show_basis} adapts its behaviour to the manifold being used. With \code{real_line}, the one-dimensional basis functions are plotted with colour distinguishing between the different resolutions. With \code{plane}, only radial basis functions are supported (at present). Each basis function is shown as a circle with diameter equal to the \code{scale} parameter of the function. Linetype distinguishes the resolution. With \code{sphere}, the centres of the basis functions are shown as circles, with larger sizes corresponding to lower (i.e., coarser) resolutions.
+#' @details The function \code{show_basis} adapts its behaviour to the manifold being used. With \code{real_line}, the one-dimensional basis functions are plotted with colour distinguishing between the different resolutions. With \code{plane}, only local basis functions are supported (at present). Each basis function is shown as a circle with diameter equal to the \code{scale} parameter of the function. Linetype distinguishes the resolution. With \code{sphere}, the centres of the basis functions are shown as circles, with larger sizes corresponding to lower (i.e., coarser) resolutions.
 #' @examples
 #' library(ggplot2)
 #' library(sp)
@@ -19,7 +19,7 @@ setGeneric("show_basis", function(basis,...) standardGeneric("show_basis"))
 #' @description Retrieve manifold from \code{FRK} object.
 #' @param .Object \code{FRK} object
 #' @examples
-#' G <-  radial_basis(manifold = plane(),
+#' G <-  local_basis(manifold = plane(),
 #'                    loc=matrix(0,1,2),
 #'                    scale=0.2,
 #'                    type="bisquare")

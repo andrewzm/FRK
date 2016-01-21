@@ -20,7 +20,7 @@ manifold(.Object)
 Retrieve manifold from \code{FRK} object.
 }
 \examples{
-G <-  radial_basis(manifold = plane(),
+G <-  local_basis(manifold = plane(),
                    loc=matrix(0,1,2),
                    scale=0.2,
                    type="bisquare")

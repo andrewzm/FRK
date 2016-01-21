@@ -30,14 +30,14 @@ test_that("basis work with all manifolds", {
 mu <- matrix(-90 + 180*runif(100),50,2)
 mu[,1] <- mu[,1]*2
 std <- rep(500,50)
-G_basis <- radial_basis(manifold = sphere(),loc = mu,scale=std,type="Gaussian")
+G_basis <- local_basis(manifold = sphere(),loc = mu,scale=std,type="Gaussian")
 test_that("we can show basis locations on sphere", {
     expect_true({show_basis(G_basis); TRUE})
 })
 
 mu <- matrix(rnorm(10),5,2)
 std <- rep(0.3,5)
-G_basis <- radial_basis(manifold = plane(),loc = mu,scale=std,type="Gaussian")
+G_basis <- local_basis(manifold = plane(),loc = mu,scale=std,type="Gaussian")
 test_that("we can have multiple functions in a Basis object on plane and plot them", {
     expect_equal(G_basis@n, 5)
     expect_equal(nrow(G_basis@df), 5)
@@ -48,7 +48,7 @@ test_that("we can have multiple functions in a Basis object on plane and plot th
 
 mu <- matrix(runif(10),10,1)
 std <- rep(0.3,10)
-G_basis <- radial_basis(manifold = real_line(),loc = mu,scale=std,type="Gaussian")
+G_basis <- local_basis(manifold = real_line(),loc = mu,scale=std,type="Gaussian")
 test_that("we can have multiple functions in a Basis object on real line and plot them", {
     expect_equal(G_basis@n, 10)
     expect_equal(nrow(G_basis@df), 10)
@@ -81,7 +81,7 @@ test_that("can average basis over polygons in plane", {
 })
 
 test_that("can get ST basis using time repetition", {
-    G_spatial <-  radial_basis(manifold = sphere(),
+    G_spatial <-  local_basis(manifold = sphere(),
                                loc=matrix(runif(20,min=-90,max=90),10,2),
                                scale=rep(20,10),
                                type="bisquare")
@@ -93,12 +93,12 @@ test_that("can get ST basis using time repetition", {
 })
 
 test_that("can get ST basis using tensor product", {
-    G_spatial <-  radial_basis(manifold = sphere(),
+    G_spatial <-  local_basis(manifold = sphere(),
                                loc=matrix(runif(20,min=-90,max=90),10,2),
                                scale=rep(20,10),
                                type="bisquare")
 
-    G_temporal <- radial_basis(manifold=real_line(),loc = matrix(c(2,7,12)),scale = rep(3,3))
+    G_temporal <- local_basis(manifold=real_line(),loc = matrix(c(2,7,12)),scale = rep(3,3))
     G_spacetime <- TensorP(G_spatial,G_temporal)
     expect_is(G_spacetime,"TensorP_Basis")
     expect_is(G_spacetime@Basis1,"Basis")

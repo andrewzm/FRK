@@ -12,7 +12,7 @@ An object of class \code{Basis} contains the basis functions used to construct t
 \details{
 
 
-Basis functions are a critical component of the \code{FRK} package and the package is designed to work with user-defined specifications of these. For convenience however, several functions aid the user to construct specific sets for a given set of data points. Please see \code{\link{auto_basis}} for more details. The function \code{\link{radial_basis}} helps the user construct a set of radial basis functions from a collection of locations and scale parameters.
+Basis functions are a critical component of the \code{FRK} package and the package is designed to work with user-defined specifications of these. For convenience however, several functions aid the user to construct specific sets for a given set of data points. Please see \code{\link{auto_basis}} for more details. The function \code{\link{local_basis}} helps the user construct a set of local basis functions from a collection of locations and scale parameters.
 }
 \section{Slots}{
 
@@ -25,7 +25,7 @@ Basis functions are a critical component of the \code{FRK} package and the packa
 
 \item{\code{pars}}{a list of parameters where the \eqn{i}-th item in the list contains the parameters of the \eqn{i}-th basis function, \code{fn[[i]]}}
 
-\item{\code{df}}{a data frame containing other attributes specific to each basis function (for example the geometric centre of the radial basis function)}
+\item{\code{df}}{a data frame containing other attributes specific to each basis function (for example the geometric centre of the local basis function)}
 }}
 \keyword{Basis}
 \keyword{functions}
