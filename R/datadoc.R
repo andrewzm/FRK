@@ -1,6 +1,6 @@
 #' @title AIRS data for May 2003
 #'
-#' @description Mid-troposheric CO2 measurements from the Atmospheric InfraRed Sounder (AIRS). The data represent measurements between 60 degrees S and 90 degrees N at roughly 1:30 pm local time on 1 May through 15 May 2003.
+#' @description Mid-troposheric CO2 measurements from the Atmospheric InfraRed Sounder (AIRS). The data are measurements between 60 degrees S and 90 degrees N at roughly 1:30 pm local time on 1 May through to 15 May 2003.
 #'
 #' @format A data frame with 209631 rows and 7 variables:
 #' \describe{

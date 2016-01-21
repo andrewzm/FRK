@@ -20,7 +20,7 @@ draw_world <- function(g = ggplot(),inc_border = TRUE) {
     if(!(is(g, "ggplot"))) stop("g has to be of class ggplot")
     if(!(is.logical(inc_border))) stop("inc_border needs to be TRUE or FALSE")
     X <- Y <- PID <- NULL
-    worldmap = map_data("world")
+    data(worldmap, package = "FRK")
     names(worldmap) <- c("X","Y","PID","POS","region","subregion")
     worldmap = clipPolys(worldmap, xlim=c(-180,180),ylim=c(-90,90), keepExtra=TRUE)
     if(inc_border) {

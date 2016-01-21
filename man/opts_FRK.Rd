@@ -21,7 +21,6 @@ The main options list for the FRK package.
  \item{"progress":}{ a flag indicating whether progress bars should be displayed or not}
  \item{"verbose":}{ a flag indicating whether certain progress monitors should be shown or not}
  \item{"parallel":}{ an integer indicating the number of cores to use. A number 0 or 1 indicates no parallelism}
- \item{"Rhipe":}{ a flag indicating whether a Hadoop backend should be used. This is an advanced option and should only be used with massive models (and obviously only where Hadoop is installed and running)}
 }
 }
 \examples{

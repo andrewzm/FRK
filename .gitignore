@@ -9,3 +9,6 @@ src/*.o
 src/*.so
 ..pdf
 vignettes/*.Rnw
+FRK.Rcheck
+*.tar.gz
+inla-mesher-functions
