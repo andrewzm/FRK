@@ -10,7 +10,7 @@ timeline(metric = Euclid_dist(dim = 1L))
 \item{metric}{an object of class \code{measure}}
 }
 \description{
-Timeline initialisation.
+Initialisation of a timeline (1D real line).
 }
 \details{
 A time axis initialised using a \code{measure} object. By default, the measure object (\code{metric}) is the absolute differences.
@@ -18,7 +18,6 @@ A time axis initialised using a \code{measure} object. By default, the measure o
 \examples{
 P <- timeline()
 print(type(P))
-warning("CHECK: This may not work for ST plane")
 print(sp::dimensions(P))
 }
 

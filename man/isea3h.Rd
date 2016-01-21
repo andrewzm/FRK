@@ -4,22 +4,22 @@
 \name{isea3h}
 \alias{isea3h}
 \title{ISEA Aperture 3 Hexagon (ISEA3H) Discrete Global Grid}
-\format{A data frame with 766280 rows and 5 variables:
+\format{A data frame with 284208 rows and 5 variables:
 \describe{
   \item{id}{grid identification number within the given resolution}
   \item{lon}{longitude coordinate}
   \item{lat}{latitude coordinate}
-  \item{res}{DGGRID resolution (0 -- 9)}
-  \item{centroid}{A 0-1 variable, indicating whether the point describes the centroid of the polygon, or is a point describing the polygon itself}
+  \item{res}{DGGRID resolution (0 -- 6)}
+  \item{centroid}{A 0-1 variable, indicating whether the point describes the centroid of the polygon, or whether it is a boundary point of the polygon}
 }}
 \usage{
 isea3h
 }
 \description{
-The data used here was obtained from http://webpages.sou.edu/~sahrk/dgg/isea.old/gen/isea3h.html and represent ISEA discrete global grids (DGGRIDs) generated using the \code{DGGRID} software. The original .gen files were converted to a data frame using the function \code{dggrid_gen_to_df}, available with the \code{FRK} package.
+The data used here was obtained from http://webpages.sou.edu/~sahrk/dgg/isea.old/gen/isea3h.html and represent ISEA discrete global grids (DGGRIDs) generated using the \code{DGGRID} software. The original .gen files were converted to a data frame using the function \code{dggrid_gen_to_df}, available with the \code{dggrids} package. Only resolutions 0--6 are shipped with \code{FRK}; for higher resolutions please install \code{dggrids} from \code{https://github.com/andrewzm/dggrids}.
 }
 \references{
-Sahr, K. (2008) Location coding on icosahedral aperture 3 hexagon discrete global grids. Computers, Environment and Urban Systems, 32(3):174-187.
+Sahr, K. (2008) Location coding on icosahedral aperture 3 hexagon discrete global grids. Computers, Environment and Urban Systems, 32, 174--187.
 }
 \keyword{datasets}
 

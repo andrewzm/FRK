@@ -10,7 +10,7 @@ Measure class used for defining measures used to compute distances between point
 \details{
 
 
-An object of class \code{measure} contains a distance function and a variable \code{dim} with the dimensions of the Riemannian manifold over which the distance is computed. By default, the distance function used is inherited from the package \code{fields}.
+An object of class \code{measure} contains a distance function and a variable \code{dim} with the dimensions of the Riemannian manifold over which the distance is computed. By default, distance functions used are those extracted from the package \code{fields}.
 }
 \keyword{Manifolds,}
 \keyword{planes}

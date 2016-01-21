@@ -19,9 +19,9 @@ gc_dist_time(R = NULL)
 \item{R}{great-circle radius}
 }
 \description{
-Distance objects included in package
+Useful objects of class \code{distance} included in package.
 }
 \details{
-Initialises an object of class \code{measure} which contains a function \code{dist} used for computing the distance between two points.  Currently the Euclidean distance and the great-circle distance are included. Distances are computed using functions from the package \code{fields}.
+Initialises an object of class \code{measure} which contains a function \code{dist} used for computing the distance between two points.  Currently the Euclidean distance and the great-circle distance are included. Distances are computed using functions extracted from the package \code{fields}.
 }
 

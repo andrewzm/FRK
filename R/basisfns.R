@@ -4,7 +4,15 @@
 #' @param loc a matrix of size \code{n} by \code{dimensions(manifold)} indicating centres of basis functions
 #' @param scale vector of length \code{n} containing the scale parameters of the basis functions. See details
 #' @param type either ``Gaussian'', ``bisquare,'' ``exp,'' or ``Matern32''.
-#' @details This functions lays out local basis functions in a domain of interest based on pre-specified location and scale parameters. If the type is ``Gaussian'', then the scale corresponds to a distance of one standard deviation. If the type is ``bisquare'', then the scale corresponds to the range of support of the bisquare function.
+#' @details This functions lays out local basis functions in a domain of interest based on pre-specified location and scale parameters. If \code{type} is ``Gaussian'', then
+#' \deqn{\phi(u) = \exp\left(-\frac{\|u \|}{2\sigma^2}\right),}
+#' and \code{scale} corresponds to the standard deviation \eqn{\sigma}. If \code{type} is ``bisquare'', then
+#'\deqn{\phi(u) = \left(1- \left(\frac{\| u \|}{R}\right)^2\right)^2 I(\|u\| < R),}
+#' and \code{scale} corresponds to the range of support of the bisquare function, \eqn{R}. If the \code{type} is ``exp'', then
+#'\deqn{\phi(u) = \exp\left(-\frac{\|u\|}{ \tau}\right),}
+#' and \code{scale} corresponds to the e-folding length, \eqn{\tau}. If \code{type} is ``Matern32'', then
+#'\deqn{\phi(u) = \left(1 + \frac{\sqrt{3}\|u\|}{\kappa}\right)\exp\left(-\frac{\sqrt{3}\| u \|}{\kappa}\right),}
+#' and \code{scale} corresponds to the parameter \eqn{\kappa}.
 #' @examples
 #' library(ggplot2)
 #' G <-  local_basis(manifold = real_line(),
@@ -52,13 +60,13 @@ local_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type
 #' @details This function automatically places basis functions within the domain of interest. If the domain is a plane or the real line, then the object \code{data} is used to establish the domain boundary.
 #'
 #'
-#'The arguement \code{type} can be either \code{Gaussian} in which case
+#'The argument \code{type} can be either ``Gaussian'' in which case
 #'\deqn{\phi(u) = \exp\left(-\frac{\|u \|}{2\sigma^2}\right),}
-#'\code{bisquare}, in which case  '
+#'``bisquare'', in which case  '
 #'\deqn{\phi(u) = \left(1- \left(\frac{\| u \|}{R}\right)^2\right)^2 I(\|u\| < R),}
-#'\code{exp}, in which case
+#'``exp'', in which case
 #'\deqn{\phi(u) = \exp\left(-\frac{\|u\|}{ \tau}\right),}
-#' or \code{Matern32}, in which case
+#' or ``Matern32'', in which case
 #'\deqn{\phi(u) = \left(1 + \frac{\sqrt{3}\|u\|}{\kappa}\right)\exp\left(-\frac{\sqrt{3}\| u \|}{\kappa}\right),}
 #' The parameters \eqn{\sigma, R, \tau} and \eqn{\kappa} are \code{scale} arguments.
 #'
@@ -197,10 +205,10 @@ auto_basis <- function(m = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,t
 }
 
 #' @title Add the time coordinate to 2D spatial basis functions
-#' @description Given a set of 2D spatial basis functions and a vector of knots in time, this function repeats the spatial basis at every temporal knot, adding the third dimension to the centroid as appopriate.
+#' @description Given a set of 2D spatial basis functions and a vector of knots in time, this function repeats the spatial basis at every temporal knot, adding the third dimension to the centroid as appropriate.
 #' @param G_spatial an object of class Basis on a 2D manifold
 #' @param t_knots a vector of numbers locating the knots in time
-#' @param manifold a 3D space-time manifold, typically STsphere or STplane
+#' @param manifold a 3D space-time manifold, typically \code{STsphere} or \code{STplane}
 #' @examples
 #' G_spatial <-  local_basis(manifold = sphere(),
 #'                    loc=matrix(runif(20,min=-90,max=90),10,2),

@@ -20,7 +20,15 @@ local_basis(manifold = sphere(), loc = matrix(c(1, 0), nrow = 1),
 Construct a set of local basis functions based on pre-specified location and scale parameters.
 }
 \details{
-This functions lays out local basis functions in a domain of interest based on pre-specified location and scale parameters. If the type is ``Gaussian'', then the scale corresponds to a distance of one standard deviation. If the type is ``bisquare'', then the scale corresponds to the range of support of the bisquare function.
+This functions lays out local basis functions in a domain of interest based on pre-specified location and scale parameters. If \code{type} is ``Gaussian'', then
+\deqn{\phi(u) = \exp\left(-\frac{\|u \|}{2\sigma^2}\right),}
+and \code{scale} corresponds to the standard deviation \eqn{\sigma}. If \code{type} is ``bisquare'', then
+\deqn{\phi(u) = \left(1- \left(\frac{\| u \|}{R}\right)^2\right)^2 I(\|u\| < R),}
+and \code{scale} corresponds to the range of support of the bisquare function, \eqn{R}. If the \code{type} is ``exp'', then
+\deqn{\phi(u) = \exp\left(-\frac{\|u\|}{ \tau}\right),}
+and \code{scale} corresponds to the e-folding length, \eqn{\tau}. If \code{type} is ``Matern32'', then
+\deqn{\phi(u) = \left(1 + \frac{\sqrt{3}\|u\|}{\kappa}\right)\exp\left(-\frac{\sqrt{3}\| u \|}{\kappa}\right),}
+and \code{scale} corresponds to the parameter \eqn{\kappa}.
 }
 \examples{
 library(ggplot2)

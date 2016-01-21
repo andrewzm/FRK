@@ -19,7 +19,7 @@ new_opts_FRK <- function(d = list(progress = TRUE, verbose = FALSE, parallel=1L)
 #'   \item{\code{$}  }{\code{set:function(opt,value)}}
 #'   \item{\code{$}  }{\code{get:function(opt)}}
 #' }
-#' @details \code{opts_FRK} is a list containing two functions, \code{set} and \code{get}, which can be used to set options and retrieve options, respectively. Currently \code{FRK} uses four options.
+#' @details \code{opts_FRK} is a list containing two functions, \code{set} and \code{get}, which can be used to set options and retrieve options, respectively. Currently \code{FRK} uses four options:
 #' \itemize{
 #'  \item{"progress":}{ a flag indicating whether progress bars should be displayed or not}
 #'  \item{"verbose":}{ a flag indicating whether certain progress monitors should be shown or not}

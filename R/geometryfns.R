@@ -1,55 +1,27 @@
 #' @title manifold
-#' @param .Object \code{manfold} object passed up from lower-level constructor
+#' @param .Object \code{manifold} object passed up from lower-level constructor
 #' @description Manifold initialisation. This function should not be called directly as \code{manifold} is a virtual class.
 setMethod("initialize",signature="manifold",function(.Object) {
     ## General manifold checks can come in here
     .Object
 })
 
-#' @title Convert DGGRID gen. file to data frame
-#'
-#' @description Convert discrete global grid (DGGRID) .gen file to data frame
-#' @param filename name of DGGRID output file of type .gen
-#' @param res resolution of the DGGRID (this number is attached to the resulting data frame)
-#'
-#' @details DGGRID produces .gen files with three columns, \code{id}, \code{lon} and \code{lat}. Polygons each have a unique identifier and following each polygon there is a line "END" that needs to be filtered out. This function takes the .gen file and converts it into a data frame with fields \code{lon, lat, id} and \code{res}.
-#'
-#' @export
-dggrid_gen_to_df <- function(filename,res) {
-    lat <- lon <- isna <- NULL # Suppress bindings warning
 
-    if(!is.character(filename)) stop("filename needs to of type 'character'")
-    if(!is.numeric(res)) stop("res needs to be of type character")
-    X <- read.table(filename,
-                    sep=" ",fill=T,
-                    header=F,
-                    col.names = c("id","lon","lat")) %>%
-        filter(!(id == "END")) %>%  ## Sometimes DGGRID doesn't put in first space, this mutate caters for this
-        mutate(isna = is.na(lat),
-               lat = ifelse(isna,lon,lat),
-               lon = ifelse(isna,as.numeric(as.character(X$id)),lon))
-    X$id[X$isna] <- NA
-    X <- select(X,-isna) %>%
-        mutate(res = res,
-               id = as.numeric(as.character(id)),
-               centroid = as.numeric(!is.na(id))) %>%
-        transform(id = spacetime::na.locf(id))
-}
 
 #' @title Automatic BAU generation
 #' @description This function calls the generic function \code{auto_BAU} (currently not exported) after a series of checks and is the easiest way to generate a set of BAUs on the manifold being used.
 #' @param manifold object of class \code{manifold}
-#' @param type either ``hex'' or ``grid'', indicating whether gridded or hexagonal BAUs should be used
+#' @param type either ``grid'' or ``hex'', indicating whether gridded or hexagonal BAUs should be used
 #' @param cellsize denotes size of gridcell when \code{type} = ``grid''. Needs to be of length 1 (isotropic grid) or a vector of length \code{dimensions(manifold)}
 #' @param isea3h_res resolution number of the isea3h DGGRID cells for when type is ``hex'' and manifold is a \code{sphere}
 #' @param data object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame}. Provision of \code{data} implies that the domain is bounded, and is thus necessary when the manifold is a \code{real_line} or a \code{plane} but is not necessary when the manifold is a \code{sphere}
 #' @param convex convex parameter used for smoothing an extended boundary when working on a finite domain (that is, when the object \code{d} is supplied), see details.
 #' @param tunit temporal unit when requiring space-time BAUs. Can be either "secs", "mins", "hours" or "days".
-#' @details \code{auto_BAUs} constructs a set of basic aerial units (BAUs) used both for data pre-processing and for prediction. As such, the BAUs need to be of sufficienly fine resolution so that data is not adversely affected; a subset of BAUs (or a completely new set of polygons) may be used for prediction
+#' @details \code{auto_BAUs} constructs a set of basic aerial units (BAUs) used both for data pre-processing and for prediction. As such, the BAUs need to be of sufficienly fine resolution so that data is not adversely affected.
 #'
-#' Two types of BAUs are supported by \code{FRK}: ``hex'' (hexagonal) and ``grid'' (rectangular). In order to have a ``grid'' set of BAUs, the user should specify a cellsize of length equal to the dimensions of the manifold, that is, of length 1 for \code{real_line} and 2 for \code{sphere} and \code{plane}. When a ``hex'' set of BAUs is desired, the first element of \code{cellsize} is used to determine the side length by dividing this value by approximately 2. If the manifold is a \code{sphere}, then \code{cellsize} is ignored and the resulting hexagonal grid is a discrete global grid with resolution \code{res}. The parameter type is ignored with \code{real_line} and ``hex'' is not available for this manifold.
+#' Two types of BAUs are supported by \code{FRK}: ``hex'' (hexagonal) and ``grid'' (rectangular). In order to have a ``grid'' set of BAUs, the user should specify a cellsize of length equal to the dimensions of the manifold, that is, of length 1 for \code{real_line} and 2 for \code{sphere} and \code{plane}. When a ``hex'' set of BAUs is desired, the first element of \code{cellsize} is used to determine the side length by dividing this value by approximately 2. The argument \code{type} is ignored with \code{real_line} and ``hex'' is not available for this manifold.
 #'
-#'   If the object \code{data} is provided, then automatic domain selection is carried out by employing the \code{INLA} function \code{inla.nonconvex.hull}, which finds a (non-convex) hull surrounding the data points (or centroids of the data polygons). This domain is extended and smoothed using the \code{convex} parameter. The parameter \code{convex} should be negative, and a larger absolute value for \code{convex} results in a larger domain with smoother boundaries. Due to the dependency on hull construction, \code{INLA} needs to be installed in order to use this function unless BAUs on a sphere are desired (note that \code{INLA} is not available on CRAN at time of writing).
+#'   If the object \code{data} is provided, then automatic domain selection is carried out by employing the \code{INLA} function \code{inla.nonconvex.hull}, which finds a (non-convex) hull surrounding the data points (or centroids of the data polygons). This domain is extended and smoothed using the \code{convex} parameter. The parameter \code{convex} should be negative, and a larger absolute value for \code{convex} results in a larger domain with smoother boundaries. Due to the dependency on hull construction, \code{INLA} needs to be installed in order to use this function unless BAUs on a sphere are desired (note that \code{INLA} was not available on CRAN at time of writing).
 #'  @examples
 #' ## First a 1D example
 #' library(sp)
@@ -64,12 +36,15 @@ dggrid_gen_to_df <- function(filename,res) {
 #' data(meuse)
 #' coordinates(meuse) = ~x+y # change into an sp object
 #' if(require(INLA)) { # INLA is needed to find the non-convex hull
+#'      ## Grid BAUs
 #'      GridPols_df <- auto_BAUs(manifold = plane(),
 #'                              cellsize = 200,
 #'                              type = "grid",
 #'                              data = meuse,
 #'                              convex=-0.05)
 #'      plot(GridPols_df)
+#'
+#'      ## Hex BAUs
 #'      HexPols_df <- auto_BAUs(manifold = plane(),
 #'                             cellsize = 200,
 #'                             type = "hex",
@@ -339,11 +314,11 @@ setMethod("auto_BAU",signature(manifold="sphere"),
 
 #' @title sphere
 #'
-#' @description Sphere initialisation.
+#' @description Initialisation of the S2 sphere.
 #'
 #' @param radius radius of sphere
 #'
-#' @details A sphere is initialised using a \code{radius} parameter. By default, the radius \code{R} is equal to \code{R}=6371 km, the Earth's radius, while the measure used to compute distances on the sphere is the great-circle distance on a sphere of radius \code{R}. Distances are computed using functions from the \code{fields} package.
+#' @details A sphere is initialised using a \code{radius} parameter. By default, the radius \code{R} is equal to \code{R}=6371 km, the Earth's radius, while the measure used to compute distances on the sphere is the great-circle distance on a sphere of radius \code{R}.
 #' @export
 #' @examples
 #' S <- sphere()
@@ -364,11 +339,11 @@ setMethod("initialize",signature="sphere",function(.Object,radius=1,metric=gc_di
 
 #' @title Space-time sphere
 #'
-#' @description Domain for modellng space-time fields over a sphere.
+#' @description Initialisation of an S2 sphere with a temporal dimensions
 #'
 #' @param radius radius of sphere
 #'
-#' @details As with the spatial-only sphere, the sphere is initialised using a \code{radius} parameter. By default, the radius \code{R} is equal to \code{R}=6371 km, the Earth's radius, while the measure used to compute distances on the sphere is the great-circle distance on a sphere of radius \code{R}. Distances are computed using functions from the \code{fields} package.
+#' @details As with the spatial-only sphere, the sphere is initialised using a \code{radius} parameter. By default, the radius \code{R} is equal to \code{R}=6371 km, the Earth's radius, while the measure used to compute distances on the sphere is the great-circle distance on a sphere of radius \code{R}.
 #' @export
 #' @examples
 #' S <- STsphere()
@@ -389,7 +364,7 @@ setMethod("initialize",signature="STsphere",function(.Object,radius=6371,metric=
 
 #' @title plane
 #'
-#' @description Plane initialisation.
+#' @description Initialisation of a 2D plane.
 #'
 #' @param metric an object of class \code{measure}
 #'
@@ -412,16 +387,15 @@ setMethod("initialize",signature="plane",function(.Object,metric=Euclid_dist(dim
 
 #' @title plane in space-time
 #'
-#' @description Space-time plane initialisation.
+#' @description Initialisation of a 2D plane with a temporal dimension.
 #'
 #' @param metric an object of class \code{measure}
 #'
-#' @details A 2D plane with a time component added is initialised using a \code{measure} object. By default, the measure object (\code{metric}) is the Euclidean distance in 3 dimensions, \link{Euclid_dist}. Distances are computed using functions from the \code{fields} package.
+#' @details A 2D plane with a time component added is initialised using a \code{measure} object. By default, the measure object (\code{metric}) is the Euclidean distance in 3 dimensions, \link{Euclid_dist}.
 #' @export
 #' @examples
 #' P <- STplane()
 #' print(type(P))
-#' warning("CHECK: This may not work for ST plane")
 #' print(sp::dimensions(P))
 STplane <- function(metric=Euclid_dist(dim=3L)) {
     stopifnot(dimensions(metric)==3L)
@@ -436,7 +410,7 @@ setMethod("initialize",signature="STplane",function(.Object,metric=Euclid_dist(d
 
 #' @title timeline
 #'
-#' @description Timeline initialisation.
+#' @description Initialisation of a timeline (1D real line).
 #'
 #' @param metric an object of class \code{measure}
 #'
@@ -445,7 +419,6 @@ setMethod("initialize",signature="STplane",function(.Object,metric=Euclid_dist(d
 #' @examples
 #' P <- timeline()
 #' print(type(P))
-#' warning("CHECK: This may not work for ST plane")
 #' print(sp::dimensions(P))
 timeline <- function(metric=Euclid_dist(dim=1L)) {
     stopifnot(dimensions(metric)==1L)
@@ -460,11 +433,11 @@ setMethod("initialize",signature="timeline",function(.Object,metric=Euclid_dist(
 
 #' @title real line
 #'
-#' @description Real-line initialisation.
+#' @description Initialisation of the 1D real-line manifold.
 #'
 #' @param metric an object of class \code{measure}
 #'
-#' @details A real line is initialised using a \code{measure} object. By default, the measure object (\code{metric}) describes the distance between two points as the absolute difference between the two coordinates. Distances are computed using functions from the \code{fields} package.
+#' @details A real line is initialised using a \code{measure} object. By default, the measure object (\code{metric}) describes the distance between two points as the absolute difference between the two coordinates.
 #' @export
 #' @examples
 #' R <- real_line()
@@ -488,11 +461,11 @@ setMethod("initialize",signature="real_line",function(.Object,metric=Euclid_dist
 #' @aliases gc_dist_time
 #' @title Pre-configured distances
 #'
-#' @description Distance objects included in package
+#' @description Useful objects of class \code{distance} included in package.
 #'
 #' @param dim dimension of Eucledian space
 #' @param R great-circle radius
-#' @details Initialises an object of class \code{measure} which contains a function \code{dist} used for computing the distance between two points.  Currently the Euclidean distance and the great-circle distance are included. Distances are computed using functions from the package \code{fields}.
+#' @details Initialises an object of class \code{measure} which contains a function \code{dist} used for computing the distance between two points.  Currently the Euclidean distance and the great-circle distance are included. Distances are computed using functions extracted from the package \code{fields}.
 #' @export
 Euclid_dist <- function(dim=2L) {
     stopifnot(is.integer(dim))
@@ -515,16 +488,15 @@ gc_dist_time <- function(R=NULL) {
 }
 
 #' @title Convert data frame to SpatialPolygons
-#' @description Convert data frame to SpatialPolygons object
+#' @description Convert data frame to SpatialPolygons object.
 #' @param df data frame containing polygon information, see details
 #' @param keys vector of variable names used to group rows belonging to the same polygon
 #' @param  coords vector of variable names identifying the coordinate columns
 #' @param proj the projection of the \code{SpatialPolygons} object. Needs to be of class \code{CRS}
-#' @details Each row in the data frame \code{df} contains both coordinates and labels (or keys) that identify to which polygon the coordinates belong. This function groups the data frame according to \code{keys} and forms a \code{SpatialPolygons} object from the coordinates in each group. It is important that all rings are closed, that is, that the last row of each group is identical to the first row. Since the keys can be arbitrary, and can contain more than one element, we identify each polygon with a new key by forming an MD5 hash made out of the respective \code{keys} variables that in themselves are unique (and therefore the hashed key is also, for most practicaly purposes, unique). For lon-lat coordinates use \code{proj = CRS("+proj=longlat")}.
+#' @details Each row in the data frame \code{df} contains both coordinates and labels (or keys) that identify to which polygon the coordinates belong. This function groups the data frame according to \code{keys} and forms a \code{SpatialPolygons} object from the coordinates in each group. It is important that all rings are closed, that is, that the last row of each group is identical to the first row. Since \code{keys} can be of length greater than one, we identify each polygon with a new key by forming an MD5 hash made out of the respective \code{keys} variables that in themselves are unique (and therefore the hashed key is also unique). For lon-lat coordinates use \code{proj = CRS("+proj=longlat")}.
 #' @export
 #' @examples
 #' library(sp)
-#' opts_FRK$set("parallel",0L)
 #' df <- data.frame(id = c(rep(1,4),rep(2,4)),
 #'                  x = c(0,1,0,0,2,3,2,2),
 #'                  y=c(0,0,1,0,0,1,1,0))
@@ -571,7 +543,7 @@ df_to_SpatialPolygons <- function(df,keys,coords,proj) {
 }
 
 #' @title SpatialPolygonsDataFrame to df
-#' @description Convert \code{SpatialPolygonsDataFrame} object to data frame
+#' @description Convert \code{SpatialPolygonsDataFrame} object to data frame.
 #' @param sp_polys object of class \code{SpatialPolygonsDataFrame}
 #' @param vars variables to put into data frame (by default all of them)
 #' @details This function is mainly used for plotting \code{SpatialPolygonsDataFrame} objects with \code{ggplot} rather than \code{spplot}. The coordinates of each polygon are extracted, and concatenated into one long data frame. The attributes of each polygon are then attached to this data frame as variables which vary by polygon \code{id}.  The returned \code{id} variable describes the polygon `id' and varies from 1 to the number of polygons represented in the data frame.

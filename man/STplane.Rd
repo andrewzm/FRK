@@ -10,15 +10,14 @@ STplane(metric = Euclid_dist(dim = 3L))
 \item{metric}{an object of class \code{measure}}
 }
 \description{
-Space-time plane initialisation.
+Initialisation of a 2D plane with a temporal dimension.
 }
 \details{
-A 2D plane with a time component added is initialised using a \code{measure} object. By default, the measure object (\code{metric}) is the Euclidean distance in 3 dimensions, \link{Euclid_dist}. Distances are computed using functions from the \code{fields} package.
+A 2D plane with a time component added is initialised using a \code{measure} object. By default, the measure object (\code{metric}) is the Euclidean distance in 3 dimensions, \link{Euclid_dist}.
 }
 \examples{
 P <- STplane()
 print(type(P))
-warning("CHECK: This may not work for ST plane")
 print(sp::dimensions(P))
 }
 

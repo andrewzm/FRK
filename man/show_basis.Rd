@@ -18,10 +18,10 @@ show_basis(basis, ...)
 \item{g}{object of class \code{gg} (a \code{ggplot} object)}
 }
 \description{
-Generic plotting function for illustrating the basis functions.
+Generic plotting function for visualising the basis functions.
 }
 \details{
-The function \code{show_basis} adapts its behaviour to the manifold being used. With \code{real_line}, the one-dimensional basis functions are plotted with colour distinguishing between the different resolutions. With \code{plane}, only local basis functions are supported (at present). Each basis function is shown as a circle with diameter equal to the \code{scale} parameter of the function. Linetype distinguishes the resolution. With \code{sphere}, the centres of the basis functions are shown as circles, with larger sizes corresponding to lower (i.e., coarser) resolutions.
+The function \code{show_basis} adapts its behaviour to the manifold being used. With \code{real_line}, the one-dimensional basis functions are plotted with colour distinguishing between the different resolutions. With \code{plane}, only local basis functions are supported (at present). Each basis function is shown as a circle with diameter equal to the \code{scale} parameter of the function. Linetype distinguishes the resolution. With \code{sphere}, the centres of the basis functions are shown as circles, with larger sizes corresponding to lower (i.e., coarser) resolutions. Space-time basis functions of subclass \code{TensorP_Basis} can be visualised by visualising the spatial component and temporal components separately.
 }
 \examples{
 library(ggplot2)

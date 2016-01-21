@@ -10,10 +10,10 @@ real_line(metric = Euclid_dist(dim = 1L))
 \item{metric}{an object of class \code{measure}}
 }
 \description{
-Real-line initialisation.
+Initialisation of the 1D real-line manifold.
 }
 \details{
-A real line is initialised using a \code{measure} object. By default, the measure object (\code{metric}) describes the distance between two points as the absolute difference between the two coordinates. Distances are computed using functions from the \code{fields} package.
+A real line is initialised using a \code{measure} object. By default, the measure object (\code{metric}) describes the distance between two points as the absolute difference between the two coordinates.
 }
 \examples{
 R <- real_line()

@@ -10,10 +10,10 @@ STsphere(radius = 6371)
 \item{radius}{radius of sphere}
 }
 \description{
-Domain for modellng space-time fields over a sphere.
+Initialisation of an S2 sphere with a temporal dimensions
 }
 \details{
-As with the spatial-only sphere, the sphere is initialised using a \code{radius} parameter. By default, the radius \code{R} is equal to \code{R}=6371 km, the Earth's radius, while the measure used to compute distances on the sphere is the great-circle distance on a sphere of radius \code{R}. Distances are computed using functions from the \code{fields} package.
+As with the spatial-only sphere, the sphere is initialised using a \code{radius} parameter. By default, the radius \code{R} is equal to \code{R}=6371 km, the Earth's radius, while the measure used to compute distances on the sphere is the great-circle distance on a sphere of radius \code{R}.
 }
 \examples{
 S <- STsphere()

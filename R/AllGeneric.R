@@ -1,10 +1,10 @@
 #### GENERIC FUNCTIONS ######
 #' @title Show basis functions
-#' @description Generic plotting function for illustrating the basis functions.
+#' @description Generic plotting function for visualising the basis functions.
 #' @param basis object of class \code{Basis}
 #' @param g object of class \code{gg} (a \code{ggplot} object)
 #' @param ... not in use
-#' @details The function \code{show_basis} adapts its behaviour to the manifold being used. With \code{real_line}, the one-dimensional basis functions are plotted with colour distinguishing between the different resolutions. With \code{plane}, only local basis functions are supported (at present). Each basis function is shown as a circle with diameter equal to the \code{scale} parameter of the function. Linetype distinguishes the resolution. With \code{sphere}, the centres of the basis functions are shown as circles, with larger sizes corresponding to lower (i.e., coarser) resolutions.
+#' @details The function \code{show_basis} adapts its behaviour to the manifold being used. With \code{real_line}, the one-dimensional basis functions are plotted with colour distinguishing between the different resolutions. With \code{plane}, only local basis functions are supported (at present). Each basis function is shown as a circle with diameter equal to the \code{scale} parameter of the function. Linetype distinguishes the resolution. With \code{sphere}, the centres of the basis functions are shown as circles, with larger sizes corresponding to lower (i.e., coarser) resolutions. Space-time basis functions of subclass \code{TensorP_Basis} can be visualised by visualising the spatial component and temporal components separately.
 #' @examples
 #' library(ggplot2)
 #' library(sp)
@@ -49,7 +49,7 @@ setGeneric("nbasis", function(.Object) standardGeneric("nbasis"))
 setGeneric("type", function(.Object) standardGeneric("type"))
 
 #' @title Compute distance
-#' @description Compute distance using object of class \code{measure} or \code{manifold}
+#' @description Compute distance using object of class \code{measure} or \code{manifold}.
 #' @param d object of class \code{measure} or \code{manifold}
 #' @param x1 first coordinate
 #' @param x2 second coordinate
@@ -60,11 +60,11 @@ setGeneric("type", function(.Object) standardGeneric("type"))
 setGeneric("distance", function(d,x1,x2) standardGeneric("distance"))
 
 #' @title Evaluate basis functions
-#' @description  Evaluate basis functions at points or average functions over polygons
+#' @description  Evaluate basis functions at points or average functions over polygons.
 #' @param basis object of class \code{Basis}
 #' @param s object of class \code{matrix}, \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame}
-#' @param output either a "list" or "matrix", depending on desired output format.
-#' @details This function evaluates the basis functions at isolated points, or averages the basis functions over polygons, for computing the matrix \eqn{S}. The latter operation is carried out using Monte Carlo integration with 1000 samples per polygon. This function is embarassingly parallelisable and is thus Hadoop-enabled (provided a Hadoop backend is available and \code{opts_FRK$get("Rhipe")} is TRUE).
+#' @param output either a "list" or "matrix", depending on desired output format
+#' @details This function evaluates the basis functions at isolated points, or averages the basis functions over polygons, for computing the matrix \eqn{S}. The latter operation is carried out using Monte Carlo integration with 1000 samples per polygon.
 #' @examples
 #' library(sp)
 #'
@@ -75,7 +75,7 @@ setGeneric("distance", function(d,x1,x2) standardGeneric("distance"))
 #' coordinates(d) <- ~lon + lat
 #' proj4string(d)=CRS("+proj=longlat")
 #'
-#' ### Now create basis functions over sphere
+#' ### Now create basis functions on sphere
 #' G <- auto_basis(m = sphere(),data=d,
 #'                 nres = 2,prune=15,
 #'                 type = "bisquare",
@@ -87,10 +87,32 @@ setGeneric("distance", function(d,x1,x2) standardGeneric("distance"))
 setGeneric("eval_basis", function(basis,s,output="matrix") standardGeneric("eval_basis"))
 
 #' @title Tensor product of basis functions
-#' @description Constructs a new set of basis by finding the tensor product of two sets of basis functions. The product is carried out on the basis functions elementwise. Hence, \code{Basis1} and \code{Basis2} need to contain the same number of basis functions.
+#' @description Constructs a new set of basis by finding the tensor product of two sets of basis functions.
 #' @param Basis1 first set of basis functions
 #' @param Basis2 second set of basis functions
 #' @export
+#' @examples
+#' library(spacetime)
+#' library(dplyr)
+#' sim_data <- data.frame(lon = runif(20,-180,180),
+#'                        lat = runif(20,-90,90),
+#'                        t = 1:20,
+#'                        z = rnorm(20),
+#'                        std = 0.1)
+#' time <- as.POSIXct("2003-05-01",tz="") + 3600*24*(sim_data$t-1)
+#' space <- sim_data[,c("lon","lat")]
+#' coordinates(space) = ~lon+lat # change into an sp object
+#' proj4string(space)=CRS("+proj=longlat +ellps=sphere")
+#' STobj <- STIDF(space,time,data=sim_data)
+#' G_spatial <- auto_basis(m = sphere(),
+#'                         data=as(STobj,"Spatial"),
+#'                         nres = 1,
+#'                         type = "bisquare",
+#'                         subsamp = 20000)
+#' G_temporal <- local_basis(manifold=real_line(),loc = matrix(c(1,3)),scale = rep(1,2))
+#' G <- TensorP(G_spatial,G_temporal)
+#' #show_basis(G_spatial)
+#' #show_basis(G_temporal)
 setGeneric("TensorP", function(Basis1,Basis2) standardGeneric("TensorP"))
 
 #### NOT EXPORTED ####

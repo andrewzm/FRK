@@ -16,14 +16,13 @@ df_to_SpatialPolygons(df, keys, coords, proj)
 \item{proj}{the projection of the \code{SpatialPolygons} object. Needs to be of class \code{CRS}}
 }
 \description{
-Convert data frame to SpatialPolygons object
+Convert data frame to SpatialPolygons object.
 }
 \details{
-Each row in the data frame \code{df} contains both coordinates and labels (or keys) that identify to which polygon the coordinates belong. This function groups the data frame according to \code{keys} and forms a \code{SpatialPolygons} object from the coordinates in each group. It is important that all rings are closed, that is, that the last row of each group is identical to the first row. Since the keys can be arbitrary, and can contain more than one element, we identify each polygon with a new key by forming an MD5 hash made out of the respective \code{keys} variables that in themselves are unique (and therefore the hashed key is also, for most practicaly purposes, unique). For lon-lat coordinates use \code{proj = CRS("+proj=longlat")}.
+Each row in the data frame \code{df} contains both coordinates and labels (or keys) that identify to which polygon the coordinates belong. This function groups the data frame according to \code{keys} and forms a \code{SpatialPolygons} object from the coordinates in each group. It is important that all rings are closed, that is, that the last row of each group is identical to the first row. Since \code{keys} can be of length greater than one, we identify each polygon with a new key by forming an MD5 hash made out of the respective \code{keys} variables that in themselves are unique (and therefore the hashed key is also unique). For lon-lat coordinates use \code{proj = CRS("+proj=longlat")}.
 }
 \examples{
 library(sp)
-opts_FRK$set("parallel",0L)
 df <- data.frame(id = c(rep(1,4),rep(2,4)),
                  x = c(0,1,0,0,2,3,2,2),
                  y=c(0,0,1,0,0,1,1,0))

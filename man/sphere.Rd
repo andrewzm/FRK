@@ -10,10 +10,10 @@ sphere(radius = 6371)
 \item{radius}{radius of sphere}
 }
 \description{
-Sphere initialisation.
+Initialisation of the S2 sphere.
 }
 \details{
-A sphere is initialised using a \code{radius} parameter. By default, the radius \code{R} is equal to \code{R}=6371 km, the Earth's radius, while the measure used to compute distances on the sphere is the great-circle distance on a sphere of radius \code{R}. Distances are computed using functions from the \code{fields} package.
+A sphere is initialised using a \code{radius} parameter. By default, the radius \code{R} is equal to \code{R}=6371 km, the Earth's radius, while the measure used to compute distances on the sphere is the great-circle distance on a sphere of radius \code{R}.
 }
 \examples{
 S <- sphere()

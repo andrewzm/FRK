@@ -29,13 +29,13 @@ Generate automatically a set of local basis functions in the domain, and automat
 This function automatically places basis functions within the domain of interest. If the domain is a plane or the real line, then the object \code{data} is used to establish the domain boundary.
 
 
-The arguement \code{type} can be either \code{Gaussian} in which case
+The argument \code{type} can be either ``Gaussian'' in which case
 \deqn{\phi(u) = \exp\left(-\frac{\|u \|}{2\sigma^2}\right),}
-\code{bisquare}, in which case  '
+``bisquare'', in which case  '
 \deqn{\phi(u) = \left(1- \left(\frac{\| u \|}{R}\right)^2\right)^2 I(\|u\| < R),}
-\code{exp}, in which case
+``exp'', in which case
 \deqn{\phi(u) = \exp\left(-\frac{\|u\|}{ \tau}\right),}
-or \code{Matern32}, in which case
+or ``Matern32'', in which case
 \deqn{\phi(u) = \left(1 + \frac{\sqrt{3}\|u\|}{\kappa}\right)\exp\left(-\frac{\sqrt{3}\| u \|}{\kappa}\right),}
 The parameters \eqn{\sigma, R, \tau} and \eqn{\kappa} are \code{scale} arguments.
 

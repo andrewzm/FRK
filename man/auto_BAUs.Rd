@@ -10,7 +10,7 @@ auto_BAUs(manifold, type = "grid", cellsize = rep(1, dimensions(manifold)),
 \arguments{
 \item{manifold}{object of class \code{manifold}}
 
-\item{type}{either ``hex'' or ``grid'', indicating whether gridded or hexagonal BAUs should be used}
+\item{type}{either ``grid'' or ``hex'', indicating whether gridded or hexagonal BAUs should be used}
 
 \item{cellsize}{denotes size of gridcell when \code{type} = ``grid''. Needs to be of length 1 (isotropic grid) or a vector of length \code{dimensions(manifold)}}
 
@@ -26,11 +26,11 @@ auto_BAUs(manifold, type = "grid", cellsize = rep(1, dimensions(manifold)),
 This function calls the generic function \code{auto_BAU} (currently not exported) after a series of checks and is the easiest way to generate a set of BAUs on the manifold being used.
 }
 \details{
-\code{auto_BAUs} constructs a set of basic aerial units (BAUs) used both for data pre-processing and for prediction. As such, the BAUs need to be of sufficienly fine resolution so that data is not adversely affected; a subset of BAUs (or a completely new set of polygons) may be used for prediction
+\code{auto_BAUs} constructs a set of basic aerial units (BAUs) used both for data pre-processing and for prediction. As such, the BAUs need to be of sufficienly fine resolution so that data is not adversely affected.
 
-Two types of BAUs are supported by \code{FRK}: ``hex'' (hexagonal) and ``grid'' (rectangular). In order to have a ``grid'' set of BAUs, the user should specify a cellsize of length equal to the dimensions of the manifold, that is, of length 1 for \code{real_line} and 2 for \code{sphere} and \code{plane}. When a ``hex'' set of BAUs is desired, the first element of \code{cellsize} is used to determine the side length by dividing this value by approximately 2. If the manifold is a \code{sphere}, then \code{cellsize} is ignored and the resulting hexagonal grid is a discrete global grid with resolution \code{res}. The parameter type is ignored with \code{real_line} and ``hex'' is not available for this manifold.
+Two types of BAUs are supported by \code{FRK}: ``hex'' (hexagonal) and ``grid'' (rectangular). In order to have a ``grid'' set of BAUs, the user should specify a cellsize of length equal to the dimensions of the manifold, that is, of length 1 for \code{real_line} and 2 for \code{sphere} and \code{plane}. When a ``hex'' set of BAUs is desired, the first element of \code{cellsize} is used to determine the side length by dividing this value by approximately 2. The argument \code{type} is ignored with \code{real_line} and ``hex'' is not available for this manifold.
 
-  If the object \code{data} is provided, then automatic domain selection is carried out by employing the \code{INLA} function \code{inla.nonconvex.hull}, which finds a (non-convex) hull surrounding the data points (or centroids of the data polygons). This domain is extended and smoothed using the \code{convex} parameter. The parameter \code{convex} should be negative, and a larger absolute value for \code{convex} results in a larger domain with smoother boundaries. Due to the dependency on hull construction, \code{INLA} needs to be installed in order to use this function unless BAUs on a sphere are desired (note that \code{INLA} is not available on CRAN at time of writing).
+  If the object \code{data} is provided, then automatic domain selection is carried out by employing the \code{INLA} function \code{inla.nonconvex.hull}, which finds a (non-convex) hull surrounding the data points (or centroids of the data polygons). This domain is extended and smoothed using the \code{convex} parameter. The parameter \code{convex} should be negative, and a larger absolute value for \code{convex} results in a larger domain with smoother boundaries. Due to the dependency on hull construction, \code{INLA} needs to be installed in order to use this function unless BAUs on a sphere are desired (note that \code{INLA} was not available on CRAN at time of writing).
 }
 \examples{
 ## First a 1D example
@@ -46,12 +46,15 @@ spplot(Grid1D_df)
 data(meuse)
 coordinates(meuse) = ~x+y # change into an sp object
 if(require(INLA)) { # INLA is needed to find the non-convex hull
+     ## Grid BAUs
      GridPols_df <- auto_BAUs(manifold = plane(),
                              cellsize = 200,
                              type = "grid",
                              data = meuse,
                              convex=-0.05)
      plot(GridPols_df)
+
+     ## Hex BAUs
      HexPols_df <- auto_BAUs(manifold = plane(),
                             cellsize = 200,
                             type = "hex",

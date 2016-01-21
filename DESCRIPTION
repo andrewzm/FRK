@@ -23,7 +23,6 @@ Depends:
     R (>= 3.1)
 Suggests:
     testthat,
-    reshape2,
     gstat,
     knitr,
     splancs,
@@ -33,6 +32,7 @@ Suggests:
 Enhances:
     dggrids,
 Imports:
+    methods,
     Matrix,
     ggplot2,
     dplyr,

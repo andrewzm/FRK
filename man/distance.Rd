@@ -21,7 +21,7 @@ distance(d, x1, x2)
 \item{x2}{second coordinate}
 }
 \description{
-Compute distance using object of class \code{measure} or \code{manifold}
+Compute distance using object of class \code{measure} or \code{manifold}.
 }
 \examples{
 distance(sphere(),matrix(0,1,2),matrix(10,1,2))

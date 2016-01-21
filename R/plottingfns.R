@@ -6,11 +6,11 @@ circleFun <- function(center = c(0,0),diameter = 1, npoints = 100){
     return(data.frame(x = xx, y = yy))
 }
 
-#' @title Draw a map of the world
+#' @title Draw a map of the world with country boundaries.
 #' @description Generates a ggplot2 map of the world
 #' @param g initial ggplot object
 #' @param inc_border flag indicating whether a map border should be drawn or not. See details.
-#' @details This function uses \code{ggplot2::map_data} in order to create a world map. Since, by default, this creates lines crossing the world at the (-180,180) longitude boundary, function \code{clipPolys} from the package \code{PBSmapping} is used to split the polygons at this boundary into two. If \code{inc_border} is TRUE, then a border is drawn around the lon/lat space; this option is most useful for projections which do not yeild rectangular plots (e.g., the sinusoidal projection).
+#' @details This function uses \code{ggplot2::map_data} in order to create a world map. Since, by default, this creates lines crossing the world at the (-180,180) longitude boundary, function \code{clipPolys} taken from the package \code{PBSmapping} is used to split the polygons at this boundary into two. If \code{inc_border} is TRUE, then a border is drawn around the lon/lat space; this option is most useful for projections which do not yeild rectangular plots (e.g., the sinusoidal projection).
 #' @export
 #' @examples
 #' library(ggplot2)
@@ -20,7 +20,7 @@ draw_world <- function(g = ggplot(),inc_border = TRUE) {
     if(!(is(g, "ggplot"))) stop("g has to be of class ggplot")
     if(!(is.logical(inc_border))) stop("inc_border needs to be TRUE or FALSE")
     X <- Y <- PID <- NULL
-    data(worldmap, package = "FRK")
+    data(worldmap, envir=environment(), package = "FRK")
     names(worldmap) <- c("X","Y","PID","POS","region","subregion")
     worldmap = clipPolys(worldmap, xlim=c(-180,180),ylim=c(-90,90), keepExtra=TRUE)
     if(inc_border) {
