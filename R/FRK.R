@@ -4,6 +4,7 @@
 #' @name FRK-package
 #' @docType package
 #' @useDynLib FRK
+#' @import methods
 #' @import ggplot2
 #' @import Matrix
 #' @import sp
