@@ -10,7 +10,6 @@
 #' @param tol convergence tolerance for the EM algorithm
 #' @param method parameter estimation method to employ. Currently only ``EM'' is supported
 #' @param print_lik flag indicating whether likelihood should be printed or not on convergence of the estimation algorithm
-#' @param pred_locs object of class \code{SpatialPolygonsDataFrame} containing the prediction polygons. The data frame of \code{pred_locs} must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality. Currently, \code{pred_locs} need to be identical to \code{BAUs} above
 #' @param use_centroid a flag indicating whether the prediction over a BAU can simply be taken as a point prediction at the BAU's centroid. This should only be done if the BAUs on which the model is trained coincide with the BAUs used in \code{SRE()}
 #' @param include_fs flag indicating whether to assume prediction locations coincide with observations in BAUs (where applicable) or not.
 #' @details \code{SRE()} is the main function in the package as it constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of basic aerial units (BAUs). The function first takes each object in the list \code{data} and maps it to the BAUs -- this entails binning the point-referenced data into BAUs (and averaging within the BAU) and finding which BAUs are influenced by the polygon datasets. Following this the incidence matrix \code{Cmat} is constructed, which appears in the observation model \eqn{Z = CY + e}, where \eqn{C} is the incidence matrix.
@@ -21,7 +20,7 @@
 #'
 #'The actual computations for the E-step and M-step are relatively straightforward. The E-step contains an inverse of an \eqn{n \times n} matrix, where \code{n} is the number of basis functions which should not exceed 2000. The M-step first updates the matrix \eqn{K}, which only depends on the sufficient statistics of the basis weights \eqn{\eta}. Then, the regression parameters \eqn{\alpha} and a line search is used to update the fine-scale variance \eqn{\sigma^2_{fs}}. If the fine-scale errors and measurement errors are homoscedastic a closed-form solution is available for the update of \eqn{\sigma^2_{fs}}. Irrespectively, since the udpates of \eqn{\alpha} and \eqn{\sigma^2_{fs}} are dependent, the updates are iterated until the change in \eqn{\sigma^2_{fs}} is no more than 0.1\%.
 #'
-#'Once the parameters are fitted, the \code{SRE} object is passed onto the function \code{SRE.predict()} in order to carry out optimal predictions over selected polygons, typically the same BAUs used to construct the SRE model with \code{SRE()}. The first part of the prediction process is to construct the matrix \eqn{S} by averaging the basis functions over the prediction polygons, using Monte Carlo integration with 1000 samples. This is a computationally-intensive process. On the other hand, one could set \code{use_centroid = TRUE} and treat the prediction over the entire polygon as that of a BAU at the centre of the polyon. This will yield valid results only if the polygon is itself a BAU (which many times it is) and if the BAUs are themselves relatively small. Once the matrix \eqn{S} is found, a standard Gaussian inversion using the estimated parameters is used.
+#'Once the parameters are fitted, the \code{SRE} object is passed onto the function \code{SRE.predict()} in order to carry out optimal predictions over the same BAUs used to construct the SRE model with \code{SRE()}. The first part of the prediction process is to construct the matrix \eqn{S} by averaging the basis functions over the prediction polygons/BAUs, using Monte Carlo integration with 1000 samples. This is a computationally-intensive process. On the other hand, one could set \code{use_centroid = TRUE} and treat the prediction over the entire polygon as that of a BAU at the centre of the polyon. This will yield valid results only if the BAUs are relatively small. Once the matrix \eqn{S} is found, a standard Gaussian inversion using the estimated parameters is used.
 #'
 #'\code{SRE.predict} returns the BAUs, which are of class \code{SpatialPolygonsDataFrame}, with two added attributes, \code{mu} and \code{var}. These can then be easily plotted using \code{spplot} or \code{ggplot2} (in conjunction with \code{\link{SpatialPolygonsDataFrame_to_df}}) as shown in the package vignettes.
 #' @references
@@ -58,7 +57,7 @@
 #' S <- SRE.fit(S,n_EM = 5,tol = 1e-5,print_lik=TRUE)
 #'
 #' ### Predict over BAUs
-#' grid_BAUs <- SRE.predict(S,pred_locs = grid_BAUs,use_centroid = TRUE)
+#' grid_BAUs <- SRE.predict(S,use_centroid = TRUE)
 #'
 #' ### Plot
 #' X <- slot(grid_BAUs,"data") %>%
@@ -96,7 +95,6 @@ SRE <- function(f,data,basis,BAUs,est_error=TRUE) {
         Z[[i]] <- Matrix(L$y)
         Ve[[i]] <- Diagonal(x=data_proc$std^2)
 
-
         C_idx <- BuildC(data_proc,BAUs)
 
         Cmat[[i]] <- sparseMatrix(i=C_idx$i_idx,
@@ -106,7 +104,7 @@ SRE <- function(f,data,basis,BAUs,est_error=TRUE) {
 
         Cmat[[i]] <- Cmat[[i]] / rowSums(Cmat[[i]]) ## Average BAUs for polygon observations
 
-        Vfs[[i]] <- Diagonal(x=as.numeric(Cmat[[i]]^2 %*% BAUs$fs )) # Assuming no obeservations overlap
+        Vfs[[i]] <- Diagonal(x=as.numeric(Cmat[[i]]^2 %*% BAUs$fs ))
         S[[i]] <- eval_basis(basis, s = data_proc)
         ## Note that S constructed in this way is similar to Cmat %*% S_BAUs where S_BAUs is the
         ## basis functions evaluated at the BAUs. Verify this by checking the following are similar
@@ -172,28 +170,30 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM",print_lik=FAL
     SRE_model
 }
 
-#setMethod("SRE.predict",signature(SRE_model="SRE", pred_locs="NULL",depname="character"),
-
 #' @rdname SRE
 #' @export
-SRE.predict <- function(SRE_model,pred_locs = SRE_model@BAUs,use_centroid=TRUE,include_fs=TRUE) {
-    ### CHANGE INPUT TO IDX!!! OR NAMES OR SOMETHING SO THAT WE CAN PREDICT ON A SUBSET OF BAUs!!
-    if(is(pred_locs,"Spatial") & !(is(pred_locs,"SpatialPolygonsDataFrame")))
-        stop("Predictions need to be over BAUs or spatial polygons")
-    if(is(pred_locs,"ST") & !(is(pred_locs,"STFDF")))
-        if(!(is(pred_locs@sp,"SpatialPolygonsDataFrame")))
-            stop("Predictions need to be over BAUs or STFDFs with spatial polygons")
-    if(!("fs" %in% names(pred_locs@data))) {
-        warning("data should contain a field 'fs' containing a basis function for fine-scale variation. Setting basis function equal to one everywhere.")
-        pred_locs$fs <- 1
-    }
-    if(!(all(pred_locs$fs > 0))) stop("fine-scale variation basis function needs to be nonnegative everywhere")
+SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE) {
 
 
-    pred_locs <- .SRE.predict(Sm=SRE_model,pred_locs=pred_locs,use_centroid=use_centroid,include_fs=include_fs)
+    # if(is(pred_locs,"Spatial") & !(is(pred_locs,"SpatialPolygonsDataFrame")))
+    #     stop("Predictions need to be over BAUs or spatial polygons")
+    #
+    # if(is(pred_locs,"ST") & !(is(pred_locs,"STFDF")))
+    #     if(!(is(pred_locs@sp,"SpatialPolygonsDataFrame")))
+    #         stop("Predictions need to be over BAUs or STFDFs with spatial polygons")
+    #
+    # if(!("fs" %in% names(pred_locs@data))) {
+    #     warning("data should contain a field 'fs' containing a basis function for
+    #             fine-scale variation. Setting basis function equal to one everywhere.")
+    #     pred_locs$fs <- 1
+    # }
+    # if(!(all(pred_locs$fs > 0))) stop("fine-scale variation basis function needs to be nonnegative everywhere")
+
+
+    pred_locs <- .SRE.predict(Sm=SRE_model,use_centroid=use_centroid,include_fs=include_fs)
 
     ## Rhipe VERSION (currently disabled)
-    # pred_locs <- rhwrapper(Ntot = length(pred_locs),
+    # pred_locs <- rhwrapper(Ntot = length(Sm@BAUs),
     #                        N = 4000,
     #                        f_expr = .rhSRE.predict,
     #                        Sm = SRE_model,
@@ -201,6 +201,94 @@ SRE.predict <- function(SRE_model,pred_locs = SRE_model@BAUs,use_centroid=TRUE,i
     #                        use_centroid = use_centroid)
 
     pred_locs
+}
+
+.SRE.predict <- function(Sm,use_centroid,include_fs = TRUE) {
+
+    ## Predict at BAUs
+    pred_locs <- Sm@BAUs
+    depname <- all.vars(Sm@f)[1]
+    pred_locs[[depname]] <- 0.1
+    L <- .gstat.formula(Sm@f,data=pred_locs)
+    X = as(L$X,"Matrix")
+    if(is(pred_locs,"Spatial")) {
+        if(use_centroid) {
+            S0 <- eval_basis(Sm@basis,as.matrix(pred_locs[coordnames(Sm@data[[1]])]@data))
+        } else {
+            S0 <- eval_basis(Sm@basis,pred_locs)
+        }
+    } else if(is(pred_locs,"STFDF")) {
+        if(use_centroid) {
+            S0 <- eval_basis(Sm@basis,as.matrix(cbind(coordinates(pred_locs),pred_locs@data$t)))
+        } else {
+            stop("Can only use centroid when predicting with spatio-temporal data")
+        }
+    }
+    pred_locs[[depname]] <- NULL
+
+    alpha <- Sm@alphahat
+    K <- Sm@Khat
+    sigma2fs <- Sm@sigma2fshat
+    D <- sigma2fs*Sm@Vfs + Sm@Ve
+    Dinv <- Diagonal(x=1/diag(D))
+    mu_eta <- Sm@mu_eta
+    S_eta <- Sm@S_eta
+
+    sig2_Vfs_pred <- Diagonal(x=sigma2fs*pred_locs$fs)
+
+    if(is(pred_locs,"Spatial")) {
+        idx <- match(row.names(pred_locs),row.names(Sm@BAUs))
+    } else if (is(pred_locs,"STFDF")){
+        idx <- match(pred_locs@data$n,Sm@BAUs@data$n)
+    }
+    #C <- Sm@Cmat[,idx,drop=FALSE]
+    CZ <- Sm@Cmat
+
+    if(include_fs) {
+        if(sigma2fs >0) {
+            LAMBDA <- as(bdiag(Sm@Khat,sig2_Vfs_pred),"symmetricMatrix")
+            LAMBDAinv <- chol2inv(chol(LAMBDA))  #block diagonal so straightforward
+            PI <- cBind(S0, .symDiagonal(n=length(pred_locs)))
+            Qx <- t(PI) %*% t(CZ) %*% solve(Sm@Ve) %*% CZ %*% PI + LAMBDAinv
+            temp <- cholPermute(Qx)
+            ybar <- t(PI) %*%t(CZ) %*% solve(Sm@Ve) %*% (Sm@Z - CZ %*% X %*% alpha)
+            x_mean <- cholsolve(Qx,ybar,perm=TRUE,cholQp = temp$Qpermchol, P = temp$P)
+            Partial_Cov <- Takahashi_Davis(Qx,cholQp = temp$Qpermchol,P = temp$P)
+            x_margvar <- diag(Partial_Cov)
+            pred_locs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
+        } else {
+            LAMBDA <- as(Sm@Khat,"symmetricMatrix")
+            LAMBDAinv <- chol2inv(chol(LAMBDA))
+            PI <- S0
+            Qx <- crossprod(solve(sqrt(Sm@Ve)) %*% CZ %*% PI) + LAMBDAinv
+            #Qx <- t(PI) %*% t(C) %*% solve(Sm@Ve) %*% C %*% PI + LAMBDAinv
+            ybar <- t(PI) %*%t(CZ) %*% solve(Sm@Ve) %*% (Sm@Z - CZ %*% X %*% alpha)
+            Partial_Cov <- as(chol2inv(chol(Qx)),"dgeMatrix")  # Actually all Cov, convenient for later
+            x_mean <- Partial_Cov %*% ybar
+            x_margvar <- diag(Partial_Cov)
+            pred_locs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
+        }
+
+        ## variance too hard to compute all at once -- do it in blocks of 1000
+        temp <- rep(0,length(pred_locs))
+        batching=cut(1:nrow(PI),breaks = seq(0,nrow(PI)+1000,by=1000),labels=F)
+
+        for(i in 1:max(unique(batching))) {
+            idx = which(batching==i)
+            temp[idx] <- as.numeric(rowSums((PI[idx,] %*% Partial_Cov)*PI[idx,]))
+        }
+        pred_locs[["var"]] <- temp
+
+        #pred_locs[["var"]] <- as.numeric(rowSums((PI %*% Partial_Cov)*PI))
+
+    }
+    if(!include_fs) {
+        pred_locs[["mu"]] <- as.numeric(X %*% alpha + S0 %*% mu_eta)
+        pred_locs[["var"]] <- rowSums((S0 %*% S_eta) * S0)
+    }
+
+    pred_locs
+
 }
 
 setMethod("summary",signature(object="SRE"),
@@ -245,89 +333,6 @@ setMethod("summary",signature(object="SRE"),
           })
 
 
-.SRE.predict <- function(Sm,pred_locs,use_centroid,include_fs = TRUE) {
-    depname <- all.vars(Sm@f)[1]
-    pred_locs[[depname]] <- 0.1
-    L <- .gstat.formula(Sm@f,data=pred_locs)
-    X = as(L$X,"Matrix")
-    if(is(pred_locs,"Spatial")) {
-        if(use_centroid) {
-            S0 <- eval_basis(Sm@basis,as.matrix(pred_locs[coordnames(Sm@data[[1]])]@data))
-        } else {
-            S0 <- eval_basis(Sm@basis,pred_locs)
-        }
-    } else if(is(pred_locs,"STFDF")) {
-        if(use_centroid) {
-            S0 <- eval_basis(Sm@basis,as.matrix(cbind(coordinates(pred_locs),pred_locs@data$t)))
-        } else {
-            stop("Can only use centroid when predicting with spatio-temporal data")
-        }
-    }
-    pred_locs[[depname]] <- NULL
-
-    alpha <- Sm@alphahat
-    K <- Sm@Khat
-    sigma2fs <- Sm@sigma2fshat
-    D <- sigma2fs*Sm@Vfs + Sm@Ve
-    Dinv <- Diagonal(x=1/diag(D))
-    mu_eta <- Sm@mu_eta
-    S_eta <- Sm@S_eta
-
-    sig2_Vfs_pred <- Diagonal(x=sigma2fs*pred_locs$fs)
-
-    if(is(pred_locs,"Spatial")) {
-        idx <- match(row.names(pred_locs),row.names(Sm@BAUs))
-    } else if (is(pred_locs,"STFDF")){
-        idx <- match(pred_locs@data$n,Sm@BAUs@data$n)
-    }
-    C <- Sm@Cmat[,idx]
-
-    if(include_fs) {
-        if(sigma2fs >0) {
-            LAMBDA <- as(bdiag(Sm@Khat,sig2_Vfs_pred),"symmetricMatrix")
-            LAMBDAinv <- chol2inv(chol(LAMBDA))  #block diagonal so straightforward
-            PI <- cBind(S0, .symDiagonal(n=length(pred_locs)))
-            Qx <- t(PI) %*% t(C) %*% solve(Sm@Ve) %*% C %*% PI + LAMBDAinv
-            temp <- cholPermute(Qx)
-            ybar <- t(PI) %*%t(C) %*% solve(Sm@Ve) %*% (Sm@Z - C %*% X %*% alpha)
-            x_mean <- cholsolve(Qx,ybar,perm=TRUE,cholQp = temp$Qpermchol, P = temp$P)
-            Partial_Cov <- Takahashi_Davis(Qx,cholQp = temp$Qpermchol,P = temp$P)
-            x_margvar <- diag(Partial_Cov)
-            pred_locs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
-        } else {
-            LAMBDA <- as(Sm@Khat,"symmetricMatrix")
-            LAMBDAinv <- chol2inv(chol(LAMBDA))
-            PI <- S0
-            Qx <- crossprod(solve(sqrt(Sm@Ve)) %*% C %*% PI) + LAMBDAinv
-            #Qx <- t(PI) %*% t(C) %*% solve(Sm@Ve) %*% C %*% PI + LAMBDAinv
-            ybar <- t(PI) %*%t(C) %*% solve(Sm@Ve) %*% (Sm@Z - C %*% X %*% alpha)
-            Partial_Cov <- as(chol2inv(chol(Qx)),"dgeMatrix")  # Actually all Cov, convenient for later
-            x_mean <- Partial_Cov %*% ybar
-            x_margvar <- diag(Partial_Cov)
-            pred_locs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
-        }
-
-        ## variance too hard to compute all at once -- do it in blocks of 1000
-        temp <- rep(0,length(pred_locs))
-        batching=cut(1:nrow(PI),breaks = seq(0,nrow(PI)+1000,by=1000),labels=F)
-
-        for(i in 1:max(unique(batching))) {
-            idx = which(batching==i)
-            temp[idx] <- as.numeric(rowSums((PI[idx,] %*% Partial_Cov)*PI[idx,]))
-        }
-        pred_locs[["var"]] <- temp
-
-        #pred_locs[["var"]] <- as.numeric(rowSums((PI %*% Partial_Cov)*PI))
-
-    }
-    if(!include_fs) {
-        pred_locs[["mu"]] <- as.numeric(X %*% alpha + S0 %*% mu_eta)
-        pred_locs[["var"]] <- rowSums((S0 %*% S_eta) * S0)
-    }
-
-    pred_locs
-
-}
 
 .SRE.Estep <- function(Sm) {
 

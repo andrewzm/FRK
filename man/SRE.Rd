@@ -11,8 +11,7 @@ SRE(f, data, basis, BAUs, est_error = TRUE)
 SRE.fit(SRE_model, n_EM = 100L, tol = 1e-05, method = "EM",
   print_lik = FALSE)
 
-SRE.predict(SRE_model, pred_locs = SRE_model@BAUs, use_centroid = TRUE,
-  include_fs = TRUE)
+SRE.predict(SRE_model, use_centroid = TRUE, include_fs = TRUE)
 }
 \arguments{
 \item{f}{\code{R} formula relating the dependent variable (or transformations thereof) to covariates}
@@ -35,8 +34,6 @@ SRE.predict(SRE_model, pred_locs = SRE_model@BAUs, use_centroid = TRUE,
 
 \item{print_lik}{flag indicating whether likelihood should be printed or not on convergence of the estimation algorithm}
 
-\item{pred_locs}{object of class \code{SpatialPolygonsDataFrame} containing the prediction polygons. The data frame of \code{pred_locs} must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality. Currently, \code{pred_locs} need to be identical to \code{BAUs} above}
-
 \item{use_centroid}{a flag indicating whether the prediction over a BAU can simply be taken as a point prediction at the BAU's centroid. This should only be done if the BAUs on which the model is trained coincide with the BAUs used in \code{SRE()}}
 
 \item{include_fs}{flag indicating whether to assume prediction locations coincide with observations in BAUs (where applicable) or not.}
@@ -53,7 +50,7 @@ The SRE model is given by \eqn{Y = T\alpha + S\eta + v} where \eqn{X} are the co
 
 The actual computations for the E-step and M-step are relatively straightforward. The E-step contains an inverse of an \eqn{n \times n} matrix, where \code{n} is the number of basis functions which should not exceed 2000. The M-step first updates the matrix \eqn{K}, which only depends on the sufficient statistics of the basis weights \eqn{\eta}. Then, the regression parameters \eqn{\alpha} and a line search is used to update the fine-scale variance \eqn{\sigma^2_{fs}}. If the fine-scale errors and measurement errors are homoscedastic a closed-form solution is available for the update of \eqn{\sigma^2_{fs}}. Irrespectively, since the udpates of \eqn{\alpha} and \eqn{\sigma^2_{fs}} are dependent, the updates are iterated until the change in \eqn{\sigma^2_{fs}} is no more than 0.1\%.
 
-Once the parameters are fitted, the \code{SRE} object is passed onto the function \code{SRE.predict()} in order to carry out optimal predictions over selected polygons, typically the same BAUs used to construct the SRE model with \code{SRE()}. The first part of the prediction process is to construct the matrix \eqn{S} by averaging the basis functions over the prediction polygons, using Monte Carlo integration with 1000 samples. This is a computationally-intensive process. On the other hand, one could set \code{use_centroid = TRUE} and treat the prediction over the entire polygon as that of a BAU at the centre of the polyon. This will yield valid results only if the polygon is itself a BAU (which many times it is) and if the BAUs are themselves relatively small. Once the matrix \eqn{S} is found, a standard Gaussian inversion using the estimated parameters is used.
+Once the parameters are fitted, the \code{SRE} object is passed onto the function \code{SRE.predict()} in order to carry out optimal predictions over the same BAUs used to construct the SRE model with \code{SRE()}. The first part of the prediction process is to construct the matrix \eqn{S} by averaging the basis functions over the prediction polygons/BAUs, using Monte Carlo integration with 1000 samples. This is a computationally-intensive process. On the other hand, one could set \code{use_centroid = TRUE} and treat the prediction over the entire polygon as that of a BAU at the centre of the polyon. This will yield valid results only if the BAUs are relatively small. Once the matrix \eqn{S} is found, a standard Gaussian inversion using the estimated parameters is used.
 
 \code{SRE.predict} returns the BAUs, which are of class \code{SpatialPolygonsDataFrame}, with two added attributes, \code{mu} and \code{var}. These can then be easily plotted using \code{spplot} or \code{ggplot2} (in conjunction with \code{\link{SpatialPolygonsDataFrame_to_df}}) as shown in the package vignettes.
 }
@@ -87,7 +84,7 @@ S <- SRE(f,list(sim_data),G,
 S <- SRE.fit(S,n_EM = 5,tol = 1e-5,print_lik=TRUE)
 
 ### Predict over BAUs
-grid_BAUs <- SRE.predict(S,pred_locs = grid_BAUs,use_centroid = TRUE)
+grid_BAUs <- SRE.predict(S,use_centroid = TRUE)
 
 ### Plot
 X <- slot(grid_BAUs,"data") \%>\%
