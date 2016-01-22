@@ -511,7 +511,7 @@ df_to_SpatialPolygons <- function(df,keys,coords,proj) {
     if(!is(proj,"CRS")) stop("proj needs to be of class CRS")
 
     dfun <- function(d) {
-        Polygons(list(Polygon(d[coords])),digest::digest(d[keys]))
+        Polygons(list(Polygon(d[coords])),digest(d[keys]))
     }
 
     if(opts_FRK$get("parallel") > 1) {

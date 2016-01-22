@@ -10,8 +10,8 @@
   \item{lat}{latitude coordinate}
   \item{group}{polygon (region) number}
   \item{order}{order of point in polygon boundary}
-  \item{regions}{region name}
-  \item{subregions}{subregion name}
+  \item{region}{region name}
+  \item{subregion}{subregion name}
 }}
 \usage{
 worldmap

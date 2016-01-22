@@ -59,8 +59,8 @@
 #'   \item{lat}{latitude coordinate}
 #'   \item{group}{polygon (region) number}
 #'   \item{order}{order of point in polygon boundary}
-#'   \item{regions}{region name}
-#'   \item{subregions}{subregion name}
+#'   \item{region}{region name}
+#'   \item{subregion}{subregion name}
 #' }
 #' @docType data
 #' @references  Original S code by Becker, R.A. and Wilks, R.A. R version by Brownrigg, R. Enhancements by Minka, T.P. and Deckmyn, A. (2015) maps: Draw Geographical Maps, R package version 3.0.1.

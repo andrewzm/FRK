@@ -21,6 +21,7 @@ Constructs a new set of basis by finding the tensor product of two sets of basis
 }
 \examples{
 library(spacetime)
+library(sp)
 library(dplyr)
 sim_data <- data.frame(lon = runif(20,-180,180),
                        lat = runif(20,-90,90),

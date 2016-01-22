@@ -93,6 +93,7 @@ setGeneric("eval_basis", function(basis,s,output="matrix") standardGeneric("eval
 #' @export
 #' @examples
 #' library(spacetime)
+#' library(sp)
 #' library(dplyr)
 #' sim_data <- data.frame(lon = runif(20,-180,180),
 #'                        lat = runif(20,-90,90),
