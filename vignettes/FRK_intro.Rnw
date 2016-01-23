@@ -1,0 +1,477 @@
+%% ! Rnw root = FRK_Master.Rnw
+\documentclass{article}
+
+% \VignetteEngine{knitr::knitr}
+% \VignetteIndexEntry{FRK for prediction of CO2 from AIRS data}
+
+\usepackage{hyperref}
+\usepackage{subfig}
+\usepackage{graphicx}
+\usepackage{amssymb,amsmath}
+\usepackage{bm}
+\usepackage{bbm}
+\usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{natbib}
+\usepackage{setspace}
+\usepackage{multirow}
+\usepackage{lineno}
+\usepackage{array}
+\usepackage[normalem]{ulem}
+\usepackage{tikz}
+\usepackage{endnotes}
+\usepackage{authblk}
+\usepackage{amsthm}
+
+\renewcommand{\tt} {\texttt}
+
+
+
+\newtheorem{proposition}{Proposition}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}{Lemma}[section]
+
+\newcommand{\red}{\textcolor{red}}%
+\newcommand{\blue}{\textcolor{blue}}
+
+\newcommand{\zerob} {{\bf 0}}
+\newcommand{\oneb} {{\bf 1}}
+\newcommand{\expect} {{\mathbb{E}}}
+\newcommand{\pt} {\tilde{p}}
+\newcommand{\alphat} {\tilde{\alpha}}
+\newcommand{\betat} {\tilde{\beta}}
+\newcommand{\pb} {\bar{p}}
+\newcommand{\thetab} {{\boldsymbol{\theta}}}
+\newcommand{\alphab} {{\boldsymbol{\alpha}}}
+\newcommand{\kappab} {{\boldsymbol{\kappa}}}
+\newcommand{\sigmab} {{\boldsymbol{\sigma}}}
+\newcommand{\nub} {{\boldsymbol{\nub}}}
+\newcommand{\gammab} {{\boldsymbol{\gamma}}}
+\newcommand{\deltab} {{\boldsymbol{\delta}}}
+\newcommand{\Deltab} {{\boldsymbol{\Delta}}}
+\newcommand{\Thetab} {{\boldsymbol{\Theta}}}
+\newcommand{\varthetab} {{\boldsymbol{\vartheta}}}
+\newcommand{\Yset} {\mathcal{Y}}
+\newcommand{\Xset} {\mathcal{X}}
+\newcommand{\intd} {\textrm{d}}
+\newcommand{\phib} {\boldsymbol{\phi}}
+\newcommand{\zetab} {\boldsymbol{\zeta}}
+\newcommand{\etab} {\boldsymbol{\eta}}
+\newcommand{\psib} {\boldsymbol{\psi}}
+\newcommand{\Sigmawinv} {{\boldsymbol{\it \Sigma}}_w^{-1}}
+\newcommand{\Sigmamat} {{\bm \Sigma}}
+\newcommand{\Sigmamatt} {\widetilde{\boldsymbol{\Sigma}}}
+\newcommand{\Qmatt} {\widetilde{\textbf{Q}}}
+\newcommand{\muvect} {\widetilde{\boldsymbol{\mu}}}
+\newcommand{\Psib} {{\bm \Psi}}
+\newcommand{\Omegab} {{\bm \Omega}}
+\newcommand{\Upsilonmat} {{\boldsymbol{\it \Upsilon}}}
+\newcommand{\Lambdamat} {\mathbf{\Lambda}}
+\newcommand{\Gammamat} {{\boldsymbol{\it \Gamma}}}
+\renewcommand{\Gammamat} {{\boldsymbol{\Gamma}}}
+\newcommand{\Pimat} {{\bm \Pi}}
+\newcommand{\Amat} {\textbf{A}}
+\newcommand{\Bmat} {\textbf{B}}
+\newcommand{\Dmat} {\textbf{D}}
+\newcommand{\Dvec} {\textbf{D}}
+\newcommand{\Gmat} {\textbf{G}}
+\newcommand{\Lmat} {\textbf{L}}
+\newcommand{\Qmat} {\textbf{Q}}
+\newcommand{\Rmat} {\textbf{R}}
+\newcommand{\Smat} {\textbf{S}}
+\newcommand{\Tmat} {\textbf{T}}
+\newcommand{\Qt} {\widetilde{\textbf{Q}}}
+\newcommand{\Qtinv} {\widetilde{\textbf{Q}}^{-1}}
+\newcommand{\Mmat} {\textbf{M}}
+\newcommand{\Cmat} {\mathbf{C}}
+\newcommand{\Jmat} {\mathbf{J}}
+\newcommand{\cmat} {\textbf{c}}
+\newcommand{\Kmat} {\textbf{K}}
+\newcommand{\im} {\iota}
+\newcommand{\Zmat} {\textbf{Z}}
+\newcommand{\Xmat} {\textbf{X}}
+\newcommand{\Xvec} {\mathbf{X}}
+\newcommand{\Rvec} {\mathbf{R}}
+\newcommand{\Imat} {\textbf{I}}
+\newcommand{\Umat} {\textbf{U}}
+\newcommand{\Pmat} {\textbf{P}}
+\newcommand{\Hmat} {\textbf{H}}
+\newcommand{\Vmat} {\textbf{V}}
+\newcommand{\bvec} {\textbf{b}}
+\newcommand{\dvec} {\textbf{d}}
+\newcommand{\avec} {\textbf{a}}
+\newcommand{\evec} {\textbf{e}}
+\newcommand{\hvec} {\textbf{h}}
+\newcommand{\xvec} {\textbf{x}}
+\newcommand{\yvec} {\textbf{y}}
+\newcommand{\zvec} {\textbf{z}}
+\newcommand{\wvec} {\textbf{w}}
+\newcommand{\vvec} {\textbf{v}}
+\newcommand{\svec} {\textbf{s}}
+\newcommand{\tvec} {\textbf{t}}
+\newcommand{\uvec} {\textbf{u}}
+\newcommand{\gvec} {\textbf{g}}
+\newcommand{\fvec} {\textbf{f}}
+\newcommand{\rvec} {\textbf{r}}
+\newcommand{\muvec} {\boldsymbol{\mu}}
+\newcommand{\Psix} {{\boldsymbol{\it \Psi}}_{\xvec}}
+\newcommand{\Phimat} {{\boldsymbol{\it \Phi}}}
+\newcommand{\Psitheta} {{\boldsymbol{\it \Psi}}_{\varthetab}}
+\newcommand{\Psia} {{\boldsymbol{\it \Psi}}_{A}}
+\newcommand{\Psixinv} {{\boldsymbol{\it \Psi}}_{\xvec}^{-1}}
+\newcommand{\vvm} {\boldsymbol {\mathcal \upsilon}}
+\newcommand{\upsilonb} {\boldsymbol {\upsilon}}
+\newcommand{\betab} {\boldsymbol {\beta}}
+\newcommand{\omegab} {\boldsymbol {\omega}}
+\newcommand{\Aop}{\boldsymbol{\mathcal{A}}}
+\newcommand{\ICE} {\textit{ICE}}
+\newcommand{\GIA} {\textit{GIA}}
+\newcommand{\GPS} {\textit{GPS}}
+\newcommand{\ERS} {\textit{ERS}}
+\newcommand{\GR} {\textit{GR}}
+\newcommand{\IS} {\textit{IS}}
+\newcommand{\ES} {\textit{ES}}
+\newcommand{\zeroes}{\mathop{\textrm{zeroes}}}
+\newcommand{\odd}{\mathop{\textrm{odd}}}
+\newcommand{\even}{\mathop{\textrm{even}}}
+\newcommand{\ff} {\textit{ff}}
+\newcommand{\fm} {\textit{fm}}
+\newcommand{\mf} {\textit{mf}}
+\newcommand{\inv} {\textit{inv}}
+
+\renewcommand{\zerob}{\mathbf{0}}
+\renewcommand{\v}{\mathbf{v}}
+\renewcommand{\u}{\mathbf{u}}
+\newcommand{\w}{\mathbf{w}}
+\renewcommand{\d}{\mathrm{d}}
+\newcommand{\Z}{\mathbf{Z}}
+\newcommand{\X}{\mathbf{X}}
+\newcommand{\x}{\mathbf{x}}
+\newcommand{\Y}{\mathbf{Y}}
+\newcommand{\Yvec}{\mathbf{Y}}
+\newcommand{\Wvec}{\mathbf{W}}
+\newcommand{\Gvec}{\mathbf{G}}
+\newcommand{\Yt}{\widetilde{\mathbf{Y}}}
+\newcommand{\Zvec}{\mathbf{Z}}
+%\newcommand{\epsilonb}{\mbox{\boldmath{$\varepsilon$}}}
+\newcommand{\epsilonb}{\boldsymbol{\varepsilon}}
+\newcommand{\bS}{\mathbf{S}}
+\newcommand{\bK}{\mathbf{K}}
+\newcommand{\bI}{\mathbf{I}}
+\newcommand{\bR}{\mathbf{R}}
+\newcommand{\bC}{\mathbf{C}}
+\newcommand{\bB}{\mathbf{B}}
+\newcommand{\bP}{\mathbf{P}}
+\newcommand{\bQ}{\mathbf{Q}}
+\renewcommand{\L}{\mathbf{L}}
+
+\newcommand{\E}{\mathrm{E}}
+\newcommand{\cov}{\mathrm{cov}}
+\newcommand{\var}{\mathrm{var}}
+\newcommand{\Dist}{\mathrm{Dist}}
+\renewcommand{\prec}{\mathrm{prec}}
+\newcommand{\tr}{\mathrm{tr}}
+\newcommand{\diag}{\mathrm{diag}}
+\newcommand{\sgn}{\mathrm{sgn}}
+\newcommand{\trace}{\mathrm{tr}}
+\newcommand{\vect}{\mathrm{vec}}
+\newcommand{\Gau}{\mathrm{Gau}}
+
+\newcommand{\RR}{\mathbb{R}}
+
+\newcommand{\s}{\mathbf{s}}
+\newcommand{\p}{\mathbf{p}}
+\renewcommand{\a}{\mathbf{a}}
+\newcommand{\h}{\mathbf{h}}
+\renewcommand{\b}{\mathbf{b}}
+\renewcommand{\c}{\mathbf{c}}
+\newcommand{\z}{\mathbf{z}}
+
+
+\newcommand{\blambda}{\boldsymbol{\lambda}}
+\newcommand{\btheta}{\boldsymbol{\theta}}
+\newcommand{\balpha}{\boldsymbol{\alpha}}
+\newcommand{\bgamma}{\boldsymbol{\gamma}}
+\newcommand{\bbeta}{\boldsymbol{\beta}}
+\newcommand{\bzero}{\boldsymbol{0}}
+\newcommand{\bmu}{\boldsymbol{\mu}}
+\newcommand{\bSigma}{\bm{\Sigma}}
+
+\newcommand{\zeros}{\textrm{zeros}}
+
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+
+
+\bibliographystyle{apalike}
+
+\title{Fixed Rank Kriging for spatial data}
+\author[1]{Andrew Zammit-Mangion}
+%\author[1]{Noel Cressie}
+\affil[1]{National Institute for Applied Statistics Research Australia~(NIASRA), School of Mathematics and Applied Statistics, University of Wollongong, New South Wales 2522, Australia}
+
+\begin{document}
+
+
+<<setup, include=FALSE, cache=FALSE>>=
+library(knitr)
+# set global chunk options
+# opts_chunk$set(fig.path='figure/minimal-', fig.align='center', fig.show='hold')
+# options(formatR.arrow=TRUE,width=90)
+@
+%\SweaveOpts{concordance=TRUE}
+
+\maketitle
+
+\section*{Case 1: 2D point data on the plane}
+
+In this vignette we apply \texttt{FRK} to the case when we have spatial data, either on the plane. For the 2D data on the plane, we consider the \texttt{meuse} data, which can be found in the package \texttt{sp}.
+
+For this vignette we need to load the following packages
+<<eval=TRUE,message=FALSE>>=
+library(sp)
+library(ggplot2)
+library(dplyr)
+library(FRK)
+@
+
+\noindent and, to keep the document tidy, we will set the \texttt{progress} package option to \texttt{FALSE}. Parallelisation is frequently used, but for the purposes of this document we will set the \texttt{parallel} option to 0 as well.
+
+<<eval=TRUE>>=
+opts_FRK$set("progress",FALSE)
+opts_FRK$set("parallel",0L)
+@
+
+We first load the \tt{meuse} data
+
+<<>>=
+data(meuse)
+print(class(meuse))
+@
+
+The \texttt{meuse} data is of class \texttt{data.frame}. However, \texttt{FRK} needs all spatial objects to be of class \texttt{SpatialPointsDataFrame} or \texttt{SpatialPolygonsDataFrame}, depending on whether the object is point-referenced of area-referenced. We change the \tt{meuse} data into a \texttt{SpatialPointsDataFrame} by applying the \tt{coordinates} function as follows:
+
+<<>>=
+coordinates(meuse) = ~x+y # change into an sp object
+@
+
+With each data location, we also need to attribute a \emph{fine-scale variation} component. This variation describes variation that occurs on sub-basic-areal-unit (BAU) scale. The fine-scale  variation need only be known up to a constant of proportionality; this constant is estimated using maximum likelihood with \tt{SRE.predict} later on. Typically, geographic features such as altitude are appropriate, but in this case we will just set this component to unity. It is important that this field is labelled `fs':
+
+<<>>=
+meuse$fs <- 1
+@
+
+Based on the data we now generate BAUs. For this we can use the helper function \tt{auto\_BAU} as follows:
+
+<<message=FALSE>>=
+set.seed(1)
+GridBAUs <- auto_BAUs(manifold = plane(),
+                     cellsize = c(100,100),
+                     type = "grid",
+                     data = meuse,
+                     convex=-0.05)
+@
+
+The \tt{auto\_BAUs} function takes several arguments (see \tt{help(auto\_BAUs)} for details). Above, we instruct the helper function to construct BAUs on the plane, centred around the data \tt{meuse} with each BAU of size 100 m $\times$ 100 m. The \tt{type="hex"} input instructs that we want a rectangular grid and not a hexagonal lattice (type \tt{hex} for a rectangular grid), and `convex=-0.05` is a specific parameter controlling the spatial-domain boundary (see \tt{INLA::inla.nonconvex.hull} for more details). As with the observations, the BAUs need to be associated with a variable that is proportional to the fine-scale variability. This can be set to 1 when we have no prior information on this variability:
+
+<<>>=
+GridBAUs$fs <- 1
+@
+\noindent The data and BAUs are illustrated in Fig.~\ref{fig:meuse}.
+
+<<fig.cap="Data locations (left panel) and BAUs (right panel) for the meuse dataset.\\label{fig:meuse}",fig.subcap=c('one plot', 'the other one'),fig.width=30,fig.height=22,out.width="0.8\\linewidth",fig.align='center'>>=
+par(mfrow=c(1,2))
+plot(meuse)
+plot(GridBAUs)
+par(mfrow=c(1,1))
+@
+
+\tt{FRK} decomposes the spatial process as a sum of basis functions that may either be user-specified or constructed using helper functions. To create spatial basis functions we use the helper function \tt{auto\_basis} as follows:
+
+<<>>=
+G <- auto_basis(m = plane(),
+                data=meuse,
+                nres = 2,
+                prune=5,
+                type = "Gaussian",
+                regular = 0)
+@
+
+\noindent The argument \tt{nres = 3} indicates how many resolutions we wish, while \tt{type = Gaussian} indicates that the basis set we want is a Gaussian basis. Basis functions are constructed such that the process is accurately represented where data is present, and not represented otherwise. This is controlled by the parameter \tt{prune}, see \tt{help(auto\_basis)} for details. The basis can be visualised using \tt{show\_basis}, see Fig.~\ref{fig:basis}.
+
+
+<<fig.cap="Basis functions automatically generated for the meuse dataset with 2 resolutions\\label{fig:basis}.",fig.height=4,fig.width=4,fig.align='center'>>=
+show_basis(G)
+@
+
+Now that we have the BAUs and the basis functions, we can construct the SRE model. As fixed effects, we just use an intercept; if we wish to use covariates, then these need to be added to the BAUs first. The fixed effects are supplied in a usual \tt{R} formula:
+
+<<>>=
+f <- log(zinc) ~ 1
+S <- SRE(f = f,
+         data = list(meuse),
+         BAUs = GridBAUs,
+         basis = G,
+         est_error=T)
+@
+
+The function \tt{SRE} takes as arguments the formula, the data (as a list, since many datasets may be used), the BAUs, the basis functions and a flag, \tt{est\_error}, indicating whether we wish to attempt to estimate the measurement-error variance or not using variogram methods. This is only allowed with spatial data since it's time consuming and, if not supplied, the data needs to also be supplied with a field \tt{std}.
+
+The \tt{SRE} model is fit using the function \tt{SRE.fit}. Maximum likelihood is carried out using the expectation maximisation (EM) algorithm, which stops either when \tt{n\_EM} is exceeded, or when the likelihood across subsequent steps does not change by more than \tt{tol}. In this case the EM algorithm converges in 100 iterations; see Fig. \ref{fig:EM}.
+
+<<cache=TRUE,fig.cap="Convergence of the EM algorithm for the meuse dataset\\label{fig:EM}",fig.height=4,fig.width=5>>=
+S <- SRE.fit(SRE_model = S,
+             n_EM = 400,
+             tol = 0.01,
+             print_lik=TRUE)
+@
+
+Finally, we predict at all the BAUs with the fitted model. This is done using the function \tt{SRE.predict}. The argument \tt{use\_centroid} indicates whether we want to treat the BAU as a prediciton point or as a prediction area, see \tt{help(SRE.predict)} for details.
+
+<<>>=
+GridBAUs <- SRE.predict(S,use_centroid = TRUE)
+@
+
+The object \tt{GridBAUs} contains the prediction mean and prediction variance at the BAU level. These can be plotted using the standard plotting commands in \tt{sp}, or else using \tt{ggplot2}. To use the latter, we first need to convert the \tt{Spatial} objects to data-frames as follows:
+
+<<>>=
+BAUs_df <- SpatialPolygonsDataFrame_to_df(sp_polys = GridBAUs,
+                                          vars = c("mu","var"))
+@
+
+
+The function takes as argument the BAUs and the variables we wish to extract from the BAUs. Now \tt{ggplot2} can be used to plot the observations and the prediction mean and variance, for example:
+
+<<>>=
+g1 <- LinePlotTheme() +
+    geom_polygon(data=BAUs_df ,aes(x,y,fill=mu,group=id),
+                 colour="light grey") +
+    scale_fill_distiller(palette="Spectral",trans="reverse") +
+    geom_point(data=data.frame(meuse),
+               aes(x,y,fill=log(zinc)),
+               colour="black",
+               pch=21, size=3) +
+    coord_fixed()
+
+g2 <- LinePlotTheme() +
+    geom_polygon(data=BAUs_df,aes(x,y,fill=sqrt(var),group=id),
+                 colour="light grey") +
+    scale_fill_distiller(palette="Spectral",trans="reverse",
+                         guide = guide_legend(title="se")) +
+    coord_fixed()
+@
+
+These plots are shown in Fig.~\ref{fig:PredictionBAU}.
+
+<<echo=FALSE,fig.cap="Prediction mean and error obtained with FRK from the meuse dataset at the BAU level.\\label{fig:PredictionBAU}",fig.width=9,fig.height=11,out.width="0.5\\linewidth",fig.subcap=c("1","2")>>=
+plot(g1)
+plot(g2)
+@
+
+Now, assume that we wanted to predict over regions encompassing several BAUs. Then we need to set the \tt{pred\_BAUs} argument in the function \tt{auto\_BAUs}. First, we create this larger regionalisation as follows
+
+<<>>=
+set.seed(1)
+Pred_regions <- auto_BAUs(manifold = plane(),
+                          cellsize = c(600,600),
+                          type = "grid",
+                          data = meuse,
+                          convex=-0.05)
+@
+
+
+\noindent and carry out prediction on the larger polygons:
+
+<<>>=
+Pred_regions <- SRE.predict(S,use_centroid = TRUE,pred_polys = Pred_regions)
+@
+
+The mean and variance can be visualised as before. These plots are shown in Fig.~\ref{fig:PredictionPolygon}.
+
+<<echo=FALSE,fig.cap="Prediction mean and error obtained with FRK from the meuse dataset at a custom resolution.\\label{fig:PredictionPolygon}",fig.subcap=c("1","2"),fig.width=9,fig.height=11,out.width="0.5\\linewidth">>=
+Pred_regions_df <- SpatialPolygonsDataFrame_to_df(sp_polys = Pred_regions,
+                                          vars = c("mu","var"))
+
+g1 <- LinePlotTheme() +
+    geom_polygon(data=Pred_regions_df ,aes(x,y,fill=mu,group=id),
+                 colour="light grey") +
+    scale_fill_distiller(palette="Spectral",trans="reverse") +
+    geom_point(data=data.frame(meuse),
+               aes(x,y,fill=log(zinc)),
+               colour="black",
+               pch=21, size=3) +
+    coord_fixed()
+
+g2 <- LinePlotTheme() +
+    geom_polygon(data=Pred_regions_df,aes(x,y,fill=sqrt(var),group=id),
+                 colour="light grey") +
+    scale_fill_distiller(palette="Spectral",trans="reverse",guide = guide_legend(title="se")) +
+    coord_fixed()
+
+plot(g1)
+plot(g2)
+@
+
+
+<<include=FALSE>>=
+# # Generate observations with large spatial support
+# data(meuse.grid)
+# gridded(meuse.grid) = ~x + y
+#
+# HexPts2 <- spsample(meuse.grid,
+#                     type = "hexagonal",
+#                     cellsize = 200)
+# HexPols2 <- HexPoints2SpatialPolygons(HexPts2)
+# HexPols_df2 <- SpatialPolygonsDataFrame(HexPols2,
+#                                         over(HexPols2,meuse) %>%
+#                                             select(zinc)) %>%
+#     subset(!is.na(zinc))
+#
+# if(0) {
+# #if(require(INLA)) { ## Need INLA from here on
+#
+#         # Generate BAUs
+#         HexPols_df <- auto_BAUs(manifold = plane(),cellsize = c(50,50),type = "grid",data = meuse,convex=-0.05)
+#         HexPols_df$fs <- 1
+#
+#         ## Generate basis functions
+#         G <- auto_basis(m = plane(),data=meuse,nres = 2,
+#                         prune=10,type = "Gaussian")
+#
+#         ## Setup SRE model
+#         HexPols_df$dist.m <- rnorm(2463)
+#         f <- log(zinc) ~ 1 + dist.m
+#         S <- SRE(f,list(meuse,HexPols_df2),BAUs = HexPols_df, G,est_error=T)
+#         S <- SRE.fit(S,n_EM = 10,print_lik=TRUE)
+#
+#         ## Point predict
+#         HexPols_df <- SRE.predict(S,use_centroid = TRUE)
+#
+#         X <- SpatialPolygonsDataFrame_to_df(sp_polys = HexPols_df,
+#                                             vars = c("mu","var"))
+#
+#         g1 <- EmptyTheme() +
+#             geom_polygon(data=X,aes(x,y,fill=mu,group=id),
+#                          colour="light grey") +
+#             scale_fill_distiller(palette="Spectral",trans="reverse") +
+#             geom_point(data=data.frame(meuse),
+#                        aes(x,y,fill=log(zinc)),
+#                        colour="black",
+#                        pch=21, size=3) +
+#             coord_fixed()
+#
+#         g2 <- EmptyTheme() +
+#             geom_polygon(data=X,aes(x,y,fill=sqrt(var),group=id),
+#                          colour="light grey") +
+#             scale_fill_distiller(palette="Spectral",trans="reverse") +
+#             #geom_point(data=data.frame(meuse),
+#             #           aes(x,y),colour="black",pch=21, size=3) +
+#             coord_fixed()
+#
+#         print(g1)
+#         print(g2)
+# }
+@
+
+
+\end{document}

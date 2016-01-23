@@ -12,3 +12,4 @@ FRK.Rcheck
 *.tar.gz
 inla-mesher-functions
 paper
+vignettes/cache

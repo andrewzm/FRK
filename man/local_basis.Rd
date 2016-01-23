@@ -28,7 +28,7 @@ and \code{scale} corresponds to the range of support of the bisquare function, \
 \deqn{\phi(u) = \exp\left(-\frac{\|u\|}{ \tau}\right),}
 and \code{scale} corresponds to the e-folding length, \eqn{\tau}. If \code{type} is ``Matern32'', then
 \deqn{\phi(u) = \left(1 + \frac{\sqrt{3}\|u\|}{\kappa}\right)\exp\left(-\frac{\sqrt{3}\| u \|}{\kappa}\right),}
-and \code{scale} corresponds to the parameter \eqn{\kappa}.x
+and \code{scale} corresponds to the parameter \eqn{\kappa}.
 }
 \examples{
 library(ggplot2)
