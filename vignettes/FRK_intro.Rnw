@@ -15,7 +15,6 @@
 \usepackage{natbib}
 \usepackage{setspace}
 \usepackage{multirow}
-\usepackage{lineno}
 \usepackage{array}
 \usepackage[normalem]{ulem}
 \usepackage{tikz}
