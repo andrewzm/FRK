@@ -172,16 +172,16 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM",print_lik=FAL
 
 #' @rdname SRE
 #' @export
-SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE) {
+SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE,pred_polys = NULL) {
 
 
-    # if(is(pred_locs,"Spatial") & !(is(pred_locs,"SpatialPolygonsDataFrame")))
-    #     stop("Predictions need to be over BAUs or spatial polygons")
-    #
-    # if(is(pred_locs,"ST") & !(is(pred_locs,"STFDF")))
-    #     if(!(is(pred_locs@sp,"SpatialPolygonsDataFrame")))
-    #         stop("Predictions need to be over BAUs or STFDFs with spatial polygons")
-    #
+     if(is(pred_polys,"Spatial") & !(is(pred_polys,"SpatialPolygons")))
+         stop("Predictions need to be over BAUs or spatial polygons")
+
+     if(is(pred_polys,"ST") & !(is(pred_polys,"STFDF")))
+         if(!(is(pred_polys@sp,"SpatialPolygons")))
+             stop("Predictions need to be over BAUs or STFDFs with spatial polygons")
+
     # if(!("fs" %in% names(pred_locs@data))) {
     #     warning("data should contain a field 'fs' containing a basis function for
     #             fine-scale variation. Setting basis function equal to one everywhere.")
@@ -190,7 +190,7 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE) {
     # if(!(all(pred_locs$fs > 0))) stop("fine-scale variation basis function needs to be nonnegative everywhere")
 
 
-    pred_locs <- .SRE.predict(Sm=SRE_model,use_centroid=use_centroid,include_fs=include_fs)
+    pred_locs <- .SRE.predict(Sm=SRE_model,use_centroid=use_centroid,include_fs=include_fs,pred_polys = pred_polys)
 
     ## Rhipe VERSION (currently disabled)
     # pred_locs <- rhwrapper(Ntot = length(Sm@BAUs),
@@ -208,16 +208,10 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE) {
 
     predict_BAUs <- TRUE
     BAUs <- Sm@BAUs
-    browser()
 
     if(is.null(pred_polys)) {
         CP <- Diagonal(length(BAUs))
     } else {
-        pred_polys <- BAUs
-        pred_polys[["fs"]][1:4] <- 10
-        pred_polys <- maptools::unionSpatialPolygons(BAUs,pred_polys[["fs"]])
-        pred_polys <- pred_polys[2,]
-        pred_polys$fs <- 1
         C_idx <- BuildC(pred_polys,BAUs)
         CP <- sparseMatrix(i=C_idx$i_idx,
                            j=C_idx$j_idx,
@@ -315,8 +309,8 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE) {
     if(predict_BAUs) {
         BAUs
     } else {
-        pred_polys[["mu"]] <- CP %*% BAUs[["mu"]]
-        pred_polys[["var"]] <- CP %*% PI %*% Cov %*% t(PI) %*% t(CP)
+        pred_polys[["mu"]] <- as.numeric(CP %*% BAUs[["mu"]])
+        pred_polys[["var"]] <- diag2(CP %*% PI %*% Cov, t(PI) %*% t(CP))
         pred_polys
     }
 

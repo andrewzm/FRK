@@ -94,7 +94,7 @@ local_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type
 #'                 type = "bisquare",
 #'                 subsamp = 20000)
 #'
-#' ### Plot and note how some basis functions are removed in Antarctica
+#' ### Plot
 #' show_basis(G,draw_world())
 #'
 #' @export

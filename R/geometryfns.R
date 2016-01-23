@@ -702,7 +702,7 @@ est_obs_error <- function(sp_pts,variogram.formula) {
 }
 
 
-setMethod("BuildC",signature(data="SpatialPolygonsDataFrame"),
+setMethod("BuildC",signature(data="SpatialPolygons"),
           function(data,BAUs) {
               data$id <- 1:length(data)
               BAU_as_points <- SpatialPoints(coordinates(BAUs))
