@@ -22,7 +22,7 @@ setMethod("initialize",signature="manifold",function(.Object) {
 #' Two types of BAUs are supported by \code{FRK}: ``hex'' (hexagonal) and ``grid'' (rectangular). In order to have a ``grid'' set of BAUs, the user should specify a cellsize of length equal to the dimensions of the manifold, that is, of length 1 for \code{real_line} and 2 for \code{sphere} and \code{plane}. When a ``hex'' set of BAUs is desired, the first element of \code{cellsize} is used to determine the side length by dividing this value by approximately 2. The argument \code{type} is ignored with \code{real_line} and ``hex'' is not available for this manifold.
 #'
 #'   If the object \code{data} is provided, then automatic domain selection is carried out by employing the \code{INLA} function \code{inla.nonconvex.hull}, which finds a (non-convex) hull surrounding the data points (or centroids of the data polygons). This domain is extended and smoothed using the \code{convex} parameter. The parameter \code{convex} should be negative, and a larger absolute value for \code{convex} results in a larger domain with smoother boundaries. Due to the dependency on hull construction, \code{INLA} needs to be installed in order to use this function unless BAUs on a sphere are desired (note that \code{INLA} was not available on CRAN at time of writing).
-#'  @examples
+#' @examples
 #' ## First a 1D example
 #' library(sp)
 #' data <- data.frame(x = runif(10)*10, y = 0, z= runif(10)*10)
@@ -52,7 +52,7 @@ setMethod("initialize",signature="manifold",function(.Object) {
 #'                             convex=-0.05)
 #'      plot(HexPols_df)
 #'  }
-#'  @export
+#' @export
 auto_BAUs <- function(manifold, type="grid",cellsize = rep(1,dimensions(manifold)),
                       isea3h_res=2,data=NULL,convex=-0.05,tunit="days") {
     if(!(is(data,"Spatial") | is(data,"ST") | is.null(data)))

@@ -12,7 +12,7 @@
 #'\deqn{\phi(u) = \exp\left(-\frac{\|u\|}{ \tau}\right),}
 #' and \code{scale} corresponds to the e-folding length, \eqn{\tau}. If \code{type} is ``Matern32'', then
 #'\deqn{\phi(u) = \left(1 + \frac{\sqrt{3}\|u\|}{\kappa}\right)\exp\left(-\frac{\sqrt{3}\| u \|}{\kappa}\right),}
-#' and \code{scale} corresponds to the parameter \eqn{\kappa}.
+#' and \code{scale} corresponds to the parameter \eqn{\kappa}.x
 #' @examples
 #' library(ggplot2)
 #' G <-  local_basis(manifold = real_line(),
