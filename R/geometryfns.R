@@ -511,7 +511,7 @@ df_to_SpatialPolygons <- function(df,keys,coords,proj) {
     if(!is(proj,"CRS")) stop("proj needs to be of class CRS")
 
     dfun <- function(d) {
-        Polygons(list(Polygon(d[coords])),digest(d[keys]))
+        Polygons(list(Polygon(d[coords])),digest::digest(d[keys]))
     }
 
     if(opts_FRK$get("parallel") > 1) {
@@ -695,7 +695,7 @@ est_obs_error <- function(sp_pts,variogram.formula) {
         stop("Observational error estimated to be zero. Please consider using finer BAUs or do not attempt to estimate observation error")
     sp_pts$std <- sqrt(vgm.fit$psill[1] / sp_pts$Nobs)
 
-    warning("Observational error estimation could be improved. Currently a variogram is fitted to the data, and then the error variance of a single observation is assumed to be the partial sill. Then the variance of the averaged observations in the BAU is divided by Nobs. Currently there is no accounting for multiple data in the same grid box during variogram fitting as it's not straightforward with gstat.")
+    ##Observational error estimation could be improved. Currently a variogram is fitted to the data, and then the error variance of a single observation is assumed to be the partial sill. Then the variance of the averaged observations in the BAU is divided by Nobs. Currently there is no accounting for multiple data in the same grid box during variogram fitting as it's not straightforward with gstat
 
     sp_pts
 
