@@ -46,6 +46,7 @@ test_that("SRE 2D plane works",{
 
     library(dplyr)
     library(sp)
+    set.seed(1)
     ### Generate process and data
     sim_process <- expand.grid(x = seq(0,1,by=0.2),y = seq(0,1,by=0.2)) %>%
         mutate(proc = sin(x*10) + 0.3*rnorm(length(x)))

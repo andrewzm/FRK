@@ -208,17 +208,22 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE) {
 
     predict_BAUs <- TRUE
     BAUs <- Sm@BAUs
+    browser()
 
     if(is.null(pred_polys)) {
         CP <- Diagonal(length(BAUs))
     } else {
-        C_idx <- BuildC(XXX,BAUs)
+        pred_polys <- BAUs
+        pred_polys[["fs"]][1:4] <- 10
+        pred_polys <- maptools::unionSpatialPolygons(BAUs,pred_polys[["fs"]])
+        pred_polys <- pred_polys[2,]
+        pred_polys$fs <- 1
+        C_idx <- BuildC(pred_polys,BAUs)
         CP <- sparseMatrix(i=C_idx$i_idx,
                            j=C_idx$j_idx,
                            x=1,
                            dims=c(length(pred_polys),
                                       length(BAUs)))
-
         CP <- CP / rowSums(CP) ## Average over polygon
         if(!all(table(C_idx$i_idx) == 1))
             predict_BAUs <- FALSE   ## Need to compute full covariance matrix
