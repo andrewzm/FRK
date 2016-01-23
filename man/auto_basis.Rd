@@ -64,7 +64,7 @@ G <- auto_basis(m = sphere(),data=d,
                 type = "bisquare",
                 subsamp = 20000)
 
-### Plot and note how some basis functions are removed in Antarctica
+### Plot
 show_basis(G,draw_world())
 
 }
