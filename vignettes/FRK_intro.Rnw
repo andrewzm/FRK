@@ -2,7 +2,7 @@
 \documentclass{article}
 
 % \VignetteEngine{knitr::knitr}
-% \VignetteIndexEntry{FRK for prediction of CO2 from AIRS data}
+% \VignetteIndexEntry{Introduction to spatial kriging with FRK}
 
 \usepackage{hyperref}
 \usepackage{subfig}
