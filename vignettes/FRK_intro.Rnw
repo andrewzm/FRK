@@ -18,7 +18,6 @@
 \usepackage{array}
 \usepackage[normalem]{ulem}
 \usepackage{tikz}
-\usepackage{authblk}
 \usepackage{amsthm}
 
 \renewcommand{\tt} {\texttt}
@@ -204,9 +203,9 @@
 \bibliographystyle{apalike}
 
 \title{Fixed Rank Kriging for spatial data}
-\author[1]{Andrew Zammit-Mangion}
+\author{Andrew Zammit-Mangion}
 %\author[1]{Noel Cressie}
-\affil[1]{National Institute for Applied Statistics Research Australia~(NIASRA), School of Mathematics and Applied Statistics, University of Wollongong, New South Wales 2522, Australia}
+%\affiliation{National Institute for Applied Statistics Research Australia~(NIASRA), School of Mathematics and Applied Statistics, University of Wollongong, New South Wales 2522, Australia}
 
 \begin{document}
 
