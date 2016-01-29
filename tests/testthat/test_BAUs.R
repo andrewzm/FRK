@@ -90,7 +90,7 @@ test_that("SpaceTime_BAUs",{
 
     time_grid <- auto_BAUs(timeline(),
                            cellsize = 1,
-                           d = STobj1,
+                           d = as.Date(time(STobj1)),
                            tunit="days")
     expect_is(time_grid,"POSIXt")
 

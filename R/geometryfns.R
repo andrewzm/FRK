@@ -54,15 +54,24 @@ setMethod("initialize",signature="manifold",function(.Object) {
 #'  }
 #' @export
 auto_BAUs <- function(manifold, type="grid",cellsize = rep(1,dimensions(manifold)),
-                      isea3h_res=2,data=NULL,convex=-0.05,tunit="days") {
-    if(!(is(data,"Spatial") | is(data,"ST") | is.null(data)))
-        stop("Data needs to be of class 'Spatial', 'ST', or NULL")
+                      isea3h_res=NULL,data=NULL,convex=-0.05,tunit="days") {
+    if(!(is(data,"Spatial") | is(data,"ST") | is(data,"Date") | is.null(data)))
+        stop("Data needs to be of class 'Spatial', 'ST', 'Date', or NULL")
     if(!is(manifold,"manifold")) stop("manifold needs to be of class 'manifold'")
-    if(!is.numeric(isea3h_res) | is.integer(isea3h_res)) stop("isea3h_res needs to be of type 'numeric' or 'integer'")
+    if(!is.null(isea3h_res)) {
+        if(!is.numeric(isea3h_res) | is.integer(isea3h_res))
+            stop("isea3h_res needs to be of type 'numeric' or 'integer'")
+        if(!(isea3h_res >=0 & isea3h_res <= 9)) stop("isea3h_res needs to be between 0 and 9")
+        if(type=="grid") {
+            type = "hex"
+            message("Only hex BAUs possible when setting isea3h_res. Coercing type to 'hex'")
+        }
+        resl <- round(isea3h_res)
+    } else { resl <- NULL}
     if(length(cellsize) == 1) cellsize <- rep(cellsize,dimensions(manifold))
     if(!length(cellsize) == dimensions(manifold)) stop("cellsize needs to be of length equal to dimension of manifold")
-    if(!(isea3h_res >=0 & isea3h_res <= 9)) stop("isea3h_res needs to be between 0 and 9")
-    resl <- round(isea3h_res)
+
+
 
     auto_BAU(manifold=manifold,type=type,cellsize=cellsize,resl=resl,d=data,convex=convex,tunit=tunit)
 
@@ -139,10 +148,11 @@ setMethod("auto_BAU",signature(manifold="timeline"),
 
               l <- list(...)
 
-              if(!"tunit" %in% names(l)) stop("Need to supply argument tunit with value secs, mins, hours, days, months or years")
+              if(!"tunit" %in% names(l))
+                  stop("Need to supply argument tunit with value secs, mins, hours, days, months or years")
 
               tunit <- l$tunit
-              tpoints <- time(d)
+              tpoints <- d  # d needs to be of class Date
 
               if(is(tpoints,"Date"))
                   tpoints <- as.POSIXct(tpoints)
@@ -163,7 +173,7 @@ setMethod("auto_BAU",signature(manifold="timeline"),
                                #       years   = "year")) %>%
                   round(tunit)
 
-              attr(tgrid,"tzone") <- attr(d@time,"tzone")
+              attr(tgrid,"tzone") <- attr(d,"tzone")
               return(tgrid)
           })
 
@@ -172,6 +182,19 @@ setMethod("auto_BAU",signature(manifold="timeline"),
 setMethod("auto_BAU",signature(manifold = c("STmanifold")),
           function(manifold,type="grid",cellsize = c(1,1,1),resl=resl,d=NULL,convex=-0.05,...) {
 
+              if(is(d,"ST")) {
+                  space_part <- d@sp
+                  time_part <- time(d)
+              } else if (is(d,"Date")) {
+                  space_part <- NULL
+                  time_part <- d
+              } else {
+                  stop("Need to supply either a spatio-temporal dataset or
+                       a timeline to construct BAUs.")
+
+              }
+
+
               if(is(manifold,"STplane")) {
                   spat_manifold <- plane()
               } else {
@@ -179,9 +202,9 @@ setMethod("auto_BAU",signature(manifold = c("STmanifold")),
               }
 
               spatial_BAUs <- auto_BAU(manifold=spat_manifold,cellsize=cellsize[1:2],
-                                       resl=resl,type=type,d=d@sp,convex=convex,...)
+                                       resl=resl,type=type,d=space_part,convex=convex,...)
               temporal_BAUs <- auto_BAU(manifold=timeline(), cellsize=cellsize[3],
-                                        resl=resl,type=type,d=d,convex=convex,...)
+                                        resl=resl,type=type,d=time_part,convex=convex,...)
 
               nt <- length(temporal_BAUs)
               ns <- nrow(spatial_BAUs)
@@ -261,16 +284,19 @@ setMethod("auto_BAU",signature(manifold="sphere"),
                        select(id,lon,lat))))
         sphere_BAUs <- isea3h_sp_poldf
     }  else if (type == "grid") {
+
         if(!is.null(d)) {
-            coords <- coordinates(d)
-            xrange <- range(coords[,1])
-            yrange <- range(coords[,2])
+            coords <- coordinates(d) %>% data.frame()
+            stopifnot("lat" %in% names(coords) &
+                        "lon" %in% names(coords))
+            xrange <- range(coords$lon)
+            yrange <- range(coords$lat)
             drangex <- diff(xrange)
             drangey <- diff(yrange)
-            xmin <- xrange[1] - drangex*1.2
-            xmax <- xrange[2] + drangex*1.2
-            ymin <- yrange[1] - drangey*1.2
-            ymax <- yrange[1] + drangey*1.2
+            xmin <- max(xrange[1] - drangex*0.2,-180)
+            xmax <- min(xrange[2] + drangex*0.2,180)
+            ymin <- max(yrange[1] - drangey*0.2,-90)
+            ymax <- min(yrange[2] + drangey*0.2,90)
         } else {
             xmin <- -180
             xmax <- 180
@@ -737,6 +763,18 @@ setMethod("BuildC",signature(data="STIDF"),
               list(i_idx=i_idx,j_idx=j_idx)
           })
 
+# setMethod("BuildC",signature(data="STFDF"),
+#           function(data,BAUs) {
+#              C <-
+#               lapply(1:length(data@time),
+#                     function(i) {
+#                         BuildC(data[,i],BAUs = BAUs)
+#                     })
+#               list(i_idx = do.call(c,lapply(C,function(l) l$i_idx) ),
+#                    j_idx = do.call(c,lapply(C,function(l) l$j_idx) ))
+#
+#           })
+
 setMethod("coordinates",signature(obj="SpatialPolygons"),function(obj){
     coord_vals <- t(sapply(1:length(obj),function(i) obj@polygons[[i]]@Polygons[[1]]@labpt))
     colnames(coord_vals) <- colnames(obj@polygons[[1]]@Polygons[[1]]@coords)
@@ -840,8 +878,10 @@ rdist.earth <- function (x1, x2 = NULL, miles = TRUE, R = NULL)
 }
 
 load_dggrids <- function (res = 3L){
+    if(!is.numeric(res))
+        stop("res needs to be an integer or vector of integers")
     isea3h <- NA # suppress binding warning
-    if(res <= 6L)  {
+    if(all(res <= 6L))  {
         data(isea3h, envir=environment(),package="FRK")
     } else {
         if(!requireNamespace("dggrids")) {

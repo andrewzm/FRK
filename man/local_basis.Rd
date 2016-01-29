@@ -14,14 +14,14 @@ local_basis(manifold = sphere(), loc = matrix(c(1, 0), nrow = 1),
 
 \item{scale}{vector of length \code{n} containing the scale parameters of the basis functions. See details}
 
-\item{type}{either ``Gaussian'', ``bisquare,'' ``exp,'' or ``Matern32''.}
+\item{type}{either ``Gaussian'', ``bisquare,'' ``exp,'' or ``Matern32''}
 }
 \description{
 Construct a set of local basis functions based on pre-specified location and scale parameters.
 }
 \details{
 This functions lays out local basis functions in a domain of interest based on pre-specified location and scale parameters. If \code{type} is ``Gaussian'', then
-\deqn{\phi(u) = \exp\left(-\frac{\|u \|}{2\sigma^2}\right),}
+\deqn{\phi(u) = \exp\left(-\frac{\|u \|^2}{2\sigma^2}\right),}
 and \code{scale} corresponds to the standard deviation \eqn{\sigma}. If \code{type} is ``bisquare'', then
 \deqn{\phi(u) = \left(1- \left(\frac{\| u \|}{R}\right)^2\right)^2 I(\|u\| < R),}
 and \code{scale} corresponds to the range of support of the bisquare function, \eqn{R}. If the \code{type} is ``exp'', then

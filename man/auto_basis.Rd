@@ -5,7 +5,7 @@
 \title{Automatic basis-function placement}
 \usage{
 auto_basis(m = plane(), data, regular = 1, nres = 2, prune = 0,
-  subsamp = 10000, type = "Gaussian")
+  subsamp = 10000, type = "Gaussian", isea3h_lo = 0)
 }
 \arguments{
 \item{m}{object of class \code{manifold}, for example, \code{sphere} or \code{plane}}
@@ -14,13 +14,15 @@ auto_basis(m = plane(), data, regular = 1, nres = 2, prune = 0,
 
 \item{regular}{an integer indicating the number of regularly-placed basis functions at the first resolution. In two dimensions, this dictates smallest number of basis functions in a row or column at the lowest resolution. If \code{regular=0}, an irregular grid is used, one that is based on the triangulation of the domain with increased mesh density in areas of high data density, see details}
 
-\item{nres}{the number of basis-function-resolutions to use}
+\item{nres}{if \code{manifold = real_line()} or \code{manifold = plane()}, then \code{nres} is the number of basis-function-resolutions to use. If \code{manifold = sphere()}, then \code{nres} is the resolution number of the ISEA3H grid to use and and can also be a vector indicating multiple resolutions}
 
 \item{prune}{a threshold parameter which dictates when a basis function is considered irrelevent or unidentifiable, and thus removed, see details}
 
 \item{subsamp}{the maximum amount of data points to consider when carrying out basis-function placement: these data objects are randomly sampled from the full dataset. Keep this number fairly high (on the order of 10^5) otherwise high resolution basis functions may be spuriously removed}
 
 \item{type}{the type of basis functions to use. See details}
+
+\item{isea3h_lo}{if \code{manifold = sphere}, this argument dictates which ISEA3H resolution is the lowest one that should be used for basis-function placement}
 }
 \description{
 Generate automatically a set of local basis functions in the domain, and automatically prune in regions of sparse data.
@@ -30,7 +32,7 @@ This function automatically places basis functions within the domain of interest
 
 
 The argument \code{type} can be either ``Gaussian'' in which case
-\deqn{\phi(u) = \exp\left(-\frac{\|u \|}{2\sigma^2}\right),}
+\deqn{\phi(u) = \exp\left(-\frac{\|u \|^2}{2\sigma^2}\right),}
 ``bisquare'', in which case  '
 \deqn{\phi(u) = \left(1- \left(\frac{\| u \|}{R}\right)^2\right)^2 I(\|u\| < R),}
 ``exp'', in which case
@@ -43,7 +45,7 @@ If the manifold is the real line, the basis functions are placed regularly insid
 
 If the manifold is a plane, and \code{regular > 0}, then basis functions are placed regularly within the bounding box of \code{data}, with the smallest number of basis functions in each row or column equal to the value of \code{regular} in the lowest resolution. Subsequent resolutions have twice the number of basis functions in each row or column. If \code{regular = 0}, then the function \code{INLA::inla.nonconvex.hull} is used to construct a (non-convex) hull around the data. The buffer and smoothness of the hull is determined by the parameter \code{convex}. Once the domain boundary is found,  \code{INLA::inla.mesh.2d} is used to construct a triangular mesh such that the node vertices coincide with data locations, subject to some minimum and maximum triangular side length constraints. The result is a mesh which is dense in regions of high data density and not dense in regions of sparse data. Even in this case, the scale is taken to be a function of the minimum distance between basis function centres, as detailed above. This may be changed in a future revision.
 
-If the manifold is a sphere, then basis functions are placed on the centroids of the discrete global grid (DGG), with the first basis resolution corresponding to the first resolution of the DGG (12 globally).  It is not recommended to go above \code{nres == 4} which contains 812 locations (for a total of 1208 basis functions). Up to resolution 6 is shipped with \code{FRK}, for higher resolutions please install \code{dggrids} from \code{https://github.com/andrewzm/dggrids}.
+If the manifold is a sphere, then basis functions are placed on the centroids of the discrete global grid (DGG), with the first basis resolution corresponding to the first resolution of the DGG (12 globally).  It is not recommended to go above \code{nres == 4} for the whole sphere, which contains 812 locations (for a total of 1208 basis functions). Up to resolution 6 is available with \code{FRK}, for higher resolutions please install \code{dggrids} from \code{https://github.com/andrewzm/dggrids}.
 
 Basis functions that are not influenced by data points may hinder convergence of the EM algorithm, since the associated hidden states are by and large unidentifiable. We hence provide a means to automatically remove such basis functions through the parameter \code{prune}. The final set only contains basis functions for which the column sums in the associated matrix \eqn{S} (which, recall, is the value/average of the basis functions at/over the data points/polygons) is greater than \code{prune}. If \code{prune == 0}, no basis functions are removed from the original design.
 }

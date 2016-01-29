@@ -13,6 +13,7 @@
 #' @param use_centroid a flag indicating whether the prediction over a BAU can simply be taken as a point prediction at the BAU's centroid. This should only be done if the BAUs on which the model is trained coincide with the BAUs used in \code{SRE()}
 #' @param include_fs flag indicating whether to assume prediction locations coincide with observations in BAUs (where applicable) or not
 #' @param pred_polys object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified
+#' @param pred_time vector of time indices at which we wish to predict. All time points are used if this option is not specified
 #' @details \code{SRE()} is the main function in the package as it constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of basic aerial units (BAUs). The function first takes each object in the list \code{data} and maps it to the BAUs -- this entails binning the point-referenced data into BAUs (and averaging within the BAU) and finding which BAUs are influenced by the polygon datasets. Following this the incidence matrix \code{Cmat} is constructed, which appears in the observation model \eqn{Z = CY + e}, where \eqn{C} is the incidence matrix.
 #'
 #' The SRE model is given by \eqn{Y = T\alpha + S\eta + v} where \eqn{X} are the covariates at BAU level, \eqn{\alpha} are the regression coefficients, \eqn{S} are the basis functions evaluated at the BAU level, \eqn{\eta} are the basis function weights, and \eqn{v} is the fine scale variation (at the BAU level). The covariance matrix of \eqn{v} is diagonal and proportional to the field `fs' in the BAUs (typically set to one). The constant of proportionality is estimated in the EM algorithm. All required matrices (\eqn{S,T} etc.) are computed and returned as part of the object, please see \code{\link{SRE-class}} for more details.
@@ -86,7 +87,8 @@ SRE <- function(f,data,basis,BAUs,est_error=TRUE) {
             stop("NAs found when mapping data to BAUs. Are you sure all your data are covered by BAUs?")
 
         if(est_error) {
-            if(is(data_proc,"ST")) stop("Estimation of error not yet implemented for spatio-temporal data")
+            if(is(data_proc,"ST"))
+                stop("Estimation of error not yet implemented for spatio-temporal data")
             data_proc <- est_obs_error(data_proc,variogram.formula=f)
         }
 
@@ -173,7 +175,7 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM",print_lik=FAL
 
 #' @rdname SRE
 #' @export
-SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE,pred_polys = NULL) {
+SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE,pred_polys = NULL,pred_time = NULL) {
 
 
      if(is(pred_polys,"Spatial") & !(is(pred_polys,"SpatialPolygons")))
@@ -191,7 +193,11 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE,pred_polys =
     # if(!(all(pred_locs$fs > 0))) stop("fine-scale variation basis function needs to be nonnegative everywhere")
 
 
-    pred_locs <- .SRE.predict(Sm=SRE_model,use_centroid=use_centroid,include_fs=include_fs,pred_polys = pred_polys)
+    pred_locs <- .SRE.predict(Sm=SRE_model,
+                              use_centroid=use_centroid,
+                              include_fs=include_fs,
+                              pred_polys = pred_polys,
+                              pred_time = pred_time)
 
     ## Rhipe VERSION (currently disabled)
     # pred_locs <- rhwrapper(Ntot = length(Sm@BAUs),
@@ -204,8 +210,15 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE,pred_polys =
     pred_locs
 }
 
-.SRE.predict <- function(Sm,use_centroid,include_fs = TRUE,pred_polys = NULL) {
+.SRE.predict <- function(Sm,use_centroid,include_fs = TRUE,pred_polys = NULL,pred_time = NULL) {
 
+    if(!is.null(pred_polys))
+        if(is(Sm@BAUs,"ST"))
+            stop("Prediciton is currently only possible at BAU level with
+                  spatio-temporal models. Please do not use pred_polys")
+
+    if(is.null(pred_time) & is(Sm@BAUs,"ST"))
+        pred_time <- 1:length(Sm@BAUs@time)
 
     predict_BAUs <- TRUE
     BAUs <- Sm@BAUs
@@ -222,6 +235,23 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE,pred_polys =
         CP <- CP / rowSums(CP) ## Average over polygon
         if(!all(table(C_idx$i_idx) == 1))
             predict_BAUs <- FALSE   ## Need to compute full covariance matrix
+    }
+
+    CZ <- Sm@Cmat
+
+    ## Now, we only need those BAUs that are influenced by observations and prediction locations
+    if(!predict_BAUs) {
+        needed_BAUs <- union(as(CP,"dgTMatrix")@j+1, as(CZ,"dgTMatrix")@j+1)
+        BAUs <- BAUs[needed_BAUs,]
+        CP <- CP[,needed_BAUs]
+        CZ <- CZ[,needed_BAUs]
+    }
+
+    if(is(BAUs,"ST")){
+        needed_BAUs <- BAUs[,pred_time]$n
+        BAUs <- BAUs[,pred_time]
+        CP <- CP[,needed_BAUs]
+        CZ <- CZ[,needed_BAUs]
     }
 
     depname <- all.vars(Sm@f)[1]
@@ -258,8 +288,7 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE,pred_polys =
     } else if (is(BAUs,"STFDF")){
         idx <- match(BAUs@data$n,Sm@BAUs@data$n)
     }
-    #C <- Sm@Cmat[,idx,drop=FALSE]
-    CZ <- Sm@Cmat
+
 
     if(include_fs) {
         if(sigma2fs >0) {
@@ -292,7 +321,6 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE,pred_polys =
         ## variance too hard to compute all at once -- do it in blocks of 1000
         temp <- rep(0,length(BAUs))
         batching=cut(1:nrow(PI),breaks = seq(0,nrow(PI)+1000,by=1000),labels=F)
-
         for(i in 1:max(unique(batching))) {
             idx = which(batching==i)
             temp[idx] <- as.numeric(rowSums((PI[idx,] %*% Cov)*PI[idx,]))
@@ -506,20 +534,32 @@ setMethod("summary",signature(object="SRE"),
     if(is(BAUs,"ST"))
         if(!all(all.vars(f)[-1] %in% c(names(BAUs@data),coordnames(BAUs))))
             stop("All covariates need to be in the SpatialPolygons BAU object")
-    if(!is(data,"list")) stop("Please supply a list of Spatial objects.")
-    if(!all(sapply(data,function(x) is(x,"Spatial") | is(x,"ST")))) stop("All data list elements need to be of class Spatial or ST")
-    if(!all(sapply(data,function(x) all.vars(f)[1] %in% names(x@data)))) stop("All data list elements to have values for the dependent variable")
-    if(!all(sapply(data,function(x) identical(proj4string(x), proj4string(BAUs))))) stop("Please ensure all data items and BAUs have the same coordinate reference system")
-    if(!(is(basis,"Basis") | is(basis,"TensorP_Basis"))) stop("basis needs to be of class Basis  or TensorP_Basis (package FRK)")
+    if(!is(data,"list"))
+        stop("Please supply a list of Spatial objects.")
+    if(!all(sapply(data,function(x) is(x,"Spatial") | is(x,"ST"))))
+        stop("All data list elements need to be of class Spatial or ST")
+    if(!all(sapply(data,function(x) all.vars(f)[1] %in% names(x@data))))
+        stop("All data list elements to have values for the dependent variable")
+    if(!all(sapply(data,function(x) identical(proj4string(x), proj4string(BAUs)))))
+        stop("Please ensure all data items and BAUs have the same coordinate reference system")
+    if(!(is(basis,"Basis") | is(basis,"TensorP_Basis")))
+        stop("basis needs to be of class Basis  or TensorP_Basis (package FRK)")
     #if(is(data,"SpatialPolygonsDataFrame") & !("std" %in% names(data))) stop("Polygon data needs to contain a field 'std' denoting the observation error")
     if(!("fs" %in% names(BAUs@data))) {
-        warning("BAUs should contain a field 'fs' containing a basis function for fine-scale variation. Setting basis function equal to one everywhere.")
+        warning("BAUs should contain a field 'fs' containing a basis
+                function for fine-scale variation. Setting basis function equal to one everywhere.")
         BAUs$fs <- 1
     }
-    if(!(is(BAUs,"SpatialPolygonsDataFrame") | is(BAUs,"STFDF"))) stop("BAUs should be a SpatialPolygonsDataFrame or a STFDF object")
-    if(is(BAUs,"STFDF")) if(!is(BAUs@sp,"SpatialPolygonsDataFrame")) stop("The spatial component of the BAUs should be a SpatialPolygonsDataFrame")
-    if((is(manifold(basis),"sphere")) & !all((coordnames(BAUs) == c("lon","lat")))) stop("Since a sphere is being used, please ensure that all coordinates (including those of BAUs) are in (lon,lat)")
-    if(!est_error & !all(sapply(data,function(x) "std" %in% names(x@data)))) stop("If observational error is not going to be estimated, please supply a field 'std' in the data objects")
+    if(!(is(BAUs,"SpatialPolygonsDataFrame") | is(BAUs,"STFDF")))
+        stop("BAUs should be a SpatialPolygonsDataFrame or a STFDF object")
+    if(is(BAUs,"STFDF")) if(!is(BAUs@sp,"SpatialPolygonsDataFrame"))
+        stop("The spatial component of the BAUs should be a SpatialPolygonsDataFrame")
+    if((is(manifold(basis),"sphere")) & !all((coordnames(BAUs) == c("lon","lat"))))
+        stop("Since a sphere is being used, please ensure that
+             all coordinates (including those of BAUs) are in (lon,lat)")
+    if(!est_error & !all(sapply(data,function(x) "std" %in% names(x@data))))
+        stop("If observational error is not going to be estimated,
+             please supply a field 'std' in the data objects")
 }
 
 .gstat.formula <- function (formula, data)

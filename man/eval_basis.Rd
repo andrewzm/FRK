@@ -15,6 +15,7 @@
 \alias{eval_basis,TensorP_Basis,matrix-method}
 \alias{eval_basis,TensorP_Basis-STIDF-method}
 \alias{eval_basis,TensorP_Basis-matrix-method}
+\alias{radial_basis}
 \title{Evaluate basis functions}
 \usage{
 eval_basis(basis, s, output = "matrix")
@@ -33,7 +34,8 @@ eval_basis(basis, s, output = "matrix")
 
 \S4method{eval_basis}{TensorP_Basis,STIDF}(basis, s, output = "matrix")
 
-\S4method{eval_basis}{Basis,STIDF}(basis, s, output = "matrix")
+radial_basis(manifold = sphere(), loc = matrix(c(1, 0), nrow = 1),
+  scale = 1, type = "Gaussian")
 }
 \arguments{
 \item{basis}{object of class \code{Basis}}

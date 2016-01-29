@@ -12,7 +12,7 @@ SRE.fit(SRE_model, n_EM = 100L, tol = 1e-05, method = "EM",
   print_lik = FALSE)
 
 SRE.predict(SRE_model, use_centroid = TRUE, include_fs = TRUE,
-  pred_polys = NULL)
+  pred_polys = NULL, pred_time = NULL)
 }
 \arguments{
 \item{f}{\code{R} formula relating the dependent variable (or transformations thereof) to covariates}
@@ -40,6 +40,8 @@ SRE.predict(SRE_model, use_centroid = TRUE, include_fs = TRUE,
 \item{include_fs}{flag indicating whether to assume prediction locations coincide with observations in BAUs (where applicable) or not}
 
 \item{pred_polys}{object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified}
+
+\item{pred_time}{vector of time indices at which we wish to predict. All time points are used if this option is not specified}
 }
 \description{
 Main constructor of spatial random effects (SRE) object. Please see \code{\link{SRE-class}} for more details on the object's properties and methods.

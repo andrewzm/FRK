@@ -15,7 +15,7 @@ opts_FRK$set("parallel",0L)
 ## Load data
 data(AIRS_05_2003)
 #AIRS_05_2003$co2std <- sqrt(5.6)
-AIRS_05_2003 <- filter(AIRS_05_2003,day %in% 1:5) %>%
+AIRS_05_2003 <- filter(AIRS_05_2003,day %in% 1) %>%
     mutate(std=co2std) %>%
     select(lon,lat,co2avgret,std)
 coordinates(AIRS_05_2003) = ~lon+lat # change into an sp object
