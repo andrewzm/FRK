@@ -34,22 +34,23 @@ setMethod("initialize",signature="manifold",function(.Object) {
 #' ## Now a 2D example
 #' data(meuse)
 #' coordinates(meuse) = ~x+y # change into an sp object
-#'
-#' ## Grid BAUs
-#' GridPols_df <- auto_BAUs(manifold = plane(),
+#'  if(require(INLA)) {
+#'     ## Grid BAUs
+#'     GridPols_df <- auto_BAUs(manifold = plane(),
 #'                              cellsize = 200,
 #'                              type = "grid",
 #'                              data = meuse,
 #'                              convex=-0.05)
-#' plot(GridPols_df)
+#'     plot(GridPols_df)
 #'
-#' ## Hex BAUs
-#' HexPols_df <- auto_BAUs(manifold = plane(),
+#'     ## Hex BAUs
+#'     HexPols_df <- auto_BAUs(manifold = plane(),
 #'                             cellsize = 200,
 #'                             type = "hex",
 #'                             data = meuse,
 #'                             convex=-0.05)
-#' plot(HexPols_df)
+#'     plot(HexPols_df)
+#' }
 #' @export
 auto_BAUs <- function(manifold, type="grid",cellsize = rep(1,dimensions(manifold)),
                       isea3h_res=NULL,data=NULL,convex=-0.05,tunit="days") {
@@ -76,10 +77,10 @@ auto_BAUs <- function(manifold, type="grid",cellsize = rep(1,dimensions(manifold
 setMethod("auto_BAU",signature(manifold="plane"),
           function(manifold,type="grid",cellsize = c(1,1),resl=resl,d=NULL,convex=-0.05,...) {
 
-              # if(!requireNamespace("INLA"))
-              #     stop("For automatic BAU generation INLA needs to be installed for
-              #          constructing non-convex hull. Please install it using
-              #          install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\")")
+               if(!requireNamespace("INLA"))
+                   stop("For automatic BAU generation INLA needs to be installed for
+                        constructing non-convex hull. Please install it using
+                        install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\")")
 
               X1 <- X2 <- NULL # Suppress bindings warning
 
@@ -93,7 +94,7 @@ setMethod("auto_BAU",signature(manifold="plane"),
               }
               xrange <- range(coords[,1])
               yrange <- range(coords[,2])
-              bndary_seg = inla.nonconvex.hull(coords,convex=convex)$loc %>%
+              bndary_seg = INLA::inla.nonconvex.hull(coords,convex=convex)$loc %>%
                   data.frame() %>%
                   mutate(x=X1,y=X2,id = 1) %>%
                   select(-X1,-X2) %>%

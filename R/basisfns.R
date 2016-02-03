@@ -119,10 +119,10 @@ auto_basis <- function(m = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,t
     coords <- coordinates(data)
 
     if(is(m,"plane") & regular==0) {
-        # if(!requireNamespace("INLA"))
-        #     stop("For automatic basis generation INLA needs to be installed
-        #          for constructing basis function centres. Please install it
-        #          using install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\")")
+         if(!requireNamespace("INLA"))
+             stop("For automatic basis generation INLA needs to be installed
+                  for constructing basis function centres. Please install it
+                  using install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\")")
     }
 
     if(nrow(coords)>subsamp) {
@@ -132,7 +132,7 @@ auto_basis <- function(m = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,t
     xrange <- range(coords[,1])
     yrange <- range(coords[,2])
 
-    if(is(m,"plane") & regular == 0) bndary_seg = inla.nonconvex.hull(coords,convex=-0.05)
+    if(is(m,"plane") & regular == 0) bndary_seg = INLA::inla.nonconvex.hull(coords,convex=-0.05)
     if(is(m,"plane") & regular > 0) {
         asp_ratio <- diff(yrange) / diff(xrange)
         if(asp_ratio < 1) {
@@ -158,7 +158,7 @@ auto_basis <- function(m = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,t
     for(i in 1:nres) {
         if(is(m,"plane") & (regular == 0)) {
             ## Generate mesh and use these as centres
-            this_res_locs <- inla.mesh.2d(loc = matrix(apply(coords,2,mean),nrow=1),
+            this_res_locs <- INLA::inla.mesh.2d(loc = matrix(apply(coords,2,mean),nrow=1),
                                           boundary = list(bndary_seg),
                                           max.edge = max(diff(xrange),diff(yrange))/(2*2.5^(i-1)),
                                           cutoff = max(diff(xrange),diff(yrange))/(3*2.5^(i-1)))$loc[,1:2]

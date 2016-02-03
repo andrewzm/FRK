@@ -27,7 +27,9 @@ Suggests:
     knitr,
     parallel,
     gstat,
-    rgeos
+    rgeos,
+    INLA,
+    splancs
 Enhances: dggrids,
 Imports:
     methods,
