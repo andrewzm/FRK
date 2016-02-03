@@ -147,7 +147,6 @@ auto_basis <- function(m = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,t
     loc <- scale <- NULL
     G <- list()
 
-    #if(is(m,"sphere")) load(system.file("extdata","isea3h.rda", package = "FRK"))
     if(is(m,"sphere")) {
         isea3h <- load_dggrids(res = nres) %>%
                   dplyr::filter(res >= isea3h_lo)
@@ -325,10 +324,6 @@ setMethod("eval_basis",signature(basis="TensorP_Basis",s="matrix"),function(basi
     S <- do.call("cBind",S)
     S <- as(S,"dgCMatrix")
 
-    # S <- foreach(i = 1:ncol(S1),.combine="cBind") %do% {
-    #     S1[,i] * S2
-    # } %>% as("dgCMatrix")
-
     S
 })
 
@@ -351,10 +346,6 @@ setMethod("eval_basis",signature(basis="TensorP_Basis",s = "STIDF"),function(bas
     S <- do.call("cBind",S)
     S <- as(S,"dgCMatrix")
 
-    # S <- foreach(i = 1:ncol(S1),.combine="cBind") %do% {
-    #     S1[,i] * S2
-    # } %>% as("dgCMatrix")
-
     S
 })
 
@@ -372,7 +363,6 @@ radial_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,typ
 
 .point_eval_fn <- function(flist,s,output="matrix") {
 
-    #x <- sapply(flist,function(f) f(s))
     x <- do.call("cbind",sapply(flist,function(f) f(s),simplify=FALSE))
     as(x,"Matrix")
 
@@ -421,7 +411,7 @@ radial_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,typ
         pip <- over(SpatialPoints(samps),
                     SpatialPolygons(list(s@polygons[[i]]),1L))
         samps <- samps[which(pip==1),]
-        #             ggplot(X) + geom_point(aes(X1,X2),pch=".") + geom_path(data=coords,aes(lon,lat)) + coord_map("ortho",xlim=c(-180,180),ylim=c(-90,90),orientation=c(-180,-45,45))
+
     }
     samps
 }

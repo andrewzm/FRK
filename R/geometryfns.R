@@ -71,10 +71,7 @@ auto_BAUs <- function(manifold, type="grid",cellsize = rep(1,dimensions(manifold
     if(length(cellsize) == 1) cellsize <- rep(cellsize,dimensions(manifold))
     if(!length(cellsize) == dimensions(manifold)) stop("cellsize needs to be of length equal to dimension of manifold")
 
-
-
     auto_BAU(manifold=manifold,type=type,cellsize=cellsize,resl=resl,d=data,convex=convex,tunit=tunit)
-
 }
 
 
@@ -82,7 +79,9 @@ setMethod("auto_BAU",signature(manifold="plane"),
           function(manifold,type="grid",cellsize = c(1,1),resl=resl,d=NULL,convex=-0.05,...) {
 
               if(!requireNamespace("INLA"))
-                  stop("For automatic BAU generation INLA needs to be installed for constructing non-convex hull. Please install it using install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\")")
+                  stop("For automatic BAU generation INLA needs to be installed for
+                       constructing non-convex hull. Please install it using
+                       install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\")")
 
               X1 <- X2 <- NULL # Suppress bindings warning
 
@@ -152,7 +151,7 @@ setMethod("auto_BAU",signature(manifold="timeline"),
                   stop("Need to supply argument tunit with value secs, mins, hours, days, months or years")
 
               tunit <- l$tunit
-              tpoints <- d  # d needs to be of class Date
+              tpoints <- d
 
               if(is(tpoints,"Date"))
                   tpoints <- as.POSIXct(tpoints)
@@ -164,6 +163,7 @@ setMethod("auto_BAU",signature(manifold="timeline"),
               tgrid <- seq(trunc(trange[1],tunit),
                            trunc(trange[2],tunit),
                            by=tspacing) %>%
+                               ## Old code:
                                # switch(tunit,
                                #       secs    = cellsize,
                                #       mins    = cellsize*60,
@@ -194,7 +194,6 @@ setMethod("auto_BAU",signature(manifold = c("STmanifold")),
 
               }
 
-
               if(is(manifold,"STplane")) {
                   spat_manifold <- plane()
               } else {
@@ -217,24 +216,6 @@ setMethod("auto_BAU",signature(manifold = c("STmanifold")),
 
           })
 
-# setMethod("auto_BAU",signature(manifold="STsphere"),
-#           function(manifold,cellsize = c(1,1,1),resl=resl,type="hex",d=NULL,convex=-0.05,...) {
-#
-#               spatial_BAUs <- auto_BAU(manifold=sphere(),cellsize=cellsize[1:2],
-#                                        resl=resl,type=type,d=STobj@sp,convex=convex,...)
-#               temporal_BAUs <- auto_BAU(manifold=sphere(), cellsize=cellsize[3],
-#                                         resl=resl,type=type,d=d,convex=convex,...)
-#
-#               nt <- length(temporal_BAUs)
-#               ns <- nrow(spatial_BAUs)
-#               STBAUs <- STFDF(spatial_BAUs,
-#                               temporal_BAUs,
-#                               data = data.frame(n = 1:(nt *ns),
-#                                                 time = rep(temporal_BAUs,each=ns),
-#                                                 t = rep(1:nt,each=ns)))
-#
-#               return(STBAUs)
-#           })
 
 setMethod("auto_BAU",signature(manifold="real_line"),
           function(manifold,type="grid",cellsize = 1,resl=resl,d=NULL,...) {
@@ -266,12 +247,6 @@ setMethod("auto_BAU",signature(manifold="sphere"),
         isea3h <- load_dggrids(res=resl)
 
         isea3h_res <- process_isea3h(isea3h,resl)
-
-        # isea3h_res <- filter(isea3h,res == resl) %>%
-        #     arrange(id) %>%
-        #     group_by(id) %>%
-        #     #filter(diff(range(lon)) < 90) %>%
-        #     data.frame()
 
         isea3h_sp_pol <- df_to_SpatialPolygons(
             df=filter(isea3h_res,centroid==0),
@@ -545,6 +520,7 @@ df_to_SpatialPolygons <- function(df,keys,coords,proj) {
     if(opts_FRK$get("parallel") > 1) {
         cl <- makeCluster(opts_FRK$get("parallel"))
 
+        ## Deprecated to remove plyr:
         #doParallel::registerDoParallel(opts_FRK$get("parallel"))
         #df_poly <- plyr::dlply(df,keys,dfun,.parallel=TRUE)
 
@@ -650,20 +626,9 @@ setMethod("map_data_to_BAUs",signature(data_sp="Spatial"),
                                   If you have simulated data, please ensure no simulated data fall on a
                                   BAU boundary as these classify as not belonging to any BAU.")
 
-                          ## Rotate? But over doesn't work with polygons spanning boundary :S
-                          # edge_data <- data_sp[which(is.na((Data_in_BAU))),]
-                          # BAUs_df <- SpatialPolygonsDataFrame_to_df(sp_pols)
-                          # edge_BAUs_id <- group_by(BAUs_df,id) %>%
-                          #                   summarise(r_lon = diff(range(lon))) %>%
-                          #                   filter(r_lon > 180)
-                          # edge_BAUs_pts <- filter(BAUs_df,id %in% edge_BAUs_id$id)
-                          #
-                          # ## Now simply find which point of polygon is closest to data point and extract id
-                          # data_inBAUs_ids <- apply(rdist(coordinates(edge_data),edge_BAUs_pts[c("lon","lat")]),1,which.min)
-                          # data_inBAUs_ids <- edge_BAUs_pts[data_inBAUs_ids,]$id
-                          # Data_in_BAU[which(is.na((Data_in_BAU)))] <- data_inBAUs_ids
                       }
-                      add_columns <- colnames(sp_pols@data[which(!colnames(sp_pols@data) %in% colnames(data_sp@data))])
+                      add_columns <- colnames(sp_pols@data[which(!colnames(sp_pols@data) %in%
+                                                                     colnames(data_sp@data))])
                       new_sp_pts <- data_sp
                       new_sp_pts@data <- cbind(new_sp_pts@data,sp_pols@data[Data_in_BAU,][add_columns])
                       new_sp_pts@data["BAU_name"] <- as.character(row.names(sp_pols)[Data_in_BAU])
@@ -790,10 +755,7 @@ setMethod("BuildC",signature(data="SpatialPolygons"),
               if(any(is.na(j_idx))) stop("NAs when constructing observation from
                                          large support observations. Are you sure all
                                          observations are covered by BAUs?")
-              # data$id <- 1:length(data)
-              # overlap <- over(SpatialPoints(coordinates(BAUs)),data)
-              # i_idx <- as.numeric(na.exclude(overlap$id))
-              # j_idx <- which(!is.na(overlap$id))
+
               list(i_idx=i_idx,j_idx=j_idx)
           })
 
@@ -802,29 +764,17 @@ setMethod("BuildC",signature(data="SpatialPointsDataFrame"),
               BAU_index <- data.frame(row.names=row.names(BAUs),n =1:length(BAUs))
               i_idx <- 1:length(data)
               j_idx <- BAU_index[data$BAU_name,]
-              #j_idx <- which(row.names(BAUs) %in% data$BAU_name)
+              ## Deprecated: #j_idx <- which(row.names(BAUs) %in% data$BAU_name)
               list(i_idx=i_idx,j_idx=j_idx)
           })
 
 setMethod("BuildC",signature(data="STIDF"),
           function(data,BAUs) {
               i_idx <- 1:length(data)
-              #j_idx <- which(BAUs@data$n %in% data@data$n)
               j_idx <- BAUs@data$n[data@data$n]
+              ## Deprecated: #j_idx <- which(BAUs@data$n %in% data@data$n)
               list(i_idx=i_idx,j_idx=j_idx)
           })
-
-# setMethod("BuildC",signature(data="STFDF"),
-#           function(data,BAUs) {
-#              C <-
-#               lapply(1:length(data@time),
-#                     function(i) {
-#                         BuildC(data[,i],BAUs = BAUs)
-#                     })
-#               list(i_idx = do.call(c,lapply(C,function(l) l$i_idx) ),
-#                    j_idx = do.call(c,lapply(C,function(l) l$j_idx) ))
-#
-#           })
 
 setMethod("coordinates",signature(obj="SpatialPolygons"),function(obj){
     coord_vals <- t(sapply(1:length(obj),function(i) obj@polygons[[i]]@Polygons[[1]]@labpt))
@@ -976,19 +926,17 @@ process_isea3h <- function(isea3h,resl) {
         coords=c("lon","lat"),
         proj=CRS())
 
-
     line = SpatialLines(list(Lines(list(Line(cbind(lon=c(180,180),lat=c(-90,90)))),
                                    ID="line")))
-    #proj4string = CRS("+proj=longlat +ellps=sphere"))
     new_polys <- NULL
     for(i in 1:length(prob_polys2_sp)) {
-        # Just ignore if cannot find intersection
+        # Just ignore if cannot find intersection, might create some small gaps in sphere (?)
         lpi <- tryCatch(rgeos::gIntersection(prob_polys2_sp[i,], line),
                         error=function(e) {TRUE})
 
         if(!is(lpi,"logical")) {
-            blpi <- rgeos::gBuffer(lpi, width = 0.000001)  # create a very thin polygon
-            dpi <- rgeos::gDifference(prob_polys2_sp[i,], blpi)                # split using gDifference
+            blpi <- rgeos::gBuffer(lpi, width = 0.000001)        # create a very thin polygon
+            dpi <- rgeos::gDifference(prob_polys2_sp[i,], blpi)  # split using gDifference
 
             pol1 <- dpi@polygons[[1]]@Polygons[[1]]@coords
             pol2 <- dpi@polygons[[1]]@Polygons[[2]]@coords

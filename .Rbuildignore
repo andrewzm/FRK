@@ -18,3 +18,4 @@ bigstudies
 .toc$
 .tar.gz$
 ^vignettes/figures
+rhipe_fns.R$

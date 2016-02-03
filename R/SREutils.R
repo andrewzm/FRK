@@ -314,9 +314,8 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE,pred_polys =
             LAMBDAinv <- chol2inv(chol(LAMBDA))
             PI <- S0
             Qx <- crossprod(solve(sqrt(Sm@Ve)) %*% CZ %*% PI) + LAMBDAinv
-            #Qx <- t(PI) %*% t(C) %*% solve(Sm@Ve) %*% C %*% PI + LAMBDAinv
             ybar <- t(PI) %*%t(CZ) %*% solve(Sm@Ve) %*% (Sm@Z - CZ %*% X %*% alpha)
-            Cov <- as(chol2inv(chol(Qx)),"dgeMatrix")  # Actually all Cov, convenient for later
+            Cov <- as(chol2inv(chol(Qx)),"dgeMatrix")  ## Do all covariance matrix
             x_mean <- Cov %*% ybar
             BAUs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
         }
@@ -329,11 +328,9 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE,pred_polys =
             temp[idx] <- as.numeric(rowSums((PI[idx,] %*% Cov)*PI[idx,]))
         }
         BAUs[["var"]] <- temp
-
-        #BAUs[["var"]] <- as.numeric(rowSums((PI %*% Partial_Cov)*PI))
-
     }
-    if(!include_fs) {
+
+        if(!include_fs) {
         BAUs[["mu"]] <- as.numeric(X %*% alpha + S0 %*% mu_eta)
         BAUs[["var"]] <- rowSums((S0 %*% S_eta) * S0)
     }
@@ -446,9 +443,6 @@ setMethod("summary",signature(object="SRE"),
                  -(-0.5*tr(DinvV) +
                        0.5*tr(DinvV %*% Dinv %*% Omega_diag)
                  )
-                 # -(-0.5*sum(diag2(cholDinv,crossprod(cholDinv,Sm@Vfs))) +
-                 #       0.5*tr(Dinv %*% Sm@Vfs %*% Dinv %*% Omega_diag)
-                 # )
             }
         }
 
@@ -505,32 +499,31 @@ setMethod("summary",signature(object="SRE"),
     N <- length(Sm@Z)
     cholD <- chol(D)
     cholDinvT <- t(solve(cholD))
-    #Dinv <- chol2inv(chol(D))
-    #S_Dinv_S <-  crossprod(sqrt(Dinv) %*% S)
     S_Dinv_S <-  crossprod(cholDinvT %*% S)
+
 
     log_det_SigmaZ <- determinant(Kinv + S_Dinv_S,logarithm = TRUE)$modulus +
         determinant(K,logarithm = TRUE)$modulus +
-        #sum(log(diag(D)))
         logdet(cholD)
 
-    #SigmaZ_inv <- Dinv - Dinv %*% S %*% solve(Kinv + S_Dinv_S) %*% t(S) %*% Dinv
-    #SigmaZ_inv2 <- Dinv - tcrossprod(Dinv %*% S %*% solve(R))
+    ## Alternatively: (slower but more direct)
+    # Dinv <- chol2inv(chol(D))
+    # SigmaZ_inv <- Dinv - Dinv %*% S %*% solve(Kinv + S_Dinv_S) %*% t(S) %*% Dinv
+    # SigmaZ_inv2 <- Dinv - tcrossprod(Dinv %*% S %*% solve(R))
+
     R <- chol(Kinv + S_Dinv_S)
-    #rDinv <- t(resid) %*% Dinv
+
     rDinv <- crossprod(cholDinvT %*% resid,cholDinvT)
-    #quad_bit <- rDinv %*% resid - tcrossprod(rDinv %*% S %*% solve(R))
+    ## Alternatively: # rDinv <- t(resid) %*% Dinv
+
     quad_bit <- crossprod(cholDinvT %*% resid) - tcrossprod(rDinv %*% S %*% solve(R))
+    ## Alternatively: # quad_bit <- rDinv %*% resid - tcrossprod(rDinv %*% S %*% solve(R))
 
     llik <- -0.5 * N * log(2*pi) -
         0.5 * log_det_SigmaZ -
         0.5 * quad_bit
     as.numeric(llik)
 
-    # OLD APPROXIMATE VERSION
-    # r <- Sm@Z - Sm@X %*% Sm@alphahat  - Sm@S %*% Sm@mu_eta
-    # as.numeric(-0.5*determinant(D)$modulus -
-    #                0.5 * t(r) %*% Dinv %*% r)
 }
 
 
@@ -552,7 +545,6 @@ setMethod("summary",signature(object="SRE"),
         stop("Please ensure all data items and BAUs have the same coordinate reference system")
     if(!(is(basis,"Basis") | is(basis,"TensorP_Basis")))
         stop("basis needs to be of class Basis  or TensorP_Basis (package FRK)")
-    #if(is(data,"SpatialPolygonsDataFrame") & !("std" %in% names(data))) stop("Polygon data needs to contain a field 'std' denoting the observation error")
     if(!("fs" %in% names(BAUs@data))) {
         warning("BAUs should contain a field 'fs' containing a basis
                 function for fine-scale variation. Setting basis function equal to one everywhere.")

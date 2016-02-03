@@ -1,11 +1,3 @@
-circleFun <- function(center = c(0,0),diameter = 1, npoints = 100){
-    r = diameter / 2
-    tt <- seq(0,2*pi,length.out = npoints)
-    xx <- center[1] + r * cos(tt)
-    yy <- center[2] + r * sin(tt)
-    return(data.frame(x = xx, y = yy))
-}
-
 #' @title Draw a map of the world with country boundaries.
 #' @description Generates a ggplot2 map of the world
 #' @param g initial ggplot object
@@ -50,9 +42,6 @@ setMethod("show_basis",signature(basis = "Basis"),  # GRBF basis with mean offse
                  }
               } else  if(is(manifold(basis),"plane")) {
                   for (i in 1:basis@n) {
-#                       g <- g + geom_path(data=circleFun(center=basis@pars[[i]]$loc,
-#                                                         diameter = basis@pars[[i]]$scale),
-#                                          aes(x=x,y=y),col=col)
                       g <- g + geom_path(data=cbind(circleFun(center=as.numeric(basis@df[i,1:2]),
                                                         diameter = basis@df$scale[i]),
                                                     res=as.factor(basis@df$res[i])),
@@ -137,3 +126,10 @@ clip_polygons_lonlat <- function(d,key) {
         }})
 }
 
+circleFun <- function(center = c(0,0),diameter = 1, npoints = 100){
+    r = diameter / 2
+    tt <- seq(0,2*pi,length.out = npoints)
+    xx <- center[1] + r * cos(tt)
+    yy <- center[2] + r * sin(tt)
+    return(data.frame(x = xx, y = yy))
+}

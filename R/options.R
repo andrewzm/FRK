@@ -1,3 +1,4 @@
+## initialise options: Run when FRK is loaded
 new_opts_FRK <- function(d = list(progress = TRUE, verbose = FALSE, parallel=1L)) {
     defaults = d
     list(set = function(opt,value) {
