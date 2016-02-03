@@ -12,23 +12,23 @@ auto_BAUs(manifold, type = "grid", cellsize = rep(1, dimensions(manifold)),
 
 \item{type}{either ``grid'' or ``hex'', indicating whether gridded or hexagonal BAUs should be used}
 
-\item{cellsize}{denotes size of gridcell when \code{type} = ``grid''. Needs to be of length 1 (isotropic grid) or a vector of length \code{dimensions(manifold)}}
+\item{cellsize}{denotes size of gridcell when \code{type} = ``grid''. Needs to be of length 1 (isotropic-grid case) or a vector of length \code{dimensions(manifold)}}
 
-\item{isea3h_res}{resolution number of the isea3h DGGRID cells for when type is ``hex'' and manifold is a \code{sphere}}
+\item{isea3h_res}{resolution number of the isea3h DGGRID cells for when type is ``hex'' and manifold is the surface of a \code{sphere}}
 
-\item{data}{object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame}. Provision of \code{data} implies that the domain is bounded, and is thus necessary when the manifold is a \code{real_line} or a \code{plane} but is not necessary when the manifold is a \code{sphere}}
+\item{data}{object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame}. Provision of \code{data} implies that the domain is bounded, and is thus necessary when the manifold is a \code{real_line} or a \code{plane} but is not necessary when the manifold is the surface of a \code{sphere}}
 
 \item{convex}{convex parameter used for smoothing an extended boundary when working on a finite domain (that is, when the object \code{d} is supplied), see details.}
 
 \item{tunit}{temporal unit when requiring space-time BAUs. Can be either "secs", "mins", "hours" or "days".}
 }
 \description{
-This function calls the generic function \code{auto_BAU} (currently not exported) after a series of checks and is the easiest way to generate a set of BAUs on the manifold being used.
+This function calls the generic function \code{auto_BAU} (currently not exported) after a series of checks and is the easiest way to generate a set of Basic Areal Units (BAUs) on the manifold being used; see details.
 }
 \details{
-\code{auto_BAUs} constructs a set of basic aerial units (BAUs) used both for data pre-processing and for prediction. As such, the BAUs need to be of sufficienly fine resolution so that data is not adversely affected.
+\code{auto_BAUs} constructs a set of Basic Areal Units (BAUs) used both for data pre-processing and for prediction. As such, the BAUs need to be of sufficienly fine resolution so that data is not adversely affected.
 
-Two types of BAUs are supported by \code{FRK}: ``hex'' (hexagonal) and ``grid'' (rectangular). In order to have a ``grid'' set of BAUs, the user should specify a cellsize of length equal to the dimensions of the manifold, that is, of length 1 for \code{real_line} and 2 for \code{sphere} and \code{plane}. When a ``hex'' set of BAUs is desired, the first element of \code{cellsize} is used to determine the side length by dividing this value by approximately 2. The argument \code{type} is ignored with \code{real_line} and ``hex'' is not available for this manifold.
+Two types of BAUs are supported by \code{FRK}: ``hex'' (hexagonal) and ``grid'' (rectangular). In order to have a ``grid'' set of BAUs, the user should specify a cellsize of length equal to the dimensions of the manifold, that is, of length 1 for \code{real_line} and 2 for the surface of a \code{sphere} and \code{plane}. When a ``hex'' set of BAUs is desired, the first element of \code{cellsize} is used to determine the side length by dividing this value by approximately 2. The argument \code{type} is ignored with \code{real_line} and ``hex'' is not available for this manifold.
 
   If the object \code{data} is provided, then automatic domain selection is carried out by employing the \code{INLA} function \code{inla.nonconvex.hull}, which finds a (non-convex) hull surrounding the data points (or centroids of the data polygons). This domain is extended and smoothed using the \code{convex} parameter. The parameter \code{convex} should be negative, and a larger absolute value for \code{convex} results in a larger domain with smoother boundaries. Due to the dependency on hull construction, \code{INLA} needs to be installed in order to use this function unless BAUs on a sphere are desired (note that \code{INLA} was not available on CRAN at time of writing).
 }

@@ -4,16 +4,16 @@
 \alias{STplane}
 \title{plane in space-time}
 \usage{
-STplane(metric = Euclid_dist(dim = 3L))
+STplane(measure = Euclid_dist(dim = 3L))
 }
 \arguments{
-\item{metric}{an object of class \code{measure}}
+\item{measure}{an object of class \code{measure}}
 }
 \description{
 Initialisation of a 2D plane with a temporal dimension.
 }
 \details{
-A 2D plane with a time component added is initialised using a \code{measure} object. By default, the measure object (\code{metric}) is the Euclidean distance in 3 dimensions, \link{Euclid_dist}.
+A 2D plane with a time component added is initialised using a \code{measure} object. By default, the measure object (\code{measure}) is the Euclidean distance in 3 dimensions, \link{Euclid_dist}.
 }
 \examples{
 P <- STplane()

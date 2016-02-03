@@ -12,8 +12,8 @@
   \item{z}{dependent variable}
   \item{proc}{variable name (Tmax)}
   \item{id}{station id}
-  \item{lat}{latitude coordinate of retrieval}
   \item{lon}{longitude coordinate of retrieval}
+  \item{lat}{latitude coordinate of retrieval}
 }}
 \usage{
 NOAA_df_1990

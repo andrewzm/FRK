@@ -256,3 +256,9 @@ tr <- function(X) {
 diag2 <- function(X,Y) {
     rowSums(X * t(Y))
 }
+
+logdet <- function (L)
+{
+    diagL <- diag(L)
+    return(2 * sum(log(diagL)))
+}

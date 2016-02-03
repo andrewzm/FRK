@@ -16,9 +16,9 @@
 The class \code{manifold} is virtual; other manifold classes inherit from this class.
 }
 \details{
-A \code{manifold} object is characterised by a character variable \code{type} which contains a description of the manifold, and a variable \code{metric} of type \code{measure}. A typical measure is the Euclidean distance.
+A \code{manifold} object is characterised by a character variable \code{type}, which contains a description of the manifold, and a variable \code{measure} of type \code{measure}. A typical measure is the Euclidean distance.
 
-\code{FRK} supports five manifolds; the real line (in one dimension), instantiated using \code{real_line()}; the 2D plane instantiated using \code{plane()}; the S2 sphere, instantiated using \code{sphere()}; the R2 space-time manifold, instantiated using \code{STplane()}, and the S2 space-time manifold, instantiated using \code{STsphere()}. User-specific manifolds can also be specified, however helper functions that are manifold specific, such as \code{auto_BAU} and \code{auto_BAUs} and \code{auto_basis} only work with the five pre-configured manifolds. On the other hand, one can always change the distance function used on the manifold to synthesise anisotropy or heterogeneity.
+\code{FRK} supports five manifolds; the real line (in one dimension), instantiated by using \code{real_line()}; the 2D plane, instantiated by using \code{plane()}; the 2D-sphere surface S2, instantiated by using \code{sphere()}; the R2 space-time manifold, instantiated by using \code{STplane()}, and the S2 space-time manifold, instantiated by using \code{STsphere()}. User-specific manifolds can also be specified, however helper functions that are manifold specific, such as \code{auto_BAU} and \code{auto_BAUs} and \code{auto_basis} only work with the pre-configured manifolds. Importantly, one can change the distance function used on the manifold to synthesise anisotropy or heterogeneity.
 }
 \keyword{Manifolds,}
 \keyword{planes}

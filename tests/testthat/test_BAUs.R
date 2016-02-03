@@ -12,15 +12,18 @@ test_that("real_line_BAUs",{
     expect_equal(mean(diff(Grid1D_df$x)),1)
 
     f <- z ~ 1
-    binned_data <- map_data_to_BAUs(data,Grid1D_df,av_var=all.vars(f)[1])
-    expect_is(binned_data,"SpatialPointsDataFrame")
-    expect_true(nrow(binned_data) <= nrow(Grid1D_df))
+    binned_data1 <- map_data_to_BAUs(data,Grid1D_df,av_var=all.vars(f)[1],average_in_BAU = TRUE)
+    binned_data2 <- map_data_to_BAUs(data,Grid1D_df,av_var=all.vars(f)[1],average_in_BAU = FALSE)
+    expect_is(binned_data1,"SpatialPointsDataFrame")
+    expect_is(binned_data2,"SpatialPointsDataFrame")
+    expect_true(nrow(binned_data1) <= nrow(Grid1D_df))
 
-    C <- BuildC(binned_data,Grid1D_df)
-    expect_is(C,"list")
-    expect_equal(names(C),c("i_idx","j_idx"))
-    expect_equal(length(C$i_idx),nrow(binned_data))
-    expect_equal(length(C$j_idx),nrow(binned_data))
+    C1 <- BuildC(binned_data1,Grid1D_df)
+    C2 <- BuildC(binned_data2,Grid1D_df)
+    expect_is(C1,"list")
+    expect_equal(names(C1),c("i_idx","j_idx"))
+    expect_equal(length(C1$i_idx),nrow(binned_data1))
+    expect_equal(length(C1$j_idx),nrow(binned_data1))
 
 
 })
@@ -58,7 +61,7 @@ test_that("sphere_BAUs",{
                           data=NULL,
     )
     expect_is(isea3h_1,"SpatialPolygonsDataFrame")
-    expect_equal(nrow(isea3h_1@data),23)
+    expect_equal(nrow(isea3h_1@data),39)
     expect_equal(names(isea3h_1@data),c("id","lon","lat"))
     expect_true(grepl("+proj=longlat",proj4string(isea3h_1)))
 
@@ -96,20 +99,26 @@ test_that("SpaceTime_BAUs",{
 
     space_time_grid <- auto_BAUs(STplane(),
                                  type="hex",
-                                 cellsize = c(0.4,0.4,1),
+                                 cellsize = c(0.3,0.3,1),
                                  data = STobj1,
-                                 tunit="days")
+                                 tunit="days",
+                                 convex= -0.2)
     expect_is(space_time_grid,"STFDF")
 
     f <- z ~ 1
-    binned_data <- map_data_to_BAUs(STobj1,space_time_grid,av_var=all.vars(f)[1])
-    expect_is(binned_data,"STIDF")
+    binned_data1 <- map_data_to_BAUs(STobj1,space_time_grid,av_var=all.vars(f)[1],average_in_BAU = TRUE)
+    binned_data2 <- map_data_to_BAUs(STobj1,space_time_grid,av_var=all.vars(f)[1],average_in_BAU = FALSE)
+    expect_is(binned_data1,"STIDF")
+    expect_is(binned_data2,"STIDF")
 
-    C <- BuildC(binned_data,space_time_grid)
-    expect_is(C,"list")
-    expect_equal(names(C),c("i_idx","j_idx"))
-    expect_equal(length(C$i_idx),as.numeric(nrow(binned_data)))
-    expect_equal(length(C$j_idx),as.numeric(nrow(binned_data)))
+    C1 <- BuildC(binned_data1,space_time_grid)
+    C2 <- BuildC(binned_data2,space_time_grid)
+    expect_is(C1,"list")
+    expect_is(C2,"list")
+    expect_equal(names(C1),c("i_idx","j_idx"))
+    expect_equal(names(C2),c("i_idx","j_idx"))
+    expect_equal(length(C1$i_idx),as.numeric(nrow(binned_data1)))
+    expect_equal(length(C1$j_idx),as.numeric(nrow(binned_data1)))
 
     expect_equal(attr(space_time_grid@time,"tzone"),attr(STobj1@time,"tzone"))
 })

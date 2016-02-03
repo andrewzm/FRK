@@ -14,7 +14,7 @@ gc_dist(R = NULL)
 gc_dist_time(R = NULL)
 }
 \arguments{
-\item{dim}{dimension of Eucledian space}
+\item{dim}{dimension of Euclidian space}
 
 \item{R}{great-circle radius}
 }

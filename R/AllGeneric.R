@@ -4,7 +4,7 @@
 #' @param basis object of class \code{Basis}
 #' @param g object of class \code{gg} (a \code{ggplot} object)
 #' @param ... not in use
-#' @details The function \code{show_basis} adapts its behaviour to the manifold being used. With \code{real_line}, the one-dimensional basis functions are plotted with colour distinguishing between the different resolutions. With \code{plane}, only local basis functions are supported (at present). Each basis function is shown as a circle with diameter equal to the \code{scale} parameter of the function. Linetype distinguishes the resolution. With \code{sphere}, the centres of the basis functions are shown as circles, with larger sizes corresponding to lower (i.e., coarser) resolutions. Space-time basis functions of subclass \code{TensorP_Basis} can be visualised by visualising the spatial component and temporal components separately.
+#' @details The function \code{show_basis} adapts its behaviour to the manifold being used. With \code{real_line}, the 1D basis functions are plotted with colour distinguishing between the different resolutions. With \code{plane}, only local basis functions are supported (at present). Each basis function is shown as a circle with diameter equal to the \code{scale} parameter of the function. Linetype distinguishes the resolution. With \code{sphere}, the centres of the basis functions are shown as circles, with larger sizes corresponding to lower (i.e., coarser) resolutions. Space-time basis functions of subclass \code{TensorP_Basis} can be visualised by visualising the spatial component and temporal components separately.
 #' @examples
 #' library(ggplot2)
 #' library(sp)
@@ -123,7 +123,7 @@ setGeneric("TensorP", function(Basis1,Basis2) standardGeneric("TensorP"))
 #' @description This generic function is called by \code{auto_BAUs} after a series of checks.
 #' @param manifold object of class \code{manifold}
 #' @param cellsize denotes size of gridcell when \code{type} == ``grid''
-#' @param resl resolution number of isea3h DGGRID cells for when \code{type} is ``hex'' and \code{manifold} is a sphere
+#' @param resl resolution number of isea3h DGGRID cells for when \code{type} is ``hex'' and \code{manifold} is \code{sphere}
 #' @param type either ``hex'' or ``grid'', indicating whether gridded or hexagonal BAUs should be used
 #' @param d data, that is, an object of class SpatialPointsDataFrame or SpatialPolygonsDataFrame. Provision of data implies that the domain is bounded (necessary with \code{real_line} and \code{plane} but not necessary with \code{sphere})
 #' @param convex convex parameter used for smoothing an extended boundary when working on a finite domain (that is, when the object \code{d} is supplied), see details
@@ -138,9 +138,10 @@ setGeneric("auto_BAU", function(manifold,type,cellsize,resl,d,convex,...) standa
 #' @param av_var variable to average into/over BAUs
 #' @param variogram.formula formula used for detrending the data for variogram estimation of the observation error. Should be identical to that used for \code{SRE()}
 #' @param est_error flag indicating whether variogram estimation of the observation error should be carried out or no. This can take a long time with large datasets
+#' @param average_in_BAU flag indicating whether to summarise data that fall into a single BAU by simply taking an average of the data and the standard devitation of the data within each BAU (suitable for extremely large datasets)
 #' @details This generic function is not called directly. It is called in the SER function for binning data in BAUs
 #' @noRd
-setGeneric("map_data_to_BAUs", function(data_sp,sp_pols,av_var,variogram.formula=NULL,est_error=T) standardGeneric("map_data_to_BAUs"))
+setGeneric("map_data_to_BAUs", function(data_sp,sp_pols,av_var,variogram.formula=NULL,est_error=T,average_in_BAU = TRUE) standardGeneric("map_data_to_BAUs"))
 
 #' @title Concatenation
 #' @description Concatenates FRK objects of the same class together. This is primarily used to join up \code{Basis} blocks together.

@@ -3,9 +3,9 @@
 \docType{class}
 \name{SRE-class}
 \alias{SRE-class}
-\title{@title Spatial Random Effects class}
+\title{Spatial Random Effects class}
 \description{
-Central object of package, containing the model and all other information required for estimation and prediction.
+This is the central class definition of the \code{FRK} package, containing the model and all other information required for estimation and prediction.
 }
 \details{
 The spatial random effects (SRE) model is the model employed in Fixed Rank Kriging, and the \code{SRE} object contains all information required for estimation and prediction from spatial data. Object slots contain both other objects (for example, an object of class \code{Basis}) and matrices derived from these objects (for example, the matrix \eqn{S}) in order to facilitate computations.
@@ -13,19 +13,19 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 \section{Slots}{
 
 \describe{
-\item{\code{data}}{the original data used to train the model}
+\item{\code{data}}{the original data from which the model's parameters are estimated}
 
 \item{\code{basis}}{object of class \code{Basis} used to construct the matrix \eqn{S}}
 
-\item{\code{BAUs}}{object of class \code{SpatialPolygonsDataFrame} that contains the basic aerial units (BAUs) that are used to both (i) project the data onto a common discretisation if they are point-referenced and (ii) provide a BAU-to-data relationship if the data has a spatial footprint}
+\item{\code{BAUs}}{object of class \code{SpatialPolygonsDataFrame} that contains the Basic Areal Units (BAUs) that are used to both (i) project the data onto a common discretisation if they are point-referenced and (ii) provide a BAU-to-data relationship if the data has a spatial footprint}
 
 \item{\code{f}}{formula used to define the SRE object. All covariates employed need to be specified in the object \code{BAUs}}
 
 \item{\code{S}}{matrix constructed by evaluating the basis functions at all BAUs affected by the data}
 
-\item{\code{Ve}}{observation variance-covariance matrix (typically diagonal)}
+\item{\code{Ve}}{measurement-error variance-covariance matrix (typically diagonal)}
 
-\item{\code{Vfs}}{fine-scale variance-covariance matrix (typically digonal) up to a constant of proportionality estimated in the framework}
+\item{\code{Vfs}}{fine-scale variance-covariance matrix (typically diagonal) up to a constant of proportionality estimated in the framework}
 
 \item{\code{Z}}{vector of observations (of class \code{Matrix})}
 

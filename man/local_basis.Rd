@@ -2,17 +2,21 @@
 % Please edit documentation in R/basisfns.R
 \name{local_basis}
 \alias{local_basis}
+\alias{radial_basis}
 \title{Construct a set of local basis functions}
 \usage{
 local_basis(manifold = sphere(), loc = matrix(c(1, 0), nrow = 1),
   scale = 1, type = "Gaussian")
+
+radial_basis(manifold = sphere(), loc = matrix(c(1, 0), nrow = 1),
+  scale = 1, type = "Gaussian")
 }
 \arguments{
-\item{manifold}{object of class \code{manifold}, for example, a sphere}
+\item{manifold}{object of class \code{manifold}, for example, \code{sphere}}
 
 \item{loc}{a matrix of size \code{n} by \code{dimensions(manifold)} indicating centres of basis functions}
 
-\item{scale}{vector of length \code{n} containing the scale parameters of the basis functions. See details}
+\item{scale}{vector of length \code{n} containing the scale parameters of the basis functions; see details}
 
 \item{type}{either ``Gaussian'', ``bisquare,'' ``exp,'' or ``Matern32''}
 }
@@ -22,13 +26,13 @@ Construct a set of local basis functions based on pre-specified location and sca
 \details{
 This functions lays out local basis functions in a domain of interest based on pre-specified location and scale parameters. If \code{type} is ``Gaussian'', then
 \deqn{\phi(u) = \exp\left(-\frac{\|u \|^2}{2\sigma^2}\right),}
-and \code{scale} corresponds to the standard deviation \eqn{\sigma}. If \code{type} is ``bisquare'', then
+and \code{scale} is given by \eqn{\sigma}, the standard deviation. If \code{type} is ``bisquare'', then
 \deqn{\phi(u) = \left(1- \left(\frac{\| u \|}{R}\right)^2\right)^2 I(\|u\| < R),}
-and \code{scale} corresponds to the range of support of the bisquare function, \eqn{R}. If the \code{type} is ``exp'', then
+and \code{scale} is given by \eqn{R}, the range of support of the bisquare function. If the \code{type} is ``exp'', then
 \deqn{\phi(u) = \exp\left(-\frac{\|u\|}{ \tau}\right),}
-and \code{scale} corresponds to the e-folding length, \eqn{\tau}. If \code{type} is ``Matern32'', then
+and \code{scale} is given by \eqn{\tau}, the e-folding length. If \code{type} is ``Matern32'', then
 \deqn{\phi(u) = \left(1 + \frac{\sqrt{3}\|u\|}{\kappa}\right)\exp\left(-\frac{\sqrt{3}\| u \|}{\kappa}\right),}
-and \code{scale} corresponds to the parameter \eqn{\kappa}.
+and \code{scale} is given by \eqn{\kappa}, the function's scale.
 }
 \examples{
 library(ggplot2)

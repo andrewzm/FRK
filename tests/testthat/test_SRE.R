@@ -93,7 +93,7 @@ test_that("SRE sphere works",{
     library(dplyr)
     library(sp)
     ### Generate process and data
-    sim_process <- expand.grid(lon = seq(-180,180,by=10),lat = seq(-90,90,by=10)) %>%
+    sim_process <- expand.grid(lon = seq(-100,100,by=10),lat = seq(-50,50,by=10)) %>%
         mutate(proc = sin(lon*10) + 0.3*rnorm(length(lon)))
     sim_data <- sample_n(sim_process,100) %>%
         mutate(z = proc + 0.1*rnorm(length(lon)), std = 0.1)
@@ -139,7 +139,8 @@ test_that("SRE space-time sphere works",{
     library(sp)
     library(spacetime)
     ### Generate process and data
-    sim_process <- expand.grid(lon = seq(-180,180,by=20),lat = seq(-90,90,by=20),t=1:5) %>%
+    set.seed(1)
+    sim_process <- expand.grid(lon = seq(-100,100,by=20),lat = seq(-40,40,by=20),t=1:5) %>%
         mutate(proc = sin(lon*10) + 0.3*rnorm(length(lon)))
     sim_data <- sample_n(sim_process,100) %>%
         mutate(z = proc + 0.1*rnorm(length(lon)), std = 0.1)

@@ -11,10 +11,10 @@ sp_to_ST_basis(G_spatial, t_knots = 1, manifold = STsphere())
 
 \item{t_knots}{a vector of numbers locating the knots in time}
 
-\item{manifold}{a 3D space-time manifold, typically \code{STsphere} or \code{STplane}}
+\item{manifold}{a 3D space-time manifold, typically \code{STsphere()} or \code{STplane()}}
 }
 \description{
-Given a set of 2D spatial basis functions and a vector of knots in time, this function repeats the spatial basis at every temporal knot, adding the third dimension to the centroid as appropriate.
+Given a set of 2D spatial basis functions and a vector of knots in time, this function repeats the spatial basis at every temporal knot, adding the third dimension (i.e., time) to the centroid as appropriate.
 }
 \examples{
 G_spatial <-  local_basis(manifold = sphere(),

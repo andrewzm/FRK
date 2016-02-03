@@ -5,18 +5,17 @@
 \alias{Basis-class}
 \alias{Basis_obj-class}
 \alias{TensorP_Basis-class}
-\title{@docType class
- @title Basis functions}
+\title{Basis functions}
 \description{
-An object of class \code{Basis} contains the basis functions used to construct the \eqn{S} matrix in fixed-rank kriging. It contains five slots, described below.
+An object of class \code{Basis} contains the basis functions used to construct the matrix \eqn{S} in fixed-rank kriging. It contains five slots, described below.
 }
 \details{
-Basis functions are a central component of \code{FRK}, and the package is designed to work with user-defined specifications of these. For convenience, however, several functions aid the user to construct a basis set for a given set of data points. Please see \code{\link{auto_basis}} for more details. The function \code{\link{local_basis}} helps the user construct a set of local basis functions (e.g., bisquare functions) from a collection of locations and scale parameters.
+Basis functions are a central component of \code{FRK}, and the package is designed to work with user-defined specifications of these. For convenience, however, several functions are available to aid the user to construct a basis set for a given set of data points. Please see \code{\link{auto_basis}} for more details. The function \code{\link{local_basis}} helps the user construct a set of local basis functions (e.g., bisquare functions) from a collection of locations and scale parameters.
 }
 \section{Slots}{
 
 \describe{
-\item{\code{manifold}}{an object of class \code{manifold} that contains information on the manifold and the distance metric used on the manifold. See \code{\link{manifold-class}} for more details}
+\item{\code{manifold}}{an object of class \code{manifold} that contains information on the manifold and the distance measure used on the manifold. See \code{\link{manifold-class}} for more details}
 
 \item{\code{n}}{the number of basis functions in this set}
 

@@ -9,13 +9,13 @@ draw_world(g = ggplot(), inc_border = TRUE)
 \arguments{
 \item{g}{initial ggplot object}
 
-\item{inc_border}{flag indicating whether a map border should be drawn or not. See details.}
+\item{inc_border}{flag indicating whether a map border should be drawn or not; see details.}
 }
 \description{
 Generates a ggplot2 map of the world
 }
 \details{
-This function uses \code{ggplot2::map_data} in order to create a world map. Since, by default, this creates lines crossing the world at the (-180,180) longitude boundary, function \code{clipPolys} taken from the package \code{PBSmapping} is used to split the polygons at this boundary into two. If \code{inc_border} is TRUE, then a border is drawn around the lon/lat space; this option is most useful for projections which do not yeild rectangular plots (e.g., the sinusoidal projection).
+This function uses \code{ggplot2::map_data} in order to create a world map. Since, by default, this creates lines crossing the world at the (-180,180) longitude boundary, function \code{clipPolys} taken from the package \code{PBSmapping} is used to split the polygons at this boundary into two. If \code{inc_border} is TRUE, then a border is drawn around the lon/lat space; this option is most useful for projections which do not yield rectangular plots (e.g., the sinusoidal projection).
 }
 \examples{
 library(ggplot2)

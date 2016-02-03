@@ -4,16 +4,16 @@
 \alias{timeline}
 \title{timeline}
 \usage{
-timeline(metric = Euclid_dist(dim = 1L))
+timeline(measure = Euclid_dist(dim = 1L))
 }
 \arguments{
-\item{metric}{an object of class \code{measure}}
+\item{measure}{an object of class \code{measure}}
 }
 \description{
-Initialisation of a timeline (1D real line).
+Initialisation of a timeline (real line).
 }
 \details{
-A time axis initialised using a \code{measure} object. By default, the measure object (\code{metric}) is the absolute differences.
+A time axis initialised using a \code{measure} object. By default, the measure object (\code{measure}) is the absolute difference.
 }
 \examples{
 P <- timeline()

@@ -1,18 +1,18 @@
 #' @title Construct a set of local basis functions
 #' @description Construct a set of local basis functions based on pre-specified location and scale parameters.
-#' @param manifold object of class \code{manifold}, for example, a sphere
+#' @param manifold object of class \code{manifold}, for example, \code{sphere}
 #' @param loc a matrix of size \code{n} by \code{dimensions(manifold)} indicating centres of basis functions
-#' @param scale vector of length \code{n} containing the scale parameters of the basis functions. See details
+#' @param scale vector of length \code{n} containing the scale parameters of the basis functions; see details
 #' @param type either ``Gaussian'', ``bisquare,'' ``exp,'' or ``Matern32''
 #' @details This functions lays out local basis functions in a domain of interest based on pre-specified location and scale parameters. If \code{type} is ``Gaussian'', then
 #' \deqn{\phi(u) = \exp\left(-\frac{\|u \|^2}{2\sigma^2}\right),}
-#' and \code{scale} corresponds to the standard deviation \eqn{\sigma}. If \code{type} is ``bisquare'', then
+#' and \code{scale} is given by \eqn{\sigma}, the standard deviation. If \code{type} is ``bisquare'', then
 #'\deqn{\phi(u) = \left(1- \left(\frac{\| u \|}{R}\right)^2\right)^2 I(\|u\| < R),}
-#' and \code{scale} corresponds to the range of support of the bisquare function, \eqn{R}. If the \code{type} is ``exp'', then
+#' and \code{scale} is given by \eqn{R}, the range of support of the bisquare function. If the \code{type} is ``exp'', then
 #'\deqn{\phi(u) = \exp\left(-\frac{\|u\|}{ \tau}\right),}
-#' and \code{scale} corresponds to the e-folding length, \eqn{\tau}. If \code{type} is ``Matern32'', then
+#' and \code{scale} is given by \eqn{\tau}, the e-folding length. If \code{type} is ``Matern32'', then
 #'\deqn{\phi(u) = \left(1 + \frac{\sqrt{3}\|u\|}{\kappa}\right)\exp\left(-\frac{\sqrt{3}\| u \|}{\kappa}\right),}
-#' and \code{scale} corresponds to the parameter \eqn{\kappa}.
+#' and \code{scale} is given by \eqn{\kappa}, the function's scale.
 #' @examples
 #' library(ggplot2)
 #' G <-  local_basis(manifold = real_line(),
@@ -53,17 +53,17 @@ local_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type
 #' @param m object of class \code{manifold}, for example, \code{sphere} or \code{plane}
 #' @param data object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame} containing the data on which basis-function placement is based, see details
 #' @param regular an integer indicating the number of regularly-placed basis functions at the first resolution. In two dimensions, this dictates smallest number of basis functions in a row or column at the lowest resolution. If \code{regular=0}, an irregular grid is used, one that is based on the triangulation of the domain with increased mesh density in areas of high data density, see details
-#' @param nres if \code{manifold = real_line()} or \code{manifold = plane()}, then \code{nres} is the number of basis-function-resolutions to use. If \code{manifold = sphere()}, then \code{nres} is the resolution number of the ISEA3H grid to use and and can also be a vector indicating multiple resolutions
+#' @param nres if \code{manifold = real_line()} or \code{manifold = plane()}, then \code{nres} is the number of basis-function resolutions to use. If \code{manifold = sphere()}, then \code{nres} is the resolution number of the ISEA3H grid to use and and can also be a vector indicating multiple resolutions
 #' @param prune a threshold parameter which dictates when a basis function is considered irrelevent or unidentifiable, and thus removed, see details
 #' @param subsamp the maximum amount of data points to consider when carrying out basis-function placement: these data objects are randomly sampled from the full dataset. Keep this number fairly high (on the order of 10^5) otherwise high resolution basis functions may be spuriously removed
-#' @param type the type of basis functions to use. See details
-#' @param isea3h_lo if \code{manifold = sphere}, this argument dictates which ISEA3H resolution is the lowest one that should be used for basis-function placement
+#' @param type the type of basis functions to use; see details
+#' @param isea3h_lo if \code{manifold = sphere()}, this argument dictates which ISEA3H resolution is the lowest one that should be used for basis-function placement
 #' @details This function automatically places basis functions within the domain of interest. If the domain is a plane or the real line, then the object \code{data} is used to establish the domain boundary.
 #'
 #'
 #'The argument \code{type} can be either ``Gaussian'' in which case
 #'\deqn{\phi(u) = \exp\left(-\frac{\|u \|^2}{2\sigma^2}\right),}
-#'``bisquare'', in which case  '
+#'``bisquare'', in which case
 #'\deqn{\phi(u) = \left(1- \left(\frac{\| u \|}{R}\right)^2\right)^2 I(\|u\| < R),}
 #'``exp'', in which case
 #'\deqn{\phi(u) = \exp\left(-\frac{\|u\|}{ \tau}\right),}
@@ -71,11 +71,11 @@ local_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type
 #'\deqn{\phi(u) = \left(1 + \frac{\sqrt{3}\|u\|}{\kappa}\right)\exp\left(-\frac{\sqrt{3}\| u \|}{\kappa}\right),}
 #' The parameters \eqn{\sigma, R, \tau} and \eqn{\kappa} are \code{scale} arguments.
 #'
-#' If the manifold is the real line, the basis functions are placed regularly inside the domain, and the number of basis functions at the lowest resolution is dictated by the integer parameter \code{regular} which has to be greater than zero. Each subsequent resolution has twice as many basis functions. The scale of the basis function is set based on the minimum distance between the centre locations following placement. The scale is equal to the minimum distance if the type of basis function is Gaussian, exponential or Matern32, and 1.5x this value if the function is bisquare.
+#' If the manifold is the real line, the basis functions are placed regularly inside the domain, and the number of basis functions at the lowest resolution is dictated by the integer parameter \code{regular} which has to be greater than zero. On the real line, each subsequent resolution has twice as many basis functions. The scale of the basis function is set based on the minimum distance between the centre locations following placement. The scale is equal to the minimum distance if the type of basis function is Gaussian, exponential or Matern32, and is equal to 1.5 times this value if the function is bisquare.
 #'
 #' If the manifold is a plane, and \code{regular > 0}, then basis functions are placed regularly within the bounding box of \code{data}, with the smallest number of basis functions in each row or column equal to the value of \code{regular} in the lowest resolution. Subsequent resolutions have twice the number of basis functions in each row or column. If \code{regular = 0}, then the function \code{INLA::inla.nonconvex.hull} is used to construct a (non-convex) hull around the data. The buffer and smoothness of the hull is determined by the parameter \code{convex}. Once the domain boundary is found,  \code{INLA::inla.mesh.2d} is used to construct a triangular mesh such that the node vertices coincide with data locations, subject to some minimum and maximum triangular side length constraints. The result is a mesh which is dense in regions of high data density and not dense in regions of sparse data. Even in this case, the scale is taken to be a function of the minimum distance between basis function centres, as detailed above. This may be changed in a future revision.
 #'
-#' If the manifold is a sphere, then basis functions are placed on the centroids of the discrete global grid (DGG), with the first basis resolution corresponding to the first resolution of the DGG (12 globally).  It is not recommended to go above \code{nres == 4} for the whole sphere, which contains 812 locations (for a total of 1208 basis functions). Up to resolution 6 is available with \code{FRK}, for higher resolutions please install \code{dggrids} from \code{https://github.com/andrewzm/dggrids}.
+#' If the manifold is the surface of a sphere, then basis functions are placed on the centroids of the discrete global grid (DGG), with the first basis resolution corresponding to the first resolution of the DGG (ISEA3H resolution 0, which yields 12 basis functions globally).  It is not recommended to go above \code{nres == 5} (ISEA3H resolutions 0--4) for the whole sphere, which would yield a total of 1220 basis functions. Up to ISEA3H resolution 6 is available with \code{FRK}; for higher resolutions please install \code{dggrids} from \code{https://github.com/andrewzm/dggrids}.
 #'
 #' Basis functions that are not influenced by data points may hinder convergence of the EM algorithm, since the associated hidden states are by and large unidentifiable. We hence provide a means to automatically remove such basis functions through the parameter \code{prune}. The final set only contains basis functions for which the column sums in the associated matrix \eqn{S} (which, recall, is the value/average of the basis functions at/over the data points/polygons) is greater than \code{prune}. If \code{prune == 0}, no basis functions are removed from the original design.
 #' @examples
@@ -219,10 +219,10 @@ auto_basis <- function(m = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,t
 }
 
 #' @title Add the time coordinate to 2D spatial basis functions
-#' @description Given a set of 2D spatial basis functions and a vector of knots in time, this function repeats the spatial basis at every temporal knot, adding the third dimension to the centroid as appropriate.
+#' @description Given a set of 2D spatial basis functions and a vector of knots in time, this function repeats the spatial basis at every temporal knot, adding the third dimension (i.e., time) to the centroid as appropriate.
 #' @param G_spatial an object of class Basis on a 2D manifold
 #' @param t_knots a vector of numbers locating the knots in time
-#' @param manifold a 3D space-time manifold, typically \code{STsphere} or \code{STplane}
+#' @param manifold a 3D space-time manifold, typically \code{STsphere()} or \code{STplane()}
 #' @examples
 #' G_spatial <-  local_basis(manifold = sphere(),
 #'                    loc=matrix(runif(20,min=-90,max=90),10,2),
@@ -359,7 +359,7 @@ setMethod("eval_basis",signature(basis="TensorP_Basis",s = "STIDF"),function(bas
 })
 
 
-#' @rdname eval_basis
+#' @rdname local_basis
 #' @export
 radial_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type="Gaussian") {
     stop("radial_basis is deprecated. Please use local_basis instead")

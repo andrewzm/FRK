@@ -4,29 +4,31 @@
 #' @param data list of objects of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame}
 #' @param basis object of class \code{Basis}
 #' @param BAUs object of class \code{SpatialPolygonsDataFrame}, the data frame which must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality
-#' @param est_error flag indicating whether the variance of the data should be estimated from variogram techniques. If this is set to 0, then \code{data} must contain a field \code{std}. Variance estimation is not possible with spatio-temporal datasets
+#' @param est_error flag indicating whether the measurement-error variance should be estimated from variogram techniques. If this is set to 0, then \code{data} must contain a field \code{std}. Measurement-error estimation is not implemented for spatio-temporal datasets
+#' @param average_in_BAU if \code{TRUE}, then multiple data points falling in the same BAU are averaged; the measurement error of the averaged data point is taken as the average of the individual measurement errors
 #' @param SRE_model object returned from the constructor \code{SRE()}
 #' @param n_EM maximum number of iterations for the EM algorithm
 #' @param tol convergence tolerance for the EM algorithm
 #' @param method parameter estimation method to employ. Currently only ``EM'' is supported
 #' @param print_lik flag indicating whether likelihood should be printed or not on convergence of the estimation algorithm
-#' @param use_centroid a flag indicating whether the prediction over a BAU can simply be taken as a point prediction at the BAU's centroid. This should only be done if the BAUs on which the model is trained coincide with the BAUs used in \code{SRE()}
+#' @param use_centroid flag indicating whether the prediction over a BAU can simply be taken as a point prediction at the BAU's centroid. This should only be done if the BAUs upon which the model is trained coincide with the BAUs used in \code{SRE()}
 #' @param include_fs flag indicating whether to assume prediction locations coincide with observations in BAUs (where applicable) or not
 #' @param pred_polys object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified
 #' @param pred_time vector of time indices at which we wish to predict. All time points are used if this option is not specified
-#' @details \code{SRE()} is the main function in the package as it constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of basic aerial units (BAUs). The function first takes each object in the list \code{data} and maps it to the BAUs -- this entails binning the point-referenced data into BAUs (and averaging within the BAU) and finding which BAUs are influenced by the polygon datasets. Following this the incidence matrix \code{Cmat} is constructed, which appears in the observation model \eqn{Z = CY + e}, where \eqn{C} is the incidence matrix.
+#' @details \code{SRE()} is the main function in the package as it constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of Basic Areal Units (BAUs). The function first takes each object in the list \code{data} and maps it to the BAUs -- this entails binning the point-referenced data into BAUs (and averaging within the BAU) if \code{average_in_BAU = TRUE}, and finding which BAUs are influenced by the polygon datasets. Following this, the incidence matrix \code{Cmat} is constructed, which appears in the observation model \eqn{Z = CY + e}, where \eqn{C} is the incidence matrix.
 #'
-#' The SRE model is given by \eqn{Y = T\alpha + S\eta + v} where \eqn{X} are the covariates at BAU level, \eqn{\alpha} are the regression coefficients, \eqn{S} are the basis functions evaluated at the BAU level, \eqn{\eta} are the basis function weights, and \eqn{v} is the fine scale variation (at the BAU level). The covariance matrix of \eqn{v} is diagonal and proportional to the field `fs' in the BAUs (typically set to one). The constant of proportionality is estimated in the EM algorithm. All required matrices (\eqn{S,T} etc.) are computed and returned as part of the object, please see \code{\link{SRE-class}} for more details.
+#' The SRE model is given by \eqn{Y = T\alpha + S\eta + \delta}, where \eqn{X} are the covariates at BAU level, \eqn{\alpha} are the regression coefficients, \eqn{S} are the basis functions evaluated at the BAU level, \eqn{\eta} are the basis function weights, and \eqn{\delta} is the fine scale variation (at the BAU level). The covariance matrix of \eqn{\delta} is diagonal and proportional to the field `fs' in the BAUs (typically set to one). The constant of proportionality is estimated in the EM algorithm. All required matrices (\eqn{S,T} etc.) are computed and returned as part of the object, please see \code{\link{SRE-class}} for more details.
 #'
-#'\code{SRE.fit()} takes an object of class \code{SRE} and estimates all unknown parameters, namely the covariance matrix \eqn{K}, the fine scale variance \eqn{\sigma^2_{fs}} and the regression parameters \eqn{\alpha}. The only method currently implemented is the expectation maximisation (EM) algorithm, which the user configures through \code{n_EM} and \code{tol}. The latter parameter, \code{tol}, is used as in Katzfuss and Cressie (2011), that is, the log-likelihood (given in Equation (16) in that work) is evaluated at each iteration at the current parameter estimate and convergence is assumed reach when this quantity stops changing by more than \code{tol}.
+#'\code{SRE.fit()} takes an object of class \code{SRE} and estimates all unknown parameters, namely the covariance matrix \eqn{K}, the fine scale variance \eqn{\sigma^2_{\delta}} and the regression parameters \eqn{\alpha}. The only method currently implemented is the Expectation Maximisation (EM) algorithm, which the user configures through \code{n_EM} and \code{tol}. The latter parameter, \code{tol}, is used as in Katzfuss and Cressie to, that is, the log-likelihood (given in Equation (16) in that work) is evaluated at each iteration at the current parameter estimate, and convergence is assumed to have been reached when this quantity stops changing by more than \code{tol}.
 #'
-#'The actual computations for the E-step and M-step are relatively straightforward. The E-step contains an inverse of an \eqn{n \times n} matrix, where \code{n} is the number of basis functions which should not exceed 2000. The M-step first updates the matrix \eqn{K}, which only depends on the sufficient statistics of the basis weights \eqn{\eta}. Then, the regression parameters \eqn{\alpha} and a line search is used to update the fine-scale variance \eqn{\sigma^2_{fs}}. If the fine-scale errors and measurement errors are homoscedastic a closed-form solution is available for the update of \eqn{\sigma^2_{fs}}. Irrespectively, since the udpates of \eqn{\alpha} and \eqn{\sigma^2_{fs}} are dependent, the updates are iterated until the change in \eqn{\sigma^2_{fs}} is no more than 0.1\%.
+#'The actual computations for the E-step and M-step are relatively straightforward. The E-step contains an inverse of an \eqn{n \times n} matrix, where \code{n} is the number of basis functions which should not exceed 2000. The M-step first updates the matrix \eqn{K}, which only depends on the sufficient statistics of the basis weights \eqn{\eta}. Then, the regression parameter \eqn{\alpha} is updated and a simple optimisation routine (a line search) is used to update the fine-scale variance \eqn{\sigma^2_{\delta}}. If the fine-scale errors and measurement errors are homoscedastic a closed-form solution is available for the update of \eqn{\sigma^2_{fs}}. Irrespectively, since the udpates of \eqn{\alpha} and \eqn{\sigma^2_{\delta}} are dependent, these two updates are iterated until the change in \eqn{\sigma^2_{\delta}} is no more than 0.1\%.
 #'
-#'Once the parameters are fitted, the \code{SRE} object is passed onto the function \code{SRE.predict()} in order to carry out optimal predictions over the same BAUs used to construct the SRE model with \code{SRE()}. The first part of the prediction process is to construct the matrix \eqn{S} by averaging the basis functions over the prediction polygons/BAUs, using Monte Carlo integration with 1000 samples. This is a computationally-intensive process. On the other hand, one could set \code{use_centroid = TRUE} and treat the prediction over the entire polygon as that of a BAU at the centre of the polyon. This will yield valid results only if the BAUs are relatively small. Once the matrix \eqn{S} is found, a standard Gaussian inversion using the estimated parameters is used.
+#'Once the parameters are fitted, the \code{SRE} object is passed onto the function \code{SRE.predict()} in order to carry out optimal predictions over the same BAUs used to construct the SRE model with \code{SRE()}. The first part of the prediction process is to construct the matrix \eqn{S} by averaging the basis functions over the prediction polygons/BAUs, using Monte Carlo integration with 1000 samples. This is a computationally-intensive process. On the other hand, one could set \code{use_centroid = TRUE} and treat the prediction over the entire polygon as that of a BAU at the centre of the polygon. This will yield valid results only if the BAUs are relatively small. Once the matrix \eqn{S} is found, a standard Gaussian inversion using the estimated parameters is used.
 #'
 #'\code{SRE.predict} returns the BAUs, which are of class \code{SpatialPolygonsDataFrame}, with two added attributes, \code{mu} and \code{var}. These can then be easily plotted using \code{spplot} or \code{ggplot2} (in conjunction with \code{\link{SpatialPolygonsDataFrame_to_df}}) as shown in the package vignettes.
 #' @references
 #' Katzfuss, M., & Cressie, N. (2011). Spatio-temporal smoothing and EM estimation for massive remote-sensing data sets. Journal of Time Series Analysis, 32(4), 430--446.
+#'
 #' Erisman, A. M., & Tinney, W. F. (1975). On computing certain elements of the inverse of a sparse matrix. Communications of the ACM, 18(3), 177--179.
 #' @export
 #' @examples
@@ -70,7 +72,7 @@
 #'    geom_point(data = data.frame(sim_data),aes(x=x,y=z),size=3) +
 #'    geom_line(data=sim_process,aes(x=x,y=proc),col="red")
 #' print(g1)
-SRE <- function(f,data,basis,BAUs,est_error=TRUE) {
+SRE <- function(f,data,basis,BAUs,est_error=TRUE,average_in_BAU = TRUE) {
 
     .check_args(f=f,data=data,basis=basis,BAUs=BAUs,est_error=est_error)
     av_var <-all.vars(f)[1]
@@ -79,11 +81,13 @@ SRE <- function(f,data,basis,BAUs,est_error=TRUE) {
     S <- Ve <- Vfs <- X <- Z <- Cmat <- list()
     for(i in 1:ndata) {
         if(est_error) data[[i]]$std <- 0 ## Just set it to something, this will be overwritten later on
+
         data_proc <- map_data_to_BAUs(data[[i]],
                                       BAUs,
-                                      av_var = av_var)
+                                      av_var = av_var,
+                                      average_in_BAU = average_in_BAU)
 
-        if(any(is.na(data_proc@data)))
+        if(any(is.na(data_proc@data[av_var])))
             stop("NAs found when mapping data to BAUs. Are you sure all your data are covered by BAUs?")
 
         if(est_error) {
@@ -105,9 +109,16 @@ SRE <- function(f,data,basis,BAUs,est_error=TRUE) {
                                   x=1,dims=c(length(data_proc),
                                              length(BAUs)))
 
+        if(any(rowSums(Cmat[[i]])==0))
+            stop("I have found difficulty in associating the data with the BAUs. If you have point-referenced data
+                 then this could be because you have data outside BAUs. If you have polygon data, then
+                 this could be because no BAUs centroids are within the polygons. For polygon data,
+                 influence on a BAU is determined from whether the BAU centroid falls within the polygon
+                 or not.")
+
         Cmat[[i]] <- Cmat[[i]] / rowSums(Cmat[[i]]) ## Average BAUs for polygon observations
 
-        Vfs[[i]] <- Diagonal(x=as.numeric(Cmat[[i]]^2 %*% BAUs$fs ))
+        Vfs[[i]] <- tcrossprod(Cmat[[i]] %*% Diagonal(x=sqrt(BAUs$fs)))
         S[[i]] <- eval_basis(basis, s = data_proc)
         ## Note that S constructed in this way is similar to Cmat %*% S_BAUs where S_BAUs is the
         ## basis functions evaluated at the BAUs. Verify this by checking the following are similar
@@ -184,14 +195,6 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE,pred_polys =
      if(is(pred_polys,"ST") & !(is(pred_polys,"STFDF")))
          if(!(is(pred_polys@sp,"SpatialPolygons")))
              stop("Predictions need to be over BAUs or STFDFs with spatial polygons")
-
-    # if(!("fs" %in% names(pred_locs@data))) {
-    #     warning("data should contain a field 'fs' containing a basis function for
-    #             fine-scale variation. Setting basis function equal to one everywhere.")
-    #     pred_locs$fs <- 1
-    # }
-    # if(!(all(pred_locs$fs > 0))) stop("fine-scale variation basis function needs to be nonnegative everywhere")
-
 
     pred_locs <- .SRE.predict(Sm=SRE_model,
                               use_centroid=use_centroid,
@@ -425,7 +428,8 @@ setMethod("summary",signature(object="SRE"),
         diag2(Sm@S %*% mu_eta %*% t(mu_eta), t(Sm@S))
 
     if(all((a <- diag(Sm@Ve)) == a[1]) &
-       all((b <- diag(Sm@Vfs)) == b[1])) {
+       all((b <- diag(Sm@Vfs)) == b[1]) &
+       all(rowSums(Sm@Vfs) == a[1]))    {
         homoscedastic <- TRUE
     } else {
         homoscedastic <- FALSE
@@ -437,11 +441,14 @@ setMethod("summary",signature(object="SRE"),
                 return(Inf)
             } else {
                 D <- sigma2fs*Sm@Vfs + Sm@Ve
-                Dinv <- solve(D)
-
-                -(-0.5*tr(Dinv %*% Sm@Vfs) +
-                      0.5*tr(Dinv %*% Sm@Vfs %*% Dinv %*% Omega_diag)
-                )
+                Dinv <- chol2inv(chol(D))
+                DinvV <- Dinv %*% Sm@Vfs
+                 -(-0.5*tr(DinvV) +
+                       0.5*tr(DinvV %*% Dinv %*% Omega_diag)
+                 )
+                 # -(-0.5*sum(diag2(cholDinv,crossprod(cholDinv,Sm@Vfs))) +
+                 #       0.5*tr(Dinv %*% Sm@Vfs %*% Dinv %*% Omega_diag)
+                 # )
             }
         }
 
@@ -450,8 +457,6 @@ setMethod("summary",signature(object="SRE"),
             2*diag2(Sm@S %*% mu_eta, t(resid)) +
             diag2(resid,t(resid))
         Omega_diag <- Diagonal(x=Omega_diag)
-
-
 
         # Repeat until finding values on opposite sides of zero if heteroscedastic
         if(!homoscedastic) {
@@ -470,7 +475,8 @@ setMethod("summary",signature(object="SRE"),
                 sigma2fs_new <- 0
                 converged <- TRUE
             }
-            sigma2fs_new <- uniroot(f = J,interval = c(sigma2fs/amp_factor,sigma2fs*amp_factor))$root
+            sigma2fs_new <- uniroot(f = J,
+                                    interval = c(sigma2fs/amp_factor,sigma2fs*amp_factor))$root
             } else {
                 sigma2fs_new <- 1/b[1]*(sum(Omega_diag)/length(Sm@Z) - a[1])
             }
@@ -488,11 +494,8 @@ setMethod("summary",signature(object="SRE"),
     Sm
 }
 
-
-
-
-
 .loglik <- function(Sm) {
+
     D <- Sm@sigma2fshat*Sm@Vfs + Sm@Ve
     S <- Sm@S
     K <- Sm@Khat
@@ -500,19 +503,24 @@ setMethod("summary",signature(object="SRE"),
     Kinv <- chol2inv(chol_K)
     resid <- Sm@Z - Sm@X %*% Sm@alphahat
     N <- length(Sm@Z)
-    Dinv <- solve(D)
-    S_Dinv_S <-  crossprod(sqrt(Dinv) %*% S)
+    cholD <- chol(D)
+    cholDinvT <- t(solve(cholD))
+    #Dinv <- chol2inv(chol(D))
+    #S_Dinv_S <-  crossprod(sqrt(Dinv) %*% S)
+    S_Dinv_S <-  crossprod(cholDinvT %*% S)
 
     log_det_SigmaZ <- determinant(Kinv + S_Dinv_S,logarithm = TRUE)$modulus +
         determinant(K,logarithm = TRUE)$modulus +
-        sum(log(diag(D)))
+        #sum(log(diag(D)))
+        logdet(cholD)
 
     #SigmaZ_inv <- Dinv - Dinv %*% S %*% solve(Kinv + S_Dinv_S) %*% t(S) %*% Dinv
     #SigmaZ_inv2 <- Dinv - tcrossprod(Dinv %*% S %*% solve(R))
     R <- chol(Kinv + S_Dinv_S)
-    rDinv <- t(resid) %*% Dinv
-
-    quad_bit <- rDinv %*% resid - tcrossprod(rDinv %*% S %*% solve(R))
+    #rDinv <- t(resid) %*% Dinv
+    rDinv <- crossprod(cholDinvT %*% resid,cholDinvT)
+    #quad_bit <- rDinv %*% resid - tcrossprod(rDinv %*% S %*% solve(R))
+    quad_bit <- crossprod(cholDinvT %*% resid) - tcrossprod(rDinv %*% S %*% solve(R))
 
     llik <- -0.5 * N * log(2*pi) -
         0.5 * log_det_SigmaZ -
@@ -550,6 +558,8 @@ setMethod("summary",signature(object="SRE"),
                 function for fine-scale variation. Setting basis function equal to one everywhere.")
         BAUs$fs <- 1
     }
+    if(!(all(BAUs$fs >= 0)))
+        stop("fine-scale variation basis function needs to be nonnegative everywhere")
     if(!(is(BAUs,"SpatialPolygonsDataFrame") | is(BAUs,"STFDF")))
         stop("BAUs should be a SpatialPolygonsDataFrame or a STFDF object")
     if(is(BAUs,"STFDF")) if(!is(BAUs@sp,"SpatialPolygonsDataFrame"))

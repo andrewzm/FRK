@@ -9,16 +9,16 @@
   \item{year}{year of retrieval}
   \item{month}{month of retrieval}
   \item{day}{day of retrieval}
-  \item{lat}{latitude coordinate of retrieval}
   \item{lon}{longitude coordinate of retrieval}
-  \item{co2avgret}{CO2 mole fraction in ppm}
-  \item{co2std}{standard deviation of CO2 reading in ppm}
+  \item{lat}{latitude coordinate of retrieval}
+  \item{co2avgret}{CO2 mole fraction retrieval in ppm}
+  \item{co2std}{measurement error of CO2 retrieval in ppm}
 }}
 \usage{
 AIRS_05_2003
 }
 \description{
-Mid-troposheric CO2 measurements from the Atmospheric InfraRed Sounder (AIRS). The data are measurements between 60 degrees S and 90 degrees N at roughly 1:30 pm local time on 1 May through to 15 May 2003.
+Mid-tropospheric CO2 measurements from the Atmospheric InfraRed Sounder (AIRS). The data are measurements between 60 degrees S and 90 degrees N at roughly 1:30 pm local time on 1 May through to 15 May 2003.
 }
 \references{
 Chahine, M. et al. (2006). AIRS: Improving weather forecasting and providing new data on greenhouse gases. Bulletin of the American Meteorological Society 87, 911--26.

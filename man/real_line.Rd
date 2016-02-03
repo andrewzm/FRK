@@ -4,16 +4,16 @@
 \alias{real_line}
 \title{real line}
 \usage{
-real_line(metric = Euclid_dist(dim = 1L))
+real_line(measure = Euclid_dist(dim = 1L))
 }
 \arguments{
-\item{metric}{an object of class \code{measure}}
+\item{measure}{an object of class \code{measure}}
 }
 \description{
-Initialisation of the 1D real-line manifold.
+Initialisation of the real-line (1D) manifold.
 }
 \details{
-A real line is initialised using a \code{measure} object. By default, the measure object (\code{metric}) describes the distance between two points as the absolute difference between the two coordinates.
+A real line is initialised using a \code{measure} object. By default, the measure object (\code{measure}) describes the distance between two points as the absolute difference between the two coordinates.
 }
 \examples{
 R <- real_line()
