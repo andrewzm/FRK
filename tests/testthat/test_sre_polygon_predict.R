@@ -33,6 +33,11 @@ test_that("can predict over polygons in plane", {
     S <- SRE(f,data = list(meuse),basis = G,BAUs = HexPols_df,est_error = FALSE)
     S <- SRE.fit(S,n_EM = 10,print_lik=F)
     HexPols_df <- SRE.predict(S,use_centroid = FALSE)
+
+    ## Try with sigma2fs = 0
+    S@sigma2fshat <- 0
+    HexPols_df <- SRE.predict(S,use_centroid = FALSE)
+
     #spplot(HexPols_df,"mu")
 })
 

@@ -316,6 +316,7 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE,pred_polys =
             Qx <- crossprod(solve(sqrt(Sm@Ve)) %*% CZ %*% PI) + LAMBDAinv
             ybar <- t(PI) %*%t(CZ) %*% solve(Sm@Ve) %*% (Sm@Z - CZ %*% X %*% alpha)
             Cov <- as(chol2inv(chol(Qx)),"dgeMatrix")  ## Do all covariance matrix
+            ## We can do all the covariance matrix since the dimension is equal to those of eta
             x_mean <- Cov %*% ybar
             BAUs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
         }
