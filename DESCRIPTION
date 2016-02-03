@@ -24,12 +24,10 @@ Depends:
 Suggests:
     covr,
     testthat,
-    gstat,
-    rgeos,
-    splancs,
-    INLA,
     knitr,
-    parallel
+    parallel,
+    gstat,
+    rgeos
 Enhances: dggrids,
 Imports:
     methods,
