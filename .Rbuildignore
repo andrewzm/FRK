@@ -13,6 +13,7 @@ bigstudies
 .concordance.tex$
 .synctex.gz$
 ^README.md$
+^cran-comments.md$
 ^\.\.pdf$
 ^paper
 .toc$
