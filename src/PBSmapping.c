@@ -191,7 +191,6 @@
 #include "globals.h"
 #include "conversions.h"
 #include "polygons.h"
-#include "thin.h"
 #include "floating.h"
 
 #ifdef _MCD_CHECK

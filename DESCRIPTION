@@ -41,7 +41,7 @@ Imports:
     sp,
     spacetime,
     digest
-License: GPL (>= 2)
+License: GPL (>= 2.1)
 NeedsCompilation: yes
 LazyData: true
 RoxygenNote: 5.0.1

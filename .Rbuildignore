@@ -20,3 +20,5 @@ bigstudies
 .tar.gz$
 ^vignettes/figures
 rhipe_fns.R$
+FRK_intro.pdf$
+^Permissions
