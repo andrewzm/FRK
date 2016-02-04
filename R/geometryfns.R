@@ -828,6 +828,7 @@ setMethod("coordnames",signature(x="STIDF"),function(x) {
 })
 
 
+## The functions rdist and rdist.earth were taken from the package fields
 rdist <- function (x1, x2 = NULL, compact = FALSE)
 {
     if (!is.matrix(x1)) {

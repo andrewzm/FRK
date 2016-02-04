@@ -6,6 +6,7 @@ vignettes/*.log
 vignettes/*.tex
 vignettes/*.synctex.gz
 vignettes/figure
+vignettes/*.pdf
 src/*.o
 src/*.so
 ..pdf
