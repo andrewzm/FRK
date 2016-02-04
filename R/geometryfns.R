@@ -896,6 +896,22 @@ load_dggrids <- function (res = 3L){
     return(isea3h)
 }
 
+.extract.from.formula <- function (formula, data)
+{
+    m = model.frame(terms(formula), as(data, "data.frame"), na.action = na.fail)
+    Y = model.extract(m, "response")
+    if (length(Y) == 0)
+        stop("no response variable present in formula")
+    Terms = attr(m, "terms")
+    X = model.matrix(Terms, m)
+    has.intercept = attr(Terms, "intercept")
+    grid = numeric(0)
+    xlevels = .getXlevels(Terms, m)
+    list(y = Y, locations = coordinates(data), X = X, call = call,
+         has.intercept = has.intercept, grid = as.double(unlist(grid)),
+         xlevels = xlevels)
+}
+
 
 
 process_isea3h <- function(isea3h,resl) {

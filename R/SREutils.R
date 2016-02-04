@@ -97,7 +97,7 @@ SRE <- function(f,data,basis,BAUs,est_error=TRUE,average_in_BAU = TRUE) {
         }
 
 
-        L <- .gstat.formula(f,data=data_proc)
+        L <- .extract.from.formula(f,data=data_proc)
         X[[i]] <- as(L$X,"Matrix")
         Z[[i]] <- Matrix(L$y)
         Ve[[i]] <- Diagonal(x=data_proc$std^2)
@@ -259,7 +259,7 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE,pred_polys =
 
     depname <- all.vars(Sm@f)[1]
     BAUs[[depname]] <- 0.1
-    L <- .gstat.formula(Sm@f,data=BAUs)
+    L <- .extract.from.formula(Sm@f,data=BAUs)
     X = as(L$X,"Matrix")
     if(is(BAUs,"Spatial")) {
         if(use_centroid) {
@@ -563,20 +563,4 @@ setMethod("summary",signature(object="SRE"),
     if(!est_error & !all(sapply(data,function(x) "std" %in% names(x@data))))
         stop("If observational error is not going to be estimated,
              please supply a field 'std' in the data objects")
-}
-
-.gstat.formula <- function (formula, data)
-{
-    m = model.frame(terms(formula), as(data, "data.frame"), na.action = na.fail)
-    Y = model.extract(m, "response")
-    if (length(Y) == 0)
-        stop("no response variable present in formula")
-    Terms = attr(m, "terms")
-    X = model.matrix(Terms, m)
-    has.intercept = attr(Terms, "intercept")
-    grid = numeric(0)
-    xlevels = .getXlevels(Terms, m)
-    list(y = Y, locations = coordinates(data), X = X, call = call,
-         has.intercept = has.intercept, grid = as.double(unlist(grid)),
-         xlevels = xlevels)
 }
