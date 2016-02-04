@@ -28,6 +28,7 @@ Suggests:
     parallel,
     gstat,
     rgeos,
+    mapproj,
     INLA,
     splancs
 Enhances: dggrids,

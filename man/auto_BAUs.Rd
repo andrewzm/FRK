@@ -45,21 +45,22 @@ spplot(Grid1D_df)
 ## Now a 2D example
 data(meuse)
 coordinates(meuse) = ~x+y # change into an sp object
-
-## Grid BAUs
-GridPols_df <- auto_BAUs(manifold = plane(),
+ if(require(INLA)) {
+    ## Grid BAUs
+    GridPols_df <- auto_BAUs(manifold = plane(),
                              cellsize = 200,
                              type = "grid",
                              data = meuse,
                              convex=-0.05)
-plot(GridPols_df)
+    plot(GridPols_df)
 
-## Hex BAUs
-HexPols_df <- auto_BAUs(manifold = plane(),
+    ## Hex BAUs
+    HexPols_df <- auto_BAUs(manifold = plane(),
                             cellsize = 200,
                             type = "hex",
                             data = meuse,
                             convex=-0.05)
-plot(HexPols_df)
+    plot(HexPols_df)
+}
 }
 
