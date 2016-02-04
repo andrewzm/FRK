@@ -13,3 +13,5 @@ FRK.Rcheck
 inla-mesher-functions
 paper
 vignettes/cache
+*.bbl
+*.toc
