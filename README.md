@@ -5,7 +5,9 @@
 Fixed Rank Kriging
 ================
 
-This package is operational but still in its early stages of development. It is based on the work by Cressie and Johannesson (2008) and carries out using Fixed Rank Kriging (FRK) using large datasets. 
+
+Description
+------------
 
 Package: FRK
 
@@ -25,5 +27,12 @@ Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling and predictio
 
 
 License: GPL (>= 2)
+
+Installation 
+------------
+
+This package is operational but still in its early stages of development. It is based on the work by Cressie and Johannesson (2008) and carries out using Fixed Rank Kriging (FRK) using large datasets. To install, please isntall `devtools` and type
+
+    install_github("andrewzm/FRK",dependencies=TRUE,build_vignettes=FALSE)
 
 
