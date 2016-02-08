@@ -307,7 +307,7 @@ Let $\Zvec \equiv (Z_i : i = 1,\dots,m)'$. Then, since each element in $D^O$ is 
 \begin{equation}\label{eq:Z_collapsed}
 \Zvec = \Tmat_Z\alphab + \Smat_Z\etab + \deltab_Z + \epsilonb,
 \end{equation}
-where $\Tmat_Z \equiv \Cmat_Z \Tmat$, $\Smat_Z \equiv \Cmat_Z \Smat$, $\deltab_Z \equiv \Cmat_Z \deltab$ and $\var(\deltab_Z) = \sigma^2_\delta\Vmat_Z \equiv \sigma^2_\delta\Cmat_Z\Vmat^{-1}\Cmat_Z'$. In practice, it is not always possible for each $B_i$ to overlap a BAU exactly. For simplicity, we assume that the observation footprint overlaps a BAU only if the BAU centroid lies within the footprint.
+where $\Tmat_Z \equiv \Cmat_Z \Tmat$, $\Smat_Z \equiv \Cmat_Z \Smat$, $\deltab_Z \equiv \Cmat_Z \deltab$ and $\var(\deltab_Z) = \sigma^2_\delta\Vmat_Z \equiv \sigma^2_\delta\Cmat_Z\Vmat_Z\Cmat_Z'$. In practice, it is not always possible for each $B_i$ to overlap a BAU exactly. For simplicity, we assume that the observation footprint overlaps a BAU only if the BAU centroid lies within the footprint.
 
 In FRK, it is assumed that the spatial random effect $\upsilon(\svec)$ can be decomposed using basis functions, $\phib(\svec) \equiv (\phi_i(\svec): i = 1,\dots,n )'$, where $n > 0$ is the number of basis functions. Generally, $\phib(\svec)$ is multiresolutional and its elements may have compact support. The basis chosen should be able to adequately reconstruct realisations of $Y(\svec)$; an empirical spectral-based approach that can ensure this is discussed in \cite{Zammit_2012}. Using basis-function decomposition, we let each $\upsilon_i \approx \frac{1}{|A_i|}\int_{A_i}\phib(\svec)'\intd \svec ~\etab$, so that $\upsilonb \approx \Smat\etab$, where $\Smat$ is the $N \times n$ matrix
 \begin{equation}
