@@ -97,7 +97,7 @@ SRE <- function(f,data,basis,BAUs,est_error=TRUE,average_in_BAU = TRUE) {
         }
 
 
-        L <- .extract.from.formula(f,data=data_proc)
+        L <- .gstat.formula(f,data=data_proc)
         X[[i]] <- as(L$X,"Matrix")
         Z[[i]] <- Matrix(L$y)
         Ve[[i]] <- Diagonal(x=data_proc$std^2)
@@ -152,7 +152,7 @@ SRE <- function(f,data,basis,BAUs,est_error=TRUE,average_in_BAU = TRUE) {
 
 #' @rdname SRE
 #' @export
-SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM",print_lik=FALSE) {
+SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM",alpha_OLS = FALSE, print_lik=FALSE) {
     if(!is.numeric(n_EM)) stop("n_EM needs to be an integer")
     if(!(n_EM <- round(n_EM)) > 0) stop("n_EM needs to be greater than 0")
     if(!is.numeric(tol)) stop("tol needs to be a number greater than zero")
@@ -163,12 +163,14 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM",print_lik=FAL
     n <- nbasis(SRE_model)
     X <- SRE_model@X
     lk <- rep(0,n_EM)
+    if(alpha_OLS)
+        SRE_model@alphahat <- solve(t(X) %*% X) %*% t(X) %*% S@Z
 
     if(opts_FRK$get("progress")) pb <- txtProgressBar(min = 0, max = n_EM, style = 3)
     for(i in 1:n_EM) {
         lk[i] <- .loglik(SRE_model)  # Compute likelihood as in Katzfuss and Cressie (2011)
         SRE_model <- .SRE.Estep(SRE_model)
-        SRE_model <- .SRE.Mstep(SRE_model)
+        SRE_model <- .SRE.Mstep(SRE_model,alpha_OLS = alpha_OLS)
         if(opts_FRK$get("progress")) setTxtProgressBar(pb, i)
         if(i>2) if(lk[i] - lk[i-1] < tol) {
             print("Minimum tolerance reached")
@@ -183,6 +185,157 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM",print_lik=FAL
     }
     SRE_model
 }
+
+
+.SRE.Estep <- function(Sm) {
+
+    alpha <- Sm@alphahat
+    K <- Sm@Khat
+    sigma2fs <- Sm@sigma2fshat
+
+    D <- sigma2fs*Sm@Vfs + Sm@Ve
+    cholD <- Matrix::chol(D)
+    cholDinv <- solve(cholD)
+    Dinv <- chol2inv(chol(D))
+    Kinv <- chol2inv(chol(K))
+
+    # Deprecated: S_eta <- chol2inv(chol(crossprod(sqrt(Dinv) %*% Sm@S) + Kinv))
+    S_eta <- chol2inv(chol(crossprod(t(cholDinv) %*% Sm@S) + Kinv))
+    mu_eta <- S_eta %*% (t(Sm@S) %*% Dinv %*% (Sm@Z - Sm@X %*% alpha))
+
+    Sm@mu_eta <- mu_eta
+    Sm@S_eta <- S_eta
+
+    Sm
+}
+
+
+.SRE.Mstep <- function(Sm,alpha_OLS = FALSE) {
+
+    mu_eta <- Sm@mu_eta
+    S_eta <- Sm@S_eta
+    alpha_init <- Sm@alphahat
+    sigma2fs_init <- Sm@sigma2fshat
+
+    K <- S_eta + tcrossprod(mu_eta)
+    alpha <- alpha_init
+    sigma2fs <- sigma2fs_init
+    converged <- FALSE
+
+    # Deprecated:
+    #   Omega_diag1 <- diag2(Sm@S %*% as(S_eta,"dgeMatrix"),t(Sm@S)) +
+    #                 diag2(Sm@S %*% mu_eta %*% t(mu_eta), t(Sm@S))
+
+    R_eta <- chol(S_eta + tcrossprod(mu_eta))
+    S_R_eta <- Sm@S %*% t(R_eta)
+    Omega_diag1 <- rowSums(S_R_eta^2)
+
+    if(all((a <- diag(Sm@Ve)) == a[1]) &
+       all((b <- diag(Sm@Vfs)) == b[1]) &
+       all(rowSums(Sm@Vfs) == a[1]))    {
+        homoscedastic <- TRUE
+    } else {
+        homoscedastic <- FALSE
+    }
+
+    while(!converged) {
+        J <- function(sigma2fs) {
+            if(sigma2fs < 0) {
+                return(Inf)
+            } else {
+                D <- sigma2fs*Sm@Vfs + Sm@Ve
+                Dinv <- chol2inv(chol(D))
+                DinvV <- Dinv %*% Sm@Vfs
+                -(-0.5*tr(DinvV) +
+                      0.5*tr(DinvV %*% Dinv %*% Omega_diag)
+                )
+            }
+        }
+
+        resid <- Sm@Z - Sm@X %*% alpha
+        Omega_diag <- Omega_diag1 -
+            2*diag2(Sm@S %*% mu_eta, t(resid)) +
+            diag2(resid,t(resid))
+        Omega_diag <- Diagonal(x=Omega_diag)
+
+        # Repeat until finding values on opposite sides of zero if heteroscedastic
+        if(!homoscedastic) {
+            amp_factor <- 10; OK <- 0
+            while(!OK) {
+                amp_factor <- amp_factor * 10
+                if(!(sign(J(sigma2fs/amp_factor)) == sign(J(sigma2fs*amp_factor)))) OK <- 1
+                if(amp_factor > 1e12) {
+                    warning("sigma2fs is being estimated to zero.
+                            This might because because of an incorrect binning procedure.")
+                    OK <- 1
+                }
+            }
+
+            if(amp_factor > 1e12) {
+                sigma2fs_new <- 0
+                converged <- TRUE
+            }
+            sigma2fs_new <- uniroot(f = J,
+                                    interval = c(sigma2fs/amp_factor,sigma2fs*amp_factor))$root
+        } else {
+            sigma2fs_new <- 1/b[1]*(sum(Omega_diag)/length(Sm@Z) - a[1])
+        }
+        D <- sigma2fs_new*Sm@Vfs + Sm@Ve
+        Dinv <- chol2inv(chol(D))
+        if(alpha_OLS) {
+            converged <- TRUE
+        } else {
+            alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*% (Sm@Z - Sm@S %*% mu_eta)
+            if(max(sigma2fs_new / sigma2fs, sigma2fs / sigma2fs_new) < 1.001) converged <- TRUE
+        }
+        sigma2fs <- sigma2fs_new
+    }
+
+    Sm@Khat <- K
+    Sm@alphahat <- alpha
+    Sm@sigma2fshat <- sigma2fs
+
+    Sm
+}
+
+.loglik <- function(Sm) {
+
+    D <- Sm@sigma2fshat*Sm@Vfs + Sm@Ve
+    S <- Sm@S
+    K <- Sm@Khat
+    chol_K <- chol(K)
+    Kinv <- chol2inv(chol_K)
+    resid <- Sm@Z - Sm@X %*% Sm@alphahat
+    N <- length(Sm@Z)
+    cholD <- chol(D)
+    cholDinvT <- t(solve(cholD))
+    S_Dinv_S <-  crossprod(cholDinvT %*% S)
+
+
+    log_det_SigmaZ <- determinant(Kinv + S_Dinv_S,logarithm = TRUE)$modulus +
+        determinant(K,logarithm = TRUE)$modulus +
+        logdet(cholD)
+
+    ## Alternatively: (slower but more direct)
+    # Dinv <- chol2inv(chol(D))
+    # SigmaZ_inv <- Dinv - Dinv %*% S %*% solve(Kinv + S_Dinv_S) %*% t(S) %*% Dinv
+    # SigmaZ_inv2 <- Dinv - tcrossprod(Dinv %*% S %*% solve(R))
+
+    R <- chol(Kinv + S_Dinv_S)
+
+    rDinv <- crossprod(cholDinvT %*% resid,cholDinvT)
+    ## Alternatively: # rDinv <- t(resid) %*% Dinv
+
+    quad_bit <- crossprod(cholDinvT %*% resid) - tcrossprod(rDinv %*% S %*% solve(R))
+    ## Alternatively: # quad_bit <- rDinv %*% resid - tcrossprod(rDinv %*% S %*% solve(R))
+
+    llik <- -0.5 * N * log(2*pi) -
+        0.5 * log_det_SigmaZ -
+        0.5 * quad_bit
+    as.numeric(llik)
+
+}
+
 
 #' @rdname SRE
 #' @export
@@ -259,7 +412,7 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE,pred_polys =
 
     depname <- all.vars(Sm@f)[1]
     BAUs[[depname]] <- 0.1
-    L <- .extract.from.formula(Sm@f,data=BAUs)
+    L <- .gstat.formula(Sm@f,data=BAUs)
     X = as(L$X,"Matrix")
     if(is(BAUs,"Spatial")) {
         if(use_centroid) {
@@ -389,144 +542,6 @@ setMethod("summary",signature(object="SRE"),
 
 
 
-.SRE.Estep <- function(Sm) {
-
-    alpha <- Sm@alphahat
-    K <- Sm@Khat
-    sigma2fs <- Sm@sigma2fshat
-
-    D <- sigma2fs*Sm@Vfs + Sm@Ve
-    Dinv <- Diagonal(x=1/diag(D))
-
-    Kinv <- chol2inv(chol(K))
-
-    S_eta <- chol2inv(chol(crossprod(sqrt(Dinv) %*% Sm@S) + Kinv))
-    mu_eta <- S_eta %*% (t(Sm@S) %*% Dinv %*% (Sm@Z - Sm@X %*% alpha))
-
-    Sm@mu_eta <- mu_eta
-    Sm@S_eta <- S_eta
-
-    Sm
-}
-
-
-.SRE.Mstep <- function(Sm) {
-
-    mu_eta <- Sm@mu_eta
-    S_eta <- Sm@S_eta
-    alpha_init <- Sm@alphahat
-    sigma2fs_init <- Sm@sigma2fshat
-
-    K <- S_eta + tcrossprod(mu_eta)
-    alpha <- alpha_init
-    sigma2fs <- sigma2fs_init
-    converged <- FALSE
-
-    Omega_diag1 <- diag2(Sm@S %*% as.matrix(S_eta),t(Sm@S)) +
-        diag2(Sm@S %*% mu_eta %*% t(mu_eta), t(Sm@S))
-
-    if(all((a <- diag(Sm@Ve)) == a[1]) &
-       all((b <- diag(Sm@Vfs)) == b[1]) &
-       all(rowSums(Sm@Vfs) == a[1]))    {
-        homoscedastic <- TRUE
-    } else {
-        homoscedastic <- FALSE
-    }
-
-    while(!converged) {
-        J <- function(sigma2fs) {
-            if(sigma2fs < 0) {
-                return(Inf)
-            } else {
-                D <- sigma2fs*Sm@Vfs + Sm@Ve
-                Dinv <- chol2inv(chol(D))
-                DinvV <- Dinv %*% Sm@Vfs
-                 -(-0.5*tr(DinvV) +
-                       0.5*tr(DinvV %*% Dinv %*% Omega_diag)
-                 )
-            }
-        }
-
-        resid <- Sm@Z - Sm@X %*% alpha
-        Omega_diag <- Omega_diag1 -
-            2*diag2(Sm@S %*% mu_eta, t(resid)) +
-            diag2(resid,t(resid))
-        Omega_diag <- Diagonal(x=Omega_diag)
-
-        # Repeat until finding values on opposite sides of zero if heteroscedastic
-        if(!homoscedastic) {
-            amp_factor <- 10; OK <- 0
-            while(!OK) {
-                amp_factor <- amp_factor * 10
-                if(!(sign(J(sigma2fs/amp_factor)) == sign(J(sigma2fs*amp_factor)))) OK <- 1
-                if(amp_factor > 1e12) {
-                    warning("sigma2fs is being estimated to zero.
-                            This might because because of an incorrect binning procedure.")
-                    OK <- 1
-                }
-            }
-
-            if(amp_factor > 1e12) {
-                sigma2fs_new <- 0
-                converged <- TRUE
-            }
-            sigma2fs_new <- uniroot(f = J,
-                                    interval = c(sigma2fs/amp_factor,sigma2fs*amp_factor))$root
-            } else {
-                sigma2fs_new <- 1/b[1]*(sum(Omega_diag)/length(Sm@Z) - a[1])
-            }
-        D <- sigma2fs_new*Sm@Vfs + Sm@Ve
-        Dinv <- Diagonal(x=1/diag(D))
-        alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*% (Sm@Z - Sm@S %*% mu_eta)
-        if(max(sigma2fs_new / sigma2fs, sigma2fs / sigma2fs_new) < 1.001) converged <- TRUE
-        sigma2fs <- sigma2fs_new
-        }
-
-    Sm@Khat <- K
-    Sm@alphahat <- alpha
-    Sm@sigma2fshat <- sigma2fs
-
-    Sm
-}
-
-.loglik <- function(Sm) {
-
-    D <- Sm@sigma2fshat*Sm@Vfs + Sm@Ve
-    S <- Sm@S
-    K <- Sm@Khat
-    chol_K <- chol(K)
-    Kinv <- chol2inv(chol_K)
-    resid <- Sm@Z - Sm@X %*% Sm@alphahat
-    N <- length(Sm@Z)
-    cholD <- chol(D)
-    cholDinvT <- t(solve(cholD))
-    S_Dinv_S <-  crossprod(cholDinvT %*% S)
-
-
-    log_det_SigmaZ <- determinant(Kinv + S_Dinv_S,logarithm = TRUE)$modulus +
-        determinant(K,logarithm = TRUE)$modulus +
-        logdet(cholD)
-
-    ## Alternatively: (slower but more direct)
-    # Dinv <- chol2inv(chol(D))
-    # SigmaZ_inv <- Dinv - Dinv %*% S %*% solve(Kinv + S_Dinv_S) %*% t(S) %*% Dinv
-    # SigmaZ_inv2 <- Dinv - tcrossprod(Dinv %*% S %*% solve(R))
-
-    R <- chol(Kinv + S_Dinv_S)
-
-    rDinv <- crossprod(cholDinvT %*% resid,cholDinvT)
-    ## Alternatively: # rDinv <- t(resid) %*% Dinv
-
-    quad_bit <- crossprod(cholDinvT %*% resid) - tcrossprod(rDinv %*% S %*% solve(R))
-    ## Alternatively: # quad_bit <- rDinv %*% resid - tcrossprod(rDinv %*% S %*% solve(R))
-
-    llik <- -0.5 * N * log(2*pi) -
-        0.5 * log_det_SigmaZ -
-        0.5 * quad_bit
-    as.numeric(llik)
-
-}
-
 
 .check_args <- function(f,data,basis,BAUs,est_error) {
     if(!is(f,"formula")) stop("f needs to be a formula.")
@@ -563,4 +578,20 @@ setMethod("summary",signature(object="SRE"),
     if(!est_error & !all(sapply(data,function(x) "std" %in% names(x@data))))
         stop("If observational error is not going to be estimated,
              please supply a field 'std' in the data objects")
+}
+
+.gstat.formula <- function (formula, data)
+{
+    m = model.frame(terms(formula), as(data, "data.frame"), na.action = na.fail)
+    Y = model.extract(m, "response")
+    if (length(Y) == 0)
+        stop("no response variable present in formula")
+    Terms = attr(m, "terms")
+    X = model.matrix(Terms, m)
+    has.intercept = attr(Terms, "intercept")
+    grid = numeric(0)
+    xlevels = .getXlevels(Terms, m)
+    list(y = Y, locations = coordinates(data), X = X, call = call,
+         has.intercept = has.intercept, grid = as.double(unlist(grid)),
+         xlevels = xlevels)
 }
