@@ -1424,7 +1424,7 @@ The development page of \tt{FRK} is \tt{https://github.com/andrewzm/FRK}. Users 
 
 \section*{Acknowledgements}
 
-Package devlopment was facilitated with \tt{devtools}, this vignette was created with \tt{knitr}, and package testing was carried out using \tt{testthat} and \tt{covr}. The package includes within it \tt{clipPolys}, from the package \tt{PBSmapping}, some date manipulation functions from \tt{Hmisc} and the functions \tt{rdist} and \tt{rdist.earth} from the package \tt{fields}. Some sparse matrix operations are facilitated using \tt{C} code from the software package \tt{SuiteSparse} \citep{SuiteSparse}.
+Package devlopment was facilitated with \tt{devtools}, this vignette was created with \tt{knitr}, and package testing was carried out using \tt{testthat} and \tt{covr}. The package includes within it some date manipulation functions from \tt{Hmisc} and the functions \tt{rdist} and \tt{rdist.earth} from the package \tt{fields}. Some sparse matrix operations are facilitated using \tt{C} code from the software package \tt{SuiteSparse} \citep{SuiteSparse}.
 
 \bibliography{FRK_bib}
 
