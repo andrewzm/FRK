@@ -3,7 +3,10 @@ Type: Package
 Title: Fixed Rank Kriging
 Version: 0.1.0
 Date: 2015-01-21
-Author: Andrew Zammit-Mangion
+Authors@R: c(
+    person("Andrew", "Zammit-Mangion", , "andrewzm@gmail.com.com", c("aut", "cre","cph")),
+    person("Nicholas", "Boers", , "boersn@macewan.ca", role = "ctb")
+    )
 Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
 VignetteBuilder: knitr
 Description: Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling
