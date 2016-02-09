@@ -8,18 +8,16 @@
 #' library(ggplot2)
 #' draw_world(g = ggplot())
 draw_world <- function(g = ggplot(),inc_border = TRUE) {
-    ### Polygon split solution thanks to http://cameron.bracken.bz/finally-an-easy-way-to-fix-the-horizontal-lines-in-ggplot2-maps
     if(!(is(g, "ggplot"))) stop("g has to be of class ggplot")
     if(!(is.logical(inc_border))) stop("inc_border needs to be TRUE or FALSE")
-    X <- Y <- PID <- NULL
+    long <- lat <- group <- NULL
     data(worldmap, envir=environment(), package = "FRK")
-    names(worldmap) <- c("X","Y","PID","POS","region","subregion")
-    worldmap = clipPolys(worldmap, xlim=c(-180,180),ylim=c(-90,90), keepExtra=TRUE)
+    worldmap <- .homogenise_maps(worldmap)
     if(inc_border) {
-        border <- data.frame(X=c(-179.99,-179.99,179.99,179.99),Y=c(-89.99,89.99,89.99,-89.99),PID=1e5,region="border")
+        border <- data.frame(long=c(-179.99,-179.99,179.99,179.99),lat=c(-89.99,89.99,89.99,-89.99),group=1e5,region="border")
         worldmap <- plyr::rbind.fill(worldmap,border)
     }
-    g + geom_path(data = worldmap, aes(x=X, y=Y, group=PID), colour="black",size=0.1)
+    g + geom_path(data = worldmap, aes(x=long, y=lat, group=group), colour="black",size=0.1)
 }
 
 #' @rdname show_basis
@@ -132,4 +130,30 @@ circleFun <- function(center = c(0,0),diameter = 1, npoints = 100){
     xx <- center[1] + r * cos(tt)
     yy <- center[2] + r * sin(tt)
     return(data.frame(x = xx, y = yy))
+}
+
+.homogenise_maps <- function(worldmap) {
+    W <-worldmap %>%
+        group_by(group) %>%
+        summarise(prob = (max(long) > 180 | min(long) < -180))     %>%
+        filter(prob==1)
+
+    for(i in W$group) {
+        this_country <- filter(worldmap,group == i)
+        CA <- filter(this_country, long >= 180 | long <= -180)
+        CB <- filter(this_country, long < 180 & long > -180)
+        CA$group <- CA$group + 10000
+        CB$group <- CB$group + 10001
+
+        if(max(CA$long) >= 180) {
+            CA$long <- CA$long - 360
+        } else if(min(CA$long) <= -180) {
+            CA$long <- CA$long + 360
+        }
+        CA <- CA %>% filter(abs(long) <= 179.99)
+
+        worldmap <- rbind(worldmap,CA,CB)
+    }
+    worldmap <- filter(worldmap,!(group %in% W$group))
+    worldmap
 }

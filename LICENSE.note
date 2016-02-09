@@ -96,29 +96,6 @@ sparseinv* are taken from the sparseinv package in SuiteSparse. Since sparseinv 
     TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
     EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-PBSmapping.c, polygons.c, conversions.h, floating.h, and globals.h are from the R package PBSMapping. These code contain the following license information:
-
-  =============================================================================
-  Copyright (C) 2003-2013 Fisheries and Oceans Canada
-
-  This file is part of PBS Mapping.
-
-  PBS Mapping is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 2 of the License, or
-  (at your option) any later version.
-
-  PBS Mapping is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with PBS Mapping; if not, write to the Free Software
-  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-  =============================================================================
-
-
 rdist.f and rdistC.c are from the R package fields. rdist.f contains the following license information
 
     c fields, Tools for spatial data

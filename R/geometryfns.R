@@ -610,8 +610,8 @@ setMethod("map_data_to_BAUs",signature(data_sp="Spatial"),
                       new_sp_pts <- SpatialPointsDataFrame(coords=sp_pols[coordnames(data_sp)]@data,
                                                            data=sp_pols@data,
                                                            proj4string = CRS(proj4string(data_sp)))
-                      #new_sp_pts$std <- sqrt(1 / new_sp_pts$Nobs)
-                      new_sp_pts$std <- sqrt(new_sp_pts$std^2 / new_sp_pts$Nobs)
+                      ## If uncommented assumes uncorrelated observations
+                      #new_sp_pts$std <- sqrt(new_sp_pts$std^2 / new_sp_pts$Nobs)
                       new_sp_pts <- subset(new_sp_pts,!is.na(Nobs))
                   } else {
 
@@ -731,7 +731,8 @@ est_obs_error <- function(sp_pts,variogram.formula) {
         stop("Measurement error estimated to be zero. Please pre-specify measurement error. If
               unknown please specify a reasonable value in the field 'std' and set
               est_error = FALSE")
-    sp_pts$std <- sqrt(vgm.fit$psill[1] / sp_pts$Nobs)
+    # sp_pts$std <- sqrt(vgm.fit$psill[1] / sp_pts$Nobs)
+    sp_pts$std <- sqrt(vgm.fit$psill[1])  ## Assume observations have correlated error in BAU
 
     ##Observational error estimation could be improved. Currently a variogram is fitted to the data, and then the error variance of a single observation is assumed to be the partial sill. Then the variance of the averaged observations in the BAU is divided by Nobs. Currently there is no accounting for multiple data in the same grid box during variogram fitting as it's not straightforward with gstat
 

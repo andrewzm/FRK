@@ -152,7 +152,7 @@ SRE <- function(f,data,basis,BAUs,est_error=TRUE,average_in_BAU = TRUE) {
 
 #' @rdname SRE
 #' @export
-SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM",alpha_OLS = FALSE, print_lik=FALSE) {
+SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM", print_lik=FALSE) {
     if(!is.numeric(n_EM)) stop("n_EM needs to be an integer")
     if(!(n_EM <- round(n_EM)) > 0) stop("n_EM needs to be greater than 0")
     if(!is.numeric(tol)) stop("tol needs to be a number greater than zero")
@@ -163,14 +163,12 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM",alpha_OLS = F
     n <- nbasis(SRE_model)
     X <- SRE_model@X
     lk <- rep(0,n_EM)
-    if(alpha_OLS)
-        SRE_model@alphahat <- solve(t(X) %*% X) %*% t(X) %*% S@Z
 
     if(opts_FRK$get("progress")) pb <- txtProgressBar(min = 0, max = n_EM, style = 3)
     for(i in 1:n_EM) {
         lk[i] <- .loglik(SRE_model)  # Compute likelihood as in Katzfuss and Cressie (2011)
         SRE_model <- .SRE.Estep(SRE_model)
-        SRE_model <- .SRE.Mstep(SRE_model,alpha_OLS = alpha_OLS)
+        SRE_model <- .SRE.Mstep(SRE_model)
         if(opts_FRK$get("progress")) setTxtProgressBar(pb, i)
         if(i>2) if(lk[i] - lk[i-1] < tol) {
             print("Minimum tolerance reached")
@@ -210,7 +208,8 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM",alpha_OLS = F
 }
 
 
-.SRE.Mstep <- function(Sm,alpha_OLS = FALSE) {
+
+.SRE.Mstep <- function(Sm) {
 
     mu_eta <- Sm@mu_eta
     S_eta <- Sm@S_eta
@@ -220,25 +219,26 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM",alpha_OLS = F
     K <- S_eta + tcrossprod(mu_eta)
     alpha <- alpha_init
     sigma2fs <- sigma2fs_init
-    converged <- FALSE
-
-    # Deprecated:
-    #   Omega_diag1 <- diag2(Sm@S %*% as(S_eta,"dgeMatrix"),t(Sm@S)) +
-    #                 diag2(Sm@S %*% mu_eta %*% t(mu_eta), t(Sm@S))
-
-    R_eta <- chol(S_eta + tcrossprod(mu_eta))
-    S_R_eta <- Sm@S %*% t(R_eta)
-    Omega_diag1 <- rowSums(S_R_eta^2)
 
     if(all((a <- diag(Sm@Ve)) == a[1]) &
        all((b <- diag(Sm@Vfs)) == b[1]) &
-       all(rowSums(Sm@Vfs) == a[1]))    {
+       all(rowSums(Sm@Vfs) == b[1]))    {
         homoscedastic <- TRUE
     } else {
         homoscedastic <- FALSE
     }
 
-    while(!converged) {
+    if( all(rowSums(Sm@Ve) == diag(Sm@Ve)) &
+        all(rowSums(Sm@Vfs) == diag(Sm@Vfs)))    {
+        diagonal_mats <- TRUE
+    } else {
+        diagonal_mats <- FALSE
+    }
+
+
+
+    if(!diagonal_mats) {
+
         J <- function(sigma2fs) {
             if(sigma2fs < 0) {
                 return(Inf)
@@ -246,54 +246,93 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM",alpha_OLS = F
                 D <- sigma2fs*Sm@Vfs + Sm@Ve
                 Dinv <- chol2inv(chol(D))
                 DinvV <- Dinv %*% Sm@Vfs
+                DinvVDinv <- Dinv %*% Sm@Vfs %*% Dinv
+
+                alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*% (Sm@Z - Sm@S %*% mu_eta)
+                resid <- Sm@Z - Sm@X %*% alpha
+
+                Dinvr <- DinvVDinv %*% resid
+                DinvS <- DinvVDinv %*% Sm@S
+
+                tr1 <- tr(DinvV)
+                tr2 <- sum(diag2(DinvS %*% (S_eta +  tcrossprod(mu_eta)),t(Sm@S))  -
+                               2*diag2(DinvS %*% mu_eta,t(resid)) +
+                               diag2(Dinvr,t(resid)))
+
+                -(-0.5*tr1 +0.5*tr2)
+            }
+        }
+    } else {
+
+        R_eta <- chol(S_eta + tcrossprod(mu_eta))
+        S_R_eta <- Sm@S %*% t(R_eta)
+        Omega_diag1 <- rowSums(S_R_eta^2)
+
+        J <- function(sigma2fs) {
+            if(sigma2fs < 0) {
+                return(Inf)
+            } else {
+                D <- sigma2fs*Sm@Vfs + Sm@Ve
+                Dinv <- chol2inv(chol(D))
+                DinvV <- Dinv %*% Sm@Vfs
+
+                alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*% (Sm@Z - Sm@S %*% mu_eta)
+                resid <- Sm@Z - Sm@X %*% alpha
+                Omega_diag <- Omega_diag1 -
+                    2*diag2(Sm@S %*% mu_eta, t(resid)) +
+                    diag2(resid,t(resid))
+                Omega_diag <- Diagonal(x=Omega_diag)
+
                 -(-0.5*tr(DinvV) +
-                      0.5*tr(DinvV %*% Dinv %*% Omega_diag)
+                  0.5*tr(DinvV %*% Dinv %*% Omega_diag)
                 )
             }
         }
+    }
 
+
+
+    # Repeat until finding values on opposite sides of zero if heteroscedastic
+    if(!homoscedastic) {
+        amp_factor <- 10; OK <- 0
+        while(!OK) {
+            amp_factor <- amp_factor * 10
+            if(!(sign(J(sigma2fs/amp_factor)) == sign(J(sigma2fs*amp_factor)))) OK <- 1
+            if(amp_factor > 1e12) {
+                warning("sigma2fs is being estimated to zero.
+                            This might because because of an incorrect binning procedure.")
+                OK <- 1
+            }
+        }
+
+        if(amp_factor > 1e12) {
+            sigma2fs_new <- 0
+        }
+        sigma2fs_new <- uniroot(f = J,
+                                interval = c(sigma2fs/amp_factor,sigma2fs*amp_factor))$root
+        D <- sigma2fs_new*Sm@Vfs + Sm@Ve
+        Dinv <- chol2inv(chol(D))
+        alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*% (Sm@Z - Sm@S %*% mu_eta)
+    } else {
+
+        alpha <- solve(t(Sm@X) %*% Sm@X) %*% t(Sm@X) %*% (Sm@Z - Sm@S %*% mu_eta)
         resid <- Sm@Z - Sm@X %*% alpha
         Omega_diag <- Omega_diag1 -
             2*diag2(Sm@S %*% mu_eta, t(resid)) +
             diag2(resid,t(resid))
         Omega_diag <- Diagonal(x=Omega_diag)
-
-        # Repeat until finding values on opposite sides of zero if heteroscedastic
-        if(!homoscedastic) {
-            amp_factor <- 10; OK <- 0
-            while(!OK) {
-                amp_factor <- amp_factor * 10
-                if(!(sign(J(sigma2fs/amp_factor)) == sign(J(sigma2fs*amp_factor)))) OK <- 1
-                if(amp_factor > 1e12) {
-                    warning("sigma2fs is being estimated to zero.
-                            This might because because of an incorrect binning procedure.")
-                    OK <- 1
-                }
-            }
-
-            if(amp_factor > 1e12) {
-                sigma2fs_new <- 0
-                converged <- TRUE
-            }
-            sigma2fs_new <- uniroot(f = J,
-                                    interval = c(sigma2fs/amp_factor,sigma2fs*amp_factor))$root
-        } else {
-            sigma2fs_new <- 1/b[1]*(sum(Omega_diag)/length(Sm@Z) - a[1])
+        sigma2fs_new <- 1/b[1]*(sum(Omega_diag)/length(Sm@Z) - a[1])
+        if(sigma2fs_new < 0) {
+            warning("sigma2fs is being estimated to zero.
+                            This might because because of an incorrect binning procedure or
+                    because too much measurement error is being assumed.")
+            sigma2fs_new = 0
         }
-        D <- sigma2fs_new*Sm@Vfs + Sm@Ve
-        Dinv <- chol2inv(chol(D))
-        if(alpha_OLS) {
-            converged <- TRUE
-        } else {
-            alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*% (Sm@Z - Sm@S %*% mu_eta)
-            if(max(sigma2fs_new / sigma2fs, sigma2fs / sigma2fs_new) < 1.001) converged <- TRUE
-        }
-        sigma2fs <- sigma2fs_new
     }
 
     Sm@Khat <- K
     Sm@alphahat <- alpha
-    Sm@sigma2fshat <- sigma2fs
+    Sm@sigma2fshat <- sigma2fs_new
 
     Sm
 }
@@ -376,6 +415,7 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE,pred_polys =
     if(is.null(pred_time) & is(Sm@BAUs,"ST"))
         pred_time <- 1:length(Sm@BAUs@time)
 
+
     predict_BAUs <- TRUE
     BAUs <- Sm@BAUs
 
@@ -433,7 +473,7 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE,pred_polys =
     K <- Sm@Khat
     sigma2fs <- Sm@sigma2fshat
     D <- sigma2fs*Sm@Vfs + Sm@Ve
-    Dinv <- Diagonal(x=1/diag(D))
+    Dinv <- chol2inv(chol(D))
     mu_eta <- Sm@mu_eta
     S_eta <- Sm@S_eta
 
@@ -594,4 +634,94 @@ setMethod("summary",signature(object="SRE"),
     list(y = Y, locations = coordinates(data), X = X, call = call,
          has.intercept = has.intercept, grid = as.double(unlist(grid)),
          xlevels = xlevels)
+}
+
+############ DEPRECATED #####################
+
+.SRE.Mstep.deprecated <- function(Sm,alpha_OLS = FALSE) {
+
+    mu_eta <- Sm@mu_eta
+    S_eta <- Sm@S_eta
+    alpha_init <- Sm@alphahat
+    sigma2fs_init <- Sm@sigma2fshat
+
+    K <- S_eta + tcrossprod(mu_eta)
+    alpha <- alpha_init
+    sigma2fs <- sigma2fs_init
+    converged <- FALSE
+
+    # Deprecated:
+    #   Omega_diag1 <- diag2(Sm@S %*% as(S_eta,"dgeMatrix"),t(Sm@S)) +
+    #                 diag2(Sm@S %*% mu_eta %*% t(mu_eta), t(Sm@S))
+
+    R_eta <- chol(S_eta + tcrossprod(mu_eta))
+    S_R_eta <- Sm@S %*% t(R_eta)
+    Omega_diag1 <- rowSums(S_R_eta^2)
+
+    if(all((a <- diag(Sm@Ve)) == a[1]) &
+       all((b <- diag(Sm@Vfs)) == b[1]) &
+       all(rowSums(Sm@Vfs) == a[1]))    {
+        homoscedastic <- TRUE
+    } else {
+        homoscedastic <- FALSE
+    }
+
+    while(!converged) {
+        J <- function(sigma2fs) {
+            if(sigma2fs < 0) {
+                return(Inf)
+            } else {
+                D <- sigma2fs*Sm@Vfs + Sm@Ve
+                Dinv <- chol2inv(chol(D))
+                DinvV <- Dinv %*% Sm@Vfs
+                -(-0.5*tr(DinvV) +
+                      0.5*tr(DinvV %*% Dinv %*% Omega_diag)
+                )
+            }
+        }
+
+        resid <- Sm@Z - Sm@X %*% alpha
+        Omega_diag <- Omega_diag1 -
+            2*diag2(Sm@S %*% mu_eta, t(resid)) +
+            diag2(resid,t(resid))
+        Omega_diag <- Diagonal(x=Omega_diag)
+
+        # Repeat until finding values on opposite sides of zero if heteroscedastic
+        if(!homoscedastic) {
+            amp_factor <- 10; OK <- 0
+            while(!OK) {
+                amp_factor <- amp_factor * 10
+                if(!(sign(J(sigma2fs/amp_factor)) == sign(J(sigma2fs*amp_factor)))) OK <- 1
+                if(amp_factor > 1e12) {
+                    warning("sigma2fs is being estimated to zero.
+                            This might because because of an incorrect binning procedure.")
+                    OK <- 1
+                }
+            }
+
+            if(amp_factor > 1e12) {
+                sigma2fs_new <- 0
+                converged <- TRUE
+            }
+            sigma2fs_new <- uniroot(f = J,
+                                    interval = c(sigma2fs/amp_factor,sigma2fs*amp_factor))$root
+            } else {
+                sigma2fs_new <- 1/b[1]*(sum(Omega_diag)/length(Sm@Z) - a[1])
+            }
+        D <- sigma2fs_new*Sm@Vfs + Sm@Ve
+        Dinv <- chol2inv(chol(D))
+        if(alpha_OLS) {
+            converged <- TRUE
+        } else {
+            alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*% (Sm@Z - Sm@S %*% mu_eta)
+            if(max(sigma2fs_new / sigma2fs, sigma2fs / sigma2fs_new) < 1.001) converged <- TRUE
+        }
+        sigma2fs <- sigma2fs_new
+        }
+
+    Sm@Khat <- K
+    Sm@alphahat <- alpha
+    Sm@sigma2fshat <- sigma2fs
+
+    Sm
 }

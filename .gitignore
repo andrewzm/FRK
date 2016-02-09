@@ -13,6 +13,7 @@ src/*.so
 FRK.Rcheck
 *.tar.gz
 inla-mesher-functions
+PBSmapping
 paper
 vignettes/cache
 *.bbl
