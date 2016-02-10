@@ -9,7 +9,7 @@
 SRE(f, data, basis, BAUs, est_error = TRUE, average_in_BAU = TRUE)
 
 SRE.fit(SRE_model, n_EM = 100L, tol = 1e-05, method = "EM",
-  alpha_OLS = FALSE, print_lik = FALSE)
+  print_lik = FALSE)
 
 SRE.predict(SRE_model, use_centroid = TRUE, include_fs = TRUE,
   pred_polys = NULL, pred_time = NULL)
@@ -34,8 +34,6 @@ SRE.predict(SRE_model, use_centroid = TRUE, include_fs = TRUE,
 \item{tol}{convergence tolerance for the EM algorithm}
 
 \item{method}{parameter estimation method to employ. Currently only ``EM'' is supported}
-
-\item{alpha_OLS}{flag indicating whether the regression coefficients should be estimated a priori by ordinary least squares (in which case the EM algorithm is used). Should only be used when computationally difficulties are encountered}
 
 \item{print_lik}{flag indicating whether likelihood should be printed or not on convergence of the estimation algorithm}
 

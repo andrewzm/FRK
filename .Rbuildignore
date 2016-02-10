@@ -6,8 +6,8 @@ bigstudies
 ^\.travis.yml$
 ^\.\.Rcheck$
 ^\.git$
-^\inla-mesher-functions
-^\PBSmapping
+^inla-mesher-functions
+^PBSmapping
 ^R/rhipe_fns.R$
 .log$
 .bbl$
