@@ -133,6 +133,8 @@ circleFun <- function(center = c(0,0),diameter = 1, npoints = 100){
 }
 
 .homogenise_maps <- function(worldmap) {
+    group <- long <- prob <- NULL # suppress bindings note
+
     W <-worldmap %>%
         group_by(group) %>%
         summarise(prob = (max(long) > 180 | min(long) < -180))     %>%

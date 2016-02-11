@@ -16,6 +16,7 @@ inla-mesher-functions
 PBSmapping
 paper
 vignettes/cache
+pres/
 *.bbl
 *.toc
 bigstudies

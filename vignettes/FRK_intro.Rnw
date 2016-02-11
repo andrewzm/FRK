@@ -1,4 +1,3 @@
-%% ! Rnw root = FRK_Master.Rnw
 \documentclass{article}
 
 % \VignetteEngine{knitr::knitr}
@@ -18,6 +17,10 @@
 \usepackage{array}
 \usepackage[normalem]{ulem}
 \usepackage{amsthm}
+\usepackage{txfonts}
+
+\DeclareSymbolFont{matha}{OML}{txmi}{m}{it}% txfonts
+\DeclareMathSymbol{\varv}{\mathord}{matha}{118}
 
 \renewcommand{\tt} {\texttt}
 
@@ -229,28 +232,28 @@ Fixed Rank Kriging (FRK) is a spatial/spatio-temporal modelling and prediction f
 
 \section{Introduction}
 
-Fixed Rank Kriging (FRK) is a spatial/spatio-temporal modelling and prediction framework designed for use with large datasets. FRK hinges on the use of a Spatial Random Effects (SRE) model, in which a spatially correlated random spatial field is decomposed using a linear combination of basis functions with random coefficients. Dimensionality reduction ensures computationally efficient prediction, while the reconstructed random spatial field is, in general, non-stationary.  The SRE model has a spatial covariance functions that is \emph{always} nonnegative-definite, and, because any (possibly non-orthogonal) basis functions can be used, it can be constructed so as to approximate standard families of covariance functions.  For a detailed treatment of FRK, see \cite{Cressie_2008}.
+Fixed Rank Kriging (FRK) is a spatial/spatio-temporal modelling and prediction framework designed for use with large datasets. FRK hinges on the use of a Spatial Random Effects (SRE) model, in which a spatially correlated random spatial field is decomposed using a linear combination of basis functions with random coefficients. Dimensionality reduction ensures computationally-efficient prediction, while the reconstructed random spatial field is, in general, non-stationary.  The SRE model has a spatial covariance functions that is \emph{always} nonnegative-definite, and, because any (possibly non-orthogonal) basis functions can be used, it can be constructed so as to approximate standard families of covariance functions.  For a detailed treatment of FRK, see \cite{Cressie_2008}.
 
 
 
-There are numerous R packages available for modelling and prediction with spatial or spatio-temporal data,\footnote{see \tt{https://cran.r-project.org/web/views/Spatial.html}.} although relatively few of these make use of a model with spatial basis functions. A few variants of FRK have, however, been developed to date and, of these, the package \tt{LatticeKrig} \citep{Nychka_2015} deserves special mention. \tt{LatticeKrig} uses Wendland basis functions (that have compact support) to decompose the spatially correlated field, and a Markov assumption to construct a precision matrix  (the matrix $\Kmat^{-1}$ in Section \ref{sec:SREModel}) to describe the dependence between the coefficients of these basis functions. \tt{LatticeKrig} does not cater for what we term fine-scale process variation, and the finest scale of the process is limited to the finest resolution of the basis functions used (which, however, can be relatively high due to the imposed sparsity). \tt{LatticeKrig}'s model is also restricted to use precision matrices constructed using Gaussian Markov random fields (GMRFs) -- this results in efficient computations and the potential use of a large number ($>4000$) basis functions, but non-stationarity is limited in \tt{LatticeKrig's} GMRFs to either a few parameters that control spatially-varying variance or to some pre-specified specification \citep[][p.~21]{LatticeKrig}.  Heterogeneity is not straightforward in GMRFs, in general; for example inference on slowly varying length scales may be carried out using the approach of \citet{Lindgren_2011}. % \red{There is one final feature of \tt{LatticeKrig} that allows fast computation but results in an incoherent spatial model. The same random effect can be assigned to two spatial resolutions, where it is assumed statistically independent of itself \citep{Nychka_2015,Bradley_206}. This can only happen in the degenerate case where the random effect is in fact non-random.}
+There are numerous \tt{R} packages available for modelling and prediction with spatial or spatio-temporal data,\footnote{see \tt{https://cran.r-project.org/web/views/Spatial.html}.} although relatively few of these make use of a model with spatial basis functions. A few variants of FRK have, however, been developed to date and, of these, the package \tt{LatticeKrig} \citep{Nychka_2015} deserves special mention. \tt{LatticeKrig} uses Wendland basis functions (that have compact support) to decompose the spatially correlated field, and a Markov assumption to construct a precision matrix  (the matrix $\Kmat^{-1}$ in Section \ref{sec:SREModel}) to describe the dependence between the coefficients of these basis functions. \tt{LatticeKrig} does not cater for what we term fine-scale process variation, and the finest scale of the process is limited to the finest resolution of the basis functions used (which, however, can be relatively high due to the imposed sparsity). \tt{LatticeKrig}'s model is also restricted to use precision matrices constructed using Gaussian Markov random field (GMRF) assumptions -- this results in efficient computations and the potential use of a large number ($>4000$) basis functions, but non-stationarity is limited in \tt{LatticeKrig's} GMRFs to either a few parameters that control spatially-varying variance or to some pre-determined specification \citep[][p.~21]{LatticeKrig}.  Heterogeneity is not straightforward in GMRFs, in general; for example inference on slowly varying length scales may be carried out using the approach of \citet{Lindgren_2011} but abrupt changes are difficult to characterise. % \red{There is one final feature of \tt{LatticeKrig} that allows fast computation but results in an incoherent spatial model. The same random effect can be assigned to two spatial resolutions, where it is assumed statistically independent of itself \citep{Nychka_2015,Bradley_206}. This can only happen in the degenerate case where the random effect is in fact non-random.}
 
 In the standard flavour of \tt{FRK} \citep{Cressie_2008}, which we term \emph{vanilla} FRK, there is an explicit reliance on basis functions to give complex non-stationary patterns at the cost of not imposing a Markov random-field assumption. The number of basis functions in vanilla \tt{FRK} is thus bounded above by a couple of thousand and thus should be carefully chosen. This package is concerned with the vanilla approach to FRK in \tt{R}; some unpackaged MATLAB code is available at \tt{http://niasra.uow.edu.au/cei/webprojects/UOW175995.html}.
 
-Other general purpose packages, such as \tt{INLA}, also have the functionality that FRK requires. With \tt{INLA}, the basis functions are `tent' functions, and the distribution of the coefficients are assumed to be Gaussian with a sparse precision matrix, such that the covariance function of the resulting Gaussian field is approximately one from the Mat{\'e}rn class of spatial covariance functions \citep[see][for details on software implementation]{Lindgren_2015}. \tt{INLA}'s approach thus shares many of the advantages and limitations of \tt{LatticeKrig}. Vanilla FRK can also be implemented with \tt{INLA}; this would, however, require considerable extra implementation effort, especially if one is using spatio-temporal models. The advantage of \tt{INLA} is that once the basic model is constructed, one has access to all the approximate-inference machinery and likelihood models available within the package.
+Other general purpose packages, such as \tt{INLA}, also have the functionality that FRK requires. When using \tt{INLA}, the usual approach is to assume that basis functions are `tent' functions, and that the distribution of the coefficients are Gaussian with a sparse precision matrix, such that the covariance function of the resulting Gaussian field is approximately one from the Mat{\'e}rn class of spatial covariance functions \citep[see][for details on software implementation]{Lindgren_2015}. \tt{INLA}'s approach thus shares many of the advantages and limitations of \tt{LatticeKrig}. Vanilla FRK can also be implemented with \tt{INLA}; this would, however, require considerable extra implementation effort, especially if one is using spatio-temporal models. The advantage of \tt{INLA} is that once the basic model is constructed, one has access to all the approximate-inference machinery and likelihood models available within the package.
 
 The predictive process approach of \citet{Banerjee_2008} can also be seen as a type of Bayesian FRK, where the basis functions are constructed from the postulated covariance function of the spatial random effects and hence depend on parameters \citep[see][for an equivalence argument]{Katzfuss_2014}. An \tt{R} package that implements predictive processes is \tt{spBayes}. \tt{spBayes} allows for multivariate spatial or spatio-temporal fields, and both spatial/spatio-temporal processes  and Bayesian inference is carried out using Markov chain Monte Carlo (MCMC), allowing for a variety of likelihood models. Because basis functions are constructed based on a prespecified parametric covariance model, they change at each MCMC iteration which results in some computational overhead.
 
 The aim of the package \tt{FRK} is to considerably facilitate spatial and spatio-temporal analysis based on what, from experience, we deem to be the most `usual' scenario faced by the analyst in the environmental sciences:
 \begin{itemize}
 \item The data has additive Gaussian measurement error, and is available at multiple spatial resolutions (or supports).
-\item The physical process being modelled is either spatial or spatio-temporal, either on $\mathbb{R}^1, \mathbb{R}^2$ or $\mathbb{S}^2$, and can be heterogeneous in both space and time.
-\item There is a spatial (or spatio-temporal) unit, which we term a Basic Areal Unit (BAU), at which it is desired to carry out prediction and over which it is acceptable to infer the average of the process.
+\item The physical process being modelled is either spatial or spatio-temporal, on $\mathbb{R}^1, \mathbb{R}^2$ or $\mathbb{S}^2$, and can be heterogeneous in both space and time.
+\item There is a spatial (or spatio-temporal) unit, which we term a Basic Areal Unit (BAU), which is the smallest unit over which an observation is considered informative or the smallest unit over which we need to predict.
 \item Datasets can have hundreds of thousands of data points and hundreds of thousands of BAUs.
 \item The extent, or nature, of spatial heterogeneity can vary greatly between one application and the next. A useful class of models for the analyst would thus be  one which is quite basic but that can also offer considerably flexibility (such as the SRE class).
 \end{itemize}
 
-The package \tt{FRK} meets the needs ot a spatial statistical analyst by requiring a consistent, straightforward sequence of commands for the analysis, irrespective of whether the multiple datasets in use have different supports or not, irrespective of the manifold being used, irrespective of whether or not a temporal dimension needs to be included or not, and irrespective of the `prediction resolution'. The package is thus designed to be relatively easy to use, with a straightforward model (outlined in Section \ref{sec:theory}), and with the capability of handling large datasets on a standard desktop machine (up to a few hundreds of thousands of data points).
+The package \tt{FRK} meets the needs of a spatial statistical analyst by requiring a consistent, straightforward sequence of commands for the analysis, irrespective of whether the multiple datasets in use have different supports or not, irrespective of the manifold being used, irrespective of whether or not a temporal dimension needs to be included or not, and irrespective of the `prediction resolution'. The package is thus designed to be relatively easy to use, with a straightforward model (outlined in Section \ref{sec:theory}), and with the capability of handling large datasets on a standard desktop machine (up to a few hundreds of thousands of data points).
 
 The package requires the user to follow the same six steps in each analysis:
 
@@ -273,145 +276,151 @@ In this section we present the theory behind the operations in \tt{FRK}. In Sect
 
 Denote the spatial field of interest as $Y(\svec)$, where $\svec \in D$ and $D$ is our domain of interest. In the following, we assume that $D$ is a spatial domain but extensions to spatio-temporal domains are natural within the framework; these are considered in Section \ref{sec:spacetime}. The SRE model is
 \begin{equation}
-Y(\svec) = \tvec(\svec)'\alphab + \upsilon(\svec) + \delta(\svec); \quad \svec \in D,
+Y(\svec) = \tvec(\svec)'\alphab + \upsilon(\svec) + \delta(\svec), \quad \svec \in D,
 \end{equation}
-where $\tvec(\svec)$ is a vector of spatially-referenced covariates, $\alphab$ are regression coefficients, $\upsilon(\svec)$ is a small-scale, spatially-correlated random effect, and $\delta(\svec)$ is a fine-scale random effect, to be specified later. In order to cater for different observation supports, it is convenient to assume a domain of interest $D^L \equiv \{A_i \subset D: i = 1,\dots,N\}$ that contains $N$ small, non-overlapping BAUs \citep{Nguyen_2012}. The process averaged over the BAUs is then the vector $\Yvec = (Y_i : i = 1,\dots,N)'$, where
+where $\tvec(\svec)$ is a vector of spatially-referenced covariates, $\alphab$ are regression coefficients, $\upsilon(\svec)$ is a small-scale, spatially-correlated random effect, and $\delta(\svec)$ is a fine-scale random effect. In order to cater for different observation supports, it is convenient to assume a domain of interest $D^L \equiv \{A_i \subset D: i = 1,\dots,N\}$ that contains $N$ small, non-overlapping BAUs \citep{Nguyen_2012}. The domain $D^L$ could be thought of as a discretisation of the original domain $D$. The process averaged over the BAUs is then the vector $\Yvec = (Y_i : i = 1,\dots,N)'$, where
 
 \begin{equation}
-Y_i \equiv \frac{1}{|A_i|}\int_{A_i} Y(\svec) \intd \svec,
+Y_i \equiv \frac{1}{|A_i|}\int_{A_i} Y(\svec) \intd \svec, \quad i = 1,\dots,N,
 \end{equation}
 
-\noindent and $N$ is the number of BAUs. At this BAU level, $Y_i = \tvec_i'\alphab + \upsilon_i + \delta_i$, where $\tvec_i \equiv \frac{1}{|A_i|}\int_{A_i} \tvec(\svec) \intd \svec$, and $\upsilon_i\equiv \frac{1}{|A_i|}\int_{A_i} \upsilon(\svec) \intd \svec$. In \tt{FRK}, we assume that the fine-scale variation is constant in each BAU (which should be very small), but uncorrelated across the BAUs. We thus model $\delta_i$ to be Gaussian with mean zero, and uncorrelated with variance
-\begin{equation}
-\var(\delta_i) = \sigma^2_\delta v_i,
+\noindent and $N$ is the number of BAUs. At this BAU level,
+\begin{equation} \label{eq:Yi1}
+Y_i = \tvec_i'\alphab + \upsilon_i + \delta_i,
 \end{equation}
-where $\sigma^2_\delta$ is a parameter that needs to be estimated, $\vvec \equiv (v_i : i = 1,\dots,N)'$ is a BAU-level basis vector for the fine-scale variation (e.g., height above sea level averaged over the BAUs), and $N > 0$ is the number of BAUs. Therefore, one can write
-\begin{equation}\label{eq:SRE_Y}
-\Yvec = \Tmat\alphab + \upsilonb + \deltab,
-\end{equation}
-where $\Tmat \equiv (\tvec_i: i = 1,\dots,N)'$, $\upsilonb \equiv (\upsilon_i : i = 1,\dots,N)'$, $\deltab \equiv (\delta_i : i = 1,\dots,N)'$, and $\var(\deltab) \equiv \sigma^2_\delta \Vmat$, where $\Vmat \equiv \diag(\vvec)$ and known.
-
-We now  assume that the unobserved field, $Y(\svec)$, is observed with footprints spanning one or more BAUs. We thus define the observation domain as $D^O \subset 2^{D^L} / \varnothing$, where $2^{D^L}$ is the power set of $D^L$. For illustration, consider the simple case of three BAUs. Then $D^L = \{A_1,A_2,A_3\}$ and, for example, $D^O = \{\{A_1,A_2\},\{A_3\}\}$, in which case $B_1 = \{A_1,A_2\}$ and $B_2 = \{A_3\}$. Catering for different footprints is important for remote sensing applications in which satellite instrument footprints can widely differ \citep[e.g.,][]{Zammit_2015}.
-
-Each $B_i \in D^O$ is either a BAU (i.e., $|B_i| = 1$), or a set of BAUs, over which we have a noisy measurement $Z(B_i)$ (in which case $|B_i| > 1$). The measurement process is thus given by
-\begin{equation}
-Z_i \equiv Z(B_i) = \frac{1}{|B_i|} \sum_{i : A_i \subset B_i}Y_i + \epsilon_i; \quad B_i \in D^O, A_i \in D^L,
-\end{equation}
-where $\epsilon_i$ is Gaussian measurement error.  We assume that the observations are conditionally independent, when conditioned on $\Yvec$. Therefore $\{\epsilon_i: i = 1,\dots,m\}$, where $m \equiv |D^O|$ is the number of observations, are independent. If these errors are also identically distributed, then $\var(\epsilon_i), i = 1,\dots,m$ can also be estimated from the data (provided $\Vmat$ is not proportional to the identity matrix or we have point-referenced observations per BAU).
-
-Let $\Zvec \equiv (Z_i : i = 1,\dots,m)'$. Then, since each element in $D^O$ is an element of the power set of $D^L$, one can construct a matrix $\Cmat_Z$, the rows of which sum to one, such that
-\begin{equation}
-\Zvec = \Cmat_Z\Yvec + \epsilonb,
-\end{equation}
-\noindent where $\epsilonb \equiv (\epsilon_i : i = 1,\dots,m)'$ and $\var(\epsilonb) = \Sigmamat_\epsilon$ is a diagonal covariance matrix. It will be convenient for future treatments to re-write
-\begin{equation}\label{eq:Z_collapsed}
-\Zvec = \Tmat_Z\alphab + \Smat_Z\etab + \deltab_Z + \epsilonb,
-\end{equation}
-where $\Tmat_Z \equiv \Cmat_Z \Tmat$, $\Smat_Z \equiv \Cmat_Z \Smat$, $\deltab_Z \equiv \Cmat_Z \deltab$ and $\var(\deltab_Z) = \sigma^2_\delta\Vmat_Z \equiv \sigma^2_\delta\Cmat_Z\Vmat_Z\Cmat_Z'$. In practice, it is not always possible for each $B_i$ to overlap a BAU exactly. For simplicity, we assume that the observation footprint overlaps a BAU only if the BAU centroid lies within the footprint.
-
-In FRK, it is assumed that the spatial random effect $\upsilon(\svec)$ can be decomposed using basis functions, $\phib(\svec) \equiv (\phi_i(\svec): i = 1,\dots,n )'$, where $n > 0$ is the number of basis functions. Generally, $\phib(\svec)$ is multiresolutional and its elements may have compact support. The basis chosen should be able to adequately reconstruct realisations of $Y(\svec)$; an empirical spectral-based approach that can ensure this is discussed in \cite{Zammit_2012}. Using basis-function decomposition, we let each $\upsilon_i \approx \frac{1}{|A_i|}\int_{A_i}\phib(\svec)'\intd \svec ~\etab$, so that $\upsilonb \approx \Smat\etab$, where $\Smat$ is the $N \times n$ matrix
+\noindent where $\tvec_i \equiv \frac{1}{|A_i|}\int_{A_i} \tvec(\svec) \intd \svec$, $\upsilon_i\equiv \frac{1}{|A_i|}\int_{A_i} \upsilon(\svec) \intd \svec$, and $\delta_i$ is specified lated.
+In FRK, it is assumed that the spatial random effect $\upsilon(\svec)$ can be decomposed using basis functions, $\phib(\svec) \equiv (\phi_i(\svec): i = 1,\dots,r )'$, where $r > 0$ is the number of basis functions. Generally, $\phib(\svec)$ is multiresolutional and its elements may have compact support. The basis chosen should be able to adequately reconstruct realisations of $Y(\svec)$; an empirical spectral-based approach that can ensure this is discussed in \cite{Zammit_2012}. Using basis-function decomposition, we let $\upsilon(\svec) = (\phi(\svec),\dots,\phi(\svec))\etab \equiv \phib(\svec)'\etab$. Then, $\upsilon_i = \frac{1}{|A_i|}\int_{A_i}\phib(\svec)'\intd \svec ~\etab, i = 1,\dots,N$, so that $\upsilonb = \Smat\etab$, where $\Smat$ is the $N \times r$ matrix
 \begin{equation}
 \Smat \equiv \left(\frac{1}{|A_i|}\int_{A_i}\phib(\svec)\intd\svec : i = 1,\dots,N\right)'.
 \end{equation}
-We assume that $\etab$ is multivariate Gaussian with mean zero and covariance matrix $\Kmat$, which needs to be estimated. We collect the unknown parameters in the set $\thetab \equiv \{\alphab, \sigma^2_\delta, \Kmat\}$; their estimation is the subject of Section \ref{sec:estimation}.
+We assume that $\etab$ is $r$-dimensional Gaussian with mean zero and $r \times r$ covariance matrix $\Kmat$, which needs to be estimated.
 
-Once the parameters in $\thetab$ are estimated, a straightforward inversion may then be used to predict over unknown areas. In \texttt{FRK} we allow the prediction set $D^P$ to be as flexible as $D^O$, specifically $D^P \subset 2^{D^L} / \varnothing$ and thus we can predict both at the individual BAU level or averages over an area spanning multiple BAUs. We provide the prediction equations in Section \ref{sec:prediction}.
-
-\subsection{Parameter estimation using the EM algorithm} \label{sec:estimation}
-
-We carry out parameter estimation using an EM algorithm \citep{Katzfuss_2011} with \eqref{eq:Z_collapsed} as our model. Define the \emph{complete-data} likelihood $L_c(\thetab) \equiv [\etab,\Zvec \mid \thetab]$ (with $\deltab_Z$ integrated out), where $[\cdot]$ denotes the probability distribution of its argument. In the E-step, the function
+In \tt{FRK}, we assume that the BAU is the smallest unit of measure. Thus, the fine-scale variation is a constant random effect in each BAU, but uncorrelated across the BAUs. Since a BAU has finite area, the fine-scale variation is not a nugget effect in the classical sense. We thus model $\delta_i$ to be Gaussian with mean zero and uncorrelated with variance
 \begin{equation}
-Q(\thetab \mid \thetab^{(i)}) \equiv \E(\ln L_c(\thetab) \mid \Zvec,\thetab^{(i)}),
+\var(\delta_i) = \sigma^2_\delta \varv_i,
 \end{equation}
-is found for some current estimate $\thetab^{(i)}$. In the M-step, the updated parameter estimate
-\begin{equation}
-\thetab^{(i+1)} = \argmax_\thetab Q(\thetab \mid \thetab^{(i)}),
+where $\sigma^2_\delta$ is a parameter that needs to be estimated, and $(\varv_1,\dots,\varv_N)$  represent known heteroscedasticity. From \eqref{eq:Yi1}, we can write
+\begin{equation}\label{eq:SRE_Y}
+\Yvec = \Tmat\alphab + \Smat\etab + \deltab,
 \end{equation}
-is found. It is straightforward to show that
+where $\Tmat \equiv (\tvec_i: i = 1,\dots,N)'$, $\deltab \equiv (\delta_i : i = 1,\dots,N)'$, and $\var(\deltab) \equiv \sigma^2_\delta \Vmat$, where $\Vmat \equiv \diag(\varv_1,\dots,\varv_N)$ and known.
+
+We now  assume that the unobserved field, $Y(\svec)$, is observed with $m$ footprints spanning one or more BAUs. We thus define the observation domain as $D^O \subset \{ \cup_{i \in c_j} A_i : c_j \in 2^{\{1,2,\dots,N\}} \setminus \varnothing, j = 1,\dots,m \}$, where $2^{\{1,2,\dots,N\}}$ is the power set of $\{1,2,\dots,N\}$. For illustration, consider the simple case of three BAUs. Then $D^L = \{A_1,A_2,A_3\}$ and, for example, $D^O = \{B_1, B_2\} = \{A_1 \cup A_2,A_3\}$, in which case $B_1 = A_1 \cup A_2$ and $B_2 = A_3$. Catering for different footprints is important for remote sensing applications in which satellite instrument footprints can differ widely \citep[e.g.,][]{Zammit_2015}.
+
+Each $B_j \in D^O$ is either a BAU, or a union of BAUs. The measurement process is thus given by
 \begin{equation}
-(\etab \mid \Zvec,\thetab^{(i)}) \sim \Gau(\muvec_\eta^{(i)},\Sigmamat_\eta^{(i)}),
+Z_j \equiv Z(B_j) = \left(\frac{1}{|B_j|} \sum_{i : A_i \subset B_j}Y_i\right) + \epsilon_j; \quad B_j \in D^O, A_i \in D^L,
+\end{equation}
+where $\epsilon_j$ is Gaussian measurement error.  We assume that the observations are conditionally independent, when conditioned on $\Yvec$. Therefore $\{\epsilon_j: j = 1,\dots,m\}$, where $m \equiv |D^O|$ is the number of observations, are independent. If these errors are also identically distributed, then $\var(\epsilon_j), j = 1,\dots,m$ can in principle be estimated from the data (provided $\Vmat$ is not proportional to the identity matrix, since otherwise it is confounded with the fine-scale variation).
+
+Let $\Zvec \equiv (Z_j : j = 1,\dots,m)'$. Then, since each element in $D^O$ is the union of subsets of $D^L$, one can construct a matrix $\Cmat_Z$, the rows of which sum to one, such that
+\begin{equation}
+\Zvec = \Cmat_Z\Yvec + \epsilonb,
+\end{equation}
+\noindent where $\epsilonb \equiv (\epsilon_j : j = 1,\dots,m)'$ and $\var(\epsilonb) = \Sigmamat_\epsilon$ is a diagonal covariance matrix. It will be convenient, as a consequence of conditional independence, to re-write
+\begin{equation}\label{eq:Z_collapsed}
+\Zvec = \Tmat_Z\alphab + \Smat_Z\etab + \deltab_Z + \epsilonb,
+\end{equation}
+where $\Tmat_Z \equiv \Cmat_Z \Tmat$, $\Smat_Z \equiv \Cmat_Z \Smat$, $\deltab_Z \equiv \Cmat_Z \deltab$ and $\var(\deltab_Z) = \sigma^2_\delta\Vmat_Z \equiv \sigma^2_\delta\Cmat_Z\Vmat\Cmat_Z'$. In practice, it is not always possible for each $B_i$ to overlap a BAU exactly. For simplicity, we assume that the observation footprint overlaps a BAU only if the BAU centroid lies within the footprint. Frequently, data is also supplied as point-referenced. In this case each data point is attributed to a specific BAU and it is possible to have multiple observations of the same BAU.
+
+
+We collect the unknown parameters in the set $\thetab \equiv \{\alphab, \sigma^2_\delta, \Kmat\}$; their estimation is the subject of Section \ref{sec:estimation}. Once the parameters in $\thetab$ are estimated, a straightforward inversion may then be used to predict over unknown areas. In \texttt{FRK} we allow the prediction set $D^P$ to be as flexible as $D^O$; specifically, $D^P \subset \{ \cup_{k \in c_k} A_i : c_k \in 2^{\{1,2,\dots,N\}} \setminus \varnothing, k = 1,\dots,N_P \}$, where $N_P$ is the number of prediction areas. We can thus predict both at the individual BAU level or averages over an area spanning multiple BAUs, and these prediction regions may overlap. We provide the prediction equations in Section \ref{sec:prediction}.
+
+\subsection{Parameter estimation using an EM algorithm} \label{sec:estimation}
+
+We carry out parameter estimation using an EM algorithm \citep{Katzfuss_2011,Nguyen_2014} with \eqref{eq:Z_collapsed} as our model. Define the \emph{complete-data} likelihood $L_c(\thetab) \equiv [\etab,\Zvec \mid \thetab]$ (with $\deltab_Z$ integrated out), where $[\cdot]$ denotes the probability distribution of its argument. In the E-step, the function
+\begin{equation}
+Q(\thetab \mid \thetab^{(l)}) \equiv \E(\ln L_c(\thetab) \mid \Zvec,\thetab^{(l)}),
+\end{equation}
+is found for some current estimate $\thetab^{(l)}$. In the M-step, the updated parameter estimate
+\begin{equation}
+\thetab^{(l+1)} = \argmax_\thetab Q(\thetab \mid \thetab^{(l)}),
+\end{equation}
+is found. It is straightforward to show that conditionally,
+\begin{equation}
+\etab \mid \Zvec,\thetab^{(l)} \sim \Gau(\muvec_\eta^{(l)},\Sigmamat_\eta^{(l)}),
 \end{equation}
 where
 \begin{align}
-\muvec_\eta^{(i)} &= \Sigmamat_\eta^{(i)} \Smat_Z'\Dmat_Z^{-1^{(i)}}(\Zvec - \Tmat_Z\alphab^{(i)}), \\
-\Sigmamat_\eta^{(i)} &= (\Smat_Z'\Dmat_Z^{-1^{(i)}}\Smat_Z + \Kmat^{-1^{(i)}})^{-1},
+\muvec_\eta^{(l)} &= \Sigmamat_\eta^{(l)} \Smat_Z'(\Dmat_Z^{-1})^{(l)}(\Zvec - \Tmat_Z\alphab^{(l)}), \\
+\Sigmamat_\eta^{(l)} &= (\Smat_Z'(\Dmat_Z^{-1})^{(l)}\Smat_Z + (\Kmat^{-1})^{(l)})^{-1},
 \end{align}
-and where $\Dmat_Z^{(i)} \equiv \sigma^{2^{(i)}}_\delta \Vmat_Z + \Sigmamat_\epsilon$.
+and where $\Dmat_Z^{(l)} \equiv (\sigma^2_\delta)^{(l)} \Vmat_Z + \Sigmamat_\epsilon$.
 
-The updates for $\alphab^{(i+1)}$ and $\Kmat^{(i+1)}$ are
+The updates for $\alphab^{(l+1)}$ and $\Kmat^{(l+1)}$ are
 \begin{align}
-\alphab^{(i+1)} &= (\Tmat_Z' \Dmat_Z^{-1^{(i+1)}} \Tmat_Z)^{-1}\Tmat_Z'\Dmat_Z^{-1^{(i+1)}}(\Zvec - \Smat_Z \muvec_\eta^{(i)}), \label{eq:alpha}\\
-\Kmat^{(i+1)} &= \Sigmamat_\eta^{(i)} + \muvec_\eta^{(i)} \muvec_\eta^{(i)'},
+\alphab^{(l+1)} &= (\Tmat_Z' (\Dmat_Z^{-1})^{(l+1)} \Tmat_Z)^{-1}\Tmat_Z'(\Dmat_Z^{-1})^{(l+1)}(\Zvec - \Smat_Z \muvec_\eta^{(l)}), \label{eq:alpha}\\
+\Kmat^{(l+1)} &= \Sigmamat_\eta^{(l)} + \muvec_\eta^{(l)} \muvec_\eta^{(l)'},
 \end{align}
-while that for $\sigma_\delta^{2^{(i+1)}}$ requires the solution to
+while that for $\sigma_\delta^{2^{(l+1)}}$ requires the solution to
 \begin{equation} \label{eq:sigma2d}
-\tr((\Sigmamat_{\epsilon} + \sigma^{2^{(i+1)}}_\delta\Vmat_Z)^{-1}\Vmat_Z) = \tr((\Sigmamat_{\epsilon} + \sigma^{2^{(i+1)}}_\delta\Vmat_Z)^{-1}\Vmat_Z(\Sigmamat_{\epsilon} + \sigma^{2^{(i+1)}}_\delta\Vmat_Z)^{-1}\Omegab),
+\tr((\Sigmamat_{\epsilon} + (\sigma^2_\delta)^{(l+1)}\Vmat_Z)^{-1}\Vmat_Z) = \tr((\Sigmamat_{\epsilon} + (\sigma^2_\delta)^{(l+1)}\Vmat_Z)^{-1}\Vmat_Z(\Sigmamat_{\epsilon} + (\sigma^2_\delta)^{(l+1)}\Vmat_Z)^{-1}\Omegab),
 \end{equation}
 where
 \begin{equation} \label{eq:Omegab}
-\Omegab \equiv \Smat_Z \Sigmamat_\eta^{(i)} \Smat_Z' + \Smat_Z \muvec_\eta^{(i)}\muvec_\eta^{(i)'} \Smat_Z' - 2\Smat_Z\muvec_\eta^{(i)}(\Zvec - \Tmat_Z\alphab^{(i+1)})' + (\Zvec - \Tmat_Z\alphab^{(i+1)})(\Zmat - \Tmat_Z\alphab^{(i+1)})'.
+\Omegab \equiv \Smat_Z \Sigmamat_\eta^{(l)} \Smat_Z' + \Smat_Z \muvec_\eta^{(l)}\muvec_\eta^{(l)'} \Smat_Z' - 2\Smat_Z\muvec_\eta^{(l)}(\Zvec - \Tmat_Z\alphab^{(l+1)})' + (\Zvec - \Tmat_Z\alphab^{(l+1)})(\Zmat - \Tmat_Z\alphab^{(l+1)})'.
 \end{equation}
 
-\noindent The solution to \eqref{eq:sigma2d} is found using a standard root-finding algorithm after the expression for $\alphab^{(i+1)}$ is substituted into \eqref{eq:Omegab}. After $ \sigma^{2^{(i+1)}}$ is found, $\alphab^{(i+1)}$ is found from \eqref{eq:alpha}. Computational simplifications are possible when $\Vmat_Z$ and $\Sigmamat_\epsilon$ are diagonal (that is, when observations do not overlap spatially or spatio-temporally are are mutually uncorrelated) since in this case only the diagonal of $\Omegab$ needs to be computed. Further simplifications are possible when $\Vmat_Z$ and $\Sigmamat_\epsilon$ are proportional to the identity matrix, with constants of proportionality $c_1$ and $c_2$, respectively. In this case
+\noindent The solution to \eqref{eq:sigma2d} is found using a standard root-finding algorithm after the expression for $\alphab^{(l+1)}$ is substituted into \eqref{eq:Omegab}. After $ (\sigma^2)^{(l+1)}$ is found, $\alphab^{(l+1)}$ is found from \eqref{eq:alpha}. Computational simplifications are possible when $\Vmat_Z$ and $\Sigmamat_\epsilon$ are diagonal (that is, when observations do not overlap spatially or spatio-temporally are are mutually uncorrelated) since then only the diagonal of $\Omegab$ needs to be computed. Further simplifications are possible when $\Vmat_Z$ and $\Sigmamat_\epsilon$ are proportional to the identity matrix, with constants of proportionality $c_1$ and $c_2$, respectively. In this case
 \begin{equation}
-\sigma^{2^{(i+1)}}_\delta = \frac{1}{c_1} \left(\frac{\tr(\Omegab)}{m} - c_2 \right),
+(\sigma^2_\delta)^{(l+1)} = \frac{1}{c_1} \left(\frac{\tr(\Omegab)}{m} - c_2 \right),
 \end{equation}
-and $\alphab^{(i+1)}$ is simply the ordinary least squares estimate given $\muvec_\eta^{(i)}$. These simplifications are used by $\texttt{FRK}$ when possible. To facilitate the computation, by default \tt{FRK} averages point-referenced observations that fall within the same BAU.
+and $\alphab^{(l+1)}$ is simply the ordinary least squares estimate given $\muvec_\eta^{(l)}$. These simplifications are used by $\texttt{FRK}$ when possible.
 
 Convergence of the EM algorithm is assessed using the (\emph{incomplete-data}) log-likelihood function at each iteration,
 \begin{equation}
-\ln (\Zvec \mid \alphab^{(i)}, \Kmat^{(i)}, \sigma^{2^{(i)}}_\delta) = -\frac{m}{2}\ln 2\pi -\frac{1}{2}\ln |\Sigmamat_Z^{(i)}| - \frac{1}{2}(\Zvec - \Tmat_Z\alphab^{(i)})'\Sigmamat_Z^{-1^{(i)}}(\Zvec - \Tmat_Z\alphab^{(i)}),
+\ln [p(]\Zvec \mid \alphab^{(l)}, \Kmat^{(l)}, (\sigma^2_\delta)^{(l)}] = -\frac{m}{2}\ln 2\pi -\frac{1}{2}\ln |\Sigmamat_Z^{(l)}| - \frac{1}{2}(\Zvec - \Tmat_Z\alphab^{(l)})'\Sigmamat_Z^{-1^{(l)}}(\Zvec - \Tmat_Z\alphab^{(l)}),
 \end{equation}
 where
 \begin{equation}
-\Sigmamat_Z^{(i)} = \Smat_Z \Kmat^{(i)} \Smat_Z' + \Dmat_Z^{(i)},
+\Sigmamat_Z^{(l)} = \Smat_Z \Kmat^{(l)} \Smat_Z' + \Dmat_Z^{(l)},
 \end{equation}
-and recall that $\Dmat_Z^{(i)} \equiv \sigma_\delta^{2^{(i)}}\Vmat_Z + \Sigmamat_\epsilon$. Efficient computation of the log-likelihood is facilitated through the use of the Sherman-Woodbury matrix identity and a matrix determinant lemma. Specifically, the operations
+and recall that $\Dmat_Z^{(l)} \equiv (\sigma_\delta^2)^{(l)}\Vmat_Z + \Sigmamat_\epsilon$. Efficient computation of the log-likelihood is facilitated through the use of the Sherman-Woodbury matrix identity and a matrix-determinant lemma \citep[e.g.,][]{Cressie_2008}. Specifically, the operations
 \begin{align}
-\Sigmamat_Z^{-1^{(i)}} &= \Dmat_Z^{-1^{(i)}} - \Dmat_Z^{-1^{(i)}} \Smat_Z (\Kmat^{-1^{(i)}} + \Smat'_Z \Dmat_Z^{-1^{(i)}}\Smat_Z)^{-1}\Smat_Z'\Dmat_Z^{-1^{(i)}},\\
-| \Sigmamat_Z^{(i)}  | &= | \Kmat^{-1^{(i)}} + \Smat_Z'\Dmat_Z^{-1^{(i)}} \Smat_Z | |\Kmat^{(i)} | |\Dmat_Z^{(i)} |,\label{eq:determinant}
+(\Sigmamat_Z^{-1})^{(l)} &= (\Dmat_Z^{-1})^{(l)} - (\Dmat_Z^{-1})^{(l)} \Smat_Z ((\Kmat^{-1})^{(l)} + \Smat'_Z (\Dmat_Z^{-1})^{(l)}\Smat_Z)^{-1}\Smat_Z'(\Dmat_Z^{-1})^{(l)},\\
+| \Sigmamat_Z^{(l)}  | &= | (\Kmat^{-1})^{(l)} + \Smat_Z'(\Dmat_Z^{-1})^{(l)} \Smat_Z | |\Kmat^{(l)} | |\Dmat_Z^{(l)} |,\label{eq:determinant}
 \end{align}
-ensure that we only deal with vectors of length $m$ and matrices of size $n \times n$, where typically $n \ll m$. To prove \eqref{eq:determinant}, start from the right-hand-side, noting that $| \Sigmamat_Z^{(i)}|  = | \Imat + \Smat_Z'\Dmat_Z^{-1^{(i)}} \Smat_Z \Kmat^{(i)}| |\Dmat_Z^{(i)} |.$ Applying Sylvester's determinant identity, $| \Imat + \Smat_Z'\Dmat_Z^{-1^{(i)}} \Smat_Z \Kmat^{(i)}| \equiv | \Imat +  \Smat_Z \Kmat^{(i)}\Smat_Z'\Dmat_Z^{-1^{(i)}}|$, we see that $| \Sigmamat_Z^{(i)}| =  |\Smat_Z \Kmat^{(i)} \Smat_Z' + \Dmat_Z^{(i)}|$, as required.
+ensure that we only deal with vectors of length $m$ and matrices of size $r \times r$, where typically $r \ll m$. To prove \eqref{eq:determinant}, start from the right-hand-side, noting that $| \Sigmamat_Z^{(l)}|  = | \Imat + \Smat_Z'(\Dmat_Z^{-1})^{(l)} \Smat_Z \Kmat^{(l)}| |\Dmat_Z^{(l)} |.$ Applying Sylvester's determinant identity, $| \Imat + \Smat_Z'(\Dmat_Z^{-1})^{(l)} \Smat_Z \Kmat^{(l)}| \equiv | \Imat +  \Smat_Z \Kmat^{(l)}\Smat_Z'(\Dmat_Z^{-1})^{(l)}|$, we see that $| \Sigmamat_Z^{(l)}| =  |\Smat_Z \Kmat^{(l)} \Smat_Z' + \Dmat_Z^{(l)}|$, as required.
 
 \subsection{Prediction} \label{sec:prediction}
 
-They key object of prediction is to estimate $Y(\svec)$ or $(Y(\svec) - \delta(\svec))$ (if one wishes to consider only the smooth component of the field) over $D^P$. Consider the process $Y_P(B_i)$, which, similar to the observations, is constructed using the BAUs:
+They key object of prediction is to estimate $Y(\svec)$ or $(Y(\svec) - \delta(\svec))$ (i.e., when one wishes to exclude the small-scale variation of the field) over $D^P$. Consider the process $Y_P(B_i)$, which, similar to the observations, is constructed using the BAUs $\{A_i: i = 1,\dots,N\}$:
 
 \begin{equation}
-Y_{P,i} \equiv Y_{P}(B_i) = \frac{1}{|B_i|} \sum_{i : A_i \subset B_i}Y_i; \quad B_i \in D^P, A_i \in D^L.
+Y_{P,i} \equiv Y_{P}(B_i) = \frac{1}{|B_i|} \sum_{i : A_i \subset B_i}Y_i, \quad B_i \in D^P.
 \end{equation}
-Let $\Yvec_P \equiv (Y_{P,i} : i = 1,\dots,N_P)'$, where $N_P$ is the number of prediction areas and also equal to $|D^P|$. Then, since each element in $D^P$ is an element of the power set of $D^L$, one can construct a matrix $\Cmat_P$, the rows of which sum to one, such that
+Let $\Yvec_P \equiv (Y_{P,i} : i = 1,\dots,N_P)'$, where $N_P$ is the number of prediction areas and is also equal to $|D^P|$. Then, since each element in $D^P$ is the union of subsets of $D^L$, one can construct a matrix $\Cmat_P$, the rows of which sum to one, such that
 \begin{equation}
 \Yvec_P = \Cmat_P\Yvec = \Tmat_P\alphab + \Smat_P\etab + \deltab_P,
 \end{equation}
-where $\Tmat_P \equiv \Cmat_P \Tmat$, $\Smat_P \equiv \Cmat_P \Smat$, $\deltab_P \equiv \Cmat_P \deltab$ and $\var(\deltab_P) = \sigma^2_\delta\Vmat_P \equiv \sigma^2_\delta\Cmat_P\Vmat^{-1}\Cmat_P'$.  In practice, it is not always possible for each $B_i$ to overlap a BAU directly. In this case, we assume that the prediction region overlaps a BAU only if the BAU centroid lies within the prediction area.
+where $\Tmat_P \equiv \Cmat_P \Tmat$, $\Smat_P \equiv \Cmat_P \Smat$, $\deltab_P \equiv \Cmat_P \deltab$ and $\var(\deltab_P) = \sigma^2_\delta\Vmat_P \equiv \sigma^2_\delta\Cmat_P\Vmat\Cmat_P'$.  As with the observations, these prediction regions may overlap. In practice, it is not always possible for each $B_i$ to overlap a BAU directly. In this case, we assume that the prediction region overlaps a BAU only if the BAU centroid lies within the prediction area.
 
-Let $i_f$ denote the EM iteration number at which convergence was reached. Then the prediction vector and covariance matrix corresponding to the smooth field, $\Yvec_P - \deltab_P,$ are
+Let $l^*$ denote the EM iteration number at which convergence was reached. The final estimates are then $\widehat\muvec_\eta = \muvec_\eta^{(l^*)}, \widehat\Sigmamat_\eta = \Sigmamat_\eta^{(l^*)}, \widehat\alpha = \alpha^{(l^*)}, \widehat\Kmat = \Kmat^{(l^*)}$ and $\widehat\sigma^2_\delta = (\sigma^2_\delta)^{(l^*)}$. The prediction vector and covariance matrix corresponding to the smooth field, $\Yvec_P - \deltab_P,$ are
 \begin{align}
-\E(\Yvec_P - \deltab_P \mid \Zvec) &= \Tmat_P\alphab^{(i_f)} + \Smat_P\muvec_\eta^{(i_f)}, \label{eq:smooth1}\\
-\var(\Yvec_P - \deltab_P \mid \Zvec) &= \Smat_P \Sigmamat_\eta^{(i_f)}\Smat_P'. \label{eq:smooth2}
+\E(\Yvec_P - \deltab_P \mid \Zvec) &= \Tmat_P\widehat\alphab + \Smat_P\widehat\muvec_\eta, \label{eq:smooth1}\\
+\var(\Yvec_P - \deltab_P \mid \Zvec) &= \Smat_P \widehat\Sigmamat_\eta\Smat_P'. \label{eq:smooth2}
 \end{align}
 However, in order to predict $\Yvec_P$ we also need to predict $\deltab_P$, which is not available at this stage. This quantity is not necessarily identical to $\deltab_Z$; this is why $\deltab_Z$ was not estimated in Section \ref{sec:estimation}.
 
 To cater for arbitrary observation and prediction support, we predict $\Yvec_P$ by first carrying out prediction over $\Yvec$, that is, at the BAU level, and then transforming linearly through $\Cmat_P$. Let $\Wvec \equiv (\etab',\deltab')'$ and $\Pimat \equiv (\Smat,\Imat)$. Then \eqref{eq:SRE_Y} can be re-written as $\Yvec = \Tmat\alphab + \Pimat\Wvec$ and
 \begin{align}
-\widehat\Yvec \equiv \E(\Yvec \mid \Zvec) &= \Tmat\alphab^{(i_f)} + \Pimat\widehat\Wvec, \\
+\widehat\Yvec \equiv \E(\Yvec \mid \Zvec) &= \Tmat\widehat\alphab + \Pimat\widehat\Wvec, \\
 \Sigmamat_{Y \mid Z} \equiv \var(\Yvec \mid \Zvec) &= \Pimat \Sigmamat_W\Pimat', \label{eq:Sigma_YZ}
 \end{align}
 where
 \begin{align}
 \Sigmamat_W &\equiv (\Pimat' \Cmat_Z' \Sigmamat_\epsilon^{-1} \Cmat_Z \Pimat + \Lambdamat^{-1})^{-1}, \label{eq:Winv}\\
-\widehat\Wvec &\equiv \Sigmamat_W\Pimat'\Cmat_Z'\Sigmamat_\epsilon^{-1}(\Zvec - \Tmat\alphab^{(i_f)}),\label{eq:What}
+\widehat\Wvec &\equiv \Sigmamat_W\Pimat'\Cmat_Z'\Sigmamat_\epsilon^{-1}(\Zvec - \Tmat_Z\widehat\alphab),\label{eq:What}
 \end{align}
-and the block diagonal matrix $\Lambdamat \equiv \textrm{bdiag}(\Kmat^{(i_f)},\sigma^{2^{(i_f)}}_\delta\Vmat_P)$, where $\textrm{bdiag}(\cdot)$ returns a block diagonal matrix of its arguments. It then follows that $\E(\Yvec_P \mid \Zvec) = \Cmat_P\widehat\Yvec$ and
+and the block diagonal matrix $\Lambdamat \equiv \textrm{bdiag}(\widehat\Kmat,\widehat\sigma^{2}_\delta\Vmat_P)$, where $\textrm{bdiag}(\cdot)$ returns a block diagonal matrix of its arguments. It then follows that $\E(\Yvec_P \mid \Zvec) = \Cmat_P\widehat\Yvec$ and
 \begin{equation}\label{eq:YvecP}
 \var(\Yvec_P \mid \Zvec) = \Cmat_P \Sigmamat_{Y \mid Z} \Cmat_P'.
 \end{equation}
-By carrying out all intensive operations on small, dense matrices, equations up to this point all have moderate computational and memory complexity. On the other hand, \eqref{eq:YvecP} indicates that all of $\Sigmamat_{Y \mid Z}$ (and hence $\Sigmamat_W$) needs to be computed and stored. In reality, only a few elements of $\Sigmamat_{Y \mid Z}$ need to be known and thus computational simplifications are possible. However, the larger the aggregation implied by $\Cmat_P$, the more the elements that need to be computed and the slower the prediction.
+By carrying out all intensive operations on small, dense matrices, equations up to this point all have moderate computational and memory complexity. On the other hand, \eqref{eq:YvecP} indicates that all of $\Sigmamat_{Y \mid Z}$ (and hence $\Sigmamat_W$) needs to be computed and stored. In reality, only a few elements of $\Sigmamat_{Y \mid Z}$ need to be known and thus computational simplifications are possible. However, the larger the aggregation implied by $\Cmat_P$, the more the elements that need to be computed  in $\Sigmamat_{Y \mid Z}$ and the slower the prediction.
 
 \section{Fixed Rank Kriging on $\mathbb{R}^2$ or $\mathbb{S}^2$}
 
-In this part of the vignette we apply \texttt{FRK} to the case when we have spatial data, either on the plane or on the surface of a sphere. For 2D data on the plane, we consider the \texttt{meuse} data, which can be found in the package \texttt{sp}. For data on the sphere we will use readings taken between May 01 2003 and May 03 2003 (inclusive) by the Atmospheric InfraRed Sounder (AIRS) on board the Aqua satellite \citep{Chahine_2006}. For spatial modelling of the data we need to load the following packages
+In this part of the vignette we apply \texttt{FRK} to the case when we have spatial data, either on the plane or on the surface of a sphere. For 2D data on the plane, we consider the \texttt{meuse} data, which can be found in the package \texttt{sp}. For data on the sphere we will use readings taken between May 01 2003 and May 03 2003 (inclusive) by the Atmospheric InfraRed Sounder (AIRS) on board the Aqua satellite \citep[e.g.,][]{Chahine_2006}. For spatial modelling of the data we need to load the following packages
 <<eval=TRUE,message=FALSE>>=
 library(sp)        # for defining points/polygons
 library(ggplot2)   # for plotting
@@ -440,7 +449,7 @@ The \tt{meuse} dataset contains readings of heavy-metal abundance in a region of
 data(meuse)            # load meuse data
 print(class(meuse))    # print class of meuse data
 @
-\noindent The \texttt{meuse} data is of class \texttt{data.frame}. However, \texttt{FRK} needs all spatial objects to be of class \texttt{SpatialPointsDataFrame} or \texttt{SpatialPolygonsDataFrame}, depending on whether the object is point-referenced of area-referenced. The \tt{meuse} data is spatially referenced, and we therefore cast it into a \texttt{SpatialPointsDataFrame} by applying the \tt{coordinates} function as follows:
+\noindent The \texttt{meuse} data is of class \texttt{data.frame}. However, \texttt{FRK} needs all spatial objects to be of class \texttt{SpatialPointsDataFrame} or \texttt{SpatialPolygonsDataFrame}, depending on whether the dataset is point-referenced of area-referenced. The \tt{meuse} data is point referenced, and we therefore cast it into a \texttt{SpatialPointsDataFrame} by applying the \tt{coordinates} function as follows:
 
 <<>>=
 coordinates(meuse) = ~x+y     # change into an sp object
@@ -459,7 +468,7 @@ GridBAUs1 <- auto_BAUs(manifold = plane(),     # 2D plane
                      convex=-0.05)            # border buffer factor
 @
 
-\noindent The \tt{auto\_BAUs} function takes several arguments (see \tt{help(auto\_BAUs)} for details). Above, we instruct the helper function to construct BAUs on the plane, centred around the data \tt{meuse} with each BAU of size 100 $\times$ 100 (with units in m since the data is supplied with x-y coordinates in m). The \tt{type="grid"} input instructs that we want a rectangular grid and not a hexagonal lattice (use \tt{"hex"} for a hexagonal lattice), and \tt{convex=-0.05} is a specific parameter controlling the spatial-domain boundary (see \tt{INLA::inla.nonconvex.hull} for more details). For each $i$-th BAU, we also need to attribute the \emph{fine-scale variation} component $v_i$. As described in Section \ref{sec:SREModel}, this component encompasses all process variation that occurs at the BAU scale and only needs to be known up to a constant of proportionality, $\sigma^2_\delta$; this constant is estimated using maximum likelihood with \tt{SRE.predict} using the EM algorithm of Section \ref{sec:estimation}. Typically, geographic features such as altitude are appropriate, but in this case we will just set this parameter to unity. It is important that this field is labelled `fs':
+\noindent The \tt{auto\_BAUs} function takes several arguments (see \tt{help(auto\_BAUs)} for details). Above, we instruct the helper function to construct BAUs on the plane, centred around the data \tt{meuse} with each BAU of size 100 $\times$ 100 (with units in m since the data is supplied with x-y coordinates in m). The \tt{type="grid"} input instructs that we want a rectangular grid and not a hexagonal lattice (use \tt{"hex"} for a hexagonal lattice), and \tt{convex=-0.05} is a specific parameter controlling the spatial-domain boundary (see \tt{INLA::inla.nonconvex.hull} for more details). For the $i$-th BAU, we also need to attribute the element $\varv_i$ that describes the hetereoscedascity of the fine-scale variation for that BAU. As described in Section \ref{sec:SREModel}, this component encompasses all process variation that occurs at the BAU scale and only needs to be known up to a constant of proportionality, $\sigma^2_\delta$; this constant is estimated using maximum likelihood with \tt{SRE.predict} using the EM algorithm of Section \ref{sec:estimation}. Typically, geographic features such as altitude are appropriate, but in this case we will just set this parameter to unity. It is important that this field is labelled `fs':
 
 <<>>=
 GridBAUs1$fs <- 1   # fine-scale variation at BAU level
@@ -486,7 +495,7 @@ G <- auto_basis(m = plane(),          # 2D plane
                 regular = 0)          # place irregularly in domain
 @
 
-\noindent The argument \tt{nres = 3} indicates how many resolutions we wish, while \tt{type = "Gaussian"} indicates that the basis set we want is composed of Gaussian functions. Other in-built functions that can be used are \tt{"exp"} (the exponential function), \tt{"bisquare"} (the bisquare function), and \tt{"Matern32"} (the Mat{\'e}rn function with smoothness parameter equal to 1.5). Basis functions are constructed such that the process is accurately represented where data is present, and not represented otherwise. This is controlled by the parameter \tt{prune}, see \tt{help(auto\_basis)} for details. The basis can be visualised using \tt{show\_basis}, see Fig.~\ref{fig:basis}.
+\noindent The argument \tt{nres = 2} indicates how many resolutions we wish, while \tt{type = "Gaussian"} indicates that the basis set we want is composed of Gaussian functions. Other built-in functions that can be used are \tt{"exp"} (the exponential covariance function), \tt{"bisquare"} (the bisquare function), and \tt{"Matern32"} (the Mat{\'e}rn covariance function with smoothness parameter equal to 1.5). Basis functions do not have to be positive-definite and are constructed such that the process is accurately represented where data is present, and not represented otherwise. This is controlled by the parameter \tt{prune}, see \tt{help(auto\_basis)} for details. The basis can be visualised using \tt{show\_basis}, see Fig.~\ref{fig:basis}.
 
 
 <<fig.cap="Basis functions automatically generated for the meuse dataset with 2 resolutions. The interpretation of the circles change with the domain and basis. For Gaussian functions on the plane, each circle is centred at the basis function centre, and has a radius equal to $1\\sigma$. Type \\tt{help(auto\\_basis)} for details.\\label{fig:basis}.",fig.height=4,fig.width=4,fig.align='center',fig.pos="t">>=
@@ -498,27 +507,27 @@ show_basis(G) +             # illustrate basis functions
 
 \vspace{0.1in}
 
-\noindent {\bf Step 4:} Now that we have the BAUs and the basis functions, we can construct the SRE model. As fixed effects, we just use an intercept; if we wish to use covariates, then these need to be added to the BAUs first. The fixed effects are supplied in a usual \tt{R} formula, which we store in \tt{f}:
+\noindent {\bf Step 4:} With the BAUs and the basis functions specified, we can construct the SRE model. For fixed effects, we just use an intercept; if we wish to use covariates, one must make sure that they are also specified at the BAU level (and hence attributed to \tt{GridBAUs1}). The fixed effects are supplied in a usual \tt{R} formula, which we store in \tt{f}:
 
 <<>>=
 f <- log(zinc) ~ 1    # formula for SRE model
 @
 
-\noindent The spatial random effects model is then constructed using the function \tt{SRE}, which essentially bins the data in the BAUs, constructs all the matrices required for estimation, and provides initial guesses for the quantities that need to be estimated.
+\noindent The Spatial Random Effects model is then constructed using the function \tt{SRE}, which essentially bins the data in the BAUs, constructs all the matrices required for estimation, and provides initial guesses for the quantities that need to be estimated.
 
 
 <<>>=
-S <- SRE(f = f,                # formula
-         data = list(meuse),   # list of datasets
-         BAUs = GridBAUs1,      # BAUs
-         basis = G,            # basis functions
-         est_error=T,          # estimation measurement error
+S <- SRE(f = f,                  # formula
+         data = list(meuse),     # list of datasets
+         BAUs = GridBAUs1,       # BAUs
+         basis = G,              # basis functions
+         est_error=TRUE,         # estimation measurement error
          average_in_BAU = FALSE) # do not average data over BAUs
 @
 
-\noindent The function \tt{SRE} takes as arguments the formula, the data (as a list which can include additional datasets), the BAUs, the basis functions, a flag, \tt{est\_error}, and a flag \tt{average\_in\_BAU}. The flag \tt{est\_error} indicates whether we wish to attempt to estimate the measurement-error variance $\Sigmamat_\epsilon \equiv \sigma^2_\epsilon\Imat$ or not using variogram methods \citep{Kang_2009}. Currently, \tt{est\_error = T} is only allowed with spatial data. When not set, the data needs to also be supplied with a field \tt{std}, the standard deviation of the measurement error.
+\noindent The function \tt{SRE} takes as arguments the formula; the data (as a list that can include additional datasets); the BAUs; the basis functions; a flag; \tt{est\_error}; and a flag \tt{average\_in\_BAU}. The flag \tt{est\_error} indicates whether we wish to attempt to estimate the measurement-error variance $\Sigmamat_\epsilon \equiv \sigma^2_\epsilon\Imat$ or not using variogram methods \citep{Kang_2009}. Currently, \tt{est\_error = TRUE} is only allowed with spatial data. When not set, the dataset needs to also contain a field \tt{std}, the standard deviation of the measurement error.
 
-Since multiple data points can fall into the same BAU, the matrix $\Vmat_Z$ is not diagonal, in general; this increases computational time considerably. For large point-referenced datasets, such as the \tt{AIRS} dataset considered in Section \ref{sec:AIRS}, one can use the argument \tt{average\_in\_BAU = TRUE} to indicate that one wishes to summarise the data at the BAU level. When this flag is set, all data falling into one BAU is averaged; the measurement error of the averaged data point is then taken to be the average measurement error of the individual data points (i.e., measurement error is assumed to be perfectly correlated within the BAU). When set to \tt{TRUE}, the dataset is thinned; this can be used to obtain quick results prior to a more detailed analysis.
+In practice, several datasets (such as the \tt{meuse} dataset) are point-referenced. Since \tt{FRK} is built on the concept of a Basic Areal Unit, the smallest footprint of an observation has to be equal to that of a BAU. If multiple point-referenced observations fall within the same BAU, then these are assumed to be readings of the same random variable (hence, the fine-scale variation is not a nugget in the classical sense).  When multiple data points can fall into the same BAU, the matrix $\Vmat_Z$ is not diagonal; this increases computational time considerably. For large point-referenced datasets, such as the \tt{AIRS} dataset considered in Section \ref{sec:AIRS}, one can use the argument \tt{average\_in\_BAU = TRUE} to indicate that one wishes to summarise the data at the BAU level. When this flag is set, all data falling into one BAU is averaged; the measurement error of the averaged data point is then taken to be the average measurement error of the individual data points (i.e., measurement error is assumed to be perfectly correlated within the BAU). Consequently, the dataset is thinned; this can be used to obtain quick results prior to a more detailed analysis.
 
 \vspace{0.1in}
 

@@ -669,7 +669,6 @@ setMethod("map_data_to_BAUs",signature(data_sp="ST"),
                   data_all_spatial$time <- as.POSIXlt( data_all_spatial$time)
               }
 
-
               ## Bin every spatial frame separately
               sp_fields <- lapply(seq_along(sp_pols@time),
                                   function(i) {
@@ -684,13 +683,17 @@ setMethod("map_data_to_BAUs",signature(data_sp="ST"),
                                       #data_spatial <- as(data_sp[,trange],"Spatial")
                                       data_spatial <- subset(data_all_spatial, time >= t1 &
                                                                                time < t2)
-                                      BAU_spatial <- sp_pols[,i]
-                                      BAU_spatial@data <- filter(BAU_spatial@data,time == t1)
-                                      BAU_spatial@data <- cbind(BAU_spatial@data,coordinates(BAU_spatial))
-                                      map_data_to_BAUs(data_spatial,
-                                                       BAU_spatial,
-                                                       av_var=av_var,
-                                                       average_in_BAU = average_in_BAU)})
+                                      if(nrow(data_spatial) > 0) { ## If at least one point in this time period
+                                          BAU_spatial <- sp_pols[,i]
+                                          BAU_spatial@data <- filter(BAU_spatial@data,time == t1)
+                                          BAU_spatial@data <- cbind(BAU_spatial@data,coordinates(BAU_spatial))
+                                          map_data_to_BAUs(data_spatial,
+                                                           BAU_spatial,
+                                                           av_var=av_var,
+                                                           average_in_BAU = average_in_BAU)
+                                          } else {
+                                              NULL
+                                          }})
 
 
               if(is(data_sp@sp,"SpatialPolygons")) stop("ST not implemented for polygon observations yet.
@@ -699,13 +702,17 @@ setMethod("map_data_to_BAUs",signature(data_sp="ST"),
               ## Recast into a STIDF
               time <- sp <- n <- NULL
               for(i in seq_along(sp_pols@time)) {
-                  sp <- rbind(sp,sp_fields[[i]]@data)
-                  n <- nrow(sp_fields[[i]])
-                  time[[i]] <- rep(time(sp_pols)[i],n)
+                  if(!is.null(sp_fields[[i]])) {
+                      sp <- rbind(sp,sp_fields[[i]]@data)
+                      n <- nrow(sp_fields[[i]])
+                      this_time <- rep(time(sp_pols)[i],n)
+                      if(is.null(time)) time <- this_time else time <- c(time,this_time)
+                      coordlabels <- coordnames(sp_fields[[i]]) # Ensures labels are from non-null field
+                  }
               }
-              coordinates(sp) <- coordnames(sp_fields[[1]])
+
+              coordinates(sp) <- coordlabels
               sp@data <- cbind(sp@data,coordinates(sp))
-              time <- do.call("c",time)
 
               STIDF(as(sp,"SpatialPoints"),
                     time,
