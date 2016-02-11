@@ -516,16 +516,19 @@ df_to_SpatialPolygons <- function(df,keys,coords,proj) {
         Polygons(list(Polygon(d[coords])),digest::digest(d[keys]))
     }
 
-    if(opts_FRK$get("parallel") > 1) {
+    if(opts_FRK$get("parallel") > 1e10) { ## Do not enable, mostly overhead
         cl <- makeCluster(opts_FRK$get("parallel"))
 
         ## Deprecated to remove plyr:
         #doParallel::registerDoParallel(opts_FRK$get("parallel"))
         #df_poly <- plyr::dlply(df,keys,dfun,.parallel=TRUE)
 
-        df_poly <- mclapply(unique(df[keys])[,1],
+        unique_keys <- unique(data.frame(df[keys]))[,1]
+        df_poly <- mclapply(unique_keys,
                             function(key) {
-                                dfun(df[df[keys]==key,])},
+                                df[df[keys]==key,] %>%
+                                    data.frame() %>%
+                                    dfun},
                             mc.cores = opts_FRK$get("parallel"))
         stopCluster(cl)
     } else {
@@ -577,6 +580,26 @@ SpatialPolygonsDataFrame_to_df <- function(sp_polys,vars = names(sp_polys)) {
     X
 }
 
+.parallel_over <- function(sp1,sp2,fn=fn,batch_size = 1000) {
+    n1 <- length(sp1)
+    n2 <- length(sp2)
+    batching=cut(1:n1,breaks = seq(0,n1+batch_size,by=batch_size),labels=F)
+
+    cl <- makeCluster(opts_FRK$get("parallel"))
+    over_list <- mclapply(1:max(unique(batching)),
+                          function(i) {
+                              idx <- which(batching == i)
+                              over(sp1[idx,],sp2,fn=sum)
+                          },
+                          mc.cores = opts_FRK$get("parallel"))
+    stopCluster(cl)
+    if(is(over_list[[1]],"data.frame")) {
+        over_res <- do.call(rbind,over_list)
+    } else {
+        over_res <- do.call(c,over_list)
+    }
+    over_res
+}
 
 #' @aliases map_data_to_BAUs,Spatial-method
 setMethod("map_data_to_BAUs",signature(data_sp="Spatial"),
@@ -588,7 +611,12 @@ setMethod("map_data_to_BAUs",signature(data_sp="Spatial"),
                       Nobs <- NULL
                       data_sp$Nobs <- 1
 
-                      timer <- system.time(Data_in_BAU <- over(sp_pols,data_sp[c(av_var,"Nobs","std")],fn=sum))
+                      if(opts_FRK$get("parallel") > 1) {
+                          timer <- system.time(Data_in_BAU <- .parallel_over(sp_pols,data_sp[c(av_var,"Nobs","std")],fn=sum))
+                      } else {
+                          timer <- system.time(Data_in_BAU <- over(sp_pols,data_sp[c(av_var,"Nobs","std")],fn=sum))
+                      }
+
 
                       ## Rhipe VERSION (Currently disabled)
                       # print("Using RHIPE to find overlays")
@@ -614,8 +642,12 @@ setMethod("map_data_to_BAUs",signature(data_sp="Spatial"),
                       #new_sp_pts$std <- sqrt(new_sp_pts$std^2 / new_sp_pts$Nobs)
                       new_sp_pts <- subset(new_sp_pts,!is.na(Nobs))
                   } else {
+                      if(opts_FRK$get("parallel") > 1) {
+                          timer <- system.time(Data_in_BAU <- .parallel_over(data_sp,as(sp_pols,"SpatialPolygons")))
+                      } else {
+                          timer <- system.time(Data_in_BAU <- over(data_sp,as(sp_pols,"SpatialPolygons")))
+                      }
 
-                      timer <- system.time(Data_in_BAU <- over(data_sp,as(sp_pols,"SpatialPolygons")))
                       if(any(is.na(Data_in_BAU))) {  # data points at 180 boundary or outside BAUs -- remove
 
                           ii <- which(is.na((Data_in_BAU)))

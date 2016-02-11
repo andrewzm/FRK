@@ -515,16 +515,28 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE,pred_polys =
         }
 
         ## variance too hard to compute all at once -- do it in blocks of 1000
-        temp <- rep(0,length(BAUs))
         batching=cut(1:nrow(PI),breaks = seq(0,nrow(PI)+1000,by=1000),labels=F)
-        for(i in 1:max(unique(batching))) {
-            idx = which(batching==i)
-            temp[idx] <- as.numeric(rowSums((PI[idx,] %*% Cov)*PI[idx,]))
+
+        if(opts_FRK$get("parallel") > 1) {
+            cl <- makeCluster(opts_FRK$get("parallel"))
+            var_list <- mclapply(1:max(unique(batching)),
+                                function(i) {
+                                    idx = which(batching == i)
+                                    as.numeric(rowSums((PI[idx,] %*% Cov)*PI[idx,]))},
+                                mc.cores = opts_FRK$get("parallel"))
+            temp <- do.call(c,var_list)
+            stopCluster(cl)
+        } else {
+            temp <- rep(0,length(BAUs))
+            for(i in 1:max(unique(batching))) {
+                idx = which(batching==i)
+                temp[idx] <- as.numeric(rowSums((PI[idx,] %*% Cov)*PI[idx,]))
+            }
         }
         BAUs[["var"]] <- temp
     }
 
-        if(!include_fs) {
+    if(!include_fs) {
         BAUs[["mu"]] <- as.numeric(X %*% alpha + S0 %*% mu_eta)
         BAUs[["var"]] <- rowSums((S0 %*% S_eta) * S0)
     }
