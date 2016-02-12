@@ -1190,7 +1190,7 @@ Sections 1--4 have introduced the core functionality of \tt{FRK}. The purpose of
 
 The main advantage of using BAUs is that one can make use of multiple datasets with different spatial supports without any added difficulty. Consider the \tt{meuse} dataset. We synthesise observations with a large support by changing the \tt{meuse} object into a \tt{SpatialPolygonsDataFrame}, where each polygon is a square of size 300 m $\times$ 300 m centred around the original \tt{meuse} data point, and with the original value of zinc concentration assigned to it. Once this object is set up, which we name \tt{meuse\_pols}, the analysis proceeds in precisely the same way as in Section \ref{sec:meuse}, but with \tt{meuse\_pols} used instead of \tt{meuse}.
 
-The prediction and the prediction standard error using \tt{meuse\_pols} are shown in Fig.~\ref{fig:meuse_large}. In Fig.~\ref{fig:meuse_large} (b) we also overlay the footprints of the observations. Note how the observations affect the prediction standard error in multiple BAUs and how regions with multiple overlapping observations have lower prediction error than those with no overlap. As expected, the prediction standard error is, overall, considerably higher than that in Fig.~\ref{fig:PredictionBAU}. Note also that the supports of the observations and the BAUs do not precisely overlap. For simplicity, we assumed that an observation influences a BAU only if the centroid of the BAU lies within the observation footprint. Refining this will require a more detailed consideration of the BAU and observation footprint geometry and will be considered in future revision.
+The prediction and the prediction standard error using \tt{meuse\_pols} are shown in Fig.~\ref{fig:meuse_large}. In Fig.~\ref{fig:meuse_large} (b) we also overlay the footprints of the observations. Note how the observations affect the prediction standard error in the BAUs and how BAUs which are observed by overlapping observations have lower prediction error than those that are only observed once. As expected, the prediction standard error is, overall, considerably higher than that in Fig.~\ref{fig:PredictionBAU}. Note also that the supports of the observations and the BAUs do not precisely overlap. For simplicity, we assumed that an observation ``influences'' a BAU only if the centroid of the BAU lies within the observation footprint. Refining this will require a more detailed consideration of the BAU and observation footprint geometry and it will be considered in future revision.
 
 <<echo=FALSE,include=FALSE,warning=FALSE>>=
 # Generate observations with large spatial support
@@ -1275,14 +1275,14 @@ g2 <- LinePlotTheme() +                          # Similar to above but with s.e
 @
 
 
-<<echo=FALSE,fig.cap="Prediction and prediction standard error obtained with FRK using the meuse dataset synthesised to have a large spatial footprint. (a) FRK prediction at the BAU level. (b) FRK prediction standard error at the BAU level. The black hexagons outline the spatial footprints of the synthesised dataset.\\label{fig:meuse_large}",fig.width=9,fig.height=11,out.width="0.5\\linewidth",fig.subcap=c("",""),fig.pos="t">>=
+<<echo=FALSE,fig.cap="Prediction and prediction standard error obtained with FRK using the \\tt{meuse} dataset where each observation is assuming to have a spatial footprint of 300 m $\\times$ 300m. (a) FRK prediction at the BAU level. (b) FRK prediction standard error at the BAU level. The black hexagons outline the spatial footprints of the data.\\label{fig:meuse_large}",fig.width=9,fig.height=11,out.width="0.5\\linewidth",fig.subcap=c("",""),fig.pos="t">>=
 plot(g1)
 plot(g2)
 @
 
  \subsection{Anisotropy: Changing the distance measure}
 
- So far we have only considered isotropic fields. Anisotropy can be easily introduced by changing the distance measure associated with the manifold. To illustrate this, below we simulate a highly anisotropic, noisy, spatio-temporal process on a fine grid in $D = [0,1] \times [0,1]$ and sample 1000 points chosen at random from it. The process and the sampled data are shown in Fig.~\ref{fig:aniso1}.
+ So far we have only considered isotropic fields. Anisotropy can be easily introduced by changing the distance measure associated with the manifold. To illustrate this, we simulate below a highly anisotropic, noisy, spatio-temporal process on a fine grid in $D = [0,1] \times [0,1]$ and sample 1000 points chosen at random from it. The process and the sampled data are shown in Fig.~\ref{fig:aniso1}.
 
  <<>>=
  set.seed(1)
@@ -1334,7 +1334,7 @@ TwoD_manifold <- plane()                 # Create R2 plane
 TwoD_manifold@measure <- asymm_measure   # Assign measure
 @
 
-We now generate a grid of basis functions (at a single resolution) manually. First, we create a $5 \times 14$ grid on $D$, which we will use as centres for the basis functions. We then call the function \tt{local\_basis} to construct bisquare basis functions centred at these locations with a range parameter of 0.4. Due to the scaling used, this implies a range of 0.1 in $x$ and a range of 0.4 in $y$. Basis function number 23 is illustrated in Fig.~\ref{fig:anisobasis}.
+We now generate a grid of basis functions (at a single resolution) manually. First, we create a $5 \times 14$ grid on $D$, which we will use as centres for the basis functions. We then call the function \tt{local\_basis} to construct bisquare basis functions centred at these locations with a range parameter (i.e., the radius in the case of a bisquare) of 0.4. Due to the scaling used, this implies a range of 0.1 in $x$ and a range of 0.4 in $y$. Basis function number 23 is illustrated in Fig.~\ref{fig:anisobasis}.
 
  <<>>=
 basis_locs <- seq(0,1,length=14) %>%                 # x locations
@@ -1410,33 +1410,33 @@ print(g2)
 The package \tt{FRK} provides the functions \tt{auto\_BAUs} and \tt{auto\_basis} to help the user construct the BAUs and basis functions based on the supplied data. These, however, could be done manually. When doing so it is important that some rules are adhered to: The object containing the basis functions needs to be of class \tt{Basis}. This class contains 5 slots:
 \begin{itemize}
 \item {\bf dim}: The dimension of the manifold.
-\item {\bf fn}: A list of functions. By default, distances in these functions are attributed with a manifold, but artbitrary distances can be used.
+\item {\bf fn}: A list of functions. By default, distances in these functions are attributed with a manifold, but arbitrary distances can be used.
 \item {\bf pars}: A list of parameters associated with each basis function. For the local basis functions used in this vignette (constructed using \tt{auto\_basis} or \tt{local\_basis}), each list item is a list with fields \tt{loc} and \tt{scale} where \tt{length(loc)} is equal to the dimension of the manifold and \tt{length(scale) = 1}.
-\item {\bf df}: A data frame with number of rows equalling the number of basis functions, containing auxiliary information about the basis functions (e.g., resolution number).
-\item {\bf n}: Integer equalling the number of basis functions.
+\item {\bf df}: A data frame with number of rows equalling the number of basis functions, and containing auxiliary information about the basis functions (e.g., resolution number).
+\item {\bf n}: An integer equalling the number of basis functions.
 \end{itemize}
-There is no constructor yet for \tt{Basis}, and the \tt{R} command \tt{new} needs to use to create this object from scratch.
+There is no constructor yet for \tt{Basis}, and the \tt{R} command \tt{new} needs to be used to create this object from scratch.
 
-There are less restrictions for constructing BAUs. BAUs need to be stored as a \tt{SpatialPolygonsDataFrame} object, and the \tt{data} slot of this object must contain
+There are less restrictions for constructing BAUs; they need to be stored as a \tt{SpatialPolygonsDataFrame} object, and the \tt{data} slot of this object must contain
 \begin{itemize}
 \item All covariates used in the model.
 \item A field \tt{fs} denoting the fine-scale variation.
-\item Fields that can be used to summarise the BAU as a point; typically the centroid of each polygon. The names of these fields need to be equal to those of the \tt{coordnames(BAUs)} (typically \tt{c("x","y")} or \tt{c("lon","lat")}).
+\item Fields that can be used to summarise the BAU as a point, typically the centroid of each polygon. The names of these fields need to equal those of the \tt{coordnames(BAUs)} (typically \tt{c("x","y")} or \tt{c("lon","lat")}).
 \end{itemize}
 
 \section{Future work}
 
-The package \tt{FRK} is designed to address the majority of needs of the spatial and spatio-temporal analyst. There are a number of important features that remain to be implemented in future revisions. These are listed below:
+The package \tt{FRK} is designed to address the majority of needs of the spatial and spatio-temporal analyst. There are a number of important features that remain to be implemented in future revisions, a number of which are listed below:
 \begin{itemize}
-\item When dealing only with spatial data, and when the number of spatial data points is relatively low, the measurement error standard deviation can be estimated using variogram analysis. This is not very reliable, and estimation of this quantity is, ideally, included in the EM algorithm. This is indeed possible; however the measurement error standard deviation is confounded with the fine-scale variation when there is on average only 1 data point per BAU. Checks will need to be made to inform the user whether or not one should be attempting to estimate $\sigma^2_\epsilon$ in addition to $\sigma^2_\delta$.
+\item When dealing with spatial-only data, and when the number of spatial data points is relatively low, the standard deviation of the measurement error can be estimated using variogram analysis. This is not very reliable, and estimation of this quantity is, ideally, included in the EM algorithm. This is indeed possible; however the standard deviation of the measurement error is confounded with the fine-scale variation when there is on average only 1 data point per BAU. Checks will need to be made to inform the user whether or not one should be attempting to estimate $\sigma^2_\epsilon$  in the EM algorithm, along with $\sigma^2_\delta$.
 
-\item Currently, \tt{FRK} is designed to work with local basis functions with a strict functional form. However, its structure can also accommodate basis functions that have no known functional form, such as empirical orthogonal functions (EOFs); future work will attempt to incorporate the use of such basis functions.
+\item Currently, \tt{FRK} is designed to work with local basis functions with a strict functional form. However, its structure can also accommodate basis functions that have no known functional form, such as empirical orthogonal functions (EOFs) and classes of wavelets defined iteratively; future work will attempt to incorporate the use of such basis functions.
 
-\item There is currently no component of the model which caters for sub-BAU process variation. This could be readily incorporated if the covariance function of the sub-BAU variation is known \citep{Wikle_2005}, however parameter estimation of parameters at this scale is likely to be problematic, and only possible when multiple point-referenced data appear in the individual BAUs.
+\item There is currently no component of the model that caters for sub-BAU process variation and all data supplied as point-referenced is mapped onto a BAU. Going below the BAU scale is possible, and intra-BAU correlation can be incorporated if the covariance function of the sub-BAU variation is known \citep{Wikle_2005}.
 
-\item Most work and testing in \tt{FRK} has been done on the real line, the 2D plane and the sphere surface ($\mathbb{S}^2$). Other manifolds can be implemented. Some, such as the 3D hyper-plane, are not too difficult to construct. Ultimately, it would be ideal if the user can specify his/her own manifold and functions that can compute the geodesic distances on the manifold.
+\item Most work and testing in \tt{FRK} has been done on the real line, the 2D plane and the surface of the sphere ($\mathbb{S}^2$). Other manifolds can be implemented. Some, such as the 3D hyper-plane, are not too difficult to construct. Ultimately, it would be ideal if the user can specify his/her own manifold and functions that can compute the geodesic distances on the manifold.
 
-\item Although designed for large data, \tt{FRK} begins to become slow when several hundreds of thousands of data points are used. The flag \tt{average\_in\_BAU} can be used to summarise the data, however if all data needs to be used, then (i) either very fine BAUs need to be used in order to ensure that not many observations fall within the same BAU, or (ii) one accepts the fact that many observations will fall into the BAUs and that observations will be correlated within the BAU. In either case, computational time will increase with the number of data points $m$, although the complexity is markedly less than $O(m^3)$.
+\item Although designed for very large data, \tt{FRK} begins to become slow when several hundreds of thousands of data points are used. The flag \tt{average\_in\_BAU} can be used to summarise the data, however it is not always obvious how the data should be summarised. Future work will focus on providing the user with different options for summarising the data.
 
 \end{itemize}
 
@@ -1444,7 +1444,7 @@ The development page of \tt{FRK} is \tt{https://github.com/andrewzm/FRK}. Users 
 
 \section*{Acknowledgements}
 
-Package devlopment was facilitated with \tt{devtools}, this vignette was created with \tt{knitr}, and package testing was carried out using \tt{testthat} and \tt{covr}. The package includes within it some date manipulation functions from \tt{Hmisc} and the functions \tt{rdist} and \tt{rdist.earth} from the package \tt{fields}. Some sparse matrix operations are facilitated using \tt{C} code from the software package \tt{SuiteSparse} \citep{SuiteSparse}.
+Package devlopment was facilitated with \tt{devtools}; this vignette was created with \tt{knitr}, and package testing was carried out using \tt{testthat} and \tt{covr}. The package includes within it some date manipulation functions from \tt{Hmisc}, and the functions \tt{rdist} and \tt{rdist.earth} from the package \tt{fields}. Some sparse-matrix operations are facilitated using \tt{C} code from the software package \tt{SuiteSparse} \citep{SuiteSparse}.
 
 \bibliography{FRK_bib}
 
