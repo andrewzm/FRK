@@ -11,7 +11,7 @@ env:
 #env:
 #  global:
 #    - NOT_CRAN=true
-#before_install: echo "options(repos = c(CRAN='http://cran.rstudio.com'))" > ~/.Rprofile
+before_install: echo "options(repos = c(CRAN='http://cran.rstudio.com'))" > ~/.Rprofile
 
 
 notifications:
@@ -19,9 +19,9 @@ notifications:
     on_success: change
     on_failure: change
 
-install:
-  - Rscript -e 'install.packages("devtools", repos = "http://cran.rstudio.com")'
-  - Rscript -e 'install.packages("knitr", repos = "http://cran.rstudio.com")'
+# install:
+# - Rscript -e 'install.packages("devtools", repos = "http://cran.rstudio.com")'
+# - Rscript -e 'install.packages("knitr", repos = "http://cran.rstudio.com")'
 # - Rscript -e "install.packages('INLA', repos='http://www.math.ntnu.no/inla/R/stable')"
 # - Rscript -e "if (!require('covr')) install.packages('covr',repos='http://cran.us.r-project.org')"
 # - Rscript -e "if (!require('knitr')) install.packages('knitr',repos='http://cran.us.r-project.org')"
