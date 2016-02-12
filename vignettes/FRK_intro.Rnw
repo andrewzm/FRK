@@ -296,7 +296,7 @@ In FRK, it is assumed that the spatial random effect $\upsilon(\svec)$ can be de
 We assume that $\etab$ is $r$-dimensional Gaussian with mean zero and $r \times r$ covariance matrix $\Kmat$, which needs to be estimated. Frequently, the BAUs are sufficiently small, and the basis functions sufficiently smooth, so that
 \begin{equation}\label{eq:Sapprox}
 \Smat \approx \left(\phib(\svec_i) : i = 1,\dots,N\right)',
-\end{equaiton}
+\end{equation}
 where $\{\svec_i: i = 1,\dots,N\}$ are the centroids of the BAUs. This approximation can be used to simplify computations when multiple, small, BAUs are used.
 
 In \tt{FRK}, we assume that the BAU is the smallest unit of measure. Thus, the fine-scale variation is a constant random effect in each BAU, but uncorrelated across the BAUs. Since a BAU has finite area, the fine-scale variation is not a nugget effect in the classical sense. We thus model $\delta_i$ to be Gaussian with mean zero and uncorrelated with variance
