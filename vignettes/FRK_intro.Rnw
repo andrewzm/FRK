@@ -531,9 +531,9 @@ In practice, several datasets (such as the \tt{meuse} dataset) are point-referen
 
 \vspace{0.1in}
 
-\noindent {\bf Step 5:} The SRE model is fit using the function \tt{SRE.fit}. Maximum likelihood is carried out using the EM algorithm of Section \ref{sec:estimation}, which is assumed to have converged either when \tt{n\_EM} is exceeded, or when the likelihood across subsequent steps does not change by more than \tt{tol}. In this case the EM algorithm converges in 100 iterations; see Fig. \ref{fig:EM}.
+\noindent {\bf Step 5:} The SRE model is fitted using the function \tt{SRE.fit}. Maximum likelihood is carried out using the EM algorithm of Section \ref{sec:estimation}, which is assumed to have converged either when \tt{n\_EM} is exceeded, or when the likelihood across subsequent steps does not change by more than \tt{tol}. In this example, the EM algorithm converged in 100 iterations; see Fig. \ref{fig:EM}.
 
-<<cache=FALSE,fig.cap="Convergence of the EM algorithm when using \tt{FRK} with the \tt{meuse} dataset.\\label{fig:EM}",fig.height=4,fig.width=5,fig.align='center'>>=
+<<cache=FALSE,fig.cap="Convergence of the EM algorithm when using \\tt{FRK} with the \\tt{meuse} dataset.\\label{fig:EM}",fig.height=4,fig.width=5,fig.align='center'>>=
 S <- SRE.fit(SRE_model = S,    # SRE model
              n_EM = 400,       # max. no. of EM iterations
              tol = 0.01,       # tolerance at which EM is assumed to have converged
@@ -542,7 +542,7 @@ S <- SRE.fit(SRE_model = S,    # SRE model
 
 \vspace{0.1in}
 
-\noindent {\bf Step 6:} Finally, we predict at all the BAUs with the fitted model. This is done using the function \tt{SRE.predict}. The argument \tt{use\_centroid} dictates whether we treat the BAU as a prediciton point or as a prediction area, see \tt{help(SRE.predict)} for details.
+\noindent {\bf Step 6:} Finally, we predict at all the BAUs with the fitted model. This is done using the function \tt{SRE.predict}. The argument \tt{use\_centroid} dictates whether we treat the BAU as a prediction point or as a prediction area, see \tt{help(SRE.predict)} for details.
 
 <<>>=
 GridBAUs1 <- SRE.predict(SRE_model = S,          # SRE model
@@ -557,7 +557,7 @@ BAUs_df <- SpatialPolygonsDataFrame_to_df(sp_polys = GridBAUs1,   # BAUs to conv
 @
 
 
-\noindent The function \tt{SpatialPolygonsDataFrame\_to\_df} takes as argument the BAUs and the variables we wish to extract from the BAUs. Now \tt{ggplot2} can be used to plot the observations and the prediction and the standard error; for example, the following code yields the plots in Fig.~\ref{fig:PredictionBAU}.
+\noindent The function \tt{SpatialPolygonsDataFrame\_to\_df} takes as argument the BAUs and the variables we wish to extract from the BAUs. Now \tt{ggplot2} can be used to plot the observations, the predictions, and the standard errors; for example, the following code yields the plots in Fig.~\ref{fig:PredictionBAU}.
 
 <<>>=
 g1 <- LinePlotTheme() +                          # Use a plain theme
@@ -609,7 +609,7 @@ Pred_regions <- SRE.predict(SRE_model = S,                # SRE model
 
 \noindent The prediction and its standard error can be visualised as before. These plots are shown in Fig.~\ref{fig:PredictionPolygon}.
 
-<<echo=FALSE,fig.cap="Prediction and prediction standard error obtained with FRK from the \tt{meuse} dataset over arbitrary polygons. Both quantities are logs of ppm, and are hence unitless.\\label{fig:PredictionPolygon}",fig.subcap=c("",""),fig.width=9,fig.height=11,out.width="0.5\\linewidth",fig.pos="t">>=
+<<echo=FALSE,fig.cap="Prediction and prediction standard error obtained with FRK from the \\tt{meuse} dataset over arbitrary polygons. Both quantities are logs of ppm.\\label{fig:PredictionPolygon}",fig.subcap=c("",""),fig.width=9,fig.height=11,out.width="0.5\\linewidth",fig.pos="t">>=
 Pred_regions_df <- SpatialPolygonsDataFrame_to_df(sp_polys = Pred_regions,
                                           vars = c("mu","var"))
 
@@ -653,7 +653,7 @@ Modelling on the sphere proceeds in a very similar fashion to the plane, except 
 data(AIRS_05_2003)                                          ## Load data
 @
 
-We next subset the data to only include the first three days, rename \tt{co2std} to \tt{std} (since this is what is required by \tt{FRK} to identify measurement error standard deviation), and select the columns that are relevant for the study. Finally we assign the CRS object:
+We next subset the data to include only the first three days, rename \tt{co2std} to \tt{std} (since this is what is required by \tt{FRK} to identify the standard deviation of the measurement error), and select the columns that are relevant for the study. Finally we assign the CRS object:
 
 <<>>=
 AIRS_05_2003 <-
@@ -667,7 +667,7 @@ proj4string(AIRS_05_2003) =
 
 \vspace{0.1in}
 
-\noindent {\bf Step 2:} The next step is to create BAUs on the sphere. This is done, again, using the \tt{auto\_BAUs} function but this time with the manifold specified to be the sphere. We also specify that we wish the BAUs to form an ISEA Aperture 3 Hexagon (ISEA3H) discrete global grid (DGG) at resolution 6. Resolutions 0--6 are included with \tt{FRK}; for higher resolutions please install the package \tt{dggrids} from \tt{https://github.com/andrewzm/dggrids}. By default, this will create a hexagonal grid on the sphere; however it is possible to have a rectangular lattice by using \tt{type = "grid"} and specifying the \tt{cellsize} as in Section \ref{sec:meuse}. An example of an ISEA3H grid, at resolution 5, is shown in Fig.~\ref{fig:sphere_BAUs}.
+\noindent {\bf Step 2:} The next step is to create BAUs on the sphere. This is done, again, using the \tt{auto\_BAUs} function but this time with the manifold specified to be the sphere. We also specify that we wish the BAUs to form an ISEA Aperture 3 Hexagon (ISEA3H) discrete global grid (DGG) at resolution 6. Resolutions 0--6 are included with \tt{FRK}; for higher resolutions please install the package \tt{dggrids} from \tt{https://github.com/andrewzm/dggrids}. By default, this will create a hexagonal grid on the sphere. However, it is possible to have a rectangular lattice by using \tt{type = "grid"} and specifying the \tt{cellsize} as in Section \ref{sec:meuse}; see Section \ref{sec:AIRS_ST}. An example of an ISEA3H grid, at resolution 5, is shown in Fig.~\ref{fig:sphere_BAUs}.
 
 
 <<eval=TRUE>>=
@@ -679,7 +679,7 @@ isea3h_sp_poldf$fs = 1                                # fine-scale component
 
 \vspace{0.1in}
 
-\noindent {\bf Step 3:} Now we construct the basis functions, this time of type \tt{"bisquare"} with three resolutions. We supply the data and the argument \tt{prune} so that basis functions in regions where there are no data are omitted from the final set. We also introduce a new argument, \tt{subsamp}. This argument dictates how many data points (chosen at random) should be used when carrying out the pruning. In general, the higher \tt{nres}, the higher \tt{subsamp} should be in order to ensure that high resolution basis functions are not omitted where data is actually available. The argument \tt{subsamp} need only be used when pruning using the entire dataset consumes a lot of resources.
+\noindent {\bf Step 3:} Now we construct the basis functions, this time of type \tt{"bisquare"} with three resolutions. We supply the data and the argument \tt{prune} so that basis functions in regions where there are no data are omitted from the final set. We also introduce a new argument, \tt{subsamp}. This argument dictates how many data points (chosen at random) should be used when carrying out the pruning. In general, the higher \tt{nres}, the higher \tt{subsamp} should be in order to ensure that high resolution basis functions are not omitted where data is actually available. The argument \tt{subsamp} need only be used when pruning with the entire dataset consumes a lot of resources.
 
 <<eval=TRUE>>=
 G <- auto_basis(m = sphere(),       # basis functions on the sphere
@@ -691,7 +691,7 @@ G <- auto_basis(m = sphere(),       # basis functions on the sphere
 @
 
 
-<<echo=FALSE,fig.cap="BAUs and basis functions used in modelling and predicting with the \\tt{AIRS} data. (a) ISEA3H hexagons at resolution 5 BAUs. (b) Basis function centroids constructed using the function \\tt{auto\\_basis}.\\label{fig:sphere_BAUs}",fig.subcap=c("",""),fig.width=4,fig.height=4,out.width="0.5\\linewidth",fig.pos="t!",message=FALSE>>=
+<<echo=FALSE,fig.cap="BAUs and basis functions used in modelling and predicting with the \\tt{AIRS} data. (a) BAUs are the ISEA3H hexagons at resolution 5. (b) Basis function centroids constructed using the function \\tt{auto\\_basis}.\\label{fig:sphere_BAUs}",fig.subcap=c("",""),fig.width=4,fig.height=4,out.width="0.5\\linewidth",fig.pos="t!",message=FALSE>>=
 data("isea3h")
 ggplot(subset(isea3h,res==5 & centroid==0)) +
           geom_path(aes(lon,lat,group=id)) +
@@ -706,7 +706,7 @@ show_basis(G,draw_world()) +
 
 \vspace{0.1in}
 
-\noindent {\bf Steps 4--5:} Since CO$_2$ mole fraction is dependent on latitude, we use latitude as a covariate in our model. The SRE object is then constructed in the same way as Section \ref{sec:meuse}, but this time we set \tt{est\_error = FALSE} since the measurement error is supplied with the data. Since multiple data points fall into the same BAU, the matrix $\Vmat_Z$ is not diagonal; this increases computational time considerably. For large point-referenced datasets, such as the \tt{AIRS} dataset, one can leave the argument \tt{average\_in\_BAU = TRUE} set (by default) to indicate that one wishes to summarise the data at the BAU level. Below, and in all subsequent analyses, we set \tt{n\_EM = 2} so as to reduce the computational time of the vignette:
+\noindent {\bf Steps 4--5:} Since CO$_2$ mole fraction has a latitudinal gradient, we use latitude as a covariate in our model. The SRE object is then constructed in the same way as Section \ref{sec:meuse}, but this time we set \tt{est\_error = FALSE} since the measurement error is supplied with the data. When multiple data points fall into the same BAU, we assume that each of these data points are conditionally independent readings of the process in the BAU. The matrix $\Vmat_Z$ is therefore not diagonal and this increases computational time considerably. For large point-referenced datasets, such as the \tt{AIRS} dataset, one can leave the argument \tt{average\_in\_BAU = TRUE} set (by default) to indicate that one wishes to summarise the data at the BAU level. Below, and in all subsequent analyses, we set the maximum number of EM iterations \tt{n\_EM = 2} so as to reduce the computational time of the vignette:
 
 <<cache=FALSE,eval=TRUE>>=
 f <- co2avgret ~ lat + 1         # formula for fixed effects
@@ -725,7 +725,7 @@ S <- SRE.fit(SRE_model = S,    # SRE model
 
 \vspace{0.1in}
 
-\noindent {\bf Step 6:} We now predict at the BAU level but this time include a flag \tt{include\_fs = FALSE}, which indicates that we wish to carry out inferences over $(\Yvec_P - \deltab_P)$ rather than over $\Yvec_P$; see \eqref{eq:smooth1} and \eqref{eq:smooth2}. This is sometimes required when one is interested in the medium-scale variation; maps of the FRK prediction generated with this flag set are rather smooth (since the basis functions adopted tend to be smooth) and the prediction standard error tends to be low. This prediction variance is, of course, not equal to $\var(\Yvec_P \mid \Zvec)$.
+\noindent {\bf Step 6:} We now predict at the BAU level but this time include a flag \tt{include\_fs = FALSE}, which indicates that we wish to carry out inferences over $(\Yvec_P - \deltab_P)$ rather than over $\Yvec_P$; see \eqref{eq:smooth1} and \eqref{eq:smooth2}. This is sometimes required when one is interested in the medium-to-small scale variation; maps of the FRK prediction generated with this flag set are rather smooth (since the basis functions adopted tend to be smooth) and the prediction standard error tends to be low compared to what one would obtain when predicting $\Yvec_P$. Of course, $\var(\Yvec_P - \deltab_P \mid \Zvec) \ne \var(\Yvec_P \mid \Zvec)$.
 
 <<eval=TRUE>>=
 isea3h_sp_poldf <- SRE.predict(SRE_model = S,          # SRE model
@@ -789,13 +789,13 @@ print(g3)
 
 \section{Fixed Rank Kriging in space and time}\label{sec:spacetime}
 
-Although \tt{FRK} is primarily designed for spatial data, it also has functionality for modelling and predicting with spatio-temporal data. The functionality is limited in some respects; in particular, only point-referenced spatio-temporal data can be used, and estimation of the measurement-error standard deviation is not implemented. These features will be implemented in future revisions.
+Although \tt{FRK} is primarily designed for spatial data, it also has functionality for modelling and predicting with spatio-temporal data. The functionality in the software is limited in some respects; in particular, only point-referenced spatio-temporal data can be used (that will be subsequently mapped to BAUs), and estimation of the standard deviation of the measurement error is not implemented. These features will be implemented in future revisions.
 
-Fixed Rank Kriging is space and time is different from Fixed Rank Filtering \citep{Cressie_2010} where a temporal auto-regressive structure is imposed on the basis-function weights, and where subsequently Kalman filtering and Rauch-Tung-Striebel smoothing are used for inference over $\etab$. In FRK, the basis functions also have a temporal dimension; the only new difficulty is specifying these space-time basis functions.
+Fixed Rank Kriging is space and time is different from Fixed Rank Filtering \citep{Cressie_2010} where a temporal auto-regressive structure is imposed on the basis-function weights $\{\etab_t \}$, and where subsequently Kalman filtering and Rauch-Tung-Striebel smoothing are used for inference on $\{\etab_t \}$. In FRK, the basis functions also have a temporal dimension; the only new aspect is specifying these space-time basis functions.
 
-We illustrate FRK in space and time using two datasets. The first dataset we consider was obtained from the National Oceanic and Atmospheric Administration (NOAA), and we will term it the \tt{NOAA} dataset. The dataset included in \tt{FRK} contains daily observations of maximum temperature (\tt{Tmax}) in degrees Fahrenheit at 138 stations in the US between between 32N--46N and 80W--100W, recorded between the years 1990 and 1993 (inclusive). We will only consider the maximum recorded temperature in July 1993 in this vignette. The second dataset we use is the same \tt{AIRS} dataset used in Section \ref{sec:AIRS}.
+We illustrate FRK in space and time using two datasets. The first dataset we consider was obtained from the National Oceanic and Atmospheric Administration (NOAA), and we will term it the \tt{NOAA} dataset. This dataset is included in \tt{FRK}, and it contains daily observations of maximum temperature (\tt{Tmax}) in degrees Fahrenheit at 138 stations in the US between between 32N--46N and 80W--100W, recorded between the years 1990 and 1993 (inclusive); see Fig.~\ref{fig:stat_locs}. We will only consider the 31 maximum temperatures recorded in July 1993 in this vignette. The second dataset we use is the same \tt{AIRS} dataset referred to in Section \ref{sec:AIRS}. In Section \ref{sec:AIRS} only the first 3 days were used to illustrate spatial-only FRK; we now use all 15 days to illustrate spatio-temporal FRK.
 
-For creating spatio-temporal objects used by \tt{FRK} we also need to load the \tt{spacetime} package:
+For creating spatio-temporal objects used by \tt{FRK} we  need to load the \tt{spacetime} package:
 
 <<>>=
 library(spacetime)
@@ -803,7 +803,7 @@ library(spacetime)
 
 \subsection{The \tt{NOAA} dataset} \label{sec:NOAA}
 
-\noindent {\bf Step 1:} We load the dataset and extract the data in July 1993 using the commands
+\noindent {\bf Step 1:} We load the dataset and extract the data for July 1993 using the commands
 
 <<message=FALSE>>=
 data("NOAA_df_1990")             # load data
@@ -811,12 +811,20 @@ Tmax <- subset(NOAA_df_1990,     # subset the data
               month %in% 7 &     # May to July
               year == 1993)      # year of 1993
 @
+
+<<echo=FALSE,fig.height=4,fig.width=6,fig.cap="Station locations from which the maximum temperature readings in the \\tt{NOAA} dataset were obtained.\\label{fig:stat_locs}",out.width="0.6\\linewidth">>=
+(LinePlotTheme() + geom_point(data=Tmax,aes(lon,lat),size=0.5)) %>%
+    draw_world() + coord_fixed(xlim = c(-115,-60), ylim = c(10,60))
+
+
+@
+
 \noindent To construct a spatio-temporal object, one must first define the temporal component as a \tt{Date} object by stringing the year, month and day together:
 <<>>=
 Tmax <- within(Tmax,
                {time = as.Date(paste(year,month,day,sep="-"))})  # create Date field
 @
-\noindent Since the data is point-referenced, we need to cast our data into a `spatio-temporal irregular data frame', \tt{STIDF}; refer to the vignette \tt{JSS816} for the various ways to do this. One of the most straightforward approaches is to use the function \tt{stConstruct} in the pacakge \tt{spacetime}. The function needs to be supplied with the data, the names of the spatial coordinates field, the name of the Date field, and a flag indicating whether the data can be treated as having been recorded over the temporal interval and not at the specific instant recorded in \tt{time} (in our case \tt{interval=TRUE}).
+\noindent Since the data is point-referenced, we need to cast our data into a `spatio-temporal irregular data frame', \tt{STIDF}; refer to the vignette \tt{JSS816} for various ways to do this. One of the most straightforward approaches is to use the function \tt{stConstruct} in the package \tt{spacetime}. The function needs to be supplied along with the data, the names of the spatial coordinates field, the name of the Date field, and a flag indicating whether the data can be treated as having been recorded over the temporal interval and not at the specific instant recorded in \tt{time} (in our case \tt{interval=TRUE}).
 
 <<>>=
 STObj <- stConstruct(x = Tmax,                    # dataset
@@ -825,7 +833,7 @@ STObj <- stConstruct(x = Tmax,                    # dataset
                  interval=TRUE)                   # time reflects an interval
 @
 
-\noindent Unlike with the spatial case, the measurement-error standard deviation needs to be specified. In this case, we set the measurement-error standard deviation to be 2 degrees Fahrenheit, although this is likely to be much less in practice. We also treat the data as being on $\mathbb{R}^2$ (that is, where space is a 2D plane; we consider space-time data on the sphere in Section \ref{sec:AIRS_ST}):
+\noindent Unlike for the spatial-only case, the standard deviation of the measurement error needs to be specified. In this case, we conservatively set it to be 2 degrees Fahrenheit, although it is likely to be much less in practice. We also treat the data as being on $\mathbb{R}^2$ (that is, where space is the plane; we consider space-time data where space is the surface of a sphere in Section \ref{sec:AIRS_ST}):
 
 <<>>=
 STObj$std <- 2
@@ -833,7 +841,7 @@ STObj$std <- 2
 
 \vspace{0.1in}
 
-\noindent {\bf Step 2:} When dealing with spatio-temporal data, the BAUs are space-time regular lattices \tt{STFDF}s. These may be constructed manually or using the helper function \tt{auto\_BAUs}. Below, we instruct the helper function to construct BAUs in a space-time cube, centred around the data \tt{STObj}, with each BAU of size 1 deg. latitude $\times$ 1 deg. longitude $\times$ 1 day. The new arguments here are \tt{manifold = STplane()}, which indicates that we are going to model a spatio-temporal field on the 2D plane, and \tt{tunit = "days"}, which indicates that each BAU has a temporal `width' equal to one day. Once again, we specify the fine-scale component to be homoscedastic:
+\noindent {\bf Step 2:} When dealing with spatio-temporal data, the BAUs are space-time regular lattices, which are classified in \tt{spacetime} as a `spatio-temporal fixed data frame', \tt{STFDF}; type \tt{help(STFDF)} for details.  \tt{STFDF} objects may be constructed manually or by using the helper function \tt{auto\_BAUs}. In the following, the helper function is used to construct BAUs in a space-time cube, centred around the data \tt{STObj}, with each BAU of size 1 deg. latitude $\times$ 1 deg. longitude $\times$ 1 day. The new arguments here are \tt{manifold = STplane()}, which indicates that we are going to model a spatio-temporal field on the 2D plane, and \tt{tunit = "days"}, which indicates that each BAU has a temporal `width' equal to one day. Once again, we specify the fine-scale component to be homoscedastic:
 
 <<warning=FALSE>>=
 grid_BAUs <- auto_BAUs(manifold=STplane(),    # spatio-temporal process on the plane
@@ -847,7 +855,7 @@ grid_BAUs$fs = 1                       # fine-scale variation
 
 \vspace{0.1in}
 
-\noindent {\bf Step 3:} The simplest way to construct spatio-temporal basis functions is to first construct spatial basis functions, then temporal basis functions, and then combine them by taking their tensor product. To construct spatial basis functions, we first project the spatio-temporal data onto the spatial domain (collapse out time) using \tt{as(STObj,"Spatial")}, and construct spatial basis function using \tt{auto\_basis}:
+\noindent {\bf Step 3:} The simplest way to construct spatio-temporal basis functions is to first construct spatial basis functions, then temporal basis functions, and then combine them by taking their tensor product. To construct spatial basis functions, we first project the spatio-temporal data onto the spatial domain (collapse out time) using \tt{as(STObj,"Spatial")}, and then construct spatial basis function using \tt{auto\_basis}:
 
 <<>>=
 G_spatial <- auto_basis(m = plane(),                 # spatial functions on the plane
@@ -856,7 +864,7 @@ G_spatial <- auto_basis(m = plane(),                 # spatial functions on the 
                         type = "bisquare")           # bisquare basis functions
 @
 
-\noindent For the temporal basis functions, we use the function \tt{local\_basis}, which gives the user more control over the location parameters and the scale parameters of the basis functions. In this case we specify that we want basis functions on the real line, located between $t = 2$ and $t = 28$ at an interval spacing of 4. Here, each location corresponds to temporal interval used to construct \tt{grid\_BAUs}; for example $t = 1$ corresponds to 1993-07-01, $t = 5$ to 1993-07-05 and so on.
+\noindent For the temporal basis functions, we use the function \tt{local\_basis}, which gives the user more control over the location parameters and the scale parameters of the basis functions. In this case we specify that we want basis functions on the real line, located between $t = 2$ and $t = 28$ at an interval spacing of 4. Here, each location represents a temporal interval used in the construction of \tt{grid\_BAUs}; for example, $t = 1$ corresponds to 1993-07-01, $t = 5$ to 1993-07-05, and so on.
 
 <<warning=FALSE>>=
 print(head(grid_BAUs@time))                                # show time indices
@@ -906,7 +914,7 @@ G <- TensorP(G_spatial,G_temporal)         # take the tensor product
                           use_centroid = TRUE)   # Treat BAUs as points
 @
 
-Plotting proceeds precisely the same way as in Section \ref{sec:meuse}, however now we need to convert the spatial polygons at multiple time points to data frames. This can be done by simply iterating through the time points we wish to visualise. Below, we extract a data frame for the BAUs on days 1, 4, 8, 12, 16, and 20. The prediction and standard error are shown in Figs.~\ref{fig:FRK_pred1} and \ref{fig:FRK_pred2}, respectively. Note how the prediction has both smooth and fine-scale components. This is expected, since fine-scale variation was, this time, included in the prediction. Note also that the BAUs we used are not located everywhere within the square domain illustrated. This is because the \tt{auto\_BAUs} function carefully chooses a (non-square) domain in order to minimise the number of BAUs needed. This can be adjusted by changing the \tt{convex} parameter in \tt{auto\_BAUs}.
+Plotting proceeds precisely the same way as in Section \ref{sec:meuse}, however now we need to convert the spatial polygons at multiple time points to data frames. This can be done by simply iterating through the time points we wish to visualise. In the following, we extract a data frame for the BAUs on days 1, 4, 8, 12, 16, and 20. The prediction and the prediction standard error are shown in Figs.~\ref{fig:FRK_pred1} and \ref{fig:FRK_pred2}, respectively. Note how the prediction has both smooth and fine-scale components. This is expected, since fine-scale variation was, this time, included in the prediction. Note also that the BAUs we used are not located everywhere within the square domain of interest. This is because the \tt{auto\_BAUs} function carefully chooses a (non-square) domain in an attempt to minimise the number of BAUs needed. This can be adjusted by changing the \tt{convex} parameter in \tt{auto\_BAUs}.
 
 <<message=FALSE,results='hide'>>=
  analyse_days <- c(1,4,8,12,16,20)  # analyse only a few days
@@ -919,7 +927,7 @@ Plotting proceeds precisely the same way as in Section \ref{sec:meuse}, however 
 @
 
 
-<<echo=FALSE,fig.cap="Spatio-temporal FRK prediction of \\tt{Tmax} on the plane in degrees Fahrenheit within a domain enclosing the region of interest for six days spanning the temporal window of the data: 01 July 1993 -- 20 July 2003.\\label{fig:FRK_pred1}",fig.height=8,fig.width=16,fig.pos="t!">>=
+<<echo=FALSE,fig.cap="Spatio-temporal FRK prediction of \\tt{Tmax} on the plane in degrees Fahrenheit within a domain enclosing the region of interest for six selected days spanning the temporal window of the data: 01 July 1993 -- 20 July 2003.\\label{fig:FRK_pred1}",fig.height=8,fig.width=16,fig.pos="t!">>=
 LinePlotTheme() +                          # Similar to above but with s.e.
     geom_polygon(data=df_st,
                  aes(lon,lat,fill=mu,group=id),
@@ -935,7 +943,7 @@ LinePlotTheme() +                          # Similar to above but with s.e.
     facet_wrap(~day)
 @
 
-<<echo=FALSE,fig.cap="Spatio-temporal FRK prediction standard  error of  \\tt{Tmax} on the plane in degrees Fahrenheit within a domain enclosing the region of interest for six days spanning the temporal window of the data, 01 July 1993 -- 20 July 2003.\\label{fig:FRK_pred2}",fig.height=8,fig.width=16,fig.pos="t!">>=
+<<echo=FALSE,fig.cap="Spatio-temporal FRK prediction standard  error of  \\tt{Tmax} on the plane in degrees Fahrenheit within a domain enclosing the region of interest for the same six days selected in Fig.~\\ref{fig:FRK_pred1} and spanning the temporal window of the data, 01 July 1993 -- 20 July 2003.\\label{fig:FRK_pred2}",fig.height=8,fig.width=16,fig.pos="t!">>=
 LinePlotTheme() +                          # Similar to above but with s.e.
     geom_polygon(data=df_st,
                  aes(lon,lat,fill=sqrt(var),group=id),
@@ -948,7 +956,7 @@ LinePlotTheme() +                          # Similar to above but with s.e.
     facet_wrap(~day)
 @
 
-In order to model the \tt{NOAA} dataset on a subset of the sphere, we first need to associate an appropriate CRS with \tt{STObj},
+In order to model the \tt{NOAA} dataset on a subset of the sphere, we first need to associate an appropriate Coordinate Reference System with \tt{STObj},
 
 <<>>=
 proj4string(STObj) <- "+proj=longlat +ellps=sphere"
@@ -972,7 +980,7 @@ grid_BAUs <- auto_BAUs(manifold=STsphere(),       # spatio-temporal process on t
                         isea3h_lo = 4)             # but remove those lower than res 4
 @
 
-Recall that when calling \tt{auto\_basis} on the sphere, basis functions are automatically constructed at locations specified by the DGGs. Above, we use the first six resolutions (resolutions 0 -- 5) of the DGGs but discard resolutions less than 4 by using the argument \tt{isea3h\_lo = 4}. The \tt{prune=1} argument behaves as above on the basis functions at these higher resolutions. The basis functions constructed using this code are shown in Fig.~\ref{fig:basis_USA}. We provide more details on FRK on the sphere in Section \ref{sec:AIRS_ST}.
+Recall that when calling \tt{auto\_basis} on the sphere, basis functions are automatically constructed at locations specified by the DGGs. In the code given above, we use the first six resolutions (resolutions 0 -- 5) of the DGGs but discard resolutions less than 4 by using the argument \tt{isea3h\_lo = 4}. The \tt{prune=1} argument behaves as above on the basis functions at these higher resolutions. The basis functions constructed using this code are shown in Fig.~\ref{fig:basis_USA}. We provide more details on FRK on the sphere in Section \ref{sec:AIRS_ST}.
 
 <<message=FALSE,echo=FALSE,fig.cap="Basis functions for FRK on the sphere with the \\tt{NOAA} dataset using two ISEA3H DGGs for location parameters of the basis functions.\\label{fig:basis_USA}",fig.height=9,fig.width=9,fig.pos="t!",out.width="0.7\\linewidth",fig.align="center">>=
 draw_world(show_basis(G_spatial,LinePlotTheme())) + coord_map("ortho",orientation = c(35,-100,0)) + xlab("lon (deg)") + ylab("lat (deg)")
@@ -980,7 +988,7 @@ draw_world(show_basis(G_spatial,LinePlotTheme())) + coord_map("ortho",orientatio
 
 \subsection{The \tt{AIRS} dataset} \label{sec:AIRS_ST}
 
-In this section we use spatio-temporal FRK on the sphere to obtain FRK predictions and standard errors of CO$_2$, in ppm, in May 2003.
+In this section we use spatio-temporal FRK on the sphere to obtain FRK predictions and prediction standard errors of CO$_2$, in ppm, between 01 May 2003 and 15 May 2003 (inclusive). To keep the package size small, the dataset \tt{AIRS\_05\_2003} only contains data in these first 15 days of May 2003.
 
 \vspace{0.1in}
 
@@ -989,7 +997,7 @@ In this section we use spatio-temporal FRK on the sphere to obtain FRK predictio
 <<eval=TRUE>>=
 data(AIRS_05_2003)   # load AIRS data
 @
-\noindent and then rename \tt{co2std} to \tt{std} and attribute the time index \tt{t} to the day number. We also use 20000 data points chosen at random in order to keep the compilation time of the vignette low.
+\noindent and then rename \tt{co2std} to \tt{std} and attribute the time index \tt{t} to the day number. We also use 20000 data points chosen at random between 01 May 2003 and 15 May 2003 (inclusive) in order to keep the compilation time of the vignette low.
 
 <<eval=TRUE>>=
 set.seed(1)
@@ -1027,7 +1035,7 @@ STObj <- stConstruct(x = AIRS_05_2003,            # dataset
 
 \vspace{0.1in}
 
-\noindent {\bf Step 2:} We next construct the BAUs. This time we specify \tt{STsphere()} for the manifold and discretise the sphere using a regular grid rather than a hexagonal lattice.  To do this we set a \tt{cellsize} and specify \tt{type="grid"}. We also supply \tt{time(STObj)} so that the BAUs are constructed around the time of the data; if we supply \tt{STObj}, then BAUs are pruned around the data spatially too.  We show the BAUs generated using \tt{time(STObj)} and \tt{STObj} in Fig.~\ref{fig:sphere_grid_BAUs}.
+\noindent {\bf Step 2:} We next construct the BAUs. This time we specify \tt{STsphere()} for the manifold, and for illustration we discretise the sphere using a regular grid rather than a hexagonal lattice.  To do this we set a \tt{cellsize} and specify \tt{type="grid"}. We also supply \tt{time(STObj)} so that the BAUs are constructed around the time of the data; if we supply \tt{STObj} instead, then BAUs are pruned spatially.  We show the BAUs generated using \tt{time(STObj)} and \tt{STObj} in Fig.~\ref{fig:sphere_grid_BAUs}.
 
 
 <<eval=TRUE,cache=FALSE>>=
@@ -1042,7 +1050,7 @@ grid_BAUs$fs = 1
 
 
 
-<<echo=FALSE,fig.subcap=c("",""),fig.cap="Gridded BAUs on the sphere used for modelling and predicting with the \\tt{AIRS} data. (a) BAUs constructed when supplying only the temporal part of the data (all sphere is covered with BAUs within the specified time period). (b) BAUs constructed when supplying the entire dataset. The view of the sphere is from the bottom; in this case there is no data close to the Southern pole and thus BAUs have been omitted from this region.\\label{fig:sphere_grid_BAUs}",fig.width=4,fig.height=4,out.width="0.5\\linewidth",fig.pos="t!",message=FALSE>>=
+<<echo=FALSE,fig.subcap=c("",""),fig.cap="Gridded BAUs on the sphere used for modelling and predicting with the \\tt{AIRS} data. (a) BAUs constructed when supplying only the temporal indices of the data (the entire sphere is covered with BAUs within the specified time period). (b) BAUs constructed when supplying the entire dataset. The view of the sphere is from the bottom; in this case there is no data below $60^{\\circ}$S and thus BAUs have been omitted from this region.\\label{fig:sphere_grid_BAUs}",fig.width=4,fig.height=4,out.width="0.5\\linewidth",fig.pos="t!",message=FALSE>>=
 
 grid_BAUs2 <- auto_BAUs(manifold=STsphere(),  # space-time field on sphere
                              data=STObj,            # data
@@ -1064,7 +1072,7 @@ ggplot(X2) +
 
 \vspace{0.1in}
 
-\noindent {\bf Step 3:} We next construct the spatio-temporal basis functions. This proceeds in exactly the same way as in the \tt{NOAA} dataset: We first construct spatial basis functions, then temporal basis functions and then find their tensor product:
+\noindent {\bf Step 3:} We next construct the spatio-temporal basis functions. This proceeds in exactly the same way as in the \tt{NOAA} dataset: We first construct spatial basis functions, then temporal basis functions, and then we find their tensor product:
 
 <<eval=TRUE>>=
 G_spatial <- auto_basis(m = sphere(),             # functions on sphere
@@ -1083,7 +1091,7 @@ G_spacetime <- TensorP(G_spatial,G_temporal)
 
 \vspace{0.1in}
 
-\noindent {\bf Steps 4--6:} Finally, the SRE model is constructed and fitted as in the other examples. Recall that \tt{est\_error = FALSE} is required with spatio-temporal data and, since we have multiple data per BAU we also set \tt{average\_in\_BAU = TRUE}. For predicting, we use the \tt{pred\_time} flag to indicate at which time points we wish to predict; here the numbers correspond to the time indices of the BAUs. We specify \tt{pred\_time = c(4,8,12)}, which indicates that we want to predict on the 4, 8 and 12 of May 2003. The data, prediction, and prediction standard error for these days are given in Figs.~\ref{fig:FRK_AIRS_ST1}--\ref{fig:FRK_AIRS_ST3}.
+\noindent {\bf Steps 4--6:} Finally, the SRE model is constructed and fitted as in the other examples. Recall that \tt{est\_error = FALSE} is required with spatio-temporal data and, since we have multiple data per BAU we also set \tt{average\_in\_BAU = TRUE}. For predicting, we use the \tt{pred\_time} flag to indicate at which time points we wish to predict; here the numbers correspond to the time indices of the BAUs. We specify \tt{pred\_time = c(4,8,12)}, which indicates that we want to predict on the 4, 8 and 12 May 2003. The data, prediction, and prediction standard error for these days are given in Figs.~\ref{fig:FRK_AIRS_ST1}--\ref{fig:FRK_AIRS_ST3}.
 
 <<eval=TRUE,message=FALSE,results='hide',cache=FALSE>>=
 f <- co2avgret ~ lat +1           # formula for fixed effects
@@ -1136,7 +1144,7 @@ g1 <- (EmptyTheme() +
 print(g1)
 @
 
-<<echo=FALSE, fig.keep=TRUE,fig.cap="Prediction standard error of $(\\Yvec_P - \\deltab_P)$ in ppm on the 04, 08 and 12 May 2003 following FRK on the \\tt{AIRS} data. \\label{fig:FRK_AIRS_ST2}",fig.align="center",out.width="\\linewidth",fig.height=3,fig.width=16,fig.pos="t!">>=
+<<echo=FALSE, fig.keep=TRUE,fig.cap="Prediction of $(\\Yvec_P - \\deltab_P)$ in ppm on 04, 08, and 12 May 2003 obtained with \\tt{FRK} on the \\tt{AIRS} data. \\label{fig:FRK_AIRS_ST2}",fig.align="center",out.width="\\linewidth",fig.height=3,fig.width=16,fig.pos="t!">>=
 
 g2 <-  (EmptyTheme() +
             geom_polygon(data=filter(X,(t %in% c(4,8,12)) & abs(lon) < 175),
@@ -1151,7 +1159,7 @@ g2 <-  (EmptyTheme() +
 print(g2)
 @
 
-<<echo=FALSE, fig.keep=TRUE,fig.cap="Prediction standard error of $(\\Yvec_P - \\deltab_P)$ in ppm on the 04, 08 and 12 May 2003 following FRK on the \\tt{AIRS} data. \\label{fig:FRK_AIRS_ST3}",fig.align="center",out.width="\\linewidth",fig.height=3,fig.width=16,fig.pos="t!">>=
+<<echo=FALSE, fig.keep=TRUE,fig.cap="Prediction standard error of $(\\Yvec_P - \\deltab_P)$ in ppm on 04, 08 and 12 May 2003 obtained with \\tt{FRK} on the \\tt{AIRS} data. \\label{fig:FRK_AIRS_ST3}",fig.align="center",out.width="\\linewidth",fig.height=3,fig.width=16,fig.pos="t!">>=
 
 X$se <- pmin(sqrt(X$var),0.7)
 g3 <-  (EmptyTheme() +

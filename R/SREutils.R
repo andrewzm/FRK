@@ -104,6 +104,7 @@ SRE <- function(f,data,basis,BAUs,est_error=TRUE,average_in_BAU = TRUE) {
 
         C_idx <- BuildC(data_proc,BAUs)
 
+
         Cmat[[i]] <- sparseMatrix(i=C_idx$i_idx,
                                   j=C_idx$j_idx,
                                   x=1,dims=c(length(data_proc),

@@ -668,6 +668,10 @@ setMethod("map_data_to_BAUs",signature(data_sp="Spatial"),
                   }
                   print(paste0("Binned data in ",timer[3]," seconds"))
               } else {
+                  warning("BAU of identical area are being assumed when computing the incidence matrix
+                           from observations having a large support.
+                           Handling of different areas will be catered for in a future revision.
+                           Please report this issue to the package maintainer.")
                   data_sp$id <- rownames(data_sp@data)
                   BAU_as_points <- SpatialPointsDataFrame(coordinates(sp_pols),sp_pols@data)
                   BAUs_aux_data <- over(data_sp,BAU_as_points)
