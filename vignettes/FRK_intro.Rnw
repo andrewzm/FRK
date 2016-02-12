@@ -17,7 +17,6 @@
 \usepackage{array}
 \usepackage[normalem]{ulem}
 \usepackage{amsthm}
-\usepackage{txfonts}
 
 \DeclareSymbolFont{matha}{OML}{txmi}{m}{it}% txfonts
 \DeclareMathSymbol{\varv}{\mathord}{matha}{118}
