@@ -11,7 +11,7 @@
 #' @param tol convergence tolerance for the EM algorithm
 #' @param method parameter estimation method to employ. Currently only ``EM'' is supported
 #' @param print_lik flag indicating whether likelihood should be printed or not on convergence of the estimation algorithm
-#' @param use_centroid flag indicating whether the prediction over a BAU can simply be taken as a point prediction at the BAU's centroid. This should only be done if the BAUs upon which the model is trained coincide with the BAUs used in \code{SRE()}
+#' @param use_centroid flag indicating whether the basis functions are averaged over the BAU, or whether the basis functions are evaluated at the BAUs centroid in order to construct the matrix \eqn{S}. The flag can safely be set when the basis functions are approximately constant over the BAUs in order to reduce computational time
 #' @param include_fs flag indicating whether to assume prediction locations coincide with observations in BAUs (where applicable) or not
 #' @param pred_polys object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified
 #' @param pred_time vector of time indices at which we wish to predict. All time points are used if this option is not specified
@@ -120,6 +120,7 @@ SRE <- function(f,data,basis,BAUs,est_error=TRUE,average_in_BAU = TRUE) {
         Cmat[[i]] <- Cmat[[i]] / rowSums(Cmat[[i]]) ## Average BAUs for polygon observations
 
         Vfs[[i]] <- tcrossprod(Cmat[[i]] %*% Diagonal(x=sqrt(BAUs$fs)))
+
         S[[i]] <- eval_basis(basis, s = data_proc)
         ## Note that S constructed in this way is similar to Cmat %*% S_BAUs where S_BAUs is the
         ## basis functions evaluated at the BAUs. Verify this by checking the following are similar

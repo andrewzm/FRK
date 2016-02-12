@@ -37,7 +37,7 @@ SRE.predict(SRE_model, use_centroid = TRUE, include_fs = TRUE,
 
 \item{print_lik}{flag indicating whether likelihood should be printed or not on convergence of the estimation algorithm}
 
-\item{use_centroid}{flag indicating whether the prediction over a BAU can simply be taken as a point prediction at the BAU's centroid. This should only be done if the BAUs upon which the model is trained coincide with the BAUs used in \code{SRE()}}
+\item{use_centroid}{flag indicating whether the basis functions are averaged over the BAU, or whether the basis functions are evaluated at the BAUs centroid in order to construct the matrix \eqn{S}. The flag can safely be set when the basis functions are approximately constant over the BAUs in order to reduce computational time}
 
 \item{include_fs}{flag indicating whether to assume prediction locations coincide with observations in BAUs (where applicable) or not}
 

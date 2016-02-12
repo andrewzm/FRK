@@ -290,10 +290,14 @@ Y_i = \tvec_i'\alphab + \upsilon_i + \delta_i,
 \end{equation}
 \noindent where $\tvec_i \equiv \frac{1}{|A_i|}\int_{A_i} \tvec(\svec) \intd \svec$, $\upsilon_i\equiv \frac{1}{|A_i|}\int_{A_i} \upsilon(\svec) \intd \svec$, and $\delta_i$ is specified lated.
 In FRK, it is assumed that the spatial random effect $\upsilon(\svec)$ can be decomposed using basis functions, $\phib(\svec) \equiv (\phi_i(\svec): i = 1,\dots,r )'$, where $r > 0$ is the number of basis functions. Generally, $\phib(\svec)$ is multiresolutional and its elements may have compact support. The basis chosen should be able to adequately reconstruct realisations of $Y(\svec)$; an empirical spectral-based approach that can ensure this is discussed in \cite{Zammit_2012}. Using basis-function decomposition, we let $\upsilon(\svec) = (\phi(\svec),\dots,\phi(\svec))\etab \equiv \phib(\svec)'\etab$. Then, $\upsilon_i = \frac{1}{|A_i|}\int_{A_i}\phib(\svec)'\intd \svec ~\etab, i = 1,\dots,N$, so that $\upsilonb = \Smat\etab$, where $\Smat$ is the $N \times r$ matrix
-\begin{equation}
+\begin{equation}\label{eq:S}
 \Smat \equiv \left(\frac{1}{|A_i|}\int_{A_i}\phib(\svec)\intd\svec : i = 1,\dots,N\right)'.
 \end{equation}
-We assume that $\etab$ is $r$-dimensional Gaussian with mean zero and $r \times r$ covariance matrix $\Kmat$, which needs to be estimated.
+We assume that $\etab$ is $r$-dimensional Gaussian with mean zero and $r \times r$ covariance matrix $\Kmat$, which needs to be estimated. Frequently, the BAUs are sufficiently small, and the basis functions sufficiently smooth, so that
+\begin{equation}\label{eq:Sapprox}
+\Smat \approx \left(\phib(\svec_i) : i = 1,\dots,N\right)',
+\end{equaiton}
+where $\{\svec_i: i = 1,\dots,N\}$ are the centroids of the BAUs. This approximation can be used to simplify computations when multiple, small, BAUs are used.
 
 In \tt{FRK}, we assume that the BAU is the smallest unit of measure. Thus, the fine-scale variation is a constant random effect in each BAU, but uncorrelated across the BAUs. Since a BAU has finite area, the fine-scale variation is not a nugget effect in the classical sense. We thus model $\delta_i$ to be Gaussian with mean zero and uncorrelated with variance
 \begin{equation}
@@ -542,7 +546,7 @@ S <- SRE.fit(SRE_model = S,    # SRE model
 
 \vspace{0.1in}
 
-\noindent {\bf Step 6:} Finally, we predict at all the BAUs with the fitted model. This is done using the function \tt{SRE.predict}. The argument \tt{use\_centroid} dictates whether we treat the BAU as a prediction point or as a prediction area, see \tt{help(SRE.predict)} for details.
+\noindent {\bf Step 6:} Finally, we predict at all the BAUs with the fitted model. This is done using the function \tt{SRE.predict}. The argument \tt{use\_centroid} dictates whether we invoke the approximation \eqref{eq:Sapprox} or not, see \tt{help(SRE.predict)} for details.
 
 <<>>=
 GridBAUs1 <- SRE.predict(SRE_model = S,          # SRE model
