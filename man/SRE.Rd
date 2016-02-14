@@ -6,7 +6,7 @@
 \alias{SRE.predict}
 \title{Construct SRE object, fit and predict}
 \usage{
-SRE(f, data, basis, BAUs, est_error = TRUE, average_in_BAU = TRUE)
+SRE(f, data, basis, BAUs, est_error = FALSE, average_in_BAU = TRUE)
 
 SRE.fit(SRE_model, n_EM = 100L, tol = 1e-05, method = "EM",
   print_lik = FALSE)
@@ -76,7 +76,7 @@ grid_BAUs <- auto_BAUs(manifold=real_line(),data=sim_data,cellsize = c(0.01),typ
 grid_BAUs$fs = 1
 
 ### Set up SRE model
-G <- auto_basis(m = real_line(),
+G <- auto_basis(manifold = real_line(),
                 data=sim_data,
                 nres = 2,
                 regular = 6,

@@ -16,7 +16,7 @@ test_that("can predict over polygons in plane", {
     HexPols_df <- SpatialPolygonsDataFrame(HexPols,
                                            over(HexPols,meuse.grid))
 
-    G <- auto_basis(m = plane(),data=meuse,nres = 2,prune=10,type = "Gaussian")
+    G <- auto_basis(manifold = plane(),data=meuse,nres = 2,prune=10,type = "Gaussian")
 
     S1 <- eval_basis(G,HexPts_df)
     S2 <- eval_basis(G,HexPols_df)

@@ -15,7 +15,7 @@ test_that("SRE 1D works",{
     grid_BAUs$fs = 1
 
     ### Set up SRE model
-    G <- auto_basis(m = real_line(),
+    G <- auto_basis(manifold = real_line(),
                     data=sim_data,
                     nres = 2,
                     regular = 6,
@@ -60,7 +60,7 @@ test_that("SRE 2D plane works",{
     grid_BAUs$fs = 1
 
     ### Set up SRE model
-    G <- auto_basis(m = plane(),
+    G <- auto_basis(manifold = plane(),
                     data=sim_data,
                     nres = 1,
                     regular = 2,
@@ -106,7 +106,7 @@ test_that("SRE sphere works",{
     grid_BAUs$fs = 1
 
     ### Set up SRE model
-    G <- auto_basis(m = sphere(),
+    G <- auto_basis(manifold = sphere(),
                     data=sim_data,
                     nres = 1,
                     type = "bisquare",
@@ -159,7 +159,7 @@ test_that("SRE space-time sphere works",{
 
 
     ### Set up SRE model
-    G_spatial <- auto_basis(m = sphere(),
+    G_spatial <- auto_basis(manifold = sphere(),
                             data=as(STobj,"Spatial"),
                             nres = 1,
                             type = "bisquare",

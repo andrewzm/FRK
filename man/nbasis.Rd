@@ -23,7 +23,7 @@ Retrieve the number of basis functions from \code{Basis} or \code{SRE} object.
 library(sp)
 data(meuse)
 coordinates(meuse) = ~x+y # change into an sp object
-G <- auto_basis(m = plane(),data=meuse,nres = 2,regular=2,prune=10,type = "Gaussian")
+G <- auto_basis(manifold = plane(),data=meuse,nres = 2,regular=2,prune=10,type = "Gaussian")
 print(nbasis(G))
 }
 

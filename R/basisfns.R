@@ -50,7 +50,7 @@ local_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type
 
 #' @title Automatic basis-function placement
 #' @description Generate automatically a set of local basis functions in the domain, and automatically prune in regions of sparse data.
-#' @param m object of class \code{manifold}, for example, \code{sphere} or \code{plane}
+#' @param manifold object of class \code{manifold}, for example, \code{sphere} or \code{plane}
 #' @param data object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame} containing the data on which basis-function placement is based, see details
 #' @param regular an integer indicating the number of regularly-placed basis functions at the first resolution. In two dimensions, this dictates smallest number of basis functions in a row or column at the lowest resolution. If \code{regular=0}, an irregular grid is used, one that is based on the triangulation of the domain with increased mesh density in areas of high data density, see details
 #' @param nres if \code{manifold = real_line()} or \code{manifold = plane()}, then \code{nres} is the number of basis-function resolutions to use. If \code{manifold = sphere()}, then \code{nres} is the resolution number of the ISEA3H grid to use and and can also be a vector indicating multiple resolutions
@@ -90,7 +90,7 @@ local_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type
 #' proj4string(d)=CRS("+proj=longlat +ellps=sphere")
 #'
 #' ### Now create basis functions over sphere
-#' G <- auto_basis(m = sphere(),data=d,
+#' G <- auto_basis(manifold = sphere(),data=d,
 #'                 nres = 2,prune=15,
 #'                 type = "bisquare",
 #'                 subsamp = 20000)
@@ -99,9 +99,10 @@ local_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type
 #' show_basis(G,draw_world())
 #'
 #' @export
-auto_basis <- function(m = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,type="Gaussian",isea3h_lo = 0) {
+auto_basis <- function(manifold = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,type="Gaussian",isea3h_lo = 0) {
+    m <- manifold
     if(!is(m,"manifold"))
-        stop("m needs to be a manifold")
+        stop("manifold needs to be an object of class manifold")
     if(!is.numeric(nres) | nres < 0)
         stop("nres needs to be greater than zero")
     if(!is.numeric(prune) | prune < 0)
@@ -120,7 +121,7 @@ auto_basis <- function(m = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,t
 
     if(is(m,"plane") & regular==0) {
          if(!requireNamespace("INLA"))
-             stop("For automatic basis generation INLA needs to be installed
+             stop("For irregularly-placed basis-function generation INLA needs to be installed
                   for constructing basis function centres. Please install it
                   using install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\")")
     }
@@ -317,13 +318,11 @@ setMethod("eval_basis",signature(basis="TensorP_Basis",s="matrix"),function(basi
     S2 <- eval_basis(basis@Basis2,s[,-(1:n1),drop=FALSE],output)
     i <- 1 #suppress binding warning
 
-    S <- list()
-    for(i in 1:ncol(S1)) {
-        S[[i]] <- S1[,i] * S2
-    }
-    S <- do.call("cBind",S)
-    S <- as(S,"dgCMatrix")
 
+    S <- Matrix(0,nrow(S1),ncol(S1)*ncol(S2))
+    for(i in 1:ncol(S1)) {
+        S[,((i-1)*ncol(S2)+1):(i*ncol(S2))] <- S1[,i] * S2
+    }
     S
 })
 
@@ -339,11 +338,11 @@ setMethod("eval_basis",signature(basis="TensorP_Basis",s = "STIDF"),function(bas
 
     i <- 1 #suppress binding warning
 
-    S <- list()
+    S <- Matrix(0,nrow(S1),ncol(S1)*ncol(S2))
     for(i in 1:ncol(S1)) {
-        S[[i]] <- S1[,i] * S2
+        S[,((i-1)*ncol(S2)+1):(i*ncol(S2))] <- S1[,i] * S2
+        #S[[i]] <- S1[,i] * S2
     }
-    S <- do.call("cBind",S)
     S <- as(S,"dgCMatrix")
 
     S

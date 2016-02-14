@@ -72,7 +72,7 @@ test_that("can average basis over polygons in plane", {
                                            cbind(over(HexPols,meuse.grid),
                                                  coordinates(HexPts)))
     ## Generate basis functions
-    G <- auto_basis(m = plane(),data=meuse,nres = 2,prune=10,type = "Gaussian")
+    G <- auto_basis(manifold = plane(),data=meuse,nres = 2,prune=10,type = "Gaussian")
 
         expect_true({eval_basis(G,coordinates(HexPts)); TRUE})
         expect_true({eval_basis(G,HexPols_df); TRUE})

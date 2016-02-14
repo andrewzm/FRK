@@ -46,7 +46,7 @@
 #' grid_BAUs$fs = 1
 #'
 #' ### Set up SRE model
-#' G <- auto_basis(m = real_line(),
+#' G <- auto_basis(manifold = real_line(),
 #'                 data=sim_data,
 #'                 nres = 2,
 #'                 regular = 6,
@@ -72,7 +72,7 @@
 #'    geom_point(data = data.frame(sim_data),aes(x=x,y=z),size=3) +
 #'    geom_line(data=sim_process,aes(x=x,y=proc),col="red")
 #' print(g1)
-SRE <- function(f,data,basis,BAUs,est_error=TRUE,average_in_BAU = TRUE) {
+SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE) {
 
     .check_args(f=f,data=data,basis=basis,BAUs=BAUs,est_error=est_error)
     av_var <-all.vars(f)[1]
@@ -121,7 +121,9 @@ SRE <- function(f,data,basis,BAUs,est_error=TRUE,average_in_BAU = TRUE) {
 
         Vfs[[i]] <- tcrossprod(Cmat[[i]] %*% Diagonal(x=sqrt(BAUs$fs)))
 
+        print("Evaluating basis functions at observation locations...")
         S[[i]] <- eval_basis(basis, s = data_proc)
+        print("Done.")
         ## Note that S constructed in this way is similar to Cmat %*% S_BAUs where S_BAUs is the
         ## basis functions evaluated at the BAUs. Verify this by checking the following are similar
         ## S2 <- eval_basis(basis, s = BAUs)

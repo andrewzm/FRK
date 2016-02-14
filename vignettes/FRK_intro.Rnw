@@ -312,9 +312,9 @@ We now  assume that the unobserved field, $Y(\svec)$, is observed with $m$ footp
 
 Each $B_j \in D^O$ is either a BAU, or a union of BAUs. The measurement process is thus given by
 \begin{equation}
-Z_j \equiv Z(B_j) = \left(\frac{1}{|B_j|} \sum_{i : A_i \subset B_j}Y_i\right) + \epsilon_j; \quad B_j \in D^O, A_i \in D^L,
+Z_j \equiv Z(B_j) = \left(\frac{\sum_{i =1}^N Y_i |A_i|\mathbb{I}(A_i \subset B_j)}{\sum_{i=1}^N |A_i|\mathbb{I}(A_i \subset B_j)}\right) + \epsilon_j; \quad B_j \in D^O,
 \end{equation}
-where $\epsilon_j$ is Gaussian measurement error.  We assume that the observations are conditionally independent, when conditioned on $\Yvec$. Therefore $\{\epsilon_j: j = 1,\dots,m\}$, where $m \equiv |D^O|$ is the number of observations, are independent. If these errors are also identically distributed, then $\var(\epsilon_j), j = 1,\dots,m$ can in principle be estimated from the data (provided $\Vmat$ is not proportional to the identity matrix, since otherwise it is confounded with the fine-scale variation).
+where $\epsilon_j$ is Gaussian measurement error and $\mathbb{I}(\cdot)$ is the indicator function.  We assume that the observations are conditionally independent, when conditioned on $\Yvec$. Therefore $\{\epsilon_j: j = 1,\dots,m\}$, where $m \equiv |D^O|$ is the number of observations, are independent. If these errors are also identically distributed, then $\var(\epsilon_j), j = 1,\dots,m$ can in principle be estimated from the data (provided $\Vmat$ is not proportional to the identity matrix, since otherwise it is confounded with the fine-scale variation).
 
 Let $\Zvec \equiv (Z_j : j = 1,\dots,m)'$. Then, since each element in $D^O$ is the union of subsets of $D^L$, one can construct a matrix $\Cmat_Z$, the rows of which sum to one, such that
 \begin{equation}
@@ -387,10 +387,10 @@ ensure that we only deal with vectors of length $m$ and matrices of size $r \tim
 
 \subsection{Prediction} \label{sec:prediction}
 
-They key object of prediction is to estimate $Y(\svec)$ or $(Y(\svec) - \delta(\svec))$ (i.e., when one wishes to exclude the small-scale variation of the field) over $D^P$. Consider the process $Y_P(B_i)$, which, similar to the observations, is constructed using the BAUs $\{A_i: i = 1,\dots,N\}$:
+They key object of prediction is to estimate $Y(\svec)$ or $(Y(\svec) - \delta(\svec))$ (i.e., when one wishes to exclude the small-scale variation of the field) over $D^P$. Consider the process $Y_P(B_j)$, which, similar to the observations, is constructed using the BAUs $\{A_i: i = 1,\dots,N\}$:
 
 \begin{equation}
-Y_{P,i} \equiv Y_{P}(B_i) = \frac{1}{|B_i|} \sum_{i : A_i \subset B_i}Y_i, \quad B_i \in D^P.
+Y_{P,j} \equiv Y_{P}(B_j) = \left(\frac{\sum_{i =1}^N Y_i |A_i|\mathbb{I}(A_i \subset B_j)}{\sum_{i=1}^N |A_i|\mathbb{I}(A_i \subset B_j)}\right) + \epsilon_j; \quad B_j \in D^P,
 \end{equation}
 Let $\Yvec_P \equiv (Y_{P,i} : i = 1,\dots,N_P)'$, where $N_P$ is the number of prediction areas and is also equal to $|D^P|$. Then, since each element in $D^P$ is the union of subsets of $D^L$, one can construct a matrix $\Cmat_P$, the rows of which sum to one, such that
 \begin{equation}
@@ -490,7 +490,7 @@ plot(GridBAUs1,add=T)
 \noindent {\bf Step 3:} \tt{FRK} decomposes the spatial process as a sum of basis functions that may either be user-specified (see Section \ref{sec:custom_basis}) or constructed using helper functions. To create spatial basis functions we use the helper function \tt{auto\_basis} as follows:
 
 <<>>=
-G <- auto_basis(m = plane(),          # 2D plane
+G <- auto_basis(manifold = plane(),   # 2D plane
                 data=meuse,           # meuse data
                 nres = 2,             # number of resolutions
                 prune=5,              # prune threshold
@@ -567,7 +567,8 @@ g1 <- LinePlotTheme() +                          # Use a plain theme
     geom_polygon(data=BAUs_df ,                  # Draw BAUs
                  aes(x,y,fill=mu,group=id),      # Colour <-> Mean
                  colour="light grey") +          # Border is light grey
-    scale_fill_distiller(palette="Spectral")  +  # Spectral palette
+    scale_fill_distiller(palette="Spectral",     # Spectral palette
+                         name="pred.") +         # legend name
     geom_point(data=data.frame(meuse),           # Plot data
                aes(x,y,fill=log(zinc)),          # Colour <-> log(zinc)
                colour="black",                   # point outer colour
@@ -580,7 +581,8 @@ g2 <- LinePlotTheme() +                          # Similar to above but with s.e
                  aes(x,y,fill=sqrt(var),group=id),
                  colour="light grey") +
     scale_fill_distiller(palette="Spectral",
-                         trans="reverse",
+                         trans = "reverse",
+                         name = "s.e.",
                          guide = guide_legend(title="se")) +
     coord_fixed() +
     xlab("Easting (m)") + ylab("Northing (m)")
@@ -620,8 +622,7 @@ g1 <- LinePlotTheme() +
     geom_polygon(data=Pred_regions_df,
                  aes(x,y,fill=mu,group=id),
                  colour="light grey") +
-    scale_fill_distiller(palette="Spectral",
-                         trans="reverse") +
+    scale_fill_distiller(palette="Spectral",name="pred.") +
     geom_point(data=data.frame(meuse),
                aes(x,y,fill=log(zinc)),
                colour="black",
@@ -635,7 +636,7 @@ g2 <- LinePlotTheme() +
                  colour="light grey") +
     scale_fill_distiller(palette="Spectral",
                          trans="reverse",
-                         guide = guide_legend(title="se")) +
+                         guide = guide_legend(title="s.e.")) +
     coord_fixed() +
     xlab("Easting (m)") + ylab("Northing (m)")
 
@@ -685,12 +686,12 @@ isea3h_sp_poldf$fs = 1                                # fine-scale component
 \noindent {\bf Step 3:} Now we construct the basis functions, this time of type \tt{"bisquare"} with three resolutions. We supply the data and the argument \tt{prune} so that basis functions in regions where there are no data are omitted from the final set. We also introduce a new argument, \tt{subsamp}. This argument dictates how many data points (chosen at random) should be used when carrying out the pruning. In general, the higher \tt{nres}, the higher \tt{subsamp} should be in order to ensure that high resolution basis functions are not omitted where data is actually available. The argument \tt{subsamp} need only be used when pruning with the entire dataset consumes a lot of resources.
 
 <<eval=TRUE>>=
-G <- auto_basis(m = sphere(),       # basis functions on the sphere
-                data=AIRS_05_2003,  # AIRS data
-                nres = 3,           # number of resolutions
-                prune=15,           # prune threshold
-                type = "bisquare",  # bisquare function
-                subsamp = 20000)    # prune using 20000 data points (at random)
+G <- auto_basis(manifold = sphere(), # basis functions on the sphere
+                data=AIRS_05_2003,   # AIRS data
+                nres = 3,            # number of resolutions
+                prune=15,            # prune threshold
+                type = "bisquare",   # bisquare function
+                subsamp = 20000)     # prune using 20000 data points (at random)
 @
 
 
@@ -755,7 +756,7 @@ g1 <- (EmptyTheme() +
                               mumax)),
                       pch=46) +
            scale_colour_distiller(palette="Spectral",
-                                  guide_legend(title="co2")
+                                  guide_legend(title="co2 (ppm)")
            ) +
            coord_map("mollweide")) %>%
     draw_world(inc_border=TRUE) +
@@ -768,7 +769,7 @@ print(g1)
 g2 <- (EmptyTheme() +
            geom_polygon(data=X,
                         aes(lon,lat,fill=mu,group=id))+
-           scale_fill_distiller(palette="Spectral") +
+           scale_fill_distiller(palette="Spectral",name="pred. (ppm)") +
            coord_map("mollweide")) %>%
     draw_world(inc_border=TRUE)+
           xlab("lon (deg)") +
@@ -781,7 +782,7 @@ X$se <- pmin(sqrt(X$var),0.5)
 g3 <- (EmptyTheme() +
            geom_polygon(data=X,
                         aes(lon,lat,fill=se,group=id))+
-           scale_fill_distiller(palette="Spectral") +
+           scale_fill_distiller(palette="Spectral",name="s.e. (ppm)") +
            coord_map("mollweide")) %>%
     draw_world(inc_border=TRUE)+
           xlab("lon (deg)") +
@@ -815,7 +816,7 @@ Tmax <- subset(NOAA_df_1990,     # subset the data
               year == 1993)      # year of 1993
 @
 
-<<echo=FALSE,fig.height=4,fig.width=6,fig.cap="Station locations from which the maximum temperature readings in the \\tt{NOAA} dataset were obtained.\\label{fig:stat_locs}",out.width="0.6\\linewidth">>=
+<<echo=FALSE,fig.align="center",fig.height=4,fig.width=6,fig.cap="Station locations from which the maximum temperature readings in the \\tt{NOAA} dataset were obtained.\\label{fig:stat_locs}",out.width="0.6\\linewidth">>=
 (LinePlotTheme() + geom_point(data=Tmax,aes(lon,lat),size=0.5)) %>%
     draw_world() + coord_fixed(xlim = c(-115,-60), ylim = c(10,60))
 
@@ -861,7 +862,7 @@ grid_BAUs$fs = 1                       # fine-scale variation
 \noindent {\bf Step 3:} The simplest way to construct spatio-temporal basis functions is to first construct spatial basis functions, then temporal basis functions, and then combine them by taking their tensor product. To construct spatial basis functions, we first project the spatio-temporal data onto the spatial domain (collapse out time) using \tt{as(STObj,"Spatial")}, and then construct spatial basis function using \tt{auto\_basis}:
 
 <<>>=
-G_spatial <- auto_basis(m = plane(),                 # spatial functions on the plane
+G_spatial <- auto_basis(manifold = plane(),          # spatial functions on the plane
                         data=as(STObj,"Spatial"),    # remove the temporal dimension
                         nres = 3,                    # three resolutions
                         type = "bisquare")           # bisquare basis functions
@@ -940,7 +941,7 @@ LinePlotTheme() +                          # Similar to above but with s.e.
                colour="black",                   # point outer colour
                pch=21, size=3) +                 # size of point
     scale_fill_distiller(palette="Spectral",
-                         guide = guide_legend(title="se")) +
+                         guide = guide_legend(title="pred. (degF)")) +
     coord_fixed() +
     xlab("lon (deg)") + ylab("lat (deg)") +
     facet_wrap(~day)
@@ -953,7 +954,7 @@ LinePlotTheme() +                          # Similar to above but with s.e.
                  colour="light grey") +
       scale_fill_distiller(palette="Spectral",
                          trans="reverse",
-                         guide = guide_legend(title="se")) +
+                         guide = guide_legend(title="s.e. (degF)")) +
     coord_fixed() +
     xlab("lon (deg)") + ylab("lat (deg)") +
     facet_wrap(~day)
@@ -975,7 +976,7 @@ grid_BAUs <- auto_BAUs(manifold=STsphere(),       # spatio-temporal process on t
                        convex=-0.1,               # parameter for hull construction
                        tunit="days")              # time unit
 
- G_spatial <- auto_basis(m = sphere(),              # spatial functions on the plane
+ G_spatial <- auto_basis(manifold = sphere(),      # spatial functions on the plane
                         data=as(STObj,"Spatial"),  # remove the temporal dimension
                         nres = 6,                  # six resolutions of DGG
                         type = "bisquare",         # bisquare basis functions
@@ -1078,7 +1079,7 @@ ggplot(X2) +
 \noindent {\bf Step 3:} We next construct the spatio-temporal basis functions. This proceeds in exactly the same way as in the \tt{NOAA} dataset: We first construct spatial basis functions, then temporal basis functions, and then we find their tensor product:
 
 <<eval=TRUE>>=
-G_spatial <- auto_basis(m = sphere(),             # functions on sphere
+G_spatial <- auto_basis(manifold = sphere(),      # functions on sphere
                         data=as(STObj,"Spatial"), # collapse time out
                         nres = 3,                 # use three DGGRID resolutions
                         prune=15,                 # prune basis functions
@@ -1139,7 +1140,7 @@ g1 <- (EmptyTheme() +
                       pch=46) +
            facet_grid(~t)+
            scale_colour_distiller(palette="Spectral",
-                                  guide_legend(title="co2")) +
+                                  guide_legend(title="co2 (ppm)")) +
            coord_map("mollweide") +
             xlab("lon (deg)") +
             ylab("lat (deg)")) %>%
@@ -1152,7 +1153,7 @@ print(g1)
 g2 <-  (EmptyTheme() +
             geom_polygon(data=filter(X,(t %in% c(4,8,12)) & abs(lon) < 175),
                          aes(lon,lat,fill=mu,group=id))+
-           scale_fill_distiller(palette="Spectral") +
+           scale_fill_distiller(palette="Spectral",name="pred. (ppm)") +
            coord_map("mollweide") +
            facet_grid(~t) +
             xlab("lon (deg)") +
@@ -1168,7 +1169,7 @@ X$se <- pmin(sqrt(X$var),0.7)
 g3 <-  (EmptyTheme() +
             geom_polygon(data=filter(X,(t %in% c(4,8,12)) & abs(lon) < 175),
                          aes(lon,lat,fill=se,group=id))+
-           scale_fill_distiller(palette="Spectral") +
+           scale_fill_distiller(palette="Spectral",name="s.e. (ppm)") +
            coord_map("mollweide") +
            facet_grid(~t) +
             xlab("lon (deg)") +
@@ -1220,7 +1221,7 @@ coordinates(meuse) = ~x + y
 @
 
 
-<<message=FALSE,echo=FALSE,cache=FALSE,results='hide'>>=
+<<message=FALSE,echo=FALSE,cache=FALSE,results='hide',warning=FALSE>>=
 set.seed(1)
 GridBAUs2 <- auto_BAUs(manifold = plane(),     # 2D plane
                      cellsize = c(100,100),   # BAU cellsize
@@ -1228,7 +1229,7 @@ GridBAUs2 <- auto_BAUs(manifold = plane(),     # 2D plane
                      data = meuse,            # data around which to create BAUs
                      convex=-0.05)            # border buffer factor
 GridBAUs2$fs <- 1   # fine-scale variation at BAU level
-G <- auto_basis(m = plane(),          # 2D plane
+G <- auto_basis(manifold = plane(),   # 2D plane
                 data=meuse,           # meuse data
                 nres = 2,             # number of resolutions
                 prune=5,              # prune threshold
@@ -1254,7 +1255,7 @@ g1 <- LinePlotTheme() +                          # Use a plain theme
     geom_polygon(data=BAUs_df ,                  # Draw BAUs
                  aes(x,y,fill=mu,group=id),      # Colour <-> Mean
                  colour="light grey") +          # Border is light grey
-    scale_fill_distiller(palette="Spectral")  +  # Spectral palette
+    scale_fill_distiller(palette="Spectral",name="pred.")  +  # Spectral palette
     coord_fixed() +                              # fix aspect ratio
     xlab("Easting (m)") + ylab("Northing (m)")   # axes labels
 
@@ -1264,7 +1265,7 @@ g2 <- LinePlotTheme() +                          # Similar to above but with s.e
                  colour="light grey") +
     scale_fill_distiller(palette="Spectral",
                          trans="reverse",
-                         guide = guide_legend(title="se")) +
+                         guide = guide_legend(title="s.e.")) +
     coord_fixed() +
     xlab("Easting (m)") + ylab("Northing (m)") +
     geom_path(data=Obs_df,
@@ -1301,9 +1302,10 @@ plot(g2)
 
  <<echo=FALSE,eval=TRUE,fig.cap="FRK with anisotropic fields. (a) Simulated process. (b) Observed data. \\label{fig:aniso1}",fig.width=6,fig.height=5,out.width="0.5\\linewidth",fig.subcap=c('',''),fig.pos="t">>=
   g1 <-LinePlotTheme() +
-      scale_fill_distiller(palette="Spectral") +
+      scale_fill_distiller(palette="Spectral",name="Y") +
       geom_tile(data=sim_process,aes(x,y,fill=proc))+
-      coord_fixed(xlim=c(0,1),ylim=c(0,1))
+      coord_fixed(xlim=c(0,1),ylim=c(0,1)) +
+       xlab(expression(s[1])) + ylab(expression(s[2]))
 
  g2 <- LinePlotTheme() +
      scale_fill_distiller(palette="Spectral") +
@@ -1311,7 +1313,8 @@ plot(g2)
                 aes(x,y,fill=z),
                 colour="black",
                 pch=21, size=2) +
-     coord_fixed(xlim=c(0,1),ylim=c(0,1))
+     coord_fixed(xlim=c(0,1),ylim=c(0,1)) +
+       xlab(expression(s[1])) + ylab(expression(s[2]))
 
    print(g1)
    print(g2)
@@ -1352,7 +1355,8 @@ sim_process$S <- S[,23]
 LinePlotTheme() +
     geom_tile(data=sim_process,aes(x,y,fill=S)) +
     coord_fixed() + scale_fill_distiller(palette = "Spectral",guide =
-                                            guide_legend(title=expression(phi[23])))
+                                            guide_legend(title=expression(phi[23](s)))) +
+       xlab(expression(s[1])) + ylab(expression(s[2]))
 @
 
 From here on, the analysis proceeds in exactly the same way as shown in all the other examples. The prediction and prediction standard error are shown in Fig.~\ref{fig:aniso2}.
@@ -1388,14 +1392,16 @@ From here on, the analysis proceeds in exactly the same way as shown in all the 
   X$se <- sqrt(X$var)
 
 g1 <-LinePlotTheme() +
-     scale_fill_distiller(palette="Spectral") +
+     scale_fill_distiller(palette="Spectral",name = "pred.") +
      geom_polygon(data=X,aes(x,y,fill=mu,group=id))+
-     coord_fixed(xlim=c(0,1),ylim=c(0,1))
+     coord_fixed(xlim=c(0,1),ylim=c(0,1)) +
+       xlab(expression(s[1])) + ylab(expression(s[2]))
 
 g2 <-LinePlotTheme() +
-     scale_fill_distiller(palette="Spectral") +
+     scale_fill_distiller(palette="Spectral",name ="s.e.") +
      geom_polygon(data=X,aes(x,y,fill=se,group=id))+
-     coord_fixed(xlim=c(0,1),ylim=c(0,1))
+     coord_fixed(xlim=c(0,1),ylim=c(0,1)) +
+       xlab(expression(s[1])) + ylab(expression(s[2]))
 
 @
 

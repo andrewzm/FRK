@@ -33,7 +33,7 @@ space <- sim_data[,c("lon","lat")]
 coordinates(space) = ~lon+lat # change into an sp object
 proj4string(space)=CRS("+proj=longlat +ellps=sphere")
 STobj <- STIDF(space,time,data=sim_data)
-G_spatial <- auto_basis(m = sphere(),
+G_spatial <- auto_basis(manifold = sphere(),
                         data=as(STobj,"Spatial"),
                         nres = 1,
                         type = "bisquare",

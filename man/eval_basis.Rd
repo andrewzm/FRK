@@ -57,7 +57,7 @@ coordinates(d) <- ~lon + lat
 proj4string(d)=CRS("+proj=longlat")
 
 ### Now create basis functions on sphere
-G <- auto_basis(m = sphere(),data=d,
+G <- auto_basis(manifold = sphere(),data=d,
                 nres = 2,prune=15,
                 type = "bisquare",
                 subsamp = 20000)

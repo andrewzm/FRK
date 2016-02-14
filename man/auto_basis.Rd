@@ -4,11 +4,11 @@
 \alias{auto_basis}
 \title{Automatic basis-function placement}
 \usage{
-auto_basis(m = plane(), data, regular = 1, nres = 2, prune = 0,
+auto_basis(manifold = plane(), data, regular = 1, nres = 2, prune = 0,
   subsamp = 10000, type = "Gaussian", isea3h_lo = 0)
 }
 \arguments{
-\item{m}{object of class \code{manifold}, for example, \code{sphere} or \code{plane}}
+\item{manifold}{object of class \code{manifold}, for example, \code{sphere} or \code{plane}}
 
 \item{data}{object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame} containing the data on which basis-function placement is based, see details}
 
@@ -61,7 +61,7 @@ coordinates(d) <- ~lon + lat
 proj4string(d)=CRS("+proj=longlat +ellps=sphere")
 
 ### Now create basis functions over sphere
-G <- auto_basis(m = sphere(),data=d,
+G <- auto_basis(manifold = sphere(),data=d,
                 nres = 2,prune=15,
                 type = "bisquare",
                 subsamp = 20000)

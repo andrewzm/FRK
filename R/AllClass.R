@@ -95,7 +95,7 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @keywords Spatial random effects, fixed rank kriging
 setClass("SRE",representation(data="list",
                               basis="Basis_obj",
-                              BAUs="ANY",     # should be SpatialPolygonsDataFrame of STFDF
+                              BAUs="ANY",     # should be SpatialPolygonsDataFrame or STFDF
                               f = "formula",
                               S = "Matrix",
                               Ve = "Matrix",
