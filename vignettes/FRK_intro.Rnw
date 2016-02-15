@@ -545,11 +545,12 @@ S <- SRE.fit(SRE_model = S,    # SRE model
 
 \vspace{0.1in}
 
-\noindent {\bf Step 6:} Finally, we predict at all the BAUs with the fitted model. This is done using the function \tt{SRE.predict}. The argument \tt{use\_centroid} dictates whether we invoke the approximation \eqref{eq:Sapprox} or not, see \tt{help(SRE.predict)} for details.
+\noindent {\bf Step 6:} Finally, we predict at all the BAUs with the fitted model. This is done using the function \tt{SRE.predict}. The argument \tt{use\_centroid} dictates whether we invoke the approximation \eqref{eq:Sapprox} or not, see \tt{help(SRE.predict)} for details. The argument \tt{obs\_fs} dictates whether we attribute the fine-scale variation to the process model or the observation model. Below, we allocate it to the process model.
 
 <<>>=
 GridBAUs1 <- SRE.predict(SRE_model = S,          # SRE model
-                        use_centroid = TRUE)    # use centroid as point reference
+                        use_centroid = TRUE,     # use centroid as point reference
+                        obs_fs = FALSE)
 @
 
 \noindent The object \tt{GridBAUs1} now contains the prediction vector and the square of the prediction standard error at the BAU level in the fields \tt{mu} and \tt{var}, respectively. These can be plotted using the standard plotting commands, such as those in \tt{sp} or \tt{ggplot2}. To use the latter, we first need to convert the \tt{Spatial} object to a data frame as follows:
@@ -609,7 +610,8 @@ Pred_regions <- auto_BAUs(manifold = plane(),      # model on the 2D plane
 <<>>=
 Pred_regions <- SRE.predict(SRE_model = S,                # SRE model
                             use_centroid = TRUE,          # treat BAUs as points
-                            pred_polys = Pred_regions)    # prediction polygons
+                            pred_polys = Pred_regions,    # prediction polygons
+                            obs_fs = FALSE)
 @
 
 \noindent The prediction and its standard error can be visualised as before. These plots are shown in Fig.~\ref{fig:PredictionPolygon}.
@@ -675,10 +677,11 @@ proj4string(AIRS_05_2003) =
 
 
 <<eval=TRUE>>=
-isea3h_sp_poldf <- auto_BAUs(manifold   = sphere(),   # model on sphere
-                             isea3h_res = 6,          # isea3h resolution 6 BAUs
-                             type = "hex")            # hexagonal grid
-isea3h_sp_poldf$fs = 1                                # fine-scale component
+isea3h_sp_poldf <- auto_BAUs(manifold   = sphere(),  # model on sphere
+                             isea3h_res = 6,         # isea3h resolution 6 BAUs
+                             type = "hex",           # hexagonal grid
+                             data = AIRS_05_2003)    # remove BAUs where there is not data
+isea3h_sp_poldf$fs = 1                               # fine-scale component
 @
 
 \vspace{0.1in}
@@ -688,7 +691,7 @@ isea3h_sp_poldf$fs = 1                                # fine-scale component
 <<eval=TRUE>>=
 G <- auto_basis(manifold = sphere(), # basis functions on the sphere
                 data=AIRS_05_2003,   # AIRS data
-                nres = 3,            # number of resolutions
+                nres = 5,            # number of resolutions
                 prune=15,            # prune threshold
                 type = "bisquare",   # bisquare function
                 subsamp = 20000)     # prune using 20000 data points (at random)
@@ -710,7 +713,7 @@ show_basis(G,draw_world()) +
 
 \vspace{0.1in}
 
-\noindent {\bf Steps 4--5:} Since CO$_2$ mole fraction has a latitudinal gradient, we use latitude as a covariate in our model. The SRE object is then constructed in the same way as Section \ref{sec:meuse}, but this time we set \tt{est\_error = FALSE} since the measurement error is supplied with the data. When multiple data points fall into the same BAU, we assume that each of these data points are conditionally independent readings of the process in the BAU. The matrix $\Vmat_Z$ is therefore not diagonal and this increases computational time considerably. For large point-referenced datasets, such as the \tt{AIRS} dataset, one can leave the argument \tt{average\_in\_BAU = TRUE} set (by default) to indicate that one wishes to summarise the data at the BAU level. Below, and in all subsequent analyses, we set the maximum number of EM iterations \tt{n\_EM = 2} so as to reduce the computational time of the vignette:
+\noindent {\bf Steps 4--5:} Since CO$_2$ mole fraction has a latitudinal gradient, we use latitude as a covariate in our model. The SRE object is then constructed in the same way as Section \ref{sec:meuse}, but this time we set \tt{est\_error = FALSE} since the measurement error is supplied with the data. When multiple data points fall into the same BAU, we assume that each of these data points are conditionally independent readings of the process in the BAU. The matrix $\Vmat_Z$ is therefore not diagonal and this increases computational time considerably. For large point-referenced datasets, such as the \tt{AIRS} dataset, one can leave the argument \tt{average\_in\_BAU = TRUE} set (by default) to indicate that one wishes to summarise the data at the BAU level. Below, and in all subsequent analyses, we set the maximum number of EM iterations \tt{n\_EM = 4} so as to reduce the computational time of the vignette:
 
 <<cache=FALSE,eval=TRUE>>=
 f <- co2avgret ~ lat + 1         # formula for fixed effects
@@ -722,7 +725,7 @@ S <- SRE(f = f,                  # formula for fixed effects
          average_in_BAU = TRUE)  # summarise data
 
 S <- SRE.fit(SRE_model = S,    # SRE model
-             n_EM = 2,       # max. no. of EM iterations
+             n_EM = 4,         # max. no. of EM iterations
              tol = 0.01,       # tolerance at which EM is assumed to have converged
              print_lik=FALSE)  # do not print log-likelihood at each iteration
 @
@@ -734,7 +737,7 @@ S <- SRE.fit(SRE_model = S,    # SRE model
 <<eval=TRUE>>=
 isea3h_sp_poldf <- SRE.predict(SRE_model = S,          # SRE model
                                use_centroid = TRUE,    # use centroid as point reference
-                               include_fs = FALSE)     # do not predict fs-variation
+                               obs_fs = TRUE)          # fs variation is in the observation model
 @
 
 The prediction and prediction standard error maps, together with the observation data, are shown in Figs.~\ref{fig:AIRSresults1}--\ref{fig:AIRSresults3}.
@@ -778,7 +781,7 @@ print(g2)
 @
 
 <<echo=FALSE,fig.keep=TRUE,fig.width=7,fig.height=3.5,out.width="\\linewidth",fig.pos="t!",fig.cap="Prediction standard error of $(\\Yvec_P - \\deltab_P)$ in ppm following FRK on the \\tt{AIRS} data.\\label{fig:AIRSresults3}",fig.align="centre">>=
-X$se <- pmin(sqrt(X$var),0.5)
+X$se <- pmax(sqrt(X$var),0.9)
 g3 <- (EmptyTheme() +
            geom_polygon(data=X,
                         aes(lon,lat,fill=se,group=id))+
@@ -910,7 +913,7 @@ G <- TensorP(G_spatial,G_temporal)         # take the tensor product
           est_error = FALSE)      # do not estimate measurement-error variance
 
  S <- SRE.fit(SRE_model = S,    # estimate parameters in the SRE model S
-             n_EM = 2,        # maximum no. of EM iterations
+             n_EM = 4,        # maximum no. of EM iterations
              tol = 0.1,         # tolerance on log-likelihood
              print_lik=FALSE)   # print log-likelihood trace
 
@@ -1107,13 +1110,13 @@ S <- SRE(f = f,                   # formula
          average_in_BAU = TRUE)   # average data that fall inside BAUs
 
 S <- SRE.fit(SRE_model = S,       # SRE model
-             n_EM = 2,          # max. EM iterations
+             n_EM = 4,          # max. EM iterations
              tol = 0.01)          # convergence criteria
 
-grid_BAUs <- SRE.predict(SRE_model = S,          # SRE model
-                         use_centroid = TRUE,    # Assume BAUs are points
-                         include_fs = FALSE,     # do not include fs variation in pred.
-                         pred_time = c(4,8,12))  # predict only at select days
+grid_BAUs <- SRE.predict(SRE_model = S,         # SRE model
+                         use_centroid = TRUE,   # Assume BAUs are points
+                         obs_fs = TRUE,         # fs variation is in obs. model
+                         pred_time = c(4,8,12)) # predict only at select days
 @
 
 <<echo=FALSE,message=FALSE,results='hide'>>=
@@ -1165,7 +1168,7 @@ print(g2)
 
 <<echo=FALSE, fig.keep=TRUE,fig.cap="Prediction standard error of $(\\Yvec_P - \\deltab_P)$ in ppm on 04, 08 and 12 May 2003 obtained with \\tt{FRK} on the \\tt{AIRS} data. \\label{fig:FRK_AIRS_ST3}",fig.align="center",out.width="\\linewidth",fig.height=3,fig.width=16,fig.pos="t!">>=
 
-X$se <- pmin(sqrt(X$var),0.7)
+X$se <- pmin(sqrt(X$var),1.3)
 g3 <-  (EmptyTheme() +
             geom_polygon(data=filter(X,(t %in% c(4,8,12)) & abs(lon) < 175),
                          aes(lon,lat,fill=se,group=id))+
@@ -1242,11 +1245,12 @@ S <- SRE(f = f,                # formula
          basis = G,            # basis functions
          est_error=TRUE)       # estimation measurement error
 S <- SRE.fit(SRE_model = S,    # SRE model
-             n_EM = 2,       # max. no. of EM iterations
+             n_EM = 4,       # max. no. of EM iterations
              tol = 0.01,       # tolerance at which EM is assumed to have converged
              print_lik=FALSE)   # print log-likelihood at each iteration
 GridBAUs2 <- SRE.predict(SRE_model = S,          # SRE model
-                        use_centroid = TRUE)    # use centroid as point reference
+                        use_centroid = TRUE,    # use centroid as point reference
+                        obs_fs = FALSE)
 BAUs_df <- SpatialPolygonsDataFrame_to_df(sp_polys = GridBAUs2,   # BAUs to convert
                                           vars = c("mu","var"))  # fields to extract
 Obs_df <- SpatialPolygonsDataFrame_to_df(sp_polys = meuse_pols,   # BAUs to convert
@@ -1379,11 +1383,12 @@ From here on, the analysis proceeds in exactly the same way as shown in all the 
            average_in_BAU = FALSE)
 
    S <- SRE.fit(SRE_model = S,
-               n_EM = 2,
+               n_EM = 4,
                tol = 0.01)
 
    grid_BAUs <- SRE.predict(SRE_model = S,
-                           use_centroid = TRUE)
+                           use_centroid = TRUE,
+                           obs_fs = FALSE)
 
     X <- SpatialPolygonsDataFrame_to_df(sp_polys = grid_BAUs,
                                       vars = c("mu","var")) %>%

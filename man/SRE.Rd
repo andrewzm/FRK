@@ -11,7 +11,7 @@ SRE(f, data, basis, BAUs, est_error = FALSE, average_in_BAU = TRUE)
 SRE.fit(SRE_model, n_EM = 100L, tol = 1e-05, method = "EM",
   print_lik = FALSE)
 
-SRE.predict(SRE_model, use_centroid = TRUE, include_fs = TRUE,
+SRE.predict(SRE_model, use_centroid = TRUE, obs_fs = TRUE,
   pred_polys = NULL, pred_time = NULL)
 }
 \arguments{
@@ -39,7 +39,7 @@ SRE.predict(SRE_model, use_centroid = TRUE, include_fs = TRUE,
 
 \item{use_centroid}{flag indicating whether the basis functions are averaged over the BAU, or whether the basis functions are evaluated at the BAUs centroid in order to construct the matrix \eqn{S}. The flag can safely be set when the basis functions are approximately constant over the BAUs in order to reduce computational time}
 
-\item{include_fs}{flag indicating whether to assume prediction locations coincide with observations in BAUs (where applicable) or not}
+\item{obs_fs}{flag indicating whether the fine-scale variation sits in the observation model (systematic error) or in the process model (process fine-scale variation)}
 
 \item{pred_polys}{object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified}
 

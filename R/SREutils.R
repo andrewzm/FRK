@@ -12,7 +12,7 @@
 #' @param method parameter estimation method to employ. Currently only ``EM'' is supported
 #' @param print_lik flag indicating whether likelihood should be printed or not on convergence of the estimation algorithm
 #' @param use_centroid flag indicating whether the basis functions are averaged over the BAU, or whether the basis functions are evaluated at the BAUs centroid in order to construct the matrix \eqn{S}. The flag can safely be set when the basis functions are approximately constant over the BAUs in order to reduce computational time
-#' @param include_fs flag indicating whether to assume prediction locations coincide with observations in BAUs (where applicable) or not
+#' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error) or in the process model (process fine-scale variation)
 #' @param pred_polys object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified
 #' @param pred_time vector of time indices at which we wish to predict. All time points are used if this option is not specified
 #' @details \code{SRE()} is the main function in the package as it constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of Basic Areal Units (BAUs). The function first takes each object in the list \code{data} and maps it to the BAUs -- this entails binning the point-referenced data into BAUs (and averaging within the BAU) if \code{average_in_BAU = TRUE}, and finding which BAUs are influenced by the polygon datasets. Following this, the incidence matrix \code{Cmat} is constructed, which appears in the observation model \eqn{Z = CY + e}, where \eqn{C} is the incidence matrix.
@@ -124,6 +124,14 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE) {
         print("Evaluating basis functions at observation locations...")
         S[[i]] <- eval_basis(basis, s = data_proc)
         print("Done.")
+
+        ## Still in development:
+        # print("Normalising basis function evaluations at BAUs ...")
+        # S0 <- eval_basis(basis,as.matrix(BAUs[coordnames(Sm@data[[1]])]@data))
+        # xx <- sqrt(rowSums((S0) * S0))
+        # S[[i]] <- S[[i]] / (Cmat[[i]] %*% xx %>% as.numeric())
+        # print("Done ...")
+
         ## Note that S constructed in this way is similar to Cmat %*% S_BAUs where S_BAUs is the
         ## basis functions evaluated at the BAUs. Verify this by checking the following are similar
         ## S2 <- eval_basis(basis, s = BAUs)
@@ -382,7 +390,7 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM", print_lik=FA
 
 #' @rdname SRE
 #' @export
-SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE,pred_polys = NULL,pred_time = NULL) {
+SRE.predict <- function(SRE_model,use_centroid=TRUE,obs_fs=TRUE,pred_polys = NULL,pred_time = NULL) {
 
 
      if(is(pred_polys,"Spatial") & !(is(pred_polys,"SpatialPolygons")))
@@ -394,7 +402,7 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE,pred_polys =
 
     pred_locs <- .SRE.predict(Sm=SRE_model,
                               use_centroid=use_centroid,
-                              include_fs=include_fs,
+                              obs_fs=obs_fs,
                               pred_polys = pred_polys,
                               pred_time = pred_time)
 
@@ -409,7 +417,7 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE,pred_polys =
     pred_locs
 }
 
-.SRE.predict <- function(Sm,use_centroid,include_fs = TRUE,pred_polys = NULL,pred_time = NULL) {
+.SRE.predict <- function(Sm,use_centroid,obs_fs = TRUE,pred_polys = NULL,pred_time = NULL) {
 
     if(!is.null(pred_polys))
         if(is(Sm@BAUs,"ST"))
@@ -447,12 +455,12 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE,pred_polys =
         CZ <- CZ[,needed_BAUs]
     }
 
-    if(is(BAUs,"ST")){
-        needed_BAUs <- BAUs[,pred_time]$n
-        BAUs <- BAUs[,pred_time]
-        CP <- CP[,needed_BAUs]
-        CZ <- CZ[,needed_BAUs]
-    }
+    # if(is(BAUs,"ST")){
+    #     needed_BAUs <- BAUs[,pred_time]$n
+    #     BAUs <- BAUs[,pred_time]
+    #     CP <- CP[,needed_BAUs]
+    #     CZ <- CZ[,needed_BAUs]
+    # }
 
     depname <- all.vars(Sm@f)[1]
     BAUs[[depname]] <- 0.1
@@ -471,13 +479,21 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE,pred_polys =
             stop("Can only use centroid when predicting with spatio-temporal data")
         }
     }
+
+    ## Still in development:
+    # print("Normalising basis function evaluations at BAUs ...")
+    # xx <- sqrt(rowSums((S0) * S0))
+    # S0 <- S0/xx
+    # print("Done ...")
+
     BAUs[[depname]] <- NULL
 
     alpha <- Sm@alphahat
     K <- Sm@Khat
     sigma2fs <- Sm@sigma2fshat
     D <- sigma2fs*Sm@Vfs + Sm@Ve
-    Dinv <- chol2inv(chol(D))
+    Dchol <- chol(D)
+    Dinv <- chol2inv(Dchol)
     mu_eta <- Sm@mu_eta
     S_eta <- Sm@S_eta
 
@@ -489,8 +505,7 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE,pred_polys =
         idx <- match(BAUs@data$n,Sm@BAUs@data$n)
     }
 
-
-    if(include_fs) {
+    if(!obs_fs) {
         if(sigma2fs >0) {
             LAMBDA <- as(bdiag(Sm@Khat,sig2_Vfs_pred),"symmetricMatrix")
             LAMBDAinv <- chol2inv(chol(LAMBDA))  #block diagonal so straightforward
@@ -540,16 +555,35 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,include_fs=TRUE,pred_polys =
         BAUs[["var"]] <- temp
     }
 
-    if(!include_fs) {
-        BAUs[["mu"]] <- as.numeric(X %*% alpha + S0 %*% mu_eta)
-        BAUs[["var"]] <- rowSums((S0 %*% S_eta) * S0)
+    if(obs_fs) {
+
+        Qx <- crossprod(t(solve(Dchol)) %*% (Sm@S %>% as("dgCMatrix")))
+        temp <- cholPermute(Qx)
+        ybar <- t(Sm@S) %*% Dinv %*% (Sm@Z - CZ %*% X %*% alpha)
+        x_mean <- cholsolve(Qx,ybar,perm=TRUE,cholQp = temp$Qpermchol, P = temp$P)
+        if(predict_BAUs) {
+            Cov <- Takahashi_Davis(Qx,cholQp = temp$Qpermchol,P = temp$P) # PARTIAL
+        } else {
+            Cov <- cholsolve(Qx,Diagonal(nrow(Qx)),perm=TRUE,
+                             cholQp = temp$Qpermchol, P = temp$P) # FULL
+        }
+        BAUs[["mu"]] <- as.numeric(X %*% alpha + S0 %*% x_mean)
+        BAUs[["var"]] <- rowSums((S0 %*% Cov) * S0)
     }
 
     if(predict_BAUs) {
-        BAUs
+        if(!is.null(pred_time)) {
+            BAUs[,pred_time]
+        } else {
+            BAUs
+        }
     } else {
         pred_polys[["mu"]] <- as.numeric(CP %*% BAUs[["mu"]])
-        pred_polys[["var"]] <- diag2(CP %*% PI %*% Cov, t(PI) %*% t(CP))
+        if(!obs_fs) {
+            pred_polys[["var"]] <- diag2(CP %*% PI %*% Cov, t(PI) %*% t(CP))
+        } else {
+            pred_polys[["var"]] <- diag2(CP %*% S0 %*% Cov, t(S0) %*% t(CP))
+        }
         pred_polys
     }
 
@@ -574,7 +608,7 @@ setMethod("summary",signature(object="SRE"),
               cat("\n")
               cat(paste0("Mean obs. variance at BAU level [extract using object@Ve]: ",mean(object@Ve@x)))
               cat("\n")
-              cat(paste0("Fine-scale variatinal proportionality constant [extract using object@sigma2fshat]: ",object@sigma2fshat))
+              cat(paste0("Fine-scale variance proportionality constant [extract using object@sigma2fshat]: ",object@sigma2fshat))
               cat("\n")
               cat(paste0("Dimensions of C in Z = C*Y + e [extract using object@Cmat]: ",deparse(dim(object@Cmat))))
               cat("\n")
