@@ -34,9 +34,12 @@ test_that("SRE 1D works",{
     S <- SRE.fit(S,n_EM = 3,tol = 1e-5,print_lik=FALSE)
     expect_is(S,"SRE")
 
-    ### Predict over BAUs
+    ### Predict over BAUs using both modes
     grid_BAUs <- SRE.predict(S,use_centroid = TRUE)
     expect_is(grid_BAUs,"SpatialPolygonsDataFrame")
+    grid_BAUs <- SRE.predict(S,use_centroid = TRUE,obs_fs = FALSE)
+    expect_is(grid_BAUs,"SpatialPolygonsDataFrame")
+
 
     ### summary works?
     expect_true({summary(S);TRUE})
@@ -82,6 +85,8 @@ test_that("SRE 2D plane works",{
     ### Predict over BAUs
     grid_BAUs <- SRE.predict(S,use_centroid = TRUE)
     expect_is(grid_BAUs,"SpatialPolygonsDataFrame")
+    grid_BAUs <- SRE.predict(S,use_centroid = TRUE,obs_fs = FALSE)
+    expect_is(grid_BAUs,"SpatialPolygonsDataFrame")
 
     ### summary works?
     expect_true({summary(S);TRUE})
@@ -126,7 +131,10 @@ test_that("SRE sphere works",{
 
     ### Predict over BAUs
     grid_BAUs <- SRE.predict(S,use_centroid = TRUE)
+    expect_is(grid_BAUs,"SpatialPolygonsDataFrame")
     grid_BAUs <- SRE.predict(S,use_centroid = FALSE)
+    expect_is(grid_BAUs,"SpatialPolygonsDataFrame")
+    grid_BAUs <- SRE.predict(S,use_centroid = FALSE,obs_fs = FALSE)
     expect_is(grid_BAUs,"SpatialPolygonsDataFrame")
 
     ### summary works?
@@ -182,6 +190,8 @@ test_that("SRE space-time sphere works",{
 
     ### Predict over BAUs
     grid_BAUs <- SRE.predict(S,use_centroid = TRUE)
+    expect_is(grid_BAUs,"STFDF")
+    grid_BAUs <- SRE.predict(S,use_centroid = TRUE,obs_fs = FALSE)
     expect_is(grid_BAUs,"STFDF")
 
     ### summary works?
