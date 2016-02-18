@@ -120,6 +120,11 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE) {
         Cmat[[i]] <- Cmat[[i]] / rowSums(Cmat[[i]]) ## Average BAUs for polygon observations
 
         Vfs[[i]] <- tcrossprod(Cmat[[i]] %*% Diagonal(x=sqrt(BAUs$fs)))
+        # if(length(Cmat[[i]]@x) == nrow(Cmat[[i]]))  { # if point observations
+        #     Vfs[[i]] <- Diagonal(x = Cmat[[i]] %*% sqrt(BAUs$fs) %>% as.numeric())
+        # } else {
+        #     Vfs[[i]] <- Diagonal(x = rep(0,nrow(Cmat[[i]])))
+        # }
 
         print("Evaluating basis functions at observation locations...")
         S[[i]] <- eval_basis(basis, s = data_proc)
@@ -157,8 +162,12 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE) {
         Cmat = do.call("rBind",Cmat),
         mu_eta = Matrix(0,nbasis(basis),1),
         S_eta = Diagonal(x = rep(1,nbasis(basis))),
+        Q_eta = Diagonal(x = rep(1,nbasis(basis))),
         alphahat = solve(t(X) %*% X) %*% t(X) %*% Z,
         Khat = Diagonal(n=nbasis(basis),x = var(Z[,1])),
+        #Khat_inv = Diagonal(n=nbasis(basis),x = 1/var(Z[,1])),
+        #B_run = Diagonal(n=nbasis(basis),x = 1/var(Z[,1])),
+        #v_run = Matrix(0,nbasis(basis),nbasis(basis)),
         sigma2fshat = mean(diag(Ve)) / mean(diag(Vfs)))
 }
 
@@ -203,18 +212,40 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM", print_lik=FA
     K <- Sm@Khat
     sigma2fs <- Sm@sigma2fshat
 
+
     D <- sigma2fs*Sm@Vfs + Sm@Ve
-    cholD <- Matrix::chol(D)
-    cholDinv <- solve(cholD)
-    Dinv <- chol2inv(chol(D))
+    if(is(D,"dtCMatrix")) {
+        cholD <- sqrt(D)
+        cholDinv <- solve(cholD)
+        Dinv <- solve(D)
+    } else {
+        cholD <- Matrix::chol(D)
+        cholDinv <- solve(cholD)
+        Dinv <- chol2inv(chol(D))
+    }
+
+
     Kinv <- chol2inv(chol(K))
 
     # Deprecated: S_eta <- chol2inv(chol(crossprod(sqrt(Dinv) %*% Sm@S) + Kinv))
     S_eta <- chol2inv(chol(crossprod(t(cholDinv) %*% Sm@S) + Kinv))
     mu_eta <- S_eta %*% (t(Sm@S) %*% Dinv %*% (Sm@Z - Sm@X %*% alpha))
 
+
+    # Sm@B_run <- Sm@B_run +  crossprod(t(cholDinv) %*% Sm@S)
+    # Q_eta2 <- crossprod(t(cholDinv) %*% Sm@S) + Kinv
+    # Q_eta <- Sm@B_run - Sm@v_run
+    # mu_eta2 <- solve(Q_eta,(t(Sm@S) %*% Dinv %*% (Sm@Z - Sm@X %*% alpha)))
+    # muQ <- Q_eta %*% mu_eta
+    # c <- (1 + t(mu_eta) %*% muQ) %>% as.numeric()
+    # v <- tcrossprod(muQ,muQ)
+    # Sm@v_run <- Sm@v_run + 1/c * v
+
+
+
     Sm@mu_eta <- mu_eta
     Sm@S_eta <- S_eta
+    # Sm@Q_eta <- Q_eta
 
     Sm
 }
@@ -229,6 +260,7 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM", print_lik=FA
     sigma2fs_init <- Sm@sigma2fshat
 
     K <- S_eta + tcrossprod(mu_eta)
+
     alpha <- alpha_init
     sigma2fs <- sigma2fs_init
 
@@ -285,7 +317,11 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM", print_lik=FA
                 return(Inf)
             } else {
                 D <- sigma2fs*Sm@Vfs + Sm@Ve
-                Dinv <- chol2inv(chol(D))
+                if(is(D,"dtCMatrix")) {
+                    Dinv <- solve(D)
+                } else {
+                    Dinv <- chol2inv(chol(D))
+                }
                 DinvV <- Dinv %*% Sm@Vfs
 
                 alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*% (Sm@Z - Sm@S %*% mu_eta)
@@ -323,7 +359,11 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM", print_lik=FA
         sigma2fs_new <- uniroot(f = J,
                                 interval = c(sigma2fs/amp_factor,sigma2fs*amp_factor))$root
         D <- sigma2fs_new*Sm@Vfs + Sm@Ve
-        Dinv <- chol2inv(chol(D))
+        if(is(D,"dtCMatrix")) {
+            Dinv <- solve(D)
+        } else {
+            Dinv <- chol2inv(chol(D))
+        }
         alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*% (Sm@Z - Sm@S %*% mu_eta)
     } else {
 
@@ -358,8 +398,16 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM", print_lik=FA
     Kinv <- chol2inv(chol_K)
     resid <- Sm@Z - Sm@X %*% Sm@alphahat
     N <- length(Sm@Z)
-    cholD <- chol(D)
-    cholDinvT <- t(solve(cholD))
+
+    if(is(D,"dtCMatrix")) {
+        cholD <- sqrt(D)
+        cholDinvT <- solve(cholD)
+    } else {
+        cholD <- chol(D)
+        cholDinvT <- t(solve(cholD))
+    }
+
+
     S_Dinv_S <-  crossprod(cholDinvT %*% S)
 
 
@@ -492,8 +540,13 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,obs_fs=TRUE,pred_polys = NUL
     K <- Sm@Khat
     sigma2fs <- Sm@sigma2fshat
     D <- sigma2fs*Sm@Vfs + Sm@Ve
-    Dchol <- chol(D)
-    Dinv <- chol2inv(Dchol)
+    if(is(D,"dtCMatrix")) {
+        Dchol <- sqrt(D)
+        Dinv <- solve(D)
+    } else {
+        Dchol <- chol(D)
+        Dinv <- chol2inv(Dchol)
+    }
     mu_eta <- Sm@mu_eta
     S_eta <- Sm@S_eta
 
@@ -504,6 +557,8 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,obs_fs=TRUE,pred_polys = NUL
     } else if (is(BAUs,"STFDF")){
         idx <- match(BAUs@data$n,Sm@BAUs@data$n)
     }
+
+
 
     if(!obs_fs) {
         if(sigma2fs >0) {
@@ -557,7 +612,7 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,obs_fs=TRUE,pred_polys = NUL
 
     if(obs_fs) {
 
-        Qx <- crossprod(t(solve(Dchol)) %*% (Sm@S %>% as("dgCMatrix")))
+        Qx <- (crossprod(t(solve(Dchol)) %*% (Sm@S %>% as("dgCMatrix"))) + chol2inv(chol(K)) %>% as("dsCMatrix"))
         temp <- cholPermute(Qx)
         ybar <- t(Sm@S) %*% Dinv %*% (Sm@Z - CZ %*% X %*% alpha)
         x_mean <- cholsolve(Qx,ybar,perm=TRUE,cholQp = temp$Qpermchol, P = temp$P)
