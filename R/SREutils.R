@@ -162,7 +162,7 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE) {
         Cmat = do.call("rBind",Cmat),
         mu_eta = Matrix(0,nbasis(basis),1),
         S_eta = Diagonal(x = rep(1,nbasis(basis))),
-        Q_eta = Diagonal(x = rep(1,nbasis(basis))),
+        #Q_eta = Diagonal(x = rep(1,nbasis(basis))),
         alphahat = solve(t(X) %*% X) %*% t(X) %*% Z,
         Khat = Diagonal(n=nbasis(basis),x = var(Z[,1])),
         #Khat_inv = Diagonal(n=nbasis(basis),x = 1/var(Z[,1])),

@@ -90,6 +90,7 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot mu_eta updated expectation of random effects (estimated)
 #' @slot S_eta updated covariance matrix of random effects (estimated)
 #' @slot Khat prior covariance matrix of random effects (estimated)
+#' @slot Khat_inv prior covariance matrix of random effects (estimated)
 #' @slot alphahat covariates weights (estimated)
 #' @slot sigma2fshat fine-scale variation scaler (estimated)
 #' @keywords Spatial random effects, fixed rank kriging
@@ -105,6 +106,10 @@ setClass("SRE",representation(data="list",
                               X = "Matrix",
                               mu_eta = "Matrix",
                               S_eta = "Matrix",
+                              Q_eta = "Matrix",
                               Khat = "Matrix",
+                              #Khat_inv = "Matrix",
                               alphahat = "Matrix",
+                              #B_run = "Matrix",
+                              #v_run = "Matrix",
                               sigma2fshat = "numeric"))
