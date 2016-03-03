@@ -12,5 +12,5 @@ GLOBAL void AMD_order_wrapper
 ) {
 amd_defaults (Control) ;		
 amd_order(*n,Ap,Ai,P,Control,Info);
-return(NULL);
+return(0);
 }
