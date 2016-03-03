@@ -1,6 +1,6 @@
 #include "amd_internal.h"
 #include <R.h> 		 /* required  */
-#include <Rmath.h>  	 /* for distribution functions etc. */  
+#include <Rmath.h>  	 /* for distribution functions etc. */
 GLOBAL void AMD_order_wrapper
 (
     Int *n,
@@ -10,7 +10,7 @@ GLOBAL void AMD_order_wrapper
     double *Control,
     double *Info
 ) {
-amd_defaults (Control) ;		
+amd_defaults (Control) ;
 amd_order(*n,Ap,Ai,P,Control,Info);
-return(0);
+return;
 }
