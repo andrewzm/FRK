@@ -43,8 +43,10 @@ Imports:
     plyr,
     sp,
     spacetime,
+    Rcpp,
     digest
 License: GPL (>= 2.1)
 NeedsCompilation: yes
 LazyData: true
 RoxygenNote: 5.0.1
+LinkingTo: Rcpp
