@@ -102,3 +102,11 @@ test_that("Date sequencing works", {
     expect_is(tgrid,"POSIXct")
     expect_equal(length(tgrid),4L)
 })
+
+test_that("distR works", {
+  x <- matrix(rnorm(20),10,2)
+  y <- matrix(rnorm(20),10,2)
+  D1 <- distR(x,x)
+  D2 <- as.matrix(dist(x))
+  expect_true(all(D1 == D2))
+})

@@ -471,7 +471,7 @@ setMethod("initialize",signature="real_line",function(.Object,measure=Euclid_dis
 #' @export
 Euclid_dist <- function(dim=2L) {
     stopifnot(is.integer(dim))
-    new("measure",dist=function(x1,x2)  rdist(x1,x2), dim=dim)
+    new("measure",dist=function(x1,x2)  distR(x1,x2), dim=dim)
 }
 
 #' @rdname distances
@@ -485,7 +485,7 @@ gc_dist <- function(R=NULL) {
 gc_dist_time <- function(R=NULL) {
     new("measure",dist=function(x1,x2)  {
         spatdist <- rdist.earth(x1[,1:2,drop=FALSE],x2[,1:2,drop=FALSE],miles=F,R=R)
-        tdist <- rdist(x1[,3],x2[,3])
+        tdist <- distR(x1[,3],x2[,3])
         sqrt(spatdist^2 + tdist^2) } ,dim=3L)
 }
 
@@ -871,29 +871,42 @@ setMethod("coordnames",signature(x="STIDF"),function(x) {
     return(c(coordnames(x@sp),"t"))
 })
 
-
-## The functions rdist and rdist.earth were taken from the package fields
-## fields is lincensed under GPL >=2
-rdist <- function (x1, x2 = NULL, compact = FALSE)
-{
+distR <- function (x1, x2 = NULL)  {
     if (!is.matrix(x1)) {
         x1 <- as.matrix(x1)
     }
     if (is.null(x2)) {
-        storage.mode(x1) <- "double"
-        if (compact)
-            return(dist(x1))
-        else return(.Call("RdistC", x1, x1, PACKAGE = "FRK"))
+        x2 <- x1
     }
-    else {
-        if (!is.matrix(x2)) {
-            x2 <- as.matrix(x2)
-        }
-        storage.mode(x1) <- "double"
-        storage.mode(x2) <- "double"
-        return(.Call("RdistC", x1, x2))
+    if (!is.matrix(x2)) {
+        x2 <- as.matrix(x2)
     }
+    if(!(ncol(x1) == ncol(x2))) stop("x1 and x2 have to have same number of columns")
+    distR_C(x1,x2)
 }
+
+# ## The functions rdist and rdist.earth were taken from the package fields
+# ## fields is lincensed under GPL >=2
+# rdist <- function (x1, x2 = NULL, compact = FALSE)
+# {
+#     if (!is.matrix(x1)) {
+#         x1 <- as.matrix(x1)
+#     }
+#     if (is.null(x2)) {
+#         storage.mode(x1) <- "double"
+#         if (compact)
+#             return(dist(x1))
+#         else return(.Call("RdistC", x1, x1, PACKAGE = "FRK"))
+#     }
+#     else {
+#         if (!is.matrix(x2)) {
+#             x2 <- as.matrix(x2)
+#         }
+#         storage.mode(x1) <- "double"
+#         storage.mode(x2) <- "double"
+#         return(.Call("RdistC", x1, x2))
+#     }
+# }
 
 
 rdist.earth <- function (x1, x2 = NULL, miles = TRUE, R = NULL)
@@ -1047,3 +1060,72 @@ process_isea3h <- function(isea3h,resl) {
 
 }
 
+
+.prec_from_neighb <- function (neighb, intrinsic = 1, precinc = 1)
+{
+    num_v <- length(neighb)
+    num_neighb <- lapply(neighb, length)
+    if (intrinsic == 1) {
+        i_list <- vector("list", num_v)
+        for (k in 1:num_v) {
+            i_list[[k]] <- rep(k, num_neighb[[k]])
+        }
+        i <- unlist(i_list)
+        j <- unlist(neighb)
+        z <- rep(-1, length(j))
+        i <- c(i, 1:num_v)
+        j <- c(j, 1:num_v)
+        zdiag <- unlist(num_neighb)
+        z <- c(z, zdiag)
+    }
+    if (intrinsic == 2) {
+        i1 <- 1:num_v
+        j1 <- 1:num_v
+        z1 <- rep(0, num_v)
+        for (k in 1:num_v) {
+            z1[k] <- num_neighb[[k]]^2 + num_neighb[[k]]
+        }
+        count <- 1
+        i2 <- rep(0, num_v * 10)
+        j2 <- rep(0, num_v * 10)
+        z2 <- rep(0, num_v * 10)
+        for (k in 1:num_v) {
+            for (l in neighb[[k]]) {
+                i2[count] <- k
+                j2[count] <- l
+                z2[count] <- -(num_neighb[[k]] + num_neighb[[l]] -
+                                   sum(duplicated(c(neighb[[l]], neighb[[k]]))))
+                count <- count + 1
+            }
+        }
+        i2 <- i2[1:count - 1]
+        j2 <- j2[1:count - 1]
+        z2 <- z2[1:count - 1]
+        count <- 1
+        i3 <- rep(0, num_v * 15)
+        j3 <- rep(0, num_v * 15)
+        z3 <- rep(0, num_v * 15)
+        neighb2 <- vector("list", num_v)
+        for (k in 1:num_v) {
+            for (l in neighb[[k]]) {
+                neighb2[[k]] <- c(neighb2[[k]], setdiff(neighb[[l]],
+                                                        c(neighb[[k]], k)))
+            }
+            for (l in unique(neighb2[[k]])) {
+                i3[count] <- k
+                j3[count] <- l
+                z3[count] <- sum(neighb2[[k]] == l)
+                count <- count + 1
+            }
+        }
+        i3 <- i3[1:count - 1]
+        j3 <- j3[1:count - 1]
+        z3 <- z3[1:count - 1]
+        i <- c(i1, i2, i3)
+        j <- c(j1, j2, j3)
+        z <- c(z1, z2, z3)
+    }
+    z <- precinc * z
+    Q <- sparseMatrix(i, j, x = z)
+    return(Q)
+}
