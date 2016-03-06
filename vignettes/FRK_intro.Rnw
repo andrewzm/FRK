@@ -1160,7 +1160,7 @@ g1 <- (EmptyTheme() +
                           colour=pmin(pmax(
                               co2avgret,mumin),
                               mumax)),
-                      pch=46) +
+                      size=0.5) +
            facet_grid(~t)+
            scale_colour_distiller(palette="Spectral",
                                   guide_legend(title="co2 (ppm)")) +
@@ -1188,10 +1188,10 @@ print(g2)
 
 <<echo=FALSE, fig.keep=TRUE,fig.cap="Prediction standard error of $\\Yvec_P$ in ppm on 04, 08 and 12 May 2003 obtained with \\tt{FRK} on the \\tt{AIRS} data. \\label{fig:FRK_AIRS_ST3}",fig.align="center",out.width="\\linewidth",fig.height=3,fig.width=16,fig.pos="t!">>=
 
-X$se <- pmin(sqrt(X$var),1.3)
+X$se <- sqrt(X$var)
 g3 <-  (EmptyTheme() +
             geom_polygon(data=filter(X,(t %in% c(4,8,12)) & abs(lon) < 175),
-                         aes(lon,lat,fill=se,group=id))+
+                         aes(lon,lat,fill=pmin(se,2.9),group=id))+
            scale_fill_distiller(palette="Spectral",name="s.e. (ppm)") +
            coord_map("mollweide") +
            facet_grid(~t) +
@@ -1349,7 +1349,7 @@ To create the modified distance measure, we note that the spatial frequency in $
 scaler <- diag(c(4,1))                                    # scale x by 4
 asymm_measure <- new("measure",                           # new measure object
                       dist=function(x1,x2)                # new distance function
-                            FRK:::rdist(x1 %*% scaler,    # scaling of first point
+                            FRK:::distR(x1 %*% scaler,    # scaling of first point
                                         x2 %*% scaler),   # scaling of second point
                       dim=2L)                             # in 2D
 @
@@ -1408,7 +1408,7 @@ From here on, the analysis proceeds in exactly the same way as shown in all the 
 
    grid_BAUs <- SRE.predict(SRE_model = S,
                            use_centroid = TRUE,
-                           obs_fs = FALSE)
+                           obs_fs = TRUE)
 
     X <- SpatialPolygonsDataFrame_to_df(sp_polys = grid_BAUs,
                                       vars = c("mu","var")) %>%
@@ -1475,7 +1475,7 @@ The development page of \tt{FRK} is \tt{https://github.com/andrewzm/FRK}. Users 
 
 \section*{Acknowledgements}
 
-Package devlopment was facilitated with \tt{devtools}; this vignette was created with \tt{knitr}, and package testing was carried out using \tt{testthat} and \tt{covr}. The package includes within it some date manipulation functions from \tt{Hmisc}, and the functions \tt{rdist} and \tt{rdist.earth} from the package \tt{fields}. Some sparse-matrix operations are facilitated using \tt{C} code from the software package \tt{SuiteSparse} \citep{SuiteSparse}.
+Package devlopment was facilitated with \tt{devtools}; this vignette was created with \tt{knitr}, and package testing was carried out using \tt{testthat} and \tt{covr}. The package includes within it some date manipulation functions from \tt{Hmisc}, and the function \tt{rdist.earth} from the package \tt{fields}. Some sparse-matrix operations are facilitated using \tt{C} code from the software package \tt{SuiteSparse} \citep{SuiteSparse}. We thank Jonathan Bradley and Chris Wikle for helpful discussions on Fixed Rank Kriging.
 
 \bibliography{FRK_bib}
 
