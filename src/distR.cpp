@@ -1,8 +1,3 @@
-#include <R.h>
-#include <Rinternals.h>
-#include <R_ext/Arith.h>
-#include <Rmath.h>
-#include <float.h>
 #include <Rcpp.h>
 using namespace Rcpp;
 
