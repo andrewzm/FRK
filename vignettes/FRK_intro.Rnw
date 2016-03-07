@@ -1104,10 +1104,11 @@ ggplot(X2) +
 <<eval=TRUE>>=
 G_spatial <- auto_basis(manifold = sphere(),      # functions on sphere
                         data=as(STObj,"Spatial"), # collapse time out
-                        nres = 3,                 # use three DGGRID resolutions
+                        nres = 4,                 # use three DGGRID resolutions
                         prune=15,                 # prune basis functions
                         type = "bisquare",        # bisquare basis functions
-                        subsamp = 20000)          # use only 20000 data points for pruning
+                        subsamp = 20000,          # use only 20000 data points for pruning
+                        isea3h_lo = 2)            # start from isea3h res 2
 
 G_temporal <- local_basis(manifold=real_line(),      # functions on real line
                           loc = matrix(c(2,7,12)),   # location parameter

@@ -195,7 +195,7 @@ auto_basis <- function(manifold = plane(),data,regular=1,nres=2,prune=0,subsamp=
                 if(j==1) {
                     rm_idx <- which(colSums(eval_basis(this_res_basis,coords)) < prune)
                     if(length(rm_idx) == length(this_res_scales))
-                        stop("prune is too large -- all functions at a resolution removed.
+                        warning("prune is too large -- all functions at a resolution removed.
                              Consider also removing number of resolutions.")
                     if(length(rm_idx) >0) this_res_locs <- this_res_locs[-rm_idx,,drop=FALSE]
                 }
@@ -274,7 +274,24 @@ setMethod("eval_basis",signature(basis="Basis",s="matrix"),function(basis,s,outp
 setMethod("eval_basis",signature(basis="Basis",s="SpatialPointsDataFrame"),function(basis,s,output = "matrix"){
     stopifnot(output %in% c("matrix","list"))
     space_dim <- dimensions(manifold(basis))
-    .point_eval_fn(basis@fn,coordinates(s)[,1:space_dim,drop=F],output)
+    if(opts_FRK$get("parallel") > 1L) {
+        n <- length(s)
+        batching=cut(1:n,breaks = seq(0,n+10000,
+                                      by=10000),labels=F)
+
+        cl <- makeCluster(opts_FRK$get("parallel"))
+        pnt_eval_list <- mclapply(1:max(unique(batching)),
+                              function(i) {
+                                  idx <- which(batching == i)
+                                  .point_eval_fn(basis@fn,
+                                                 coordinates(s)[idx,1:space_dim,drop=F],output)
+                              },
+                              mc.cores = opts_FRK$get("parallel"))
+        stopCluster(cl)
+        do.call(rBind,pnt_eval_list)
+    } else  {
+        .point_eval_fn(basis@fn,coordinates(s)[,1:space_dim,drop=F],output)
+    }
 })
 
 #' @rdname eval_basis
