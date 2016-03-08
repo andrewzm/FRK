@@ -41,3 +41,8 @@ Installation
 Installation will take a few minutes since the vignette is extensive and built from scratch. After installation see the  several examples provided in the vignette by typing
 
     vignette("FRK_intro")
+
+Known Issues
+------------
+
+Currently `FRK` is not installing on OSX with `build_vignettes=TRUE` as it fails to find `texi2dvi`. Set `build_vignettes=FALSE` to ensure installation. Then download the `.Rnw` file in the `vignettes` folder and compile the pdf file separately in `RStudio` with `knitr`. 
