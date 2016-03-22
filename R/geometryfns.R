@@ -56,8 +56,9 @@ auto_BAUs <- function(manifold, type="grid",cellsize = rep(1,dimensions(manifold
                       isea3h_res=NULL,data=NULL,convex=-0.05,tunit="days") {
     if(!(is(data,"Spatial") | is(data,"ST") | is(data,"Date") | is.null(data)))
       stop("Data needs to be of class 'Spatial', 'ST', 'Date', or NULL")
-    if((class(coordnames(data)) == "NULL"))
-        stop("data needs to have coordinate names")
+    if(is(data,"Spatial") | is(data,"ST"))
+        if((class(coordnames(data)) == "NULL"))
+            stop("data needs to have coordinate names")
     if(!is(manifold,"manifold")) stop("manifold needs to be of class 'manifold'")
     if(!is.null(isea3h_res)) {
         if(!is.numeric(isea3h_res) | is.integer(isea3h_res))

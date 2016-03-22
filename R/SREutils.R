@@ -229,7 +229,8 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, regularise = FALSE, metho
     if(opts_FRK$get("progress")) pb <- txtProgressBar(min = 0, max = n_EM, style = 3)
     for(i in 1:n_EM) {
         if (!(SRE_model@fs_model == "ICAR")){
-            print(system.time( lk[i] <- .loglik(SRE_model)))  # Compute likelihood
+            #print(system.time( lk[i] <- .loglik(SRE_model)))  # Compute likelihood
+            lk[i] <- .loglik(SRE_model)
         } else {
             lk[i] <- sqrt(sum(SRE_model@mu_eta^2))
         }
