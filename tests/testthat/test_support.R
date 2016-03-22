@@ -6,6 +6,7 @@ Srs2 = Polygons(list(Sr2), "s2")
 SpP = SpatialPolygons(list(Srs1,Srs2), 1:2)
 attr = data.frame(z=c(5,2),std=c(1,1), row.names=c("s1", "s2"))
 SrDf = SpatialPolygonsDataFrame(SpP, attr)
+coordnames(SrDf) <- c("x","y")
 
 # Now create the BAUs
 BAUs <- auto_BAUs(manifold = plane(),

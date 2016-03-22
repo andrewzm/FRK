@@ -231,7 +231,7 @@ setMethod("auto_BAU",signature(manifold="real_line"),
     xrange <- range(coords[,1])
 
     drangex <- diff(xrange)
-    xgrid <- seq(xrange[1] - drangex*0.2,xrange[2] + drangex*0.2,by=cellsize[1]) %>%
+    xgrid <- data.frame(x=seq(xrange[1] - drangex*0.2,xrange[2] + drangex*0.2,by=cellsize[1])) %>%
         cbind(y=0) %>%
         SpatialPoints()
 
