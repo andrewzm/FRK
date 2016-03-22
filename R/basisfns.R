@@ -51,13 +51,14 @@ local_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type
 #' @title Automatic basis-function placement
 #' @description Generate automatically a set of local basis functions in the domain, and automatically prune in regions of sparse data.
 #' @param manifold object of class \code{manifold}, for example, \code{sphere} or \code{plane}
-#' @param data object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame} containing the data on which basis-function placement is based, see details
+#' @param data object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame} containing the data on which basis-function placement is based, or a list of these; see details
 #' @param regular an integer indicating the number of regularly-placed basis functions at the first resolution. In two dimensions, this dictates smallest number of basis functions in a row or column at the lowest resolution. If \code{regular=0}, an irregular grid is used, one that is based on the triangulation of the domain with increased mesh density in areas of high data density, see details
 #' @param nres if \code{manifold = real_line()} or \code{manifold = plane()}, then \code{nres} is the number of basis-function resolutions to use. If \code{manifold = sphere()}, then \code{nres} is the resolution number of the ISEA3H grid to use and and can also be a vector indicating multiple resolutions
 #' @param prune a threshold parameter which dictates when a basis function is considered irrelevent or unidentifiable, and thus removed, see details
 #' @param subsamp the maximum amount of data points to consider when carrying out basis-function placement: these data objects are randomly sampled from the full dataset. Keep this number fairly high (on the order of 10^5) otherwise high resolution basis functions may be spuriously removed
 #' @param type the type of basis functions to use; see details
 #' @param isea3h_lo if \code{manifold = sphere()}, this argument dictates which ISEA3H resolution is the lowest one that should be used for basis-function placement
+#' @param bndary a \code{matrix} containing points containing the boundary. If \code{regular == 0} this can be used to define a boundary in which irregularly-spaced basis functions are placed
 #' @details This function automatically places basis functions within the domain of interest. If the domain is a plane or the real line, then the object \code{data} is used to establish the domain boundary.
 #'
 #'
@@ -99,7 +100,15 @@ local_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type
 #' show_basis(G,draw_world())
 #'
 #' @export
-auto_basis <- function(manifold = plane(),data,regular=1,nres=2,prune=0,subsamp=10000,type="Gaussian",isea3h_lo = 0) {
+auto_basis <- function(manifold = plane(),
+                       data,
+                       regular=1,
+                       nres=2,
+                       prune=0,
+                       subsamp=10000,
+                       type="Gaussian",
+                       isea3h_lo = 0,
+                       bndary = NULL) {
     m <- manifold
     if(!is(m,"manifold"))
         stop("manifold needs to be an object of class manifold")
@@ -119,7 +128,7 @@ auto_basis <- function(manifold = plane(),data,regular=1,nres=2,prune=0,subsamp=
     isea3h <- centroid <- res <- NULL #(suppress warnings, these are loaded from data)
     coords <- coordinates(data)
 
-    if(is(m,"plane") & regular==0) {
+    if(is(m,"plane") & regular == 0 & is.null(bndary)) {
          if(!requireNamespace("INLA"))
              stop("For irregularly-placed basis-function generation INLA needs to be installed
                   for constructing basis function centres. Please install it
@@ -133,7 +142,17 @@ auto_basis <- function(manifold = plane(),data,regular=1,nres=2,prune=0,subsamp=
     xrange <- range(coords[,1])
     yrange <- range(coords[,2])
 
-    if(is(m,"plane") & regular == 0) bndary_seg = INLA::inla.nonconvex.hull(coords,convex=-0.05)
+
+    if(is(m,"plane") & regular == 0) {
+        if(is.null(bndary)) {
+            bndary_seg = INLA::inla.nonconvex.hull(coords,concave = 0)
+        } else {
+            if(!is(bndary,"matrix"))
+                stop("bndary needs to be a matrix of points")
+            bndary_seg <- inla.mesh.segment(bndary)
+        }
+    }
+
     if(is(m,"plane") & regular > 0) {
         asp_ratio <- diff(yrange) / diff(xrange)
         if(asp_ratio < 1) {
@@ -165,8 +184,8 @@ auto_basis <- function(manifold = plane(),data,regular=1,nres=2,prune=0,subsamp=
                                           cutoff = max(diff(xrange),diff(yrange))/(3*2.5^(i-1)))$loc[,1:2]
         } else if(is(m,"plane") & (regular> 0)) {
             ## Generate mesh and use these as centres
-            xgrid <- seq(xrange[1] + diff(xrange)/(2*nx*i), xrange[2] - diff(xrange)/(2*nx*i), length =nx*i)
-            ygrid <- seq(yrange[1] + diff(yrange)/(2*ny*i), yrange[2] - diff(yrange)/(2*ny*i), length =ny*i)
+            xgrid <- seq(xrange[1] + diff(xrange)/(2*nx*i), xrange[2] - diff(xrange)/(2*nx*i), length =nx*(3^(i-1)))
+            ygrid <- seq(yrange[1] + diff(yrange)/(2*ny*i), yrange[2] - diff(yrange)/(2*ny*i), length =ny*(3^(i-1)))
 
             this_res_locs <- xgrid %>%
                 expand.grid(ygrid) %>%
@@ -507,5 +526,33 @@ setMethod("nbasis",signature(.Object="Basis_obj"),function(.Object) {return(.Obj
 #' @rdname nbasis
 #' @aliases nbasis,SRE-method
 setMethod("nbasis",signature(.Object="SRE"),function(.Object) {return(nbasis(.Object@basis))})
+
+#' @aliases count_res,SRE-method
+setMethod("count_res",signature="SRE",function(.Object) {
+    count_res(.Object@basis)
+})
+
+#' @aliases count_res,TensorP_Basis-method
+setMethod("count_res",signature="TensorP_Basis",function(.Object) {
+    c1 <-  count(.Object@Basis1@df,res)
+    c2 <-  count(.Object@Basis2@df,res)
+
+    c_all <- NULL
+    max_res_c1 <- c1$res[1] - 1
+    for( i in 1:nrow(c2)) {
+        new_res <- (max_res_c1 + 1):(max_res_c1 + nrow(c1))
+        temp_c1 <- c1
+        temp_c1$res <- new_res
+        temp_c1$n <- temp_c1$n * c2$n[i]
+        c_all <- rbind(c_all,temp_c1)
+        max_res_c1 <- max(c_all$res)
+    }
+    c_all
+})
+
+#' @aliases count_res,Basis-method
+setMethod("count_res",signature="Basis",function(.Object) {
+    count(.Object@df,res)
+})
 
 

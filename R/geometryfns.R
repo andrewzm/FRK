@@ -55,7 +55,9 @@ setMethod("initialize",signature="manifold",function(.Object) {
 auto_BAUs <- function(manifold, type="grid",cellsize = rep(1,dimensions(manifold)),
                       isea3h_res=NULL,data=NULL,convex=-0.05,tunit="days") {
     if(!(is(data,"Spatial") | is(data,"ST") | is(data,"Date") | is.null(data)))
-        stop("Data needs to be of class 'Spatial', 'ST', 'Date', or NULL")
+      stop("Data needs to be of class 'Spatial', 'ST', 'Date', or NULL")
+    if((class(coordnames(data)) == "NULL"))
+        stop("data needs to have coordinate names")
     if(!is(manifold,"manifold")) stop("manifold needs to be of class 'manifold'")
     if(!is.null(isea3h_res)) {
         if(!is.numeric(isea3h_res) | is.integer(isea3h_res))
@@ -74,6 +76,8 @@ auto_BAUs <- function(manifold, type="grid",cellsize = rep(1,dimensions(manifold
 }
 
 
+
+
 setMethod("auto_BAU",signature(manifold="plane"),
           function(manifold,type="grid",cellsize = c(1,1),resl=resl,d=NULL,convex=-0.05,...) {
 
@@ -83,15 +87,17 @@ setMethod("auto_BAU",signature(manifold="plane"),
                         install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\")")
 
               X1 <- X2 <- NULL # Suppress bindings warning
-
               if(is(d,"SpatialPoints")){
-                coords <- coordinates(d)
+                  coords <- coordinates(d)
               } else if(is(d,"SpatialPolygons")){
-                 ## get out all edges
-                 coords <- do.call("rbind",
-                         lapply(1:length(d),
-                                function(i) coordinates(d@polygons[[i]]@Polygons[[1]])))
+                  ## get out all edges
+                  coords <- do.call("rbind",
+                                    lapply(1:length(d),
+                                           function(i) coordinates(d@polygons[[i]]@Polygons[[1]])))
               }
+              coord_names <- coordnames(d)
+
+
               xrange <- range(coords[,1])
               yrange <- range(coords[,2])
               bndary_seg = INLA::inla.nonconvex.hull(coords,convex=convex)$loc %>%
@@ -112,22 +118,23 @@ setMethod("auto_BAU",signature(manifold="plane"),
                   HexPts <- spsample(xy,type="hexagonal",cellsize = cellsize[1])
                   idx <- which(!is.na(over(HexPts,bndary_seg)))
                   HexPols <- HexPoints2SpatialPolygons(HexPts[idx,])
-                  coordnames(HexPols) <- coordnames(d)
-                  coordnames(HexPts) <- coordnames(d)
+                  coordnames(HexPols) <- coord_names
+                  coordnames(HexPts) <- coord_names
                   HexPols_df <- SpatialPolygonsDataFrame(HexPols,
                                                          data.frame(
                                                              coordinates(HexPts[idx,]),
                                                              row.names = row.names(HexPols)))
                   return(HexPols_df)
               } else if (type == "grid") {
+                  coordnames(xy) <- coord_names
                   xy <- xy %>%
                       points2grid() %>%
-                      as.SpatialPolygons.GridTopology()
-                  if(!all(coordnames(xy) == coordnames(d))) {
+                      as.SpatialPolygons.GridTopology2()
+                  if(!all(coordnames(xy) == coord_names)) {
                       warning("Coordinate names different from (x,y).
                               Renaming polygons might take a while due to
                               structure of the function as.SpatialPolygons.GridTopology.")
-                      coordnames(xy) <- coordnames(d)
+                      coordnames(xy) <- coord_names
                   }
                   idx <- which(!is.na(over(xy,bndary_seg)))
                   xy <- xy[idx,]
@@ -756,7 +763,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="ST"),
 
           })
 
-est_obs_error <- function(sp_pts,variogram.formula) {
+est_obs_error <- function(sp_pts,variogram.formula,vgm_model = NULL) {
 
     #stopifnot(is(variogram.formula,"formula"))
     stopifnot(is(sp_pts,"Spatial"))
@@ -767,16 +774,20 @@ est_obs_error <- function(sp_pts,variogram.formula) {
 
     g <- gstat::gstat(formula=variogram.formula,data=sp_pts)
     v <- gstat::variogram(g,cressie=T)
-    vgm.fit = gstat::fit.variogram(v, model = gstat::vgm(1, "Lin", mean(v$dist), 1))
+    if(is.null(vgm_model)) vgm_model <-  gstat::vgm(1, "Lin", mean(v$dist), 1)
+    vgm.fit = gstat::fit.variogram(v, model = vgm_model)
+
+    if(vgm.fit$psill[1] == 0) { ## Try with Gaussian, maybe process is overly smooth or data is a large average
+        vgm.fit = gstat::fit.variogram(v, model = vgm(1, "Gau", mean(v$dist), 1))
+    }
     plot(v,vgm.fit)
     print(paste0("sigma2e estimate = ",vgm.fit$psill[1]))
     if(vgm.fit$psill[1] == 0)
         stop("Measurement error estimated to be zero. Please pre-specify measurement error. If
               unknown please specify a reasonable value in the field 'std' and set
-              est_error = FALSE")
+              est_error = FALSE or else try altering vgm_model")
     # sp_pts$std <- sqrt(vgm.fit$psill[1] / sp_pts$Nobs)
     sp_pts$std <- sqrt(vgm.fit$psill[1])  ## Assume observations have correlated error in BAU
-
     ##Observational error estimation could be improved. Currently a variogram is fitted to the data, and then the error variance of a single observation is assumed to be the partial sill. Then the variance of the averaged observations in the BAU is divided by Nobs. Currently there is no accounting for multiple data in the same grid box during variogram fitting as it's not straightforward with gstat
 
     sp_pts
@@ -1128,4 +1139,33 @@ process_isea3h <- function(isea3h,resl) {
     z <- precinc * z
     Q <- sparseMatrix(i, j, x = z)
     return(Q)
+}
+
+## exactly as as.SpatialPolygons.GridTopology2 but with correct names to avoid name switch
+as.SpatialPolygons.GridTopology2 <- function (grd, proj4string = CRS(as.character(NA)))
+{
+    coord_names <- names(grd@cellsize)
+    grd_crds <- coordinates(grd)
+    IDs <- IDvaluesGridTopology(grd)
+    nPolygons <- nrow(grd_crds)
+    cS <- grd@cellsize
+    cS2 <- cS/2
+    cS2x <- cS2[1]
+    cS2y <- cS2[2]
+    Srl <- vector(mode = "list", length = nPolygons)
+    xi <- grd_crds[,1]
+    yi <- grd_crds[,2]
+    xall <- cbind(xi - cS2x, xi - cS2x, xi + cS2x, xi + cS2x, xi -
+               cS2x)
+    yall <- cbind(yi - cS2y, yi + cS2y, yi + cS2y, yi - cS2y, yi -
+               cS2y)
+    for (i in 1:nPolygons) {
+        coords <- cbind(xall[i,],yall[i,])
+        colnames(coords) <- coord_names
+        Srl[[i]] <- Polygons(list(Polygon(coords = coords)),
+                             ID = IDs[i])
+        comment(Srl[[i]]) <- "0"
+    }
+    res <- SpatialPolygons(Srl, proj4string = proj4string)
+    res
 }

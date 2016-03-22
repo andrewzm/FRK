@@ -5,12 +5,12 @@
 \title{Automatic basis-function placement}
 \usage{
 auto_basis(manifold = plane(), data, regular = 1, nres = 2, prune = 0,
-  subsamp = 10000, type = "Gaussian", isea3h_lo = 0)
+  subsamp = 10000, type = "Gaussian", isea3h_lo = 0, bndary = NULL)
 }
 \arguments{
 \item{manifold}{object of class \code{manifold}, for example, \code{sphere} or \code{plane}}
 
-\item{data}{object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame} containing the data on which basis-function placement is based, see details}
+\item{data}{object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame} containing the data on which basis-function placement is based, or a list of these; see details}
 
 \item{regular}{an integer indicating the number of regularly-placed basis functions at the first resolution. In two dimensions, this dictates smallest number of basis functions in a row or column at the lowest resolution. If \code{regular=0}, an irregular grid is used, one that is based on the triangulation of the domain with increased mesh density in areas of high data density, see details}
 
@@ -23,6 +23,8 @@ auto_basis(manifold = plane(), data, regular = 1, nres = 2, prune = 0,
 \item{type}{the type of basis functions to use; see details}
 
 \item{isea3h_lo}{if \code{manifold = sphere()}, this argument dictates which ISEA3H resolution is the lowest one that should be used for basis-function placement}
+
+\item{bndary}{a \code{matrix} containing points containing the boundary. If \code{regular == 0} this can be used to define a boundary in which irregularly-spaced basis functions are placed}
 }
 \description{
 Generate automatically a set of local basis functions in the domain, and automatically prune in regions of sparse data.

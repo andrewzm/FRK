@@ -6,6 +6,7 @@
 #' @param BAUs object of class \code{SpatialPolygonsDataFrame}, the data frame which must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality
 #' @param est_error flag indicating whether the measurement-error variance should be estimated from variogram techniques. If this is set to 0, then \code{data} must contain a field \code{std}. Measurement-error estimation is not implemented for spatio-temporal datasets
 #' @param average_in_BAU if \code{TRUE}, then multiple data points falling in the same BAU are averaged; the measurement error of the averaged data point is taken as the average of the individual measurement errors
+#' @param fs_model if "ind" then the fine-scale variation is independent at the BAU level. If "ICAR", then an ICAR model is placed on the BAUs
 #' @param SRE_model object returned from the constructor \code{SRE()}
 #' @param n_EM maximum number of iterations for the EM algorithm
 #' @param tol convergence tolerance for the EM algorithm
@@ -15,6 +16,7 @@
 #' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error) or in the process model (process fine-scale variation)
 #' @param pred_polys object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified
 #' @param pred_time vector of time indices at which we wish to predict. All time points are used if this option is not specified
+#' @param vgm_model an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm} containing the variogram model to fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified the variogram used is \code{gstat::vgm(1, "Lin", d, 1)} where \code{d} is approximately one third of the maximum distance between any two points
 #' @details \code{SRE()} is the main function in the package as it constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of Basic Areal Units (BAUs). The function first takes each object in the list \code{data} and maps it to the BAUs -- this entails binning the point-referenced data into BAUs (and averaging within the BAU) if \code{average_in_BAU = TRUE}, and finding which BAUs are influenced by the polygon datasets. Following this, the incidence matrix \code{Cmat} is constructed, which appears in the observation model \eqn{Z = CY + e}, where \eqn{C} is the incidence matrix.
 #'
 #' The SRE model is given by \eqn{Y = T\alpha + S\eta + \delta}, where \eqn{X} are the covariates at BAU level, \eqn{\alpha} are the regression coefficients, \eqn{S} are the basis functions evaluated at the BAU level, \eqn{\eta} are the basis function weights, and \eqn{\delta} is the fine scale variation (at the BAU level). The covariance matrix of \eqn{\delta} is diagonal and proportional to the field `fs' in the BAUs (typically set to one). The constant of proportionality is estimated in the EM algorithm. All required matrices (\eqn{S,T} etc.) are computed and returned as part of the object, please see \code{\link{SRE-class}} for more details.
@@ -72,7 +74,7 @@
 #'    geom_point(data = data.frame(sim_data),aes(x=x,y=z),size=3) +
 #'    geom_line(data=sim_process,aes(x=x,y=proc),col="red")
 #' print(g1)
-SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE) {
+SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_model = "ind",vgm_model = NULL) {
 
     .check_args(f=f,data=data,basis=basis,BAUs=BAUs,est_error=est_error)
     av_var <-all.vars(f)[1]
@@ -93,7 +95,7 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE) {
         if(est_error) {
             if(is(data_proc,"ST"))
                 stop("Estimation of error not yet implemented for spatio-temporal data")
-            data_proc <- est_obs_error(data_proc,variogram.formula=f)
+            data_proc <- est_obs_error(data_proc,variogram.formula=f, vgm_model = vgm_model)
         }
 
 
@@ -110,16 +112,26 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE) {
                                   x=1,dims=c(length(data_proc),
                                              length(BAUs)))
 
+
         if(any(rowSums(Cmat[[i]])==0))
-            stop("I have found difficulty in associating the data with the BAUs. If you have point-referenced data
-                 then this could be because you have data outside BAUs. If you have polygon data, then
-                 this could be because no BAUs centroids are within the polygons. For polygon data,
-                 influence on a BAU is determined from whether the BAU centroid falls within the polygon
-                 or not.")
+            stop("I have found difficulty in associating the data with the BAUs.
+                  If you have point-referenced data
+                 then this could be because you have data outside BAUs. If you have
+                 polygon data, then this could be because no BAUs centroids are
+                 within the polygons. For polygon data, influence on a BAU is determined from
+                 whether the BAU centroid falls within the polygon or not.")
 
         Cmat[[i]] <- Cmat[[i]] / rowSums(Cmat[[i]]) ## Average BAUs for polygon observations
 
-        Vfs[[i]] <- tcrossprod(Cmat[[i]] %*% Diagonal(x=sqrt(BAUs$fs)))
+        if(fs_model == "ind") {
+            Vfs[[i]] <- tcrossprod(Cmat[[i]] %*% Diagonal(x=sqrt(BAUs$fs)))
+        } else if(fs_model == "ICAR") {
+            Vfs[[i]] <- Matrix(ncol=0,nrow=0)
+        } else {
+            stop("Model needs to be ``ind'' or ``ICAR''.")
+        }
+
+
         # if(length(Cmat[[i]]@x) == nrow(Cmat[[i]]))  { # if point observations
         #     Vfs[[i]] <- Diagonal(x = Cmat[[i]] %*% sqrt(BAUs$fs) %>% as.numeric())
         # } else {
@@ -143,6 +155,21 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE) {
         ## (Cmat[[i]] %*% S2) - S[[i]]
     }
 
+    if(fs_model == "ind") {
+        Qfs_BAUs <- Diagonal(x=1/BAUs$fs)
+        Vfs_BAUs <- Diagonal(x=BAUs$fs)
+    } else if(fs_model == "ICAR") {
+        ## Make block diagonal for spatio-temporal
+        message("Finding the polygon neighbours...")
+        nblist <- spdep::poly2nb(BAUs[,1][,1]) ## Caters for both spatial and ST
+        Qfs_BAUs <- .prec_from_neighb(nblist)
+        if(is(BAUs,"STFDF")) {
+            Qfs_BAUs <- do.call("bdiag",
+                                lapply(1:length(BAUs@time),function(i) {Qfs_BAUs}))
+        }
+        Vfs_BAUs <- Matrix(ncol=0,nrow=0)
+    }
+
     S <- do.call("rBind",S)
     X <- do.call("rBind",X)
     Z <- do.call("rBind",Z)
@@ -157,61 +184,94 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE) {
         S = S,
         Ve = Ve,
         Vfs = Vfs,
+        Vfs_BAUs = Vfs_BAUs,
+        Qfs_BAUs = Qfs_BAUs,
         X = X,
         Z = Z,
         Cmat = do.call("rBind",Cmat),
         mu_eta = Matrix(0,nbasis(basis),1),
+        mu_xi = Matrix(0,length(BAUs),1),
         S_eta = Diagonal(x = rep(1,nbasis(basis))),
-        #Q_eta = Diagonal(x = rep(1,nbasis(basis))),
         alphahat = solve(t(X) %*% X) %*% t(X) %*% Z,
         Khat = Diagonal(n=nbasis(basis),x = var(Z[,1])),
-        #Khat_inv = Diagonal(n=nbasis(basis),x = 1/var(Z[,1])),
-        #B_run = Diagonal(n=nbasis(basis),x = 1/var(Z[,1])),
-        #v_run = Matrix(0,nbasis(basis),nbasis(basis)),
-        sigma2fshat = mean(diag(Ve)) / mean(diag(Vfs)))
+        Q_eta = Diagonal(x = rep(1,nbasis(basis))),
+        Khat_inv = Diagonal(n=nbasis(basis),x = 1/var(Z[,1])),
+        B_run = Diagonal(n=nbasis(basis),x = 1/var(Z[,1])),
+        v_run = Matrix(0,nbasis(basis),nbasis(basis)),
+        sigma2fshat = mean(diag(Ve)) / 4,
+        fs_model = fs_model,
+        regularise = FALSE)
 }
 
 #' @rdname SRE
 #' @export
-SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM", print_lik=FALSE) {
+SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, regularise = FALSE, method="EM", print_lik=FALSE) {
     if(!is.numeric(n_EM)) stop("n_EM needs to be an integer")
     if(!(n_EM <- round(n_EM)) > 0) stop("n_EM needs to be greater than 0")
     if(!is.numeric(tol)) stop("tol needs to be a number greater than zero")
     if(!(tol > 0)) stop("tol needs to be a number greater than zero")
     if(!(method == "EM")) stop("Currently only the EM algorithm is implemented for parameter estimation")
     if(!(is.logical(print_lik))) stop("print_lik needs to be a logical quantity")
+    if(!(is.logical(regularise))) stop("regularise needs to be TRUE or FALSE")
 
     n <- nbasis(SRE_model)
     X <- SRE_model@X
     lk <- rep(0,n_EM)
+    SRE_model@regularise <- regularise
+    if(!is.na(tol) & (SRE_model@fs_model == "ICAR")) {
+        warning("Cannot monitor the observed likelihood with the ICAR model.
+                Monitoring changes in eta instead.")
+        lik_plot_ylab <- "norm(eta)"
+    } else {
+        lik_plot_ylab <- "log likelihood"
+    }
 
     if(opts_FRK$get("progress")) pb <- txtProgressBar(min = 0, max = n_EM, style = 3)
     for(i in 1:n_EM) {
-        lk[i] <- .loglik(SRE_model)  # Compute likelihood as in Katzfuss and Cressie (2011)
+        if (!(SRE_model@fs_model == "ICAR")){
+            print(system.time( lk[i] <- .loglik(SRE_model)))  # Compute likelihood
+        } else {
+            lk[i] <- sqrt(sum(SRE_model@mu_eta^2))
+        }
         SRE_model <- .SRE.Estep(SRE_model)
         SRE_model <- .SRE.Mstep(SRE_model)
         if(opts_FRK$get("progress")) setTxtProgressBar(pb, i)
-        if(i>2) if(lk[i] - lk[i-1] < tol) {
-            print("Minimum tolerance reached")
-            break
-        }
+        if(i>1)
+            if(abs(lk[i] - lk[i-1]) < tol) {
+                print("Minimum tolerance reached")
+                break
+            }
     }
     if(opts_FRK$get("progress")) close(pb)
 
     if(i == n_EM) print("Maximum EM iterations reached")
-    if(print_lik) {
-        plot(1:i,lk[1:i],ylab="log likelihood",xlab="EM iteration (from #1)")
+    if(print_lik & !is.na(tol)) {
+        plot(1:i,lk[1:i],ylab=lik_plot_ylab,xlab="EM iteration (from #1)")
     }
     SRE_model
 }
 
-
 .SRE.Estep <- function(Sm) {
+    if(Sm@fs_model == "ind") {
+        Sm <- .SRE.Estep.ind(Sm)
+    } else if(Sm@fs_model == "ICAR") {
+        Sm <- .SRE.EMstep.ICAR(Sm)
+    }
+}
 
+.SRE.Mstep <- function(Sm) {
+    if(Sm@fs_model == "ind") {
+        Sm <- .SRE.Mstep.ind(Sm)
+    } else if(Sm@fs_model == "ICAR") {
+        Sm
+    }
+}
+
+.SRE.Estep.ind <- function(Sm) {
     alpha <- Sm@alphahat
     K <- Sm@Khat
+    Kinv <- Sm@Khat_inv
     sigma2fs <- Sm@sigma2fshat
-
 
     D <- sigma2fs*Sm@Vfs + Sm@Ve
     if(is(D,"dtCMatrix")) {
@@ -225,41 +285,60 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM", print_lik=FA
     }
 
 
-    Kinv <- chol2inv(chol(K))
-
-    # Deprecated: S_eta <- chol2inv(chol(crossprod(sqrt(Dinv) %*% Sm@S) + Kinv))
-    S_eta <- chol2inv(chol(crossprod(t(cholDinv) %*% Sm@S) + Kinv))
-    mu_eta <- S_eta %*% (t(Sm@S) %*% Dinv %*% (Sm@Z - Sm@X %*% alpha))
+    Q_eta <- (crossprod(t(cholDinv) %*% Sm@S) + Kinv)
+    S_eta <- chol2inv(chol(Q_eta))
+    mu_eta <- S_eta %*%(t(Sm@S) %*% Dinv %*% (Sm@Z - Sm@X %*% alpha))
 
 
-    # Sm@B_run <- Sm@B_run +  crossprod(t(cholDinv) %*% Sm@S)
-    # Q_eta2 <- crossprod(t(cholDinv) %*% Sm@S) + Kinv
-    # Q_eta <- Sm@B_run - Sm@v_run
-    # mu_eta2 <- solve(Q_eta,(t(Sm@S) %*% Dinv %*% (Sm@Z - Sm@X %*% alpha)))
-    # muQ <- Q_eta %*% mu_eta
-    # c <- (1 + t(mu_eta) %*% muQ) %>% as.numeric()
-    # v <- tcrossprod(muQ,muQ)
-    # Sm@v_run <- Sm@v_run + 1/c * v
+    ## Deprecated:
+    # if(!is(Q_eta,"dsCMatrix")) Q_eta <- as(Q_eta,"dsCMatrix")
+    # chol_Q_eta <- cholPermute(Q_eta)
+    # mu_eta <- cholsolve(Q_eta,(t(Sm@S) %*% Dinv %*% (Sm@Z - Sm@X %*% alpha)),
+    #                     perm=TRUE, cholQp = chol_Q_eta$Qpermchol,P = chol_Q_eta$P)
+    # S_eta <- Matrix()
 
-
+    ## Deprecated:
+    # S_eta <- chol2inv(chol(crossprod(t(cholDinv) %*% Sm@S) + Kinv))
+    # mu_eta <- S_eta %*% (t(Sm@S) %*% Dinv %*% (Sm@Z - Sm@X %*% alpha))
 
     Sm@mu_eta <- mu_eta
     Sm@S_eta <- S_eta
-    # Sm@Q_eta <- Q_eta
-
+    Sm@Q_eta <- Q_eta
     Sm
+
 }
 
 
+.regularise_K <- function(Sm,S_eta= NULL,mu_eta = NULL) {
+    if (is.null(S_eta)) S_eta <- Sm@S_eta
+    if (is.null(mu_eta)) mu_eta <- Sm@mu_eta
 
-.SRE.Mstep <- function(Sm) {
+    if(Sm@regularise) {
+        warning("Regularising K")
+         res_summ <- count_res(S)
+         prec_struct <- do.call("bdiag",
+                                lapply(1:nrow(res_summ),
+                                       function(i) 100^(res_summ$res[i]-min(res_summ$res) - 0.5)*Diagonal(res_summ$n[i])))
+        # #prec_struct <- 1*Diagonal(nrow(S_eta))
+         # K <- chol2inv(chol(
+         #     chol2inv(chol(S_eta +  tcrossprod(mu_eta))) + prec_struct))
+        nu <- 20
+        K <- (S_eta +  tcrossprod(mu_eta) + nu*solve(prec_struct))/nu
+    } else {
+        K <- S_eta + tcrossprod(mu_eta)
+    }
+    K
+}
+
+.SRE.Mstep.ind <- function(Sm) {
 
     mu_eta <- Sm@mu_eta
     S_eta <- Sm@S_eta
     alpha_init <- Sm@alphahat
     sigma2fs_init <- Sm@sigma2fshat
 
-    K <- S_eta + tcrossprod(mu_eta)
+    K <- .regularise_K(Sm)
+    Khat_inv <- chol2inv(chol(K))
 
     alpha <- alpha_init
     sigma2fs <- sigma2fs_init
@@ -281,117 +360,184 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM", print_lik=FA
 
 
 
-    if(!diagonal_mats) {
+    if(!all(diag(Sm@Vfs == 0)))
+        if(!diagonal_mats) {
 
-        J <- function(sigma2fs) {
-            if(sigma2fs < 0) {
-                return(Inf)
-            } else {
-                D <- sigma2fs*Sm@Vfs + Sm@Ve
-                Dinv <- chol2inv(chol(D))
-                DinvV <- Dinv %*% Sm@Vfs
-                DinvVDinv <- Dinv %*% Sm@Vfs %*% Dinv
-
-                alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*% (Sm@Z - Sm@S %*% mu_eta)
-                resid <- Sm@Z - Sm@X %*% alpha
-
-                Dinvr <- DinvVDinv %*% resid
-                DinvS <- DinvVDinv %*% Sm@S
-
-                tr1 <- tr(DinvV)
-                tr2 <- sum(diag2(DinvS %*% (S_eta +  tcrossprod(mu_eta)),t(Sm@S))  -
-                               2*diag2(DinvS %*% mu_eta,t(resid)) +
-                               diag2(Dinvr,t(resid)))
-
-                -(-0.5*tr1 +0.5*tr2)
-            }
-        }
-    } else {
-
-        R_eta <- chol(S_eta + tcrossprod(mu_eta))
-        S_R_eta <- Sm@S %*% t(R_eta)
-        Omega_diag1 <- rowSums(S_R_eta^2)
-
-        J <- function(sigma2fs) {
-            if(sigma2fs < 0) {
-                return(Inf)
-            } else {
-                D <- sigma2fs*Sm@Vfs + Sm@Ve
-                if(is(D,"dtCMatrix")) {
-                    Dinv <- solve(D)
+            J <- function(sigma2fs) {
+                if(sigma2fs < 0) {
+                    return(Inf)
                 } else {
+                    D <- sigma2fs*Sm@Vfs + Sm@Ve
                     Dinv <- chol2inv(chol(D))
+                    DinvV <- Dinv %*% Sm@Vfs
+                    DinvVDinv <- Dinv %*% Sm@Vfs %*% Dinv
+
+                    alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*%
+                        (Sm@Z - Sm@S %*% mu_eta)
+                    resid <- Sm@Z - Sm@X %*% alpha
+
+                    Dinvr <- DinvVDinv %*% resid
+                    DinvS <- DinvVDinv %*% Sm@S
+
+                    tr1 <- tr(DinvV)
+                    tr2 <- sum(diag2(DinvS %*% (S_eta +  tcrossprod(mu_eta)),t(Sm@S))  -
+                                   2*diag2(DinvS %*% mu_eta,t(resid)) +
+                                   diag2(Dinvr,t(resid)))
+
+                    -(-0.5*tr1 +0.5*tr2)
                 }
-                DinvV <- Dinv %*% Sm@Vfs
+            }
+        } else {
 
-                alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*% (Sm@Z - Sm@S %*% mu_eta)
-                resid <- Sm@Z - Sm@X %*% alpha
-                Omega_diag <- Omega_diag1 -
-                    2*diag2(Sm@S %*% mu_eta, t(resid)) +
-                    diag2(resid,t(resid))
-                Omega_diag <- Diagonal(x=Omega_diag)
+            R_eta <- chol(S_eta + tcrossprod(mu_eta))
+            S_R_eta <- Sm@S %*% t(R_eta)
+            Omega_diag1 <- rowSums(S_R_eta^2)
+            # Partial_Cov <- Takahashi_Davis(Sm@Q_eta,cholQp = Sm@chol_Q_eta$Qpermchol,
+            #                        P = Sm@chol_Q_eta$P)
+            # Omega_diag1 <- as.numeric(diag2(Sm@S %*% Partial_Cov,t(Sm@S)) + (Sm@S %*% mu_eta)^2)
+            # warning("Doing sparse")
+            J <- function(sigma2fs) {
+                if(sigma2fs < 0) {
+                    return(Inf)
+                } else {
+                    D <- sigma2fs*Sm@Vfs + Sm@Ve
+                    if(is(D,"dtCMatrix")) {
+                        Dinv <- solve(D)
+                    } else {
+                        Dinv <- chol2inv(chol(D))
+                    }
+                    DinvV <- Dinv %*% Sm@Vfs
 
-                -(-0.5*tr(DinvV) +
-                  0.5*tr(DinvV %*% Dinv %*% Omega_diag)
-                )
+                    alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*% (Sm@Z - Sm@S %*% mu_eta)
+                    resid <- Sm@Z - Sm@X %*% alpha
+                    Omega_diag <- Omega_diag1 -
+                        2*diag2(Sm@S %*% mu_eta, t(resid)) +
+                        diag2(resid,t(resid))
+                    Omega_diag <- Diagonal(x=Omega_diag)
+
+                    -(-0.5*tr(DinvV) +
+                          0.5*tr(DinvV %*% Dinv %*% Omega_diag)
+                    )
+                }
             }
         }
-    }
 
 
 
     # Repeat until finding values on opposite sides of zero if heteroscedastic
-    if(!homoscedastic) {
-        amp_factor <- 10; OK <- 0
-        while(!OK) {
-            amp_factor <- amp_factor * 10
-            if(!(sign(J(sigma2fs/amp_factor)) == sign(J(sigma2fs*amp_factor)))) OK <- 1
-            if(amp_factor > 1e12) {
-                warning("sigma2fs is being estimated to zero.
+    if(!all(diag(Sm@Vfs == 0)))
+        if(!homoscedastic) {
+            amp_factor <- 10; OK <- 0
+            while(!OK) {
+                amp_factor <- amp_factor * 10
+                if(!(sign(J(sigma2fs/amp_factor)) == sign(J(sigma2fs*amp_factor)))) OK <- 1
+                if(amp_factor > 1e9) {
+                    warning("sigma2fs is being estimated to zero.
                             This might because because of an incorrect binning procedure.")
-                OK <- 1
+                    OK <- 1
+                }
             }
-        }
 
-        if(amp_factor > 1e12) {
-            sigma2fs_new <- 0
-        }
-        sigma2fs_new <- uniroot(f = J,
-                                interval = c(sigma2fs/amp_factor,sigma2fs*amp_factor))$root
-        D <- sigma2fs_new*Sm@Vfs + Sm@Ve
-        if(is(D,"dtCMatrix")) {
-            Dinv <- solve(D)
+            if(amp_factor > 1e9) {
+                sigma2fs_new <- 0
+            } else {
+                sigma2fs_new <- uniroot(f = J,
+                                        interval = c(sigma2fs/amp_factor,sigma2fs*amp_factor))$root
+            }
+            D <- sigma2fs_new*Sm@Vfs + Sm@Ve
+            if(is(D,"dtCMatrix")) {
+                Dinv <- solve(D)
+            } else {
+                Dinv <- chol2inv(chol(D))
+            }
+            alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*% (Sm@Z - Sm@S %*% mu_eta)
         } else {
-            Dinv <- chol2inv(chol(D))
-        }
-        alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*% (Sm@Z - Sm@S %*% mu_eta)
-    } else {
 
-        alpha <- solve(t(Sm@X) %*% Sm@X) %*% t(Sm@X) %*% (Sm@Z - Sm@S %*% mu_eta)
-        resid <- Sm@Z - Sm@X %*% alpha
-        Omega_diag <- Omega_diag1 -
-            2*diag2(Sm@S %*% mu_eta, t(resid)) +
-            diag2(resid,t(resid))
-        Omega_diag <- Diagonal(x=Omega_diag)
-        sigma2fs_new <- 1/b[1]*(sum(Omega_diag)/length(Sm@Z) - a[1])
-        if(sigma2fs_new < 0) {
-            warning("sigma2fs is being estimated to zero.
+            alpha <- solve(t(Sm@X) %*% Sm@X) %*% t(Sm@X) %*% (Sm@Z - Sm@S %*% mu_eta)
+            resid <- Sm@Z - Sm@X %*% alpha
+            Omega_diag <- Omega_diag1 -
+                2*diag2(Sm@S %*% mu_eta, t(resid)) +
+                diag2(resid,t(resid))
+            Omega_diag <- Diagonal(x=Omega_diag)
+            sigma2fs_new <- 1/b[1]*(sum(Omega_diag)/length(Sm@Z) - a[1])
+            if(sigma2fs_new < 0) {
+                warning("sigma2fs is being estimated to zero.
                             This might because because of an incorrect binning procedure or
                     because too much measurement error is being assumed.")
-            sigma2fs_new = 0
+                sigma2fs_new = 0
+            }
         }
+    if(all(diag(Sm@Vfs == 0))) {
+        alpha <- solve(t(Sm@X) %*% solve(Sm@Ve) %*% Sm@X) %*% t(Sm@X) %*%
+            solve(Sm@Ve) %*% (Sm@Z - Sm@S %*% mu_eta)
+        sigma2fs_new <- 0
     }
 
     Sm@Khat <- K
+    Sm@Khat_inv <- Khat_inv
     Sm@alphahat <- alpha
     Sm@sigma2fshat <- sigma2fs_new
 
     Sm
 }
 
-.loglik <- function(Sm) {
+.SRE.EMstep.ICAR <- function(Sm) {
 
-    D <- Sm@sigma2fshat*Sm@Vfs + Sm@Ve
+    alpha <- Sm@alphahat
+    K <- Sm@Khat
+    Kinv <- Sm@Khat_inv
+    sigma2fs <- Sm@sigma2fshat
+    Qfs_norm <- Sm@Qfs_BAUs %>% as("dgTMatrix")
+    Cmat <- Sm@Cmat
+    r <- nrow(K)
+    n <- length(Sm@BAUs)
+    Qe <- solve(Sm@Ve)
+
+    GAMMA <- as(bdiag(Kinv,(1/sigma2fs) * Qfs_norm),"symmetricMatrix") %>% as("dgTMatrix")
+    PI <- cBind(Sm@S, Cmat %*% .symDiagonal(n=length(Sm@BAUs)))
+    Qx <- (t(PI) %*% solve(Sm@Ve) %*% PI + GAMMA) %>% as("dgTMatrix")
+
+    ## Add (zero) elements to Qx so that all covariance elements associated with eta are computed
+    ## This may be removed in the future if we work with uniformly sparse K
+    ij <- expand.grid(i=0:(r-1),j=0:(r-1))
+    miss_idx <- setdiff(ij,data.frame(i=Qx@i,j=Qx@j))
+    Qx@i <- c(Qx@i,miss_idx[,1])
+    Qx@j <- c(Qx@j,miss_idx[,2])
+    Qx@x <- c(Qx@x,rep(0L,nrow(miss_idx)))
+    Qx <- as(Qx,"dgCMatrix")
+    temp <- cholPermute(Qx)
+    ybar <- t(PI) %*% Qe %*% (Sm@Z - Sm@X %*% alpha)
+    x_mean <- cholsolve(Qx,ybar,perm=TRUE,cholQp = temp$Qpermchol, P = temp$P)
+    Cov <- Takahashi_Davis(Qx,cholQp = temp$Qpermchol,P = temp$P) # PARTIAL
+
+    MeanOuter_sparse <- sparseMatrix(i=GAMMA@i + 1, j=GAMMA@j + 1,
+                                     x = x_mean[GAMMA@i+1] * x_mean[GAMMA@j+1])
+    MeanOuter_eta <- tcrossprod(Matrix(x_mean[1:r]))
+
+    Sm@Khat <- .regularise_K(Sm = Sm,
+                             S_eta = as(forceSymmetric(Cov[(1:r),(1:r)]),"symmetricMatrix"),
+                             mu_eta = (Matrix(x_mean[1:r])))
+    Sm@Khat_inv <- chol2inv(chol(Sm@Khat))
+
+    Sm@sigma2fshat <- sum(Qfs_norm * (Cov[-(1:r),-(1:r)] + MeanOuter_sparse[-(1:r),-(1:r)]))/ length(Sm@BAUs)
+    Sm@alphahat <- solve(t(Sm@X) %*% Qe %*% Sm@X) %*% t(Sm@X) %*% Qe %*% (Sm@Z - PI %*% x_mean)
+    Sm@mu_eta <- Matrix(x_mean[1:r])
+    Sm@mu_xi <- Matrix(x_mean[-(1:r)])
+    Sm@S_eta <- Cov[1:r,1:r]
+    Sm
+
+}
+
+.loglik <- function(Sm) {
+    if(Sm@fs_model == "ind") {
+        .loglik.ind(Sm)
+    } else if(Sm@fs_model == "ICAR") {
+        .loglik.ICAR(Sm)
+    }
+}
+
+.loglik.ind <- function(Sm) {
+
     S <- Sm@S
     K <- Sm@Khat
     chol_K <- chol(K)
@@ -399,6 +545,7 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM", print_lik=FA
     resid <- Sm@Z - Sm@X %*% Sm@alphahat
     N <- length(Sm@Z)
 
+    D <- Sm@sigma2fshat*Sm@Vfs + Sm@Ve
     if(is(D,"dtCMatrix")) {
         cholD <- sqrt(D)
         cholDinvT <- solve(cholD)
@@ -407,10 +554,7 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM", print_lik=FA
         cholDinvT <- t(solve(cholD))
     }
 
-
     S_Dinv_S <-  crossprod(cholDinvT %*% S)
-
-
     log_det_SigmaZ <- determinant(Kinv + S_Dinv_S,logarithm = TRUE)$modulus +
         determinant(K,logarithm = TRUE)$modulus +
         logdet(cholD)
@@ -435,18 +579,65 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, method="EM", print_lik=FA
 
 }
 
+.loglik.ICAR <- function(Sm) {
+
+    # warning("Monitoring complete-data likelihood")
+    # res <- Sm@Z - Sm@X %*% Sm@alphahat - Sm@S %*% Sm@mu_eta - Sm@Cmat %*% Sm@mu_xi
+    # (-0.5 * t(res) %*% solve(Sm@Ve) %*%  res) %>% as.numeric()
+    S <- Sm@S
+    K <- Sm@Khat
+    chol_K <- chol(K)
+    Kinv <- chol2inv(chol_K)
+    resid <- Sm@Z - Sm@X %*% Sm@alphahat
+    N <- length(Sm@Z)
+    Qe <- solve(Sm@Ve)
+    Cmat <- Sm@Cmat
+    Qfs <- (1/Sm@sigma2fshat) * Sm@Qfs_BAUs
+    R <- chol(Qfs  + t(Cmat) %*% Qe %*% Cmat)
+    Dinv <- Qe*1.000000001 - crossprod(t(solve(R)) %*% t(Cmat) %*% Qe)
+    chol_Dinv <- chol(Dinv)
+    D <- chol2inv(chol_Dinv)
+    cholD <- chol(D)
+    cholDinvT <- t(solve(cholD))
+    S_Dinv_S <-  crossprod(cholDinvT %*% S)
+    log_det_SigmaZ <- determinant(Kinv + S_Dinv_S,logarithm = TRUE)$modulus +
+        determinant(K,logarithm = TRUE)$modulus +
+        logdet(cholD)
+
+    ## Alternatively: (slower but more direct)
+    # Dinv <- chol2inv(chol(D))
+    # SigmaZ_inv <- Dinv - Dinv %*% S %*% solve(Kinv + S_Dinv_S) %*% t(S) %*% Dinv
+    # SigmaZ_inv2 <- Dinv - tcrossprod(Dinv %*% S %*% solve(R))
+
+    R <- chol(Kinv + S_Dinv_S)
+
+    rDinv <- crossprod(cholDinvT %*% resid,cholDinvT)
+    ## Alternatively: # rDinv <- t(resid) %*% Dinv
+
+    quad_bit <- crossprod(cholDinvT %*% resid) - tcrossprod(rDinv %*% S %*% solve(R))
+    ## Alternatively: # quad_bit <- rDinv %*% resid - tcrossprod(rDinv %*% S %*% solve(R))
+
+    llik <- -0.5 * N * log(2*pi) -
+        0.5 * log_det_SigmaZ -
+        0.5 * quad_bit
+    as.numeric(llik)
+
+
+
+}
+
 
 #' @rdname SRE
 #' @export
 SRE.predict <- function(SRE_model,use_centroid=TRUE,obs_fs=TRUE,pred_polys = NULL,pred_time = NULL) {
 
 
-     if(is(pred_polys,"Spatial") & !(is(pred_polys,"SpatialPolygons")))
-         stop("Predictions need to be over BAUs or spatial polygons")
+    if(is(pred_polys,"Spatial") & !(is(pred_polys,"SpatialPolygons")))
+        stop("Predictions need to be over BAUs or spatial polygons")
 
-     if(is(pred_polys,"ST") & !(is(pred_polys,"STFDF")))
-         if(!(is(pred_polys@sp,"SpatialPolygons")))
-             stop("Predictions need to be over BAUs or STFDFs with spatial polygons")
+    if(is(pred_polys,"ST") & !(is(pred_polys,"STFDF")))
+        if(!(is(pred_polys@sp,"SpatialPolygons")))
+            stop("Predictions need to be over BAUs or STFDFs with spatial polygons")
 
     pred_locs <- .SRE.predict(Sm=SRE_model,
                               use_centroid=use_centroid,
@@ -487,7 +678,7 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,obs_fs=TRUE,pred_polys = NUL
                            j=C_idx$j_idx,
                            x=1,
                            dims=c(length(pred_polys),
-                                      length(BAUs)))
+                                  length(BAUs)))
         CP <- CP / rowSums(CP) ## Average over polygon
         if(!all(table(C_idx$i_idx) == 1))
             predict_BAUs <- FALSE   ## Need to compute full covariance matrix
@@ -539,18 +730,26 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,obs_fs=TRUE,pred_polys = NUL
     alpha <- Sm@alphahat
     K <- Sm@Khat
     sigma2fs <- Sm@sigma2fshat
-    D <- sigma2fs*Sm@Vfs + Sm@Ve
-    if(is(D,"dtCMatrix")) {
-        Dchol <- sqrt(D)
-        Dinv <- solve(D)
-    } else {
-        Dchol <- chol(D)
-        Dinv <- chol2inv(Dchol)
-    }
     mu_eta <- Sm@mu_eta
     S_eta <- Sm@S_eta
 
-    sig2_Vfs_pred <- Diagonal(x=sigma2fs*BAUs$fs)
+    if(Sm@fs_model == "ind") {
+        D <- sigma2fs*Sm@Vfs + Sm@Ve
+        if(is(D,"dtCMatrix")) {
+            Dchol <- sqrt(D)
+            Dinv <- solve(D)
+        } else {
+            Dchol <- chol(D)
+            Dinv <- chol2inv(Dchol)
+        }
+
+        sig2_Vfs_pred <- Diagonal(x=sigma2fs*BAUs$fs)
+        Q <- solve(sig2_Vfs_pred)
+
+
+    } else if(Sm@fs_model == "ICAR") {
+        Q <- (1/sigma2fs) * Sm@Qfs_BAUs
+    }
 
     if(is(BAUs,"Spatial")) {
         idx <- match(row.names(BAUs),row.names(Sm@BAUs))
@@ -562,20 +761,21 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,obs_fs=TRUE,pred_polys = NUL
 
     if(!obs_fs) {
         if(sigma2fs >0) {
-            LAMBDA <- as(bdiag(Sm@Khat,sig2_Vfs_pred),"symmetricMatrix")
-            LAMBDAinv <- chol2inv(chol(LAMBDA))  #block diagonal so straightforward
+            #LAMBDA <- as(bdiag(Sm@Khat,sig2_Vfs_pred),"symmetricMatrix")
+            LAMBDAinv <- bdiag(Sm@Khat_inv,Q)
             PI <- cBind(S0, .symDiagonal(n=length(BAUs)))
-            Qx <- t(PI) %*% t(CZ) %*% solve(Sm@Ve) %*% CZ %*% PI + LAMBDAinv
-            temp <- cholPermute(Qx)
+            tC_Ve_C <- t(CZ) %*% solve(Sm@Ve) %*% CZ + 0*.symDiagonal(ncol(CZ)) # Ensure zeros
+            Qx <- t(PI) %*% tC_Ve_C %*% PI + LAMBDAinv
+            chol_Qx <- cholPermute(Qx)
             ybar <- t(PI) %*%t(CZ) %*% solve(Sm@Ve) %*% (Sm@Z - CZ %*% X %*% alpha)
-            x_mean <- cholsolve(Qx,ybar,perm=TRUE,cholQp = temp$Qpermchol, P = temp$P)
+            x_mean <- cholsolve(Qx,ybar,perm=TRUE,cholQp = chol_Qx$Qpermchol, P = chol_Qx$P)
             if(predict_BAUs) {
-                Cov <- Takahashi_Davis(Qx,cholQp = temp$Qpermchol,P = temp$P) # PARTIAL
+                Cov <- Takahashi_Davis(Qx,cholQp = chol_Qx$Qpermchol,P = chol_Qx$P) # PARTIAL
             } else {
                 Cov <- cholsolve(Qx,Diagonal(nrow(Qx)),perm=TRUE,
-                                 cholQp = temp$Qpermchol, P = temp$P) # FULL
+                                 cholQp = chol_Qx$Qpermchol, P = chol_Qx$P) # FULL
             }
-            BAUs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
+            BAUs[["mu"]] <- as.numeric(X %*% alpha) + as.numeric(PI %*% x_mean)
         } else {
             LAMBDA <- as(Sm@Khat,"symmetricMatrix")
             LAMBDAinv <- chol2inv(chol(LAMBDA))
@@ -594,10 +794,10 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,obs_fs=TRUE,pred_polys = NUL
         if(opts_FRK$get("parallel") > 1) {
             cl <- makeCluster(opts_FRK$get("parallel"))
             var_list <- mclapply(1:max(unique(batching)),
-                                function(i) {
-                                    idx = which(batching == i)
-                                    as.numeric(rowSums((PI[idx,] %*% Cov)*PI[idx,]))},
-                                mc.cores = opts_FRK$get("parallel"))
+                                 function(i) {
+                                     idx = which(batching == i)
+                                     as.numeric(rowSums((PI[idx,] %*% Cov)*PI[idx,]))},
+                                 mc.cores = opts_FRK$get("parallel"))
             temp <- do.call(c,var_list)
             stopCluster(cl)
         } else {
@@ -611,10 +811,10 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,obs_fs=TRUE,pred_polys = NUL
     }
 
     if(obs_fs) {
-
-        Qx <- (crossprod(t(solve(Dchol)) %*% (Sm@S %>% as("dgCMatrix"))) + chol2inv(chol(K)) %>% as("dsCMatrix"))
+        Qobs <- solve(Sm@Ve)
+        Qx <- (crossprod(t(Qobs) %*% (Sm@S %>% as("dgCMatrix"))) + chol2inv(chol(K)) %>% as("dsCMatrix"))
         temp <- cholPermute(Qx)
-        ybar <- t(Sm@S) %*% Dinv %*% (Sm@Z - CZ %*% X %*% alpha)
+        ybar <- t(Sm@S) %*% Qobs %*% (Sm@Z - CZ %*% X %*% alpha)
         x_mean <- cholsolve(Qx,ybar,perm=TRUE,cholQp = temp$Qpermchol, P = temp$P)
         if(predict_BAUs) {
             Cov <- Takahashi_Davis(Qx,cholQp = temp$Qpermchol,P = temp$P) # PARTIAL
@@ -622,8 +822,8 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,obs_fs=TRUE,pred_polys = NUL
             Cov <- cholsolve(Qx,Diagonal(nrow(Qx)),perm=TRUE,
                              cholQp = temp$Qpermchol, P = temp$P) # FULL
         }
-        BAUs[["mu"]] <- as.numeric(X %*% alpha + S0 %*% x_mean)
-        BAUs[["var"]] <- rowSums((S0 %*% Cov) * S0)
+        BAUs[["mu"]] <- as.numeric(X %*% alpha) + as.numeric(S0 %*% x_mean)
+        BAUs[["var"]] <- rowSums((S0 %*% Cov) * S0) + Sm@sigma2fshat*BAUs$fs
     }
 
     if(predict_BAUs) {
@@ -797,22 +997,22 @@ setMethod("summary",signature(object="SRE"),
             while(!OK) {
                 amp_factor <- amp_factor * 10
                 if(!(sign(J(sigma2fs/amp_factor)) == sign(J(sigma2fs*amp_factor)))) OK <- 1
-                if(amp_factor > 1e12) {
+                if(amp_factor > 1e9) {
                     warning("sigma2fs is being estimated to zero.
                             This might because because of an incorrect binning procedure.")
                     OK <- 1
                 }
             }
 
-            if(amp_factor > 1e12) {
+            if(amp_factor > 1e9) {
                 sigma2fs_new <- 0
                 converged <- TRUE
             }
             sigma2fs_new <- uniroot(f = J,
                                     interval = c(sigma2fs/amp_factor,sigma2fs*amp_factor))$root
-            } else {
-                sigma2fs_new <- 1/b[1]*(sum(Omega_diag)/length(Sm@Z) - a[1])
-            }
+        } else {
+            sigma2fs_new <- 1/b[1]*(sum(Omega_diag)/length(Sm@Z) - a[1])
+        }
         D <- sigma2fs_new*Sm@Vfs + Sm@Ve
         Dinv <- chol2inv(chol(D))
         if(alpha_OLS) {
@@ -822,7 +1022,7 @@ setMethod("summary",signature(object="SRE"),
             if(max(sigma2fs_new / sigma2fs, sigma2fs / sigma2fs_new) < 1.001) converged <- TRUE
         }
         sigma2fs <- sigma2fs_new
-        }
+    }
 
     Sm@Khat <- K
     Sm@alphahat <- alpha

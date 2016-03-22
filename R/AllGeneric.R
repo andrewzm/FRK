@@ -149,6 +149,12 @@ setGeneric("map_data_to_BAUs", function(data_sp,sp_pols,av_var,variogram.formula
 #' @noRd
 setGeneric("concat", function(...) standardGeneric("concat"))
 
+#' @title Counts of basis per resolution
+#' @description Returns a data frame with two columns, containing the resolution number and the number of basis functions at that resolution.
+#' @param .Obj an \code{FRK} object
+#' @noRd
+setGeneric("count_res", function(.Object) standardGeneric("count_res"))
+
 #' @title Construct incidence matrix
 #' @description Construct incidence matrix for Spatial and Spatiotemporal fields.
 #' @param ... a series of \code{FRK} objects

@@ -6,10 +6,11 @@
 \alias{SRE.predict}
 \title{Construct SRE object, fit and predict}
 \usage{
-SRE(f, data, basis, BAUs, est_error = FALSE, average_in_BAU = TRUE)
+SRE(f, data, basis, BAUs, est_error = FALSE, average_in_BAU = TRUE,
+  fs_model = "ind", vgm_model = NULL)
 
-SRE.fit(SRE_model, n_EM = 100L, tol = 1e-05, method = "EM",
-  print_lik = FALSE)
+SRE.fit(SRE_model, n_EM = 100L, tol = 1e-05, regularise = FALSE,
+  method = "EM", print_lik = FALSE)
 
 SRE.predict(SRE_model, use_centroid = TRUE, obs_fs = TRUE,
   pred_polys = NULL, pred_time = NULL)
@@ -26,6 +27,10 @@ SRE.predict(SRE_model, use_centroid = TRUE, obs_fs = TRUE,
 \item{est_error}{flag indicating whether the measurement-error variance should be estimated from variogram techniques. If this is set to 0, then \code{data} must contain a field \code{std}. Measurement-error estimation is not implemented for spatio-temporal datasets}
 
 \item{average_in_BAU}{if \code{TRUE}, then multiple data points falling in the same BAU are averaged; the measurement error of the averaged data point is taken as the average of the individual measurement errors}
+
+\item{fs_model}{if "ind" then the fine-scale variation is independent at the BAU level. If "ICAR", then an ICAR model is placed on the BAUs}
+
+\item{vgm_model}{an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm} containing the variogram model to fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified the variogram used is \code{gstat::vgm(1, "Lin", d, 1)} where \code{d} is approximately one third of the maximum distance between any two points}
 
 \item{SRE_model}{object returned from the constructor \code{SRE()}}
 

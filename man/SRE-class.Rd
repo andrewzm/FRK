@@ -39,6 +39,8 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 
 \item{\code{Khat}}{prior covariance matrix of random effects (estimated)}
 
+\item{\code{Khat_inv}}{prior covariance matrix of random effects (estimated)}
+
 \item{\code{alphahat}}{covariates weights (estimated)}
 
 \item{\code{sigma2fshat}}{fine-scale variation scaler (estimated)}

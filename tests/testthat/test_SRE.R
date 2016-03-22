@@ -23,11 +23,17 @@ test_that("SRE 1D works",{
                     subsamp = 20000)
     expect_is(G,"Basis")
 
+    c_res <- count_res(G)
+    expect_is(c_res,"data.frame")
+    expect_equal(c_res$res,c(1,2))
+
     f <- z ~ 1
     S <- SRE(f,list(sim_data),G,
              grid_BAUs,
              est_error = FALSE)
 
+    c_res2 <- count_res(S)
+    expect_identical(c_res,c_res2)
     expect_is(S,"SRE")
 
     ### Fit with 5 EM iterations so as not to take too much time
