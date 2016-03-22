@@ -778,7 +778,7 @@ est_obs_error <- function(sp_pts,variogram.formula,vgm_model = NULL) {
     vgm.fit = gstat::fit.variogram(v, model = vgm_model)
 
     if(vgm.fit$psill[1] == 0) { ## Try with Gaussian, maybe process is overly smooth or data is a large average
-        vgm.fit = gstat::fit.variogram(v, model = vgm(1, "Gau", mean(v$dist), 1))
+        vgm.fit = gstat::fit.variogram(v, model = gstat::vgm(1, "Gau", mean(v$dist), 1))
     }
     plot(v,vgm.fit)
     print(paste0("sigma2e estimate = ",vgm.fit$psill[1]))
