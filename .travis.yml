@@ -35,6 +35,8 @@ install:
 - Rscript -e 'install.packages("rgeos", repos = "http://cran.rstudio.com")'
 - Rscript -e 'install.packages("gstat", repos = "http://cran.rstudio.com")'
 - Rscript -e 'install.packages("testthat", repos = "http://cran.rstudio.com")'
+- Rscript -e 'install.packages("spdep", repos = "http://cran.rstudio.com")'
+- Rscript -e 'install.packages("verification", repos = "http://cran.rstudio.com")'
 - Rscript -e 'devtools::install_github("andrewzm/inla")'
 - Rscript -e 'devtools::install_github("jimhester/covr")'
 - Rscript -e 'devtools::install_github("jimhester/lintr")'
