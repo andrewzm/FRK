@@ -57,7 +57,7 @@ setGeneric("type", function(.Object) standardGeneric("type"))
 #' distance(sphere(),matrix(0,1,2),matrix(10,1,2))
 #' distance(plane(),matrix(0,1,2),matrix(10,1,2))
 #' @export
-setGeneric("distance", function(d,x1,x2) standardGeneric("distance"))
+setGeneric("distance", function(d,x1,x2=NULL) standardGeneric("distance"))
 
 #' @title Evaluate basis functions
 #' @description  Evaluate basis functions at points or average functions over polygons.
@@ -116,6 +116,26 @@ setGeneric("eval_basis", function(basis,s,output="matrix") standardGeneric("eval
 #' #show_basis(G_temporal)
 setGeneric("TensorP", function(Basis1,Basis2) standardGeneric("TensorP"))
 
+#' @title Return number of resolutions
+#' @description Return the number of resolutions from a basis function object.
+#' @param b object of class \code{Basis} or \code{SRE}
+#' @examples
+#' library(sp)
+#' d <- data.frame(lon = runif(n=1000,min = -179, max = 179),
+#'                 lat = runif(n=1000,min = -90, max = 90),
+#'                 z = rnorm(5000))
+#' coordinates(d) <- ~lon + lat
+#' proj4string(d)=CRS("+proj=longlat")
+#'
+#' ### Now create basis functions on sphere
+#' G <- auto_basis(manifold = sphere(),data=d,
+#'                 nres = 2,prune=15,
+#'                 type = "bisquare",
+#'                 subsamp = 20000)
+#' nres(G)
+#' @export
+setGeneric("nres", function(b) standardGeneric("nres"))
+
 #### NOT EXPORTED ####
 
 #' @title Automatic BAU generation
@@ -161,5 +181,10 @@ setGeneric("count_res", function(.Object) standardGeneric("count_res"))
 #' @noRd
 setGeneric("BuildC", function(data,BAUs) standardGeneric("BuildC"))
 
+#' @title Construct distance matrices
+#' @description Construct distance matrices for Spatial and Spatiotemporal fields.
+#' @param G an object of class \code{Basis}
+#' @noRd
+setGeneric("BuildD", function(G) standardGeneric("BuildD"))
 
 

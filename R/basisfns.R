@@ -59,6 +59,8 @@ local_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type
 #' @param type the type of basis functions to use; see details
 #' @param isea3h_lo if \code{manifold = sphere()}, this argument dictates which ISEA3H resolution is the lowest one that should be used for basis-function placement
 #' @param bndary a \code{matrix} containing points containing the boundary. If \code{regular == 0} this can be used to define a boundary in which irregularly-spaced basis functions are placed
+#' @param verbose a logical variable indicating whether to output a summary of the basis functions created or not
+#' @param ... unused
 #' @details This function automatically places basis functions within the domain of interest. If the domain is a plane or the real line, then the object \code{data} is used to establish the domain boundary.
 #'
 #'
@@ -103,17 +105,17 @@ local_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type
 auto_basis <- function(manifold = plane(),
                        data,
                        regular=1,
-                       nres=2,
+                       nres=NULL,
                        prune=0,
                        subsamp=10000,
                        type="Gaussian",
                        isea3h_lo = 0,
-                       bndary = NULL) {
+                       bndary = NULL,
+                       verbose = 0L,
+                       ...) {
     m <- manifold
     if(!is(m,"manifold"))
         stop("manifold needs to be an object of class manifold")
-    if(!is.numeric(nres) | nres < 0)
-        stop("nres needs to be greater than zero")
     if(!is.numeric(prune) | prune < 0)
         stop("prune needs to be greater than zero")
     if(!is.numeric(subsamp) | subsamp < 0)
@@ -124,7 +126,46 @@ auto_basis <- function(manifold = plane(),
         stop("Irregular basis only available on planes")
     if(!(is(isea3h_lo,"numeric")))
         stop("isea3h_lo needs to be an integer greater than 0")
+    if(!(is.numeric(nres) | is.null(nres)))
+        stop("nres needs to be greater than zero or NULL")
+    if(is.null(nres)) {
+        print("...Automatically choosing functions...")
+        tot_basis <- 0
+        tot_data <- length(data)
+        nres <- 1
+        max_basis <- min(1000,tot_data/5)
+        while(tot_basis <= max_basis) {
+            nres <- nres + 1
+            G <- .auto_basis(manifold =manifold,
+                            data=data,
+                            prune =0,regular=regular,nres=nres,
+                            subsamp=subsamp,type=type,isea3h_lo = isea3h_lo,
+                            bndary=bndary, verbose=0)
+            tot_basis <- nbasis(G)
+        }
+        S <- eval_basis(G,data)
+        prune <- (colSums(S)[rev(order(colSums(S)))])[round(max_basis)] + 1e-10
+    }
 
+    .auto_basis(manifold=manifold,data=data,regular=regular,nres=nres,
+                prune=prune,subsamp=subsamp,type=type,isea3h_lo = isea3h_lo,
+                bndary=bndary, verbose=verbose)
+
+}
+
+
+.auto_basis <- function(manifold = plane(),
+                       data,
+                       regular=1,
+                       nres=2,
+                       prune=0,
+                       subsamp=10000,
+                       type="Gaussian",
+                       isea3h_lo = 0,
+                       bndary = NULL,
+                       verbose = 0L) {
+
+    m <- manifold
     isea3h <- centroid <- res <- NULL #(suppress warnings, these are loaded from data)
     coords <- coordinates(data)
 
@@ -149,7 +190,7 @@ auto_basis <- function(manifold = plane(),
         } else {
             if(!is(bndary,"matrix"))
                 stop("bndary needs to be a matrix of points")
-            bndary_seg <- inla.mesh.segment(bndary)
+            bndary_seg <- INLA::inla.mesh.segment(bndary)
         }
     }
 
@@ -170,7 +211,7 @@ auto_basis <- function(manifold = plane(),
     if(is(m,"sphere")) {
         isea3h <- load_dggrids(res = nres) %>%
                   dplyr::filter(res >= isea3h_lo)
-        nres <- nres - isea3h_lo
+        #nres <- nres - isea3h_lo
     }
 
 
@@ -183,10 +224,11 @@ auto_basis <- function(manifold = plane(),
                                           max.edge = max(diff(xrange),diff(yrange))/(2*2.5^(i-1)),
                                           cutoff = max(diff(xrange),diff(yrange))/(3*2.5^(i-1)))$loc[,1:2]
         } else if(is(m,"plane") & (regular> 0)) {
+           xgrid <- seq(xrange[1], xrange[2], length =nx*(3^(i)))
+           ygrid <- seq(yrange[1], yrange[2], length =ny*(3^(i)))
             ## Generate mesh and use these as centres
-            xgrid <- seq(xrange[1] + diff(xrange)/(2*nx*i), xrange[2] - diff(xrange)/(2*nx*i), length =nx*(3^(i-1)))
-            ygrid <- seq(yrange[1] + diff(yrange)/(2*ny*i), yrange[2] - diff(yrange)/(2*ny*i), length =ny*(3^(i-1)))
-
+            #xgrid <- seq(xrange[1] + diff(xrange)/(2*nx*i), xrange[2] - diff(xrange)/(2*nx*i), length =nx*(3^(i-1)))
+            #ygrid <- seq(yrange[1] + diff(yrange)/(2*ny*i), yrange[2] - diff(yrange)/(2*ny*i), length =ny*(3^(i-1)))
             this_res_locs <- xgrid %>%
                 expand.grid(ygrid) %>%
                 as.matrix()
@@ -195,7 +237,7 @@ auto_basis <- function(manifold = plane(),
         } else if(is(m,"sphere")) {
             this_res_locs <- as.matrix(filter(isea3h,centroid==1,res==(i-1 + isea3h_lo))[c("lon","lat")])
         }
-        ## Set scales: To 1.5x the distance to nearest basis
+        ## Set scales: To 1.5x the distance to nearest basis if bisquare
         ## Refine: Remove basis which are not influenced by data and re-find the scales
         for(j in 1:2) {
             D <- FRK::distance(m,this_res_locs,this_res_locs)
@@ -222,7 +264,7 @@ auto_basis <- function(manifold = plane(),
                 break
             }
         }
-        print(paste0("Number of basis at resolution ",i," = ",nrow(this_res_locs)))
+        if(verbose) print(paste0("Number of basis at resolution ",i," = ",nrow(this_res_locs)))
 
         G[[i]] <-  local_basis(manifold = m,
                                 loc=this_res_locs,
@@ -276,7 +318,22 @@ sp_to_ST_basis <- function(G_spatial,t_knots = 1,manifold=STsphere()) {
 #' @rdname TensorP
 #' @aliases TensorP,Basis-Basis-method
 setMethod("TensorP",signature(Basis1="Basis",Basis2="Basis"),function(Basis1,Basis2) {
-    new("TensorP_Basis",Basis1=Basis1, Basis2=Basis2, n = Basis1@n * Basis2@n)
+    if(nres(Basis2) > 1) stop("Only one basis can be multiresolution (Basis 1)")
+    df1 <- Basis1@df
+    df2 <- Basis2@df
+    n1 <- dimensions(Basis1)
+    n2 <- dimensions(Basis2)
+    expand.grid(df1[,1:n1,drop=FALSE],df2[,1:n2,drop=FALSE])
+    df <- cbind(df1[rep(1:nrow(df1),times = nrow(df2)),1:n1], ## One resolution in df2 being assumed
+                df2[rep(1:nrow(df2),each = nrow(df1)),1:n2],
+                df1[rep(1:nrow(df1),times = nrow(df2)),"res"])
+    names(df) <- c(paste0("loc",1:(n1 + n2)),"res")
+
+    new("TensorP_Basis",
+        Basis1=Basis1,
+        Basis2=Basis2,
+        n = Basis1@n * Basis2@n,
+        df = df)
 })
 
 
@@ -345,7 +402,6 @@ setMethod("eval_basis",signature(basis="Basis",s="STIDF"),function(basis,s,outpu
     .point_eval_fn(basis@fn,cbind(coordinates(s),t=s@data$t)[,1:space_dim,drop=F],output)
 })
 
-
 #' @rdname eval_basis
 #' @aliases eval_basis,TensorP_Basis-matrix-method
 setMethod("eval_basis",signature(basis="TensorP_Basis",s="matrix"),function(basis,s,output = "matrix"){
@@ -385,6 +441,33 @@ setMethod("eval_basis",signature(basis="TensorP_Basis",s = "STIDF"),function(bas
 })
 
 
+#' @rdname eval_basis
+#' @aliases eval_basis,TensorP_Basis-STFDF-method
+setMethod("eval_basis",signature(basis="TensorP_Basis",s = "STFDF"),function(basis,s,output = "matrix"){
+    n1 <- dimensions(manifold(basis@Basis1))
+    slocs <- coordinates(s)
+    tlocs <- matrix(s@data$t)
+    nt <- length(s@time)
+
+    S1 <- eval_basis(basis@Basis1,s[,1],output)
+    S1 <- do.call("rBind",lapply(1:nt,function(x) S1))
+    S2 <- eval_basis(basis@Basis2,tlocs[,,drop=FALSE],output)
+
+
+
+    i <- 1 #suppress binding warning
+
+    S <- Matrix(0,nrow(S1),ncol(S1)*ncol(S2))
+    for(i in 1:ncol(S1)) {
+        S[,((i-1)*ncol(S2)+1):(i*ncol(S2))] <- S1[,i] * S2
+        #S[[i]] <- S1[,i] * S2
+    }
+    S <- as(S,"dgCMatrix")
+
+    S
+})
+
+
 #' @rdname local_basis
 #' @export
 radial_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type="Gaussian") {
@@ -392,9 +475,36 @@ radial_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,typ
 
 }
 
+#' @rdname nres
+#' @aliases nres_basis,Basis-method
+setMethod("nres",signature(b="Basis"),function(b){ length(unique(b@df$res))})
+
+#' @rdname nres
+#' @aliases nres_basis,Basis-method
+setMethod("nres",signature(b="TensorP_Basis"),function(b){nres(b@Basis1) * nres(b@Basis2)})
 
 
+#' @rdname nres
+#' @aliases nres_SRE,SRE-method
+setMethod("nres",signature(b="SRE"),function(b){ nres(b@basis)})
 
+setMethod("BuildD",signature(G="Basis"),function(G){
+    res <- NULL # suppress bindings (it's in the data frame)
+    nres <- nres(G)
+    m <- manifold(G)
+    D_basis = lapply(1:nres,function(i)  {
+        x1 <- filter(G@df,res == i)[,1:dimensions(m)] %>% as.matrix()
+        distance(m,x1,x1)
+})})
+
+setMethod("BuildD",signature(G="TensorP_Basis"),function(G){
+    nres1 <- nres(G@Basis1)
+    nres2 <- nres(G@Basis2)
+    stopifnot(nres2 == 1)
+    D_basis <- list(Basis1 = BuildD(G@Basis1),
+                    Basis2 = BuildD(G@Basis2))
+    D_basis
+    })
 
 .point_eval_fn <- function(flist,s,output="matrix") {
 
@@ -534,6 +644,7 @@ setMethod("count_res",signature="SRE",function(.Object) {
 
 #' @aliases count_res,TensorP_Basis-method
 setMethod("count_res",signature="TensorP_Basis",function(.Object) {
+    res <- NULL # suppress bindings (it's in the data frame)
     c1 <-  count(.Object@Basis1@df,res)
     c2 <-  count(.Object@Basis2@df,res)
 
@@ -552,6 +663,7 @@ setMethod("count_res",signature="TensorP_Basis",function(.Object) {
 
 #' @aliases count_res,Basis-method
 setMethod("count_res",signature="Basis",function(.Object) {
+    res <- NULL # suppress bindings (it's in the data frame)
     count(.Object@df,res)
 })
 

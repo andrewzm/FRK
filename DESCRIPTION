@@ -4,7 +4,7 @@ Title: Fixed Rank Kriging
 Version: 0.1.1
 Date: 2015-01-21
 Authors@R: c(
-    person("Andrew", "Zammit-Mangion", , "andrewzm@gmail.com.com", c("aut", "cre","cph")),
+    person("Andrew", "Zammit-Mangion", , "andrewzm@gmail.com", c("aut", "cre","cph")),
     person("Nicholas", "Boers", , "boersn@macewan.ca", role = "ctb")
     )
 Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
@@ -33,7 +33,9 @@ Suggests:
     rgeos,
     mapproj,
     INLA,
-    splancs
+    splancs,
+    spdep,
+    verification
 Enhances: dggrids
 Imports:
     methods,

@@ -7,11 +7,11 @@
 \alias{distance,measure-method}
 \title{Compute distance}
 \usage{
-distance(d, x1, x2)
+distance(d, x1, x2 = NULL)
 
-\S4method{distance}{measure}(d, x1, x2)
+\S4method{distance}{measure}(d, x1, x2 = NULL)
 
-\S4method{distance}{manifold}(d, x1, x2)
+\S4method{distance}{manifold}(d, x1, x2 = NULL)
 }
 \arguments{
 \item{d}{object of class \code{measure} or \code{manifold}}

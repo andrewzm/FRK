@@ -70,7 +70,7 @@ setClass("Basis_obj", representation(n = "numeric","VIRTUAL"))
 setClass("Basis",contains="Basis_obj", representation(manifold="manifold",fn="list",pars="list", df="data.frame"))
 
 #' @rdname Basisclass
-setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Basis2="Basis"))
+setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Basis2="Basis",n = "integer", df = "data.frame"))
 
 
 #' @title Spatial Random Effects class
@@ -99,6 +99,7 @@ setClass("SRE",representation(data="list",
                               BAUs="ANY",     # should be SpatialPolygonsDataFrame or STFDF
                               f = "formula",
                               S = "Matrix",
+                              S0 = "Matrix",
                               Ve = "Matrix",
                               Vfs = "Matrix",
                               Vfs_BAUs = "Matrix",
@@ -117,4 +118,6 @@ setClass("SRE",representation(data="list",
                               v_run = "Matrix",
                               sigma2fshat = "numeric",
                               fs_model = "character",
-                              regularise = "logical"))
+                              D_basis = "list",
+                              K_type = "character",
+                              lambda = "numeric"))

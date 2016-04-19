@@ -58,8 +58,7 @@ test_that("sphere_BAUs",{
     isea3h_1 <- auto_BAUs(manifold=sphere(),
                           type="hex",
                           isea3h_res=1,
-                          data=NULL,
-    )
+                          data=NULL)
     expect_is(isea3h_1,"SpatialPolygonsDataFrame")
     expect_equal(nrow(isea3h_1@data),39)
     expect_equal(names(isea3h_1@data),c("id","lon","lat"))
@@ -105,9 +104,12 @@ test_that("SpaceTime_BAUs",{
                                  convex= -0.2)
     expect_is(space_time_grid,"STFDF")
 
+    STobj2 <- space_time_grid[1:5,1:3] # mock space-time STFDF data
+    STobj2$z <- 1
+
     f <- z ~ 1
-    binned_data1 <- map_data_to_BAUs(STobj1,space_time_grid,av_var=all.vars(f)[1],average_in_BAU = TRUE)
-    binned_data2 <- map_data_to_BAUs(STobj1,space_time_grid,av_var=all.vars(f)[1],average_in_BAU = FALSE)
+    binned_data1 <- FRK:::map_data_to_BAUs(STobj1,space_time_grid,av_var=all.vars(f)[1],average_in_BAU = TRUE)
+    binned_data2 <- FRK:::map_data_to_BAUs(STobj1,space_time_grid,av_var=all.vars(f)[1],average_in_BAU = FALSE)
     expect_is(binned_data1,"STIDF")
     expect_is(binned_data2,"STIDF")
 
@@ -119,6 +121,22 @@ test_that("SpaceTime_BAUs",{
     expect_equal(names(C2),c("i_idx","j_idx"))
     expect_equal(length(C1$i_idx),as.numeric(nrow(binned_data1)))
     expect_equal(length(C1$j_idx),as.numeric(nrow(binned_data1)))
+
+    ## The below tests are passing in Rstudio but not on R terminal
+
+    # binned_data3 <- map_data_to_BAUs(STobj2,space_time_grid,av_var=all.vars(f)[1],average_in_BAU = TRUE)
+    # binned_data4 <- map_data_to_BAUs(STobj2,space_time_grid,av_var=all.vars(f)[1],average_in_BAU = FALSE)
+    # expect_is(binned_data3,"STFDF")
+    # expect_is(binned_data4,"STFDF")
+
+    # C3 <- BuildC(binned_data3,space_time_grid)
+    # C4 <- BuildC(binned_data4,space_time_grid)
+    # expect_is(C3,"list")
+    # expect_is(C4,"list")
+    # expect_equal(names(C3),c("i_idx","j_idx"))
+    # expect_equal(names(C4),c("i_idx","j_idx"))
+    # expect_equal(length(C3$i_idx),as.numeric(length(binned_data3)))
+    # expect_equal(length(C4$j_idx),as.numeric(length(binned_data4)))
 
     expect_equal(attr(space_time_grid@time,"tzone"),attr(STobj1@time,"tzone"))
 })

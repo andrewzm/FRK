@@ -5,9 +5,7 @@
 Fixed Rank Kriging
 ================
 
-The package FRK is still under development. Both function interfaces and the underlying modelling approach are frequently being changed. This notice will be removed once a stable version is released.
-
-
+The package FRK is still under development. However, both function interfaces and the underlying modelling approach are now relatively stable. This notice will be removed once a stable version is released.
 
 Description
 ------------
@@ -20,27 +18,42 @@ Title: Fixed Rank Kriging
 
 Version: 0.1.0
 
-Date: 2016-01-21
+Date: 2016-04-19
 
 Author: Andrew Zammit-Mangion
 
 Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
 
-Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling and prediction with large datasets. The approach, discussed in Cressie and Johannesson (2008), decomposes the field, and hence the covariance function, using a fixed set of n basis functions, where *n* is typically much smaller than the number of data points (or polygons) *m*. The method naturally allows for non-stationary, anisotropic covariance functions and the use of observations with varying support (with known error variance). The projected field is a key building block of the spatial random effects (SRE) model, on which this package is based. The package FRK provides  helper functions to model, fit, and predict using an SRE with relative ease. Reference: Cressie, N., & Johannesson, G. (2008). Fixed rank kriging for very large spatial data sets. Journal of the Royal Statistical Society: Series B, 70, 209-226.
-
+Description: Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling and prediction with large datasets. The approach, discussed in Cressie and Johannesson (2008), decomposes the field, and hence the covariance function, using a fixed set of *n* basis functions, where *n* is typically much smaller than the number of data points (or polygons) *m*. The method naturally allows for non-stationary, anisotropic covariance functions and the use of observations with varying support (with known error variance). The projected field is a
+    key building block of the Spatial Random Effects (SRE) model, on which this package is based. The package FRK provides helper functions to model, fit, and predict using an SRE with relative ease. Reference: Cressie, N., & Johannesson, G. (2008). Fixed rank kriging for very large spatial data sets. Journal of the Royal Statistical Society: Series B, 70, 209-226.
 
 License: GPL (>= 2)
 
 Installation 
 ------------
 
-`FRK` is still in its early stages of development. To install, first please install `INLA` from `http://www.r-inla.org/download`, then please load `devtools` and type
+`FRK` is still under development but stable and ready for use with simple applications. To install, first please install `INLA` from `http://www.r-inla.org/download`, then please load `devtools` and type
 
     install_github("andrewzm/FRK",dependencies=TRUE,build_vignettes=TRUE)
 
 Installation will take a few minutes since the vignette is extensive and built from scratch. After installation see the  several examples provided in the vignette by typing
 
     vignette("FRK_intro")
+
+Quick start
+------------
+
+    library(sp)
+    Z <- data.frame(x = runif(1000), y= runif(1000))
+    Z$z <- sin(8*Z$x) + cos(8*Z$y) + 0.5*rnorm(100)
+    coordinates(Z) = ~x+y
+    Pred <- FRK(f = z~1,
+                list(Z),
+                cellsize = c(0.02,0.02),
+                n_EM = 100)
+    spplot(Z,"z")
+    spplot(Pred$PredPolys,"mu")
+    
 
 Known Issues
 ------------

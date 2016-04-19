@@ -22,3 +22,5 @@ pres/
 bigstudies
 Permissions
 *.dll
+*.Rnw
+*.bib

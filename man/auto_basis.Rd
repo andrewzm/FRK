@@ -4,8 +4,9 @@
 \alias{auto_basis}
 \title{Automatic basis-function placement}
 \usage{
-auto_basis(manifold = plane(), data, regular = 1, nres = 2, prune = 0,
-  subsamp = 10000, type = "Gaussian", isea3h_lo = 0, bndary = NULL)
+auto_basis(manifold = plane(), data, regular = 1, nres = NULL,
+  prune = 0, subsamp = 10000, type = "Gaussian", isea3h_lo = 0,
+  bndary = NULL, verbose = 0L, ...)
 }
 \arguments{
 \item{manifold}{object of class \code{manifold}, for example, \code{sphere} or \code{plane}}
@@ -25,6 +26,10 @@ auto_basis(manifold = plane(), data, regular = 1, nres = 2, prune = 0,
 \item{isea3h_lo}{if \code{manifold = sphere()}, this argument dictates which ISEA3H resolution is the lowest one that should be used for basis-function placement}
 
 \item{bndary}{a \code{matrix} containing points containing the boundary. If \code{regular == 0} this can be used to define a boundary in which irregularly-spaced basis functions are placed}
+
+\item{verbose}{a logical variable indicating whether to output a summary of the basis functions created or not}
+
+\item{...}{unused}
 }
 \description{
 Generate automatically a set of local basis functions in the domain, and automatically prune in regions of sparse data.

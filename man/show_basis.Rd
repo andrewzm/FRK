@@ -4,11 +4,14 @@
 \name{show_basis}
 \alias{show_basis}
 \alias{show_basis,Basis-method}
+\alias{show_basis,TensorP_Basis-method}
 \title{Show basis functions}
 \usage{
 show_basis(basis, ...)
 
 \S4method{show_basis}{Basis}(basis, g = ggplot())
+
+\S4method{show_basis}{TensorP_Basis}(basis, g = ggplot())
 }
 \arguments{
 \item{basis}{object of class \code{Basis}}

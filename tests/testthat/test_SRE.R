@@ -175,7 +175,7 @@ test_that("SRE space-time sphere works",{
     ### Set up SRE model
     G_spatial <- auto_basis(manifold = sphere(),
                             data=as(STobj,"Spatial"),
-                            nres = 1,
+                            nres = 2,
                             type = "bisquare",
                             subsamp = 20000)
 

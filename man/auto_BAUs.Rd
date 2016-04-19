@@ -4,8 +4,8 @@
 \alias{auto_BAUs}
 \title{Automatic BAU generation}
 \usage{
-auto_BAUs(manifold, type = "grid", cellsize = rep(1, dimensions(manifold)),
-  isea3h_res = NULL, data = NULL, convex = -0.05, tunit = "days")
+auto_BAUs(manifold, type = "grid", cellsize = NULL, isea3h_res = NULL,
+  data = NULL, convex = -0.05, tunit = "days")
 }
 \arguments{
 \item{manifold}{object of class \code{manifold}}

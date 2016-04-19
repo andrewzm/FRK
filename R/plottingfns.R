@@ -73,6 +73,13 @@ setMethod("show_basis",signature(basis = "Basis"),  # GRBF basis with mean offse
 
           })
 
+#' @rdname show_basis
+#' @aliases show_basis,TensorP_Basis-method
+setMethod("show_basis",signature(basis = "TensorP_Basis"),
+          function(basis,g=ggplot()) {
+           (show_basis(basis@Basis1) + ggtitle("Basis1")) %>% print()
+           (show_basis(basis@Basis2) + ggtitle("Basis2")) %>% print()
+          })
 
 #' @name plotting-themes
 #' @aliases LinePlotTheme

@@ -6,7 +6,6 @@ setMethod("initialize",signature="manifold",function(.Object) {
     .Object
 })
 
-
 #' @title Automatic BAU generation
 #' @description This function calls the generic function \code{auto_BAU} (currently not exported) after a series of checks and is the easiest way to generate a set of Basic Areal Units (BAUs) on the manifold being used; see details.
 #' @param manifold object of class \code{manifold}
@@ -52,14 +51,31 @@ setMethod("initialize",signature="manifold",function(.Object) {
 #'     plot(HexPols_df)
 #' }
 #' @export
-auto_BAUs <- function(manifold, type="grid",cellsize = rep(1,dimensions(manifold)),
+auto_BAUs <- function(manifold, type="grid",cellsize = NULL,
                       isea3h_res=NULL,data=NULL,convex=-0.05,tunit="days") {
+
+
     if(!(is(data,"Spatial") | is(data,"ST") | is(data,"Date") | is.null(data)))
-      stop("Data needs to be of class 'Spatial', 'ST', 'Date', or NULL")
+        stop("Data needs to be of class 'Spatial', 'ST', 'Date', or NULL")
     if(is(data,"Spatial") | is(data,"ST"))
         if((class(coordnames(data)) == "NULL"))
             stop("data needs to have coordinate names")
+
     if(!is(manifold,"manifold")) stop("manifold needs to be of class 'manifold'")
+    if(is.null(type)) {
+        if(grepl("longlat",proj4string(data[[1]]))) {
+            BAU_type <- "hex"
+            if(is.null(isea3h_res)) isea3h_res <- 6
+        }
+    }
+    if(is.null(cellsize)) {
+        if(is.null(data)) {
+            if(!grepl("sphere",type(manifold))) stop("Need to supply data for planar problems")
+        } else {
+            if(!grepl("sphere",type(manifold))) cellsize <- .choose_BAU_cellsize_from_data(data)
+        }
+    }
+
     if(!is.null(isea3h_res)) {
         if(!is.numeric(isea3h_res) | is.integer(isea3h_res))
             stop("isea3h_res needs to be of type 'numeric' or 'integer'")
@@ -70,8 +86,11 @@ auto_BAUs <- function(manifold, type="grid",cellsize = rep(1,dimensions(manifold
         }
         resl <- round(isea3h_res)
     } else { resl <- NULL}
-    if(length(cellsize) == 1) cellsize <- rep(cellsize,dimensions(manifold))
-    if(!length(cellsize) == dimensions(manifold)) stop("cellsize needs to be of length equal to dimension of manifold")
+
+    if(!grepl("sphere",type(manifold))){
+        if(length(cellsize) == 1) cellsize <- rep(cellsize,dimensions(manifold))
+        if(!length(cellsize) == dimensions(manifold)) stop("cellsize needs to be of length equal to dimension of manifold")
+    }
 
     auto_BAU(manifold=manifold,type=type,cellsize=cellsize,resl=resl,d=data,convex=convex,tunit=tunit)
 }
@@ -153,6 +172,7 @@ setMethod("auto_BAU",signature(manifold="timeline"),
           function(manifold,type="grid",cellsize = c(1),resl=resl,d=NULL,convex=-0.05,...) {
 
               l <- list(...)
+              if(is.null(cellsize)) cellsize <- 1
 
               if(!"tunit" %in% names(l))
                   stop("Need to supply argument tunit with value secs, mins, hours, days, months or years")
@@ -214,6 +234,7 @@ setMethod("auto_BAU",signature(manifold = c("STmanifold")),
 
               nt <- length(temporal_BAUs)
               ns <- nrow(spatial_BAUs)
+
               STBAUs <- STFDF(spatial_BAUs,
                               temporal_BAUs,
                               data = data.frame(n = 1:(nt *ns),
@@ -485,7 +506,7 @@ Euclid_dist <- function(dim=2L) {
 #' @rdname distances
 #' @export
 gc_dist <- function(R=NULL) {
-    new("measure",dist=function(x1,x2)  rdist.earth(x1,x2,miles=F,R=R),dim=2L)
+    new("measure",dist=function(x1,x2=NULL)  rdist.earth(x1,x2,miles=F,R=R),dim=2L)
 }
 
 #' @rdname distances
@@ -680,7 +701,8 @@ setMethod("map_data_to_BAUs",signature(data_sp="Spatial"),
                            from observations having a large support.
                            Handling of different areas will be catered for in a future revision.
                            Please report this issue to the package maintainer.")
-                  data_sp$id <- rownames(data_sp@data)
+                  #data_sp$id <- rownames(data_sp@data)
+                  data_sp$id <- row.names(data_sp)
                   BAU_as_points <- SpatialPointsDataFrame(coordinates(sp_pols),sp_pols@data)
                   BAUs_aux_data <- over(data_sp,BAU_as_points)
                   ## The covariates are not averaged using this method... only the covariate in the last BAU
@@ -691,11 +713,14 @@ setMethod("map_data_to_BAUs",signature(data_sp="Spatial"),
                       overlap <- which(over(BAU_as_points,this_poly) == 1) # find which points overlap observations
                       BAU_data <- BAU_as_points[names(overlap),1:ncol(BAU_as_points)] # extract BAU data at these points
                       this_attr <- data.frame(t(apply(BAU_data@data,2,mean))) # average over BAU data
+                      # only columns not already in data so that they cannot be written over
                       BAUs_aux_data[data_sp[["id"]][i],] <- this_attr # assign to data
                   }
 
                   stopifnot(all(row.names(BAUs_aux_data) == row.names(data_sp)))
-                  data_sp@data <- cbind(data_sp@data,BAUs_aux_data)
+                  col_sel <- which(!(names(BAUs_aux_data) %in% names(data_sp)))
+
+                  data_sp@data <- cbind(data_sp@data,BAUs_aux_data[,col_sel])
                   data_sp$Nobs <- 1
                   new_sp_pts <- data_sp
               }
@@ -708,7 +733,12 @@ setMethod("map_data_to_BAUs",signature(data_sp="ST"),
 
               sp_fields <- NULL
 
-              data_all_spatial <- as(data_sp,"Spatial")
+              if(is(data_sp,"STIDF")) {
+                  data_all_spatial <- as(data_sp,"Spatial")
+              } else {
+                  data_sp2 <- as(data_sp,"STIDF")
+                  data_all_spatial <- as(data_sp2,"Spatial")
+              }
               if(all(class(data_all_spatial$time) == "Date")) {
                   data_all_spatial$time <- as.POSIXlt( data_all_spatial$time)
               }
@@ -724,10 +754,14 @@ setMethod("map_data_to_BAUs",signature(data_sp="ST"),
                                           trange <- paste0(format(t1),"::",format(last(data_sp@endTime)))
                                           t2 <- format(last(sp_pols@endTime))
                                       }
-                                      #data_spatial <- as(data_sp[,trange],"Spatial")
                                       data_spatial <- subset(data_all_spatial, time >= t1 &
-                                                                               time < t2)
+                                                                                   time < t2)
                                       if(nrow(data_spatial) > 0) { ## If at least one point in this time period
+                                          if(is(data_sp,"STFDF")) {
+                                              ## Only subset polygons if there is at least one equivalent point
+                                              data_spatial <- data_sp[,trange]
+                                          }
+
                                           BAU_spatial <- sp_pols[,i]
                                           BAU_spatial@data <- filter(BAU_spatial@data,time == t1)
                                           BAU_spatial@data <- cbind(BAU_spatial@data,coordinates(BAU_spatial))
@@ -739,28 +773,40 @@ setMethod("map_data_to_BAUs",signature(data_sp="ST"),
                                               NULL
                                           }})
 
-
-              if(is(data_sp@sp,"SpatialPolygons")) stop("ST not implemented for polygon observations yet.
-                                                        Please contact package maintainer")
-
-              ## Recast into a STIDF
-              time <- sp <- n <- NULL
-              for(i in seq_along(sp_pols@time)) {
-                  if(!is.null(sp_fields[[i]])) {
-                      sp <- rbind(sp,sp_fields[[i]]@data)
-                      n <- nrow(sp_fields[[i]])
-                      this_time <- rep(time(sp_pols)[i],n)
-                      if(is.null(time)) time <- this_time else time <- c(time,this_time)
-                      coordlabels <- coordnames(sp_fields[[i]]) # Ensures labels are from non-null field
+              if(is(data_sp,"STIDF")) {
+                  ## Recast into a STIDF
+                  time <- sp <- n <- NULL
+                  for(i in seq_along(sp_pols@time)) {
+                      if(!is.null(sp_fields[[i]])) {
+                          sp <- rbind(sp,sp_fields[[i]]@data)
+                          n <- nrow(sp_fields[[i]])
+                          this_time <- rep(time(sp_pols)[i],n)
+                          if(is.null(time)) time <- this_time else time <- c(time,this_time)
+                          coordlabels <- coordnames(sp_fields[[i]]) # Ensures labels are from non-null field
+                      }
                   }
+
+                  coordinates(sp) <- coordlabels
+                  sp@data <- cbind(sp@data,coordinates(sp))
+
+                  STIDF(as(sp,"SpatialPoints"),
+                        time,
+                        data = sp@data)
+              } else {
+                  time <- sp <- n <- NULL
+                  for(i in seq_along(sp_pols@time)) {
+                      if(!is.null(sp_fields[[i]])) {
+                          sp <- rbind(sp,sp_fields[[i]]@data)
+                          n <- nrow(sp_fields[[i]])
+                          this_time <- rep(time(sp_pols)[i],n)
+                          if(is.null(time)) time <- this_time else time <- c(time,this_time)
+                          coordlabels <- coordnames(sp_fields[[i]]) # Ensures labels are from non-null field
+                      }
+                  }
+                  data_sp@data <- sp
+                  data_sp
+
               }
-
-              coordinates(sp) <- coordlabels
-              sp@data <- cbind(sp@data,coordinates(sp))
-
-              STIDF(as(sp,"SpatialPoints"),
-                    time,
-                    data = sp@data)
 
           })
 
@@ -773,9 +819,16 @@ est_obs_error <- function(sp_pts,variogram.formula,vgm_model = NULL) {
     if(!requireNamespace("gstat"))
         stop("gstat is required for variogram estimation. Please install gstat")
 
-    g <- gstat::gstat(formula=variogram.formula,data=sp_pts)
+    if(length(sp_pts) > 50000) {
+        print("Selecting 50000 data points at random for estimating the measurement error variance")
+        sp_pts_sub <- sp_pts[sample(1:length(sp_pts),50000),]
+    } else {
+        sp_pts_sub <- sp_pts
+    }
+    L <- .gstat.formula(variogram.formula,data=sp_pts_sub)
+    g <- gstat::gstat(formula=variogram.formula,data=sp_pts_sub)
     v <- gstat::variogram(g,cressie=T)
-    if(is.null(vgm_model)) vgm_model <-  gstat::vgm(1, "Lin", mean(v$dist), 1)
+    if(is.null(vgm_model)) vgm_model <-  gstat::vgm(var(L$y)/2, "Lin", mean(v$dist), var(L$y)/2)
     vgm.fit = gstat::fit.variogram(v, model = vgm_model)
 
     if(vgm.fit$psill[1] == 0) { ## Try with Gaussian, maybe process is overly smooth or data is a large average
@@ -831,6 +884,21 @@ setMethod("BuildC",signature(data="STIDF"),
               list(i_idx=i_idx,j_idx=j_idx)
           })
 
+setMethod("BuildC",signature(data="STFDF"),
+          function(data,BAUs) {
+              i_idx <- j_idx <- NULL
+              C_one_time <- BuildC(data[,1],BAUs[,1])
+              i <- C_one_time$i_idx
+              j <- C_one_time$j_idx
+              for(k in seq_along(data@time)) {
+                  t_idx <- as.numeric(data@time[k])
+                  j_idx <- c(j_idx, (t_idx-1)*nrow(BAUs) + j)
+                  i_idx <- c(i_idx, (t_idx-1)*nrow(data) + i)
+              }
+              list(i_idx=i_idx,j_idx=j_idx)
+          })
+
+
 setMethod("coordinates",signature(obj="SpatialPolygons"),function(obj){
     coord_vals <- t(sapply(1:length(obj),function(i) obj@polygons[[i]]@Polygons[[1]]@labpt))
     colnames(coord_vals) <- colnames(obj@polygons[[1]]@Polygons[[1]]@coords)
@@ -844,13 +912,17 @@ setMethod("dimensions",signature("measure"),function(obj){obj@dim})
 #' @aliases dimensions,manifold-method
 setMethod("dimensions",signature("manifold"),function(obj){dimensions(obj@measure)})
 
+#' @aliases dimensions,Basis-method
+setMethod("dimensions",signature("Basis"),function(obj){dimensions(obj@manifold)})
+
+
 #' @rdname distance
 #' @aliases distance,measure-method
-setMethod("distance",signature("measure"),function(d,x1,x2){d@dist(x1,x2)})
+setMethod("distance",signature("measure"),function(d,x1,x2=NULL){d@dist(x1,x2)})
 
 #' @rdname distance
 #' @aliases distance,manifold-method
-setMethod("distance",signature("manifold"),function(d,x1,x2){distance(d@measure,x1,x2)})
+setMethod("distance",signature("manifold"),function(d,x1,x2=NULL){distance(d@measure,x1,x2)})
 
 
 #' @rdname type
@@ -1169,4 +1241,52 @@ as.SpatialPolygons.GridTopology2 <- function (grd, proj4string = CRS(as.characte
     }
     res <- SpatialPolygons(Srl, proj4string = proj4string)
     res
+}
+
+.choose_manifold_from_data <- function(data) {
+
+    stopifnot(is(data,"Spatial") | is(data,"ST"))
+    if(is(data, "Spatial")) {
+        p4 <- proj4string(data)
+        if(is.na(p4)) {
+            manifold = plane()
+        }  else {
+            if(grepl("longlat",p4)) {
+                manifold = sphere()
+            } else {
+                manifold = plane()
+            }
+        }
+    } else {
+        p4 <- proj4string(data@sp)
+        if(is.na(p4)) {
+            manifold = STplane()
+        }  else {
+            if(grepl(p4,"longlat")) {
+                manifold = STsphere()
+            } else {
+                manifold = STplane()
+            }
+        }
+    }
+    manifold
+}
+
+.choose_BAU_cellsize_from_data <- function(data) {
+    if (is(data,"Spatial")) {
+        cellsize <- c(diff(range(coordinates(data)[,1]))/100,
+                      diff(range(coordinates(data)[,2]))/100)
+    } else {
+        stop("ST cellsize selection not implemented yet")
+    }
+}
+
+.polygons_to_points <- function(polys) {
+    stopifnot(is(polys,"STFDF") | is(polys,"SpatialPolygons"))
+    if(is(polys,"STFDF")) {
+        as.matrix(cbind(coordinates(polys),polys@data$t))
+    } else {
+        as.matrix(polys[coordnames(polys)]@data)
+    }
+
 }
