@@ -44,6 +44,7 @@ Quick start
 ------------
 
     library(sp)
+    library(FRK)
     Z <- data.frame(x = runif(1000), y= runif(1000))
     Z$z <- sin(8*Z$x) + cos(8*Z$y) + 0.5*rnorm(100)
     coordinates(Z) = ~x+y
