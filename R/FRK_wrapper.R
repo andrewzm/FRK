@@ -4,20 +4,15 @@ FRK <- function(f,                     # formula
                 data,                  # list of data items
                 basis = NULL,          # Basis object
                 BAUs = NULL,           # BAUs (SpatialPolygonsDataFrame)
-                est_error=TRUE,       # estimate measurement error
-                average_in_BAU = TRUE, # average data into BAUs
+                K_type = "block-exponential", # type of K matrix
+                lambda = 0,              # regularisation parameter
                 fs_model = "ind",      # fine-scale variation component
-                SRE_model = NULL,      # SRE model
+                average_in_BAU = TRUE, # average data into BAUs
+                est_error=TRUE,       # estimate measurement error
                 n_EM = 20,             # max. no. of EM iterations
                 tol = 0.01,            # tolerance at which EM is assumed to have converged
                 method = "EM",         # method for parameter estimation
                 print_lik=TRUE,        # print log-likelihood at each iteration
-                use_centroid = TRUE,   # use BAU centroid to evaluate basis functions over BAUs
-                obs_fs = TRUE,         # where to include fs variation?
-                pred_polys = NULL,     # spatial prediction polygons
-                pred_time = NULL,      # temporal prediction points
-                K_type = "block-exponential", # type of K matrix
-                lambda = 0,              # regularisation parameter
                 cross_validate = 1L,
                 ...)
                 {
@@ -60,13 +55,5 @@ FRK <- function(f,                     # formula
                  cross_validate = cross_validate,
                  lambda = lambda)
 
-    print("Predicting...")
-    BAUs_pred <- SRE.predict(SRE_model = S,          # SRE model
-                             use_centroid = use_centroid,     # use centroid as point reference
-                             obs_fs = obs_fs,
-                             pred_polys = pred_polys,
-                             pred_time = pred_time)
-
-    list(S=S,PredPolys = BAUs_pred)
-
+    S
 }

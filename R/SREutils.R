@@ -87,7 +87,7 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mode
 
     S <- Ve <- Vfs <- X <- Z <- Cmat <- list()
 
-    print("Normalising basis function evaluations at BAUs ...")
+    print("Mapping and normalising basis function evaluations at BAU level ...")
     S0 <- eval_basis(basis,.polygons_to_points(BAUs))
     xx <- sqrt(rowSums((S0) * S0))
     xx <- xx + 1*(xx == 0) ## Where there are no basis functions do not divide zero by zero..
@@ -155,7 +155,6 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mode
         print("Done.")
 
         S[[i]] <- Cmat[[i]] %*% S0
-        print("Done ...")
 
         ## Note that S constructed in this way is similar to Cmat %*% S_BAUs where S_BAUs is the
         ## basis functions evaluated at the BAUs. Verify this by checking the following are similar
@@ -537,7 +536,7 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", 
                                 par_init <- max(-Sm@D_basis[[i]][1,2]/log(Ki[1,2]),1e-9)
                             }
                             if(par_init[1] == 1e-9) par_init[1] <- max_l/10
-                            optim(par = par_init, fn = f_tau,gr = gr_f_tau,i=i,method="BFGS")$par
+                            suppressWarnings(optim(par = par_init, fn = f_tau,gr = gr_f_tau,i=i)$par)
                         })
         K <- lapply(1:nrow(all_res),
                     function(i) {
@@ -1057,6 +1056,7 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,obs_fs=TRUE,pred_polys = NUL
     }
 
     if(is.null(pred_polys)) {
+        BAUs[["sd"]] <- sqrt(BAUs[["var"]])
         if(!is.null(pred_time)) {
             BAUs[,pred_time]
         } else {

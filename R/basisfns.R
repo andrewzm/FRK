@@ -133,7 +133,7 @@ auto_basis <- function(manifold = plane(),
         tot_basis <- 0
         tot_data <- length(data)
         nres <- 1
-        max_basis <- min(1000,tot_data/5)
+        max_basis <- max(min(1000,tot_data/5),200) # between 200 and 1000 basis functions
         while(tot_basis <= max_basis) {
             nres <- nres + 1
             G <- .auto_basis(manifold =manifold,
@@ -248,11 +248,12 @@ auto_basis <- function(manifold = plane(),
                 this_res_scales <- apply(D,1,min)
             }
 
-            this_res_basis <- local_basis(manifold = m,
+            if(nrow(D) >0)
+                this_res_basis <- local_basis(manifold = m,
                                            loc=this_res_locs,
                                            scale=ifelse(type=="bisquare",1.5,1)*this_res_scales,
                                            type=type)
-            if(prune > 0) {
+            if(prune > 0 & nrow(D)>0) {
                 if(j==1) {
                     rm_idx <- which(colSums(eval_basis(this_res_basis,coords)) < prune)
                     if(length(rm_idx) == length(this_res_scales))
@@ -266,11 +267,13 @@ auto_basis <- function(manifold = plane(),
         }
         if(verbose) print(paste0("Number of basis at resolution ",i," = ",nrow(this_res_locs)))
 
-        G[[i]] <-  local_basis(manifold = m,
-                                loc=this_res_locs,
-                                scale=ifelse(type=="bisquare",1.5,1)*this_res_scales,
-                                type=type)
-        G[[i]]@df$res=i
+        if(nrow(D) > 0) {
+            G[[i]] <-  local_basis(manifold = m,
+                                    loc=this_res_locs,
+                                    scale=ifelse(type=="bisquare",1.5,1)*this_res_scales,
+                                    type=type)
+            G[[i]]@df$res=i
+        }
     }
 
     G_basis <- Reduce("concat",G)
