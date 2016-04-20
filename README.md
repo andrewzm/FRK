@@ -44,16 +44,24 @@ Quick start
 ------------
 
     library(sp)
+    library(ggplot2)
     library(FRK)
     Z <- data.frame(x = runif(1000), y= runif(1000))
     Z$z <- sin(8*Z$x) + cos(8*Z$y) + 0.5*rnorm(100)
     coordinates(Z) = ~x+y
-    Pred <- FRK(f = z~1,
+    S <- FRK(f = z~1,
                 list(Z),
                 cellsize = c(0.02,0.02),
                 n_EM = 100)
+    Pred <- SRE.predict(SRE_model = S,
+                        obs_fs = TRUE)              
+    xy <- data.frame(coordinates(Pred))
+    xy$mu <- Pred$mu
+    xy$se <- Pred$sd
     spplot(Z,"z")
-    spplot(Pred$PredPolys,"mu")
+    ggplot(xy) + geom_point(aes(x,y,color=mu)) + scale_color_distiller(palette="Spectral")
+    ggplot(xy) + geom_point(aes(x,y,colour=se)) + scale_color_distiller(palette="Spectral")
+    
     
 
 Known Issues
