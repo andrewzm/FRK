@@ -887,13 +887,19 @@ setMethod("BuildC",signature(data="STIDF"),
 setMethod("BuildC",signature(data="STFDF"),
           function(data,BAUs) {
               i_idx <- j_idx <- NULL
+              count <- 0L
               C_one_time <- BuildC(data[,1],BAUs[,1])
               i <- C_one_time$i_idx
               j <- C_one_time$j_idx
-              for(k in seq_along(data@time)) {
-                  t_idx <- as.numeric(data@time[k])
-                  j_idx <- c(j_idx, (t_idx-1)*nrow(BAUs) + j)
-                  i_idx <- c(i_idx, (t_idx-1)*nrow(data) + i)
+              for(k in seq_along(time(BAUs))) {
+                  overlap_time <- which(time(data) == (time(BAUs)[k]))
+                  if(length(overlap_time) > 1L) stop("Something is wrong in binning polygon data into BAUs")
+                  if(length(overlap_time) == 1) {
+                      t_idx <- as.numeric(BAUs@time[k])
+                      j_idx <- c(j_idx, (t_idx-1)*nrow(BAUs) + j)
+                      i_idx <- c(i_idx, count*nrow(data) + i)
+                      count <- count + 1
+                  }
               }
               list(i_idx=i_idx,j_idx=j_idx)
           })
@@ -1031,7 +1037,7 @@ load_dggrids <- function (res = 3L){
             stop("Such high DGGRID resolutions are not
                                        shipped with the package FRK. For this
                                        resolution please download and install the
-                                       package dggrids from github/andrewzm")
+                                       package dggrids from https://github.com/andrewzm/dggrids")
         } else {
             data(isea3h,envir=environment(),package = "dggrids")
         }
@@ -1128,6 +1134,7 @@ process_isea3h <- function(isea3h,resl) {
         }
     }
     new_polys <- as.data.frame(new_polys)
+
     centroids <- new_polys %>%
                  group_by(id) %>%
                  summarise(lon=mean(lon),lat=mean(lat),res=res[1],centroid=1,probpoly=0)

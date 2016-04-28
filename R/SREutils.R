@@ -320,6 +320,7 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", 
     X <- SRE_model@X
     lk <- rep(0,n_EM)
     SRE_model@lambda <- lambda
+
     if(!is.na(tol) & (SRE_model@fs_model == "ICAR")) {
         warning("Cannot monitor the observed likelihood with the ICAR model.
                 Monitoring changes in eta instead.")
@@ -536,8 +537,9 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", 
                                 par_init <- max(-Sm@D_basis[[i]][1,2]/log(Ki[1,2]),1e-9)
                             }
                             if(par_init[1] == 1e-9) par_init[1] <- max_l/10
-                            suppressWarnings(optim(par = par_init, fn = f_tau,gr = gr_f_tau,i=i)$par)
+                            suppressWarnings(optim(par = par_init, fn = f_tau,gr = gr_f_tau,i=i,control=list(maxit=5L))$par)
                         })
+
         K <- lapply(1:nrow(all_res),
                     function(i) {
                         if(is(Sm@basis,"TensorP_Basis")) {
@@ -553,8 +555,7 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", 
 
         # Rearrange in order time/resolution when we have tensor products
         # When we don't have tensor product idx_all and 1:nrow(K) should be the same
-        K[idx_all,idx_all] <- K[1:nrow(K),1:nrow(K)]
-
+        K <- reverse_permute(K,idx_all)
 
         cat("  Estimates of omega: ",unlist(omega),"  ")
         cat("  Estimates of tau: ",unlist(tau),"  ")
@@ -1018,25 +1019,7 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,obs_fs=TRUE,pred_polys = NUL
         }
 
         ## variance too hard to compute all at once -- do it in blocks of 1000
-        batching=cut(1:nrow(PI),breaks = seq(0,nrow(PI)+1000,by=1000),labels=F)
-
-        if(opts_FRK$get("parallel") > 1) {
-            cl <- makeCluster(opts_FRK$get("parallel"))
-            var_list <- mclapply(1:max(unique(batching)),
-                                 function(i) {
-                                     idx = which(batching == i)
-                                     as.numeric(rowSums((PI[idx,] %*% Cov)*PI[idx,]))},
-                                 mc.cores = opts_FRK$get("parallel"))
-            temp <- do.call(c,var_list)
-            stopCluster(cl)
-        } else {
-            temp <- rep(0,length(BAUs))
-            for(i in 1:max(unique(batching))) {
-                idx = which(batching==i)
-                temp[idx] <- as.numeric(rowSums((PI[idx,] %*% Cov)*PI[idx,]))
-            }
-        }
-        BAUs[["var"]] <- temp
+        BAUs[["var"]] <- .batch_compute_var(PI,Cov)
     }
 
     if(obs_fs) {
@@ -1052,7 +1035,8 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,obs_fs=TRUE,pred_polys = NUL
                              cholQp = temp$Qpermchol, P = temp$P) # FULL
         }
         BAUs[["mu"]] <- as.numeric(X %*% alpha) + as.numeric(S0 %*% x_mean)
-        BAUs[["var"]] <- rowSums((S0 %*% Cov) * S0) + Sm@sigma2fshat*BAUs$fs
+        BAUs[["var"]] <- .batch_compute_var(S0,Cov)
+        #BAUs[["var"]] <- rowSums((S0 %*% Cov) * S0) + Sm@sigma2fshat*BAUs$fs
     }
 
     if(is.null(pred_polys)) {
@@ -1084,6 +1068,27 @@ SRE.simulate <- function(S,obs_fs) {
     S0 <- S0/xx
     print("Done ...")
 
+}
+
+.batch_compute_var <- function(X,Cov) {
+  batching=cut(1:nrow(X),breaks = seq(0,nrow(X)+1000,by=1000),labels=F)
+  if(opts_FRK$get("parallel") > 1) {
+    cl <- makeCluster(opts_FRK$get("parallel"))
+    var_list <- mclapply(1:max(unique(batching)),
+                         function(i) {
+                           idx = which(batching == i)
+                           as.numeric(rowSums((X[idx,] %*% Cov)*X[idx,]))},
+                         mc.cores = opts_FRK$get("parallel"))
+    temp <- do.call(c,var_list)
+    stopCluster(cl)
+  } else {
+    temp <- rep(0,nrow(X))
+    for(i in 1:max(unique(batching))) {
+      idx = which(batching==i)
+      temp[idx] <- as.numeric(rowSums((X[idx,] %*% Cov)*X[idx,]))
+    }
+  }
+  temp
 }
 
 setMethod("summary",signature(object="SRE"),

@@ -345,7 +345,24 @@ setMethod("TensorP",signature(Basis1="Basis",Basis2="Basis"),function(Basis1,Bas
 setMethod("eval_basis",signature(basis="Basis",s="matrix"),function(basis,s,output = "matrix"){
     stopifnot(output %in% c("list","matrix"))
     space_dim <- dimensions(manifold(basis))
-    .point_eval_fn(basis@fn,s[,1:space_dim,drop=F],output)
+    if(opts_FRK$get("parallel") > 1L) {
+        n <- nrow(s)
+        batching=cut(1:n,breaks = seq(0,n+10000,
+                                      by=10000),labels=F)
+
+        cl <- makeCluster(opts_FRK$get("parallel"))
+        pnt_eval_list <- mclapply(1:max(unique(batching)),
+                                  function(i) {
+                                      idx <- which(batching == i)
+                                      .point_eval_fn(basis@fn,
+                                                     s[idx,1:space_dim,drop=F],output)
+                                  },
+                                  mc.cores = opts_FRK$get("parallel"))
+        stopCluster(cl)
+        do.call(rBind,pnt_eval_list)
+    } else  {
+        .point_eval_fn(basis@fn,s[,1:space_dim,drop=F],output)
+    }
 })
 
 #' @rdname eval_basis
@@ -353,6 +370,7 @@ setMethod("eval_basis",signature(basis="Basis",s="matrix"),function(basis,s,outp
 setMethod("eval_basis",signature(basis="Basis",s="SpatialPointsDataFrame"),function(basis,s,output = "matrix"){
     stopifnot(output %in% c("matrix","list"))
     space_dim <- dimensions(manifold(basis))
+
     if(opts_FRK$get("parallel") > 1L) {
         n <- length(s)
         batching=cut(1:n,breaks = seq(0,n+10000,
@@ -411,15 +429,20 @@ setMethod("eval_basis",signature(basis="TensorP_Basis",s="matrix"),function(basi
     n1 <- dimensions(manifold(basis@Basis1))
     S1 <- eval_basis(basis@Basis1,s[,1:n1,drop=FALSE],output)
     S2 <- eval_basis(basis@Basis2,s[,-(1:n1),drop=FALSE],output)
-    i <- 1 #suppress binding warning
 
-
-    S <- Matrix(0,nrow(S1),ncol(S1)*ncol(S2))
-    for(i in 1:ncol(S1)) {
-        S[,((i-1)*ncol(S2)+1):(i*ncol(S2))] <- S1[,i] * S2
-    }
+#     warning("Changed to matrix, improve")
+#     S <- matrix(0,nrow(S1),ncol(S1)*ncol(S2))
+#     for(i in 1:ncol(S1)) {
+#         XX <-  ((S1[,i] * S2) %>% as.matrix())
+#         S[,((i-1)*ncol(S2)+1):(i*ncol(S2))] <- XX
+#     }
+    #XX <- lapply(1:ncol(S1),function(i)  (S1[,i] * S2))
+    ## Order: First space then time
+    XX <- lapply(1:ncol(S2),function(i)  (S2[,i] * S1))
+    S <- quickcBind(XX)
     S
 })
+
 
 #' @rdname eval_basis
 #' @aliases eval_basis,TensorP_Basis-STIDF-method
@@ -431,15 +454,8 @@ setMethod("eval_basis",signature(basis="TensorP_Basis",s = "STIDF"),function(bas
     S1 <- eval_basis(basis@Basis1,slocs[,,drop=FALSE],output)
     S2 <- eval_basis(basis@Basis2,tlocs[,,drop=FALSE],output)
 
-    i <- 1 #suppress binding warning
-
-    S <- Matrix(0,nrow(S1),ncol(S1)*ncol(S2))
-    for(i in 1:ncol(S1)) {
-        S[,((i-1)*ncol(S2)+1):(i*ncol(S2))] <- S1[,i] * S2
-        #S[[i]] <- S1[,i] * S2
-    }
-    S <- as(S,"dgCMatrix")
-
+    XX <- lapply(1:ncol(S2),function(i)  (S2[,i] * S1))
+    S <- quickcBind(XX)
     S
 })
 
@@ -455,18 +471,8 @@ setMethod("eval_basis",signature(basis="TensorP_Basis",s = "STFDF"),function(bas
     S1 <- eval_basis(basis@Basis1,s[,1],output)
     S1 <- do.call("rBind",lapply(1:nt,function(x) S1))
     S2 <- eval_basis(basis@Basis2,tlocs[,,drop=FALSE],output)
-
-
-
-    i <- 1 #suppress binding warning
-
-    S <- Matrix(0,nrow(S1),ncol(S1)*ncol(S2))
-    for(i in 1:ncol(S1)) {
-        S[,((i-1)*ncol(S2)+1):(i*ncol(S2))] <- S1[,i] * S2
-        #S[[i]] <- S1[,i] * S2
-    }
-    S <- as(S,"dgCMatrix")
-
+    XX <- lapply(1:ncol(S2),function(i)  (S2[,i] * S1))
+    S <- quickcBind(XX)
     S
 })
 

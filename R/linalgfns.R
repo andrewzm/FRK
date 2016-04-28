@@ -262,3 +262,58 @@ logdet <- function (L)
     diagL <- diag(L)
     return(2 * sum(log(diagL)))
 }
+
+quickcBind <- function(L) {
+  quickBind(L,"c")
+}
+
+quickrBind <- function(L) {
+  quickBind(L,"r")
+}
+
+quickBind <- function(L,rc = "c") {
+  
+  ## http://stackoverflow.com/questions/8843700/creating-sparse-matrix-from-a-list-of-sparse-vectors
+  ## L list a list of sparseMatrices
+  ## Should do in C
+  nzCount<-lapply(L, function(x) length(as(x,"dgTMatrix")@x));
+  nz<-sum(do.call(rbind,nzCount));
+  r<-vector(mode="integer",length=nz);
+  c<-vector(mode="integer",length=nz);
+  v<-vector(mode="double",length=nz);
+  ind <- 1
+  nc  <- 0
+  nr  <- 0
+  for(i in 1:length(L)){
+    tempMat <- as(L[[i]],"dgTMatrix")
+    ln<-length(tempMat@x);
+    if(ln>0){
+      if(rc == "c") {
+        r[ind:(ind+ln-1)] <- tempMat@i + 1;
+        c[ind:(ind+ln-1)] <- tempMat@j+ nc + 1
+      } else if (rc == "r") {
+        r[ind:(ind+ln-1)] <- tempMat@i + nr + 1;
+        c[ind:(ind+ln-1)] <- tempMat@j + 1
+      }
+      v[ind:(ind+ln-1)] <- tempMat@x
+      ind<-ind+ln;
+    }
+    if(rc == "c") {
+      nc <- nc + ncol(tempMat)
+      nr <- nrow(tempMat)
+    } else if (rc == "r") {
+      nr <- nr + nrow(tempMat)  
+      nc <- ncol(tempMat)
+    }
+  }
+  return (sparseMatrix(i=r,j=c,x=v,dims = c(nr,nc)));  
+}
+
+reverse_permute <- function(X,idx) {
+  ## Given a matrix X returns Y such that Y[idx,idx] = X
+  X <- as(X,"dgTMatrix")
+  dict <- data.frame(from = 1:length(idx),to = idx)
+  i_idx <- data.frame(from = X@i+1) %>% left_join(dict,by="from")
+  j_idx <- data.frame(from = X@j+1) %>% left_join(dict,by="from")
+  sparseMatrix(i=i_idx$to, j=j_idx$to, x = X@x,dims = dim(X))
+}
