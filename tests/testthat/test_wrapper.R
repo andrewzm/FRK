@@ -6,9 +6,9 @@ test_that("basic_wrapper",{
     Z$z <- sin(8*Z$x) + cos(8*Z$y) + 0.5*rnorm(100)
     coordinates(Z) = ~x+y
     S <- FRK(f = z~1,
-                list(Z),
-                cellsize = c(0.1,0.1),
-                n_EM = 2)
+             list(Z),
+             cellsize = c(0.1,0.1),
+             n_EM = 2)
     Pred <- SRE.predict(SRE_model = S,
                         obs_fs = TRUE)
 })

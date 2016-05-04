@@ -34,8 +34,15 @@ FRK <- function(f,                     # formula
     }
 
     print("Generating basis functions...")
+    tot_data <- length(data[[1]])
+    if(K_type == "unstructured") {
+      max_basis <- tot_data^(0.75)
+    } else {
+      max_basis <- NULL
+    }
+
     G <- auto_basis(manifold =manifold,
-                    data=data[[1]],...)
+                    data=data[[1]],...,max_basis = max_basis)
 
     print("Constructing SRE model...")
     S <- SRE(f = f,                  # formula

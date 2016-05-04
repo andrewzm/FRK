@@ -55,6 +55,7 @@ local_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type
 #' @param regular an integer indicating the number of regularly-placed basis functions at the first resolution. In two dimensions, this dictates smallest number of basis functions in a row or column at the lowest resolution. If \code{regular=0}, an irregular grid is used, one that is based on the triangulation of the domain with increased mesh density in areas of high data density, see details
 #' @param nres if \code{manifold = real_line()} or \code{manifold = plane()}, then \code{nres} is the number of basis-function resolutions to use. If \code{manifold = sphere()}, then \code{nres} is the resolution number of the ISEA3H grid to use and and can also be a vector indicating multiple resolutions
 #' @param prune a threshold parameter which dictates when a basis function is considered irrelevent or unidentifiable, and thus removed, see details
+#' @param max_basis maximum number of basis functions. This overrides the parameter \code{nres}
 #' @param subsamp the maximum amount of data points to consider when carrying out basis-function placement: these data objects are randomly sampled from the full dataset. Keep this number fairly high (on the order of 10^5) otherwise high resolution basis functions may be spuriously removed
 #' @param type the type of basis functions to use; see details
 #' @param isea3h_lo if \code{manifold = sphere()}, this argument dictates which ISEA3H resolution is the lowest one that should be used for basis-function placement
@@ -105,8 +106,9 @@ local_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type
 auto_basis <- function(manifold = plane(),
                        data,
                        regular=1,
-                       nres=NULL,
+                       nres=2,
                        prune=0,
+                       max_basis = NULL,
                        subsamp=10000,
                        type="Gaussian",
                        isea3h_lo = 0,
@@ -128,12 +130,11 @@ auto_basis <- function(manifold = plane(),
         stop("isea3h_lo needs to be an integer greater than 0")
     if(!(is.numeric(nres) | is.null(nres)))
         stop("nres needs to be greater than zero or NULL")
-    if(is.null(nres)) {
+    if(!is.null(max_basis)) {
         print("...Automatically choosing functions...")
         tot_basis <- 0
         tot_data <- length(data)
         nres <- 1
-        max_basis <- max(min(1000,tot_data/5),200) # between 200 and 1000 basis functions
         while(tot_basis <= max_basis) {
             nres <- nres + 1
             G <- .auto_basis(manifold =manifold,
@@ -251,7 +252,7 @@ auto_basis <- function(manifold = plane(),
             if(nrow(D) >0)
                 this_res_basis <- local_basis(manifold = m,
                                            loc=this_res_locs,
-                                           scale=ifelse(type=="bisquare",1.5,1)*this_res_scales,
+                                           scale=ifelse(type=="bisquare",1.5,1.5)*this_res_scales,
                                            type=type)
             if(prune > 0 & nrow(D)>0) {
                 if(j==1) {
@@ -270,7 +271,7 @@ auto_basis <- function(manifold = plane(),
         if(nrow(D) > 0) {
             G[[i]] <-  local_basis(manifold = m,
                                     loc=this_res_locs,
-                                    scale=ifelse(type=="bisquare",1.5,1)*this_res_scales,
+                                    scale=ifelse(type=="bisquare",1.5,1.5)*this_res_scales,
                                     type=type)
             G[[i]]@df$res=i
         }

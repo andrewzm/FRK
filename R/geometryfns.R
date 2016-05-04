@@ -15,6 +15,7 @@ setMethod("initialize",signature="manifold",function(.Object) {
 #' @param data object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame}. Provision of \code{data} implies that the domain is bounded, and is thus necessary when the manifold is a \code{real_line} or a \code{plane} but is not necessary when the manifold is the surface of a \code{sphere}
 #' @param convex convex parameter used for smoothing an extended boundary when working on a finite domain (that is, when the object \code{d} is supplied), see details.
 #' @param tunit temporal unit when requiring space-time BAUs. Can be either "secs", "mins", "hours" or "days".
+#' @param ... currently unused
 #' @details \code{auto_BAUs} constructs a set of Basic Areal Units (BAUs) used both for data pre-processing and for prediction. As such, the BAUs need to be of sufficienly fine resolution so that data is not adversely affected.
 #'
 #' Two types of BAUs are supported by \code{FRK}: ``hex'' (hexagonal) and ``grid'' (rectangular). In order to have a ``grid'' set of BAUs, the user should specify a cellsize of length equal to the dimensions of the manifold, that is, of length 1 for \code{real_line} and 2 for the surface of a \code{sphere} and \code{plane}. When a ``hex'' set of BAUs is desired, the first element of \code{cellsize} is used to determine the side length by dividing this value by approximately 2. The argument \code{type} is ignored with \code{real_line} and ``hex'' is not available for this manifold.
@@ -52,7 +53,7 @@ setMethod("initialize",signature="manifold",function(.Object) {
 #' }
 #' @export
 auto_BAUs <- function(manifold, type="grid",cellsize = NULL,
-                      isea3h_res=NULL,data=NULL,convex=-0.05,tunit="days") {
+                      isea3h_res=NULL,data=NULL,convex=-0.05,tunit="days",...) {
 
 
     if(!(is(data,"Spatial") | is(data,"ST") | is(data,"Date") | is.null(data)))

@@ -183,7 +183,11 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mode
     Ve <- do.call("bdiag",Ve)
     Vfs <- do.call("bdiag",Vfs)
     D_basis <- BuildD(basis)
-
+    #K_norm <- .initialise_K(basis,D_basis)
+    #K_init <- var(Z[,1])*K_norm
+    K_init = Diagonal(n=nbasis(basis),x = 1/(1/var(Z[,1])))
+    K_inv_init = Diagonal(n=nbasis(basis),x = (1/var(Z[,1])))
+    
     new("SRE",
         data=data,
         basis=basis,
@@ -202,10 +206,9 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mode
         mu_xi = Matrix(0,length(BAUs),1),
         S_eta = Diagonal(x = rep(1,nbasis(basis))),
         alphahat = solve(t(X) %*% X) %*% t(X) %*% Z,
-        #Khat = Diagonal(n=nbasis(basis),x = var(Z[,1]))
-        Khat = Diagonal(n=nbasis(basis),x = 1/(1/var(Z[,1]))),
+        Khat = K_init,
+        Khat_inv = K_inv_init,
         Q_eta = Diagonal(x = rep(1,nbasis(basis))),
-        Khat_inv = Diagonal(n=nbasis(basis),x = (1/var(Z[,1]))),
         B_run = Diagonal(n=nbasis(basis),x = 1/var(Z[,1])),
         v_run = Matrix(0,nbasis(basis),nbasis(basis)),
         sigma2fshat = mean(diag(Ve)) / 4,
@@ -213,6 +216,33 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mode
         D_basis = D_basis,
         K_type = K_type,
         lambda = 0)
+}
+
+.initialise_K <- function(basis,D_basis) {
+   
+    all_res <- count_res(basis)
+    K_norm <- lapply(1:nrow(all_res),
+                    function(i) {
+                        idx <- which(basis@df$res == i)
+                        if(is(basis,"TensorP_Basis")) {
+                            tau_init_space <- max(D_basis$Basis1[[i]])/5 ## space
+                            tau_init_time <- 3 ## time
+                            Ki <- kronecker(exp(-D_basis$Basis2[[1]]/tau_init_time),
+                                            exp(-D_basis$Basis1[[i]]/tau_init_space))
+                        } else {
+                            tau_init_space <- max(D_basis[[i]])/5 ## space
+                            Ki <- exp(-D_basis[[i]]/tau_init_space)
+                        }
+                    })
+    
+    K_norm <- do.call("bdiag",K_norm)
+    idx_all <- unlist(lapply(1:nrow(all_res), function(i) which(basis@df$res == i)))
+    
+    # Rearrange in order time/resolution when we have tensor products
+    # When we don't have tensor product idx_all and 1:nrow(K) should be the same
+    K_norm <- reverse_permute(K_norm,idx_all)
+    
+    
 }
 
 
@@ -537,7 +567,7 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", 
                                 par_init <- max(-Sm@D_basis[[i]][1,2]/log(Ki[1,2]),1e-9)
                             }
                             if(par_init[1] == 1e-9) par_init[1] <- max_l/10
-                            suppressWarnings(optim(par = par_init, fn = f_tau,gr = gr_f_tau,i=i,control=list(maxit=5L))$par)
+                            suppressWarnings(optim(par = par_init, fn = f_tau,gr = gr_f_tau,i=i,control=list(maxit=100L))$par)
                         })
 
         K <- lapply(1:nrow(all_res),
