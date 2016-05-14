@@ -7,11 +7,10 @@
 \alias{SRE.predict}
 \title{Construct SRE object, fit and predict}
 \usage{
-FRK(f, data, basis = NULL, BAUs = NULL, est_error = TRUE,
-  average_in_BAU = TRUE, fs_model = "ind", SRE_model = NULL, n_EM = 20,
-  tol = 0.01, method = "EM", print_lik = TRUE, use_centroid = TRUE,
-  obs_fs = TRUE, pred_polys = NULL, pred_time = NULL,
-  K_type = "block-exponential", lambda = 0, cross_validate = 1L, ...)
+FRK(f, data, basis = NULL, BAUs = NULL, K_type = "block-exponential",
+  lambda = 0, fs_model = "ind", average_in_BAU = TRUE, est_error = TRUE,
+  n_EM = 20, tol = 0.01, method = "EM", print_lik = TRUE,
+  cross_validate = 1L, ...)
 
 SRE(f, data, basis, BAUs, est_error = FALSE, average_in_BAU = TRUE,
   fs_model = "ind", vgm_model = NULL, K_type = "block-exponential")
@@ -31,13 +30,15 @@ SRE.predict(SRE_model, use_centroid = TRUE, obs_fs = TRUE,
 
 \item{BAUs}{object of class \code{SpatialPolygonsDataFrame}, the data frame which must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality. If the function \code{FRK} is used directly, then BAUs are created automatically but only coordinates can then be used as covariates}
 
-\item{est_error}{flag indicating whether the measurement-error variance should be estimated from variogram techniques. If this is set to 0, then \code{data} must contain a field \code{std}. Measurement-error estimation is not implemented for spatio-temporal datasets}
+\item{K_type}{the parameterisation used for the \code{K} matrix. Currently this can be "unstructured" or "block-exponential"}
 
-\item{average_in_BAU}{if \code{TRUE}, then multiple data points falling in the same BAU are averaged; the measurement error of the averaged data point is taken as the average of the individual measurement errors}
+\item{lambda}{regularisation parameter (0 by default)}
 
 \item{fs_model}{if "ind" then the fine-scale variation is independent at the BAU level. If "ICAR", then an ICAR model is placed on the BAUs}
 
-\item{SRE_model}{object returned from the constructor \code{SRE()}}
+\item{average_in_BAU}{if \code{TRUE}, then multiple data points falling in the same BAU are averaged; the measurement error of the averaged data point is taken as the average of the individual measurement errors}
+
+\item{est_error}{flag indicating whether the measurement-error variance should be estimated from variogram techniques. If this is set to 0, then \code{data} must contain a field \code{std}. Measurement-error estimation is not implemented for spatio-temporal datasets}
 
 \item{n_EM}{maximum number of iterations for the EM algorithm}
 
@@ -47,6 +48,14 @@ SRE.predict(SRE_model, use_centroid = TRUE, obs_fs = TRUE,
 
 \item{print_lik}{flag indicating whether likelihood should be printed or not on convergence of the estimation algorithm}
 
+\item{cross_validate}{the number \eqn{k} in \eqn{k}-fold cross-validation. If greater than 1, \code{lambda} is ignored and estimated through cross-validation}
+
+\item{...}{other parameters passed on to \code{auto_basis} and \code{auto_BAUs}}
+
+\item{vgm_model}{an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm} containing the variogram model to fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified the variogram used is \code{gstat::vgm(1, "Lin", d, 1)} where \code{d} is approximately one third of the maximum distance between any two points}
+
+\item{SRE_model}{object returned from the constructor \code{SRE()}}
+
 \item{use_centroid}{flag indicating whether the basis functions are averaged over the BAU, or whether the basis functions are evaluated at the BAUs centroid in order to construct the matrix \eqn{S}. The flag can safely be set when the basis functions are approximately constant over the BAUs in order to reduce computational time}
 
 \item{obs_fs}{flag indicating whether the fine-scale variation sits in the observation model (systematic error) or in the process model (process fine-scale variation)}
@@ -54,16 +63,6 @@ SRE.predict(SRE_model, use_centroid = TRUE, obs_fs = TRUE,
 \item{pred_polys}{object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified}
 
 \item{pred_time}{vector of time indices at which we wish to predict. All time points are used if this option is not specified}
-
-\item{K_type}{the parameterisation used for the \code{K} matrix. Currently this can be "unstructured" or "block-exponential"}
-
-\item{lambda}{regularisation parameter (0 by default)}
-
-\item{cross_validate}{the number \eqn{k} in \eqn{k}-fold cross-validation. If greater than 1, \code{lambda} is ignored and estimated through cross-validation}
-
-\item{...}{other parameters passed on to \code{auto_basis} and \code{auto_BAUs}}
-
-\item{vgm_model}{an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm} containing the variogram model to fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified the variogram used is \code{gstat::vgm(1, "Lin", d, 1)} where \code{d} is approximately one third of the maximum distance between any two points}
 }
 \description{
 Main constructor of spatial random effects (SRE) object. Please see \code{\link{SRE-class}} for more details on the object's properties and methods.

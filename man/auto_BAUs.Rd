@@ -5,7 +5,7 @@
 \title{Automatic BAU generation}
 \usage{
 auto_BAUs(manifold, type = "grid", cellsize = NULL, isea3h_res = NULL,
-  data = NULL, convex = -0.05, tunit = "days")
+  data = NULL, convex = -0.05, tunit = "days", ...)
 }
 \arguments{
 \item{manifold}{object of class \code{manifold}}
@@ -21,6 +21,8 @@ auto_BAUs(manifold, type = "grid", cellsize = NULL, isea3h_res = NULL,
 \item{convex}{convex parameter used for smoothing an extended boundary when working on a finite domain (that is, when the object \code{d} is supplied), see details.}
 
 \item{tunit}{temporal unit when requiring space-time BAUs. Can be either "secs", "mins", "hours" or "days".}
+
+\item{...}{currently unused}
 }
 \description{
 This function calls the generic function \code{auto_BAU} (currently not exported) after a series of checks and is the easiest way to generate a set of Basic Areal Units (BAUs) on the manifold being used; see details.

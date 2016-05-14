@@ -4,8 +4,8 @@
 \alias{auto_basis}
 \title{Automatic basis-function placement}
 \usage{
-auto_basis(manifold = plane(), data, regular = 1, nres = NULL,
-  prune = 0, subsamp = 10000, type = "Gaussian", isea3h_lo = 0,
+auto_basis(manifold = plane(), data, regular = 1, nres = 2, prune = 0,
+  max_basis = NULL, subsamp = 10000, type = "Gaussian", isea3h_lo = 0,
   bndary = NULL, verbose = 0L, ...)
 }
 \arguments{
@@ -18,6 +18,8 @@ auto_basis(manifold = plane(), data, regular = 1, nres = NULL,
 \item{nres}{if \code{manifold = real_line()} or \code{manifold = plane()}, then \code{nres} is the number of basis-function resolutions to use. If \code{manifold = sphere()}, then \code{nres} is the resolution number of the ISEA3H grid to use and and can also be a vector indicating multiple resolutions}
 
 \item{prune}{a threshold parameter which dictates when a basis function is considered irrelevent or unidentifiable, and thus removed, see details}
+
+\item{max_basis}{maximum number of basis functions. This overrides the parameter \code{nres}}
 
 \item{subsamp}{the maximum amount of data points to consider when carrying out basis-function placement: these data objects are randomly sampled from the full dataset. Keep this number fairly high (on the order of 10^5) otherwise high resolution basis functions may be spuriously removed}
 
