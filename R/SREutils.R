@@ -87,7 +87,7 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mode
 
     S <- Ve <- Vfs <- X <- Z <- Cmat <- list()
 
-    print("Mapping and normalising basis function evaluations at BAU level ...")
+    print("Normalising basis function evaluations at BAU level ...")
     S0 <- eval_basis(basis,.polygons_to_points(BAUs))
     xx <- sqrt(rowSums((S0) * S0))
     xx <- xx + 1*(xx == 0) ## Where there are no basis functions do not divide zero by zero..
@@ -96,6 +96,7 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mode
     for(i in 1:ndata) {
         if(est_error) data[[i]]$std <- 0 ## Just set it to something, this will be overwritten later on
 
+        print("Binning data ...")
         data_proc <- map_data_to_BAUs(data[[i]],
                                       BAUs,
                                       av_var = av_var,
@@ -109,7 +110,6 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mode
                 stop("Estimation of error not yet implemented for spatio-temporal data")
             data_proc <- est_obs_error(data_proc,variogram.formula=f, vgm_model = vgm_model)
         }
-
 
         L <- .gstat.formula(f,data=data_proc)
         X[[i]] <- as(L$X,"Matrix")
@@ -187,7 +187,7 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mode
     #K_init <- var(Z[,1])*K_norm
     K_init = Diagonal(n=nbasis(basis),x = 1/(1/var(Z[,1])))
     K_inv_init = Diagonal(n=nbasis(basis),x = (1/var(Z[,1])))
-    
+
     new("SRE",
         data=data,
         basis=basis,
@@ -219,7 +219,7 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mode
 }
 
 .initialise_K <- function(basis,D_basis) {
-   
+
     all_res <- count_res(basis)
     K_norm <- lapply(1:nrow(all_res),
                     function(i) {
@@ -234,15 +234,15 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mode
                             Ki <- exp(-D_basis[[i]]/tau_init_space)
                         }
                     })
-    
+
     K_norm <- do.call("bdiag",K_norm)
     idx_all <- unlist(lapply(1:nrow(all_res), function(i) which(basis@df$res == i)))
-    
+
     # Rearrange in order time/resolution when we have tensor products
     # When we don't have tensor product idx_all and 1:nrow(K) should be the same
     K_norm <- reverse_permute(K_norm,idx_all)
-    
-    
+
+
 }
 
 
@@ -1191,9 +1191,9 @@ setMethod("summary",signature(object="SRE"),
     }
     if(!(all(BAUs$fs >= 0)))
         stop("fine-scale variation basis function needs to be nonnegative everywhere")
-    if(!(is(BAUs,"SpatialPolygonsDataFrame") | is(BAUs,"STFDF")))
-        stop("BAUs should be a SpatialPolygonsDataFrame or a STFDF object")
-    if(is(BAUs,"STFDF")) if(!is(BAUs@sp,"SpatialPolygonsDataFrame"))
+    if(!(is(BAUs,"SpatialPolygonsDataFrame") | is(BAUs,"SpatialPixelsDataFrame") | is(BAUs,"STFDF")))
+        stop("BAUs should be a SpatialPolygonsDataFrame, SpatialPixelsDataFrame, or a STFDF object")
+    if(is(BAUs,"STFDF")) if(!(is(BAUs@sp,"SpatialPolygonsDataFrame") | is(BAUs,"SpatialPixelsDataFrame")))
         stop("The spatial component of the BAUs should be a SpatialPolygonsDataFrame")
     if((is(manifold(basis),"sphere")) & !all((coordnames(BAUs) == c("lon","lat"))))
         stop("Since a sphere is being used, please ensure that
@@ -1222,7 +1222,7 @@ setMethod("summary",signature(object="SRE"),
         stop("If observational error is not going to be estimated,
              please supply a field 'std' in the data objects")
     if(!(is.null(BAUs))) {
-        if(!(is(BAUs,"SpatialPolygonsDataFrame") | is(BAUs,"STFDF")))
+        if(!(is(BAUs,"SpatialPolygonsDataFrame") | is(BAUs,"SpatialPixelsDataFrame") | is(BAUs,"STFDF")))
             stop("BAUs should be a SpatialPolygonsDataFrame or a STFDF object")
         if(!all(sapply(data,function(x) identical(proj4string(x), proj4string(BAUs)))))
             stop("Please ensure all data items and BAUs have the same coordinate reference system")

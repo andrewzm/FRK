@@ -90,9 +90,9 @@ test_that("SRE 2D plane works",{
 
     ### Predict over BAUs
     grid_BAUs <- SRE.predict(S,use_centroid = TRUE)
-    expect_is(grid_BAUs,"SpatialPolygonsDataFrame")
+    expect_is(grid_BAUs,"SpatialPixelsDataFrame")
     grid_BAUs <- SRE.predict(S,use_centroid = TRUE,obs_fs = FALSE)
-    expect_is(grid_BAUs,"SpatialPolygonsDataFrame")
+    expect_is(grid_BAUs,"SpatialPixelsDataFrame")
 
     ### summary works?
     expect_true({summary(S);TRUE})

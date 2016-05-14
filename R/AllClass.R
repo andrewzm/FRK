@@ -79,7 +79,7 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #'
 #'@slot data the original data from which the model's parameters are estimated
 #'@slot basis object of class \code{Basis} used to construct the matrix \eqn{S}
-#'@slot BAUs object of class \code{SpatialPolygonsDataFrame} that contains the Basic Areal Units (BAUs) that are used to both (i) project the data onto a common discretisation if they are point-referenced and (ii) provide a BAU-to-data relationship if the data has a spatial footprint
+#'@slot BAUs object of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame} of \code{STFDF} that contains the Basic Areal Units (BAUs) that are used to both (i) project the data onto a common discretisation if they are point-referenced and (ii) provide a BAU-to-data relationship if the data has a spatial footprint
 #' @slot f formula used to define the SRE object. All covariates employed need to be specified in the object \code{BAUs}
 #' @slot S matrix constructed by evaluating the basis functions at all BAUs affected by the data
 #' @slot Ve measurement-error variance-covariance matrix (typically diagonal)
@@ -96,7 +96,7 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @keywords Spatial random effects, fixed rank kriging
 setClass("SRE",representation(data="list",
                               basis="Basis_obj",
-                              BAUs="ANY",     # should be SpatialPolygonsDataFrame or STFDF
+                              BAUs="ANY",     # should be SpatialPolygonsDataFrame, SpatialPixelsDataFrame or STFDF
                               f = "formula",
                               S = "Matrix",
                               S0 = "Matrix",

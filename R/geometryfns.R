@@ -159,7 +159,7 @@ setMethod("auto_BAU",signature(manifold="plane"),
                   }
                   idx <- which(!is.na(over(xy,bndary_seg)))
                   xy <- xy[idx,]
-                  xy_df <- SpatialPolygonsDataFrame(xy,
+                  xy_df <- SpatialPixelsDataFrame(xy,
                                                     data.frame(
                                                         coordinates(xy),
                                                         row.names = row.names(xy)))
@@ -623,6 +623,7 @@ SpatialPolygonsDataFrame_to_df <- function(sp_polys,vars = names(sp_polys)) {
                           },
                           mc.cores = opts_FRK$get("parallel"))
     stopCluster(cl)
+
     if(is(over_list[[1]],"data.frame")) {
         over_res <- do.call(rbind,over_list)
     } else {
@@ -641,41 +642,71 @@ setMethod("map_data_to_BAUs",signature(data_sp="Spatial"),
                       Nobs <- NULL
                       data_sp$Nobs <- 1
 
-                      if(opts_FRK$get("parallel") > 1) {
-                          timer <- system.time(Data_in_BAU <- .parallel_over(sp_pols,data_sp[c(av_var,"Nobs","std")],fn=sum))
-                      } else {
-                          timer <- system.time(Data_in_BAU <- over(sp_pols,data_sp[c(av_var,"Nobs","std")],fn=sum))
-                      }
+                      ## Deprecated:: The below did the over the other way round which was very
+                      ## inefficient if the BAUs could be represented as Pixels
+                      # if(opts_FRK$get("parallel") > 1) {
+                      #     browser()
+                      #     timer <- system.time(Data_in_BAU <-
+                      #          .parallel_over(sp_pols,data_sp[c(av_var,"Nobs","std")],fn=sum))
+                      # } else {
+                      #     timer <- system.time(Data_in_BAU <-
+                      #             over(sp_pols,data_sp[c(av_var,"Nobs","std")],fn=sum))
+                      # }
+                      #
+                      #
+                      # ## Rhipe VERSION (Currently disabled)
+                      # # print("Using RHIPE to find overlays")
+                      # # timer <- system.time(
+                      # # Data_in_BAU <- rhwrapper(Ntot = length(sp_pols),
+                      # #                                  N = 4000,
+                      # #                                  f_expr = .rhover,
+                      # #                                  sp_pols = sp_pols,
+                      # #                                  data_sp = data_sp,
+                      # #                                  av_var=av_var)
+                      # #     )
+                      #
+                      #
+                      # sp_pols@data[av_var] <- Data_in_BAU[av_var]/Data_in_BAU$Nobs
+                      # sp_pols@data["std"] <- Data_in_BAU["std"]/Data_in_BAU$Nobs
+                      # sp_pols@data["Nobs"] <- Data_in_BAU$Nobs
+                      # sp_pols@data["BAU_name"] <- as.character(row.names(sp_pols))
+                      #
+                      # new_sp_pts <- SpatialPointsDataFrame(
+                      #     coords=sp_pols[coordnames(data_sp)]@data,
+                      #     data=sp_pols@data,
+                      #     proj4string = CRS(proj4string(data_sp)))
+                      # ## If uncommented assumes uncorrelated observations
+                      # #new_sp_pts$std <- sqrt(new_sp_pts$std^2 / new_sp_pts$Nobs)
+                      # new_sp_pts <- subset(new_sp_pts,!is.na(Nobs))
 
-
-                      ## Rhipe VERSION (Currently disabled)
-                      # print("Using RHIPE to find overlays")
-                      # timer <- system.time(
-                      # Data_in_BAU <- rhwrapper(Ntot = length(sp_pols),
-                      #                                  N = 4000,
-                      #                                  f_expr = .rhover,
-                      #                                  sp_pols = sp_pols,
-                      #                                  data_sp = data_sp,
-                      #                                  av_var=av_var)
-                      #     )
-
-
-                      sp_pols@data[av_var] <- Data_in_BAU[av_var]/Data_in_BAU$Nobs
-                      sp_pols@data["std"] <- Data_in_BAU["std"]/Data_in_BAU$Nobs
-                      sp_pols@data["Nobs"] <- Data_in_BAU$Nobs
                       sp_pols@data["BAU_name"] <- as.character(row.names(sp_pols))
+                      safe_mean <- function(x) {
+                          if(is(x,"logical") | is(x,"numeric")) {
+                              mean(x)
+                          } else { x[1] }
+                      }
+                      timer <- system.time({
+                              data_df <- data_sp@data[setdiff(names(data_sp),
+                                                                  names(sp_pols)) %>%
+                                                        intersect(names(data_sp))]
+                              Data_in_BAU <- cbind(data_df,
+                                                            over(data_sp[av_var],
+                                                           sp_pols)) %>%
+                                                group_by(BAU_name) %>%
+                                                summarise_each(funs(safe_mean(.))) %>%
+                                             as.data.frame()})
 
-                      new_sp_pts <- SpatialPointsDataFrame(coords=sp_pols[coordnames(data_sp)]@data,
-                                                           data=sp_pols@data,
-                                                           proj4string = CRS(proj4string(data_sp)))
-                      ## If uncommented assumes uncorrelated observations
-                      #new_sp_pts$std <- sqrt(new_sp_pts$std^2 / new_sp_pts$Nobs)
-                      new_sp_pts <- subset(new_sp_pts,!is.na(Nobs))
+                      new_sp_pts <- SpatialPointsDataFrame(
+                          coords=Data_in_BAU[coordnames(data_sp)],
+                          data=Data_in_BAU,
+                          proj4string = CRS(proj4string(data_sp)))
                   } else {
                       if(opts_FRK$get("parallel") > 1) {
-                          timer <- system.time(Data_in_BAU <- .parallel_over(data_sp,as(sp_pols,"SpatialPolygons")))
+                          timer <- system.time(Data_in_BAU <- .parallel_over(data_sp,
+                                                                             as(sp_pols,"SpatialPolygons")))
                       } else {
-                          timer <- system.time(Data_in_BAU <- over(data_sp,as(sp_pols,"SpatialPolygons")))
+                          timer <- system.time(Data_in_BAU <- over(data_sp,
+                                                                   as(sp_pols,"SpatialPolygons")))
                       }
 
                       if(any(is.na(Data_in_BAU))) {  # data points at 180 boundary or outside BAUs -- remove
@@ -710,9 +741,12 @@ setMethod("map_data_to_BAUs",signature(data_sp="Spatial"),
                   ## is recorded. In the following we find the average covariate over support
                   ## (needs to be done separately as my have overlapping observations)
                   for (i in 1L:length(data_sp)) {
-                      this_poly <- SpatialPolygons(list(data_sp@polygons[[i]]),1L) #extract poly (a bit long-winded)
-                      overlap <- which(over(BAU_as_points,this_poly) == 1) # find which points overlap observations
-                      BAU_data <- BAU_as_points[names(overlap),1:ncol(BAU_as_points)] # extract BAU data at these points
+                      #extract poly (a bit long-winded)
+                      this_poly <- SpatialPolygons(list(data_sp@polygons[[i]]),1L)
+                      # find which points overlap observations
+                      overlap <- which(over(BAU_as_points,this_poly) == 1)
+                      # extract BAU data at these points
+                      BAU_data <- BAU_as_points[names(overlap),1:ncol(BAU_as_points)]
                       this_attr <- data.frame(t(apply(BAU_data@data,2,mean))) # average over BAU data
                       # only columns not already in data so that they cannot be written over
                       BAUs_aux_data[data_sp[["id"]][i],] <- this_attr # assign to data
@@ -1290,7 +1324,7 @@ as.SpatialPolygons.GridTopology2 <- function (grd, proj4string = CRS(as.characte
 }
 
 .polygons_to_points <- function(polys) {
-    stopifnot(is(polys,"STFDF") | is(polys,"SpatialPolygons"))
+    stopifnot(is(polys,"STFDF") |  is(polys,"SpatialPixels")| is(polys,"SpatialPolygons"))
     if(is(polys,"STFDF")) {
         as.matrix(cbind(coordinates(polys),polys@data$t))
     } else {

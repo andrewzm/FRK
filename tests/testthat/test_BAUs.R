@@ -37,7 +37,7 @@ test_that("plane_BAUs",{
                            type="grid",
                            cellsize = 0.5,
                            data=data)
-    expect_is(Grid2D,"SpatialPolygonsDataFrame")
+    expect_is(Grid2D,"SpatialPixelsDataFrame")
     expect_equal(names(Grid2D),c("x","y"))
 
 
