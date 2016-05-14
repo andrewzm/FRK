@@ -28,7 +28,6 @@ test_that("real_line_BAUs",{
 
 })
 
-
 test_that("plane_BAUs",{
     library(sp)
     data <- data.frame(x = rnorm(5),y=rnorm(5),z = rnorm(5),std=1)
