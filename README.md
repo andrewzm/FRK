@@ -68,3 +68,9 @@ Known Issues
 ------------
 
 Currently `FRK` is not installing on OSX with `build_vignettes=TRUE` as it fails to find `texi2dvi`. Set `build_vignettes=FALSE` to ensure installation. Then download the `.Rnw` file in the `vignettes` folder and compile the pdf file separately in `RStudio` with `knitr`. 
+
+
+Demonstrations
+--------------
+
+FRK is currently being used to generate spatio-temporal animations of fields observed by satellite data. [Here](https://www.youtube.com/watch?v=_kPa8VoeSdM) we show a very low-resolution prediction of CO2 using data from the ACOS satellite and OCO-2 between 2009 and 2016.

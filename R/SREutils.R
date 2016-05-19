@@ -124,7 +124,6 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mode
                                   dims=c(length(data_proc),
                                              length(BAUs)))
 
-
         if(any(rowSums(Cmat[[i]])==0))
             stop("I have found difficulty in associating the data with the BAUs.
                   If you have point-referenced data
@@ -1193,8 +1192,8 @@ setMethod("summary",signature(object="SRE"),
         stop("fine-scale variation basis function needs to be nonnegative everywhere")
     if(!(is(BAUs,"SpatialPolygonsDataFrame") | is(BAUs,"SpatialPixelsDataFrame") | is(BAUs,"STFDF")))
         stop("BAUs should be a SpatialPolygonsDataFrame, SpatialPixelsDataFrame, or a STFDF object")
-    if(is(BAUs,"STFDF")) if(!(is(BAUs@sp,"SpatialPolygonsDataFrame") | is(BAUs,"SpatialPixelsDataFrame")))
-        stop("The spatial component of the BAUs should be a SpatialPolygonsDataFrame")
+    if(is(BAUs,"STFDF")) if(!(is(BAUs@sp,"SpatialPolygonsDataFrame") | is(BAUs@sp,"SpatialPixelsDataFrame")))
+        stop("The spatial component of the BAUs should be a SpatialPolygonsDataFrame or SpatialPixelsDataFrame")
     if((is(manifold(basis),"sphere")) & !all((coordnames(BAUs) == c("lon","lat"))))
         stop("Since a sphere is being used, please ensure that
              all coordinates (including those of BAUs) are in (lon,lat)")
@@ -1232,7 +1231,7 @@ setMethod("summary",signature(object="SRE"),
             stop("BAUs should contain a field 'fs' containing a basis
                 function for fine-scale variation. ")
         }
-        if(is(BAUs,"STFDF")) if(!is(BAUs@sp,"SpatialPolygonsDataFrame"))
+        if(is(BAUs,"STFDF")) if(!(is(BAUs@sp,"SpatialPolygonsDataFrame") | is(BAUs@sp,"SpatialPixelsDataFrame")))
             stop("The spatial component of the BAUs should be a SpatialPolygonsDataFrame")
     }
 

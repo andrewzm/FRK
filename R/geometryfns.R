@@ -921,13 +921,14 @@ setMethod("BuildC",signature(data="STIDF"),
 
 setMethod("BuildC",signature(data="STFDF"),
           function(data,BAUs) {
+              
               i_idx <- j_idx <- NULL
               count <- 0L
               C_one_time <- BuildC(data[,1],BAUs[,1])
               i <- C_one_time$i_idx
               j <- C_one_time$j_idx
               for(k in seq_along(time(BAUs))) {
-                  overlap_time <- which(time(data) == (time(BAUs)[k]))
+                  overlap_time <- which(as.POSIXct(time(data)) == (time(BAUs)[k]))
                   if(length(overlap_time) > 1L) stop("Something is wrong in binning polygon data into BAUs")
                   if(length(overlap_time) == 1) {
                       t_idx <- as.numeric(BAUs@time[k])
