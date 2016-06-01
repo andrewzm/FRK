@@ -103,7 +103,7 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mode
                                       average_in_BAU = average_in_BAU)
 
         if(any(is.na(data_proc@data[av_var])))
-            stop("NAs found when mapping data to BAUs. Are you sure all your data are covered by BAUs?")
+            stop("NAs found when mapping data to BAUs. Do you have NAs in your data? If not, are you sure all your data are covered by BAUs?")
 
         if(est_error) {
             if(is(data_proc,"ST"))

@@ -4,7 +4,7 @@ new_opts_FRK <- function(d = list(progress = TRUE, verbose = FALSE, parallel=1L)
     list(set = function(opt,value) {
         if(!(opt %in% c("progress","verbose","parallel")))
             stop("opt needs to be one of ('progress','verbose','parallel')")
-        .option_check(opt,value)
+        value <- .option_check(opt,value)
         defaults[[opt]] <<- value
     },
     get = function(opt) {
@@ -23,9 +23,17 @@ new_opts_FRK <- function(d = list(progress = TRUE, verbose = FALSE, parallel=1L)
         if(!(value == TRUE | value == FALSE))
             stop("verbose should be TRUE or FALSE")
 
-    if(opt == "parallel")
+    if(opt == "parallel") {
         if(!is.integer(value))
             stop("parallel should be a nonnegative integer")
+        if(Sys.info()[['sysname']] == "Windows") {
+            if(!value == 1L) {
+                warning("Windows detected. Currently FRK is only parallelisable on
+                        Linux/Mac systems. Coercing number of cores to 1")
+                value <- 1L
+            }
+        }
+    }
 
     if(opt == "parallel")
         if(!(value >= 0))
@@ -34,6 +42,8 @@ new_opts_FRK <- function(d = list(progress = TRUE, verbose = FALSE, parallel=1L)
 
     if(!requireNamespace("parallel"))
         stop("package parallel is required for using multiple cores. Please install parallel")
+
+    value
 
 }
 
