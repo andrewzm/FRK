@@ -26,13 +26,13 @@ new_opts_FRK <- function(d = list(progress = TRUE, verbose = FALSE, parallel=1L)
     if(opt == "parallel") {
         if(!is.integer(value))
             stop("parallel should be a nonnegative integer")
-        if(Sys.info()[['sysname']] == "Windows") {
-            if(!value == 1L) {
-                warning("Windows detected. Currently FRK is only parallelisable on
-                        Linux/Mac systems. Coercing number of cores to 1")
-                value <- 1L
-            }
-        }
+        # if(Sys.info()[['sysname']] == "Windows") {
+        #     if(!value == 1L) {
+        #         warning("Windows detected. Currently FRK is only parallelisable on
+        #                 Linux/Mac systems. Coercing number of cores to 1")
+        #         value <- 1L
+        #     }
+        # }
     }
 
     if(opt == "parallel")
