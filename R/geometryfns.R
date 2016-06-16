@@ -547,20 +547,28 @@ df_to_SpatialPolygons <- function(df,keys,coords,proj) {
     }
 
     if(opts_FRK$get("parallel") > 1e10) { ## Do not enable, mostly overhead
-        cl <- makeCluster(opts_FRK$get("parallel"))
-
         ## Deprecated to remove plyr:
         #doParallel::registerDoParallel(opts_FRK$get("parallel"))
         #df_poly <- plyr::dlply(df,keys,dfun,.parallel=TRUE)
 
         unique_keys <- unique(data.frame(df[keys]))[,1]
-        df_poly <- mclapply(unique_keys,
+
+        clusterExport(opts_FRK$get("cl"),
+                      c("df"),envir=environment())
+        df_poly <- parLapply(opts_FRK$get("cl"),unique_keys,
                             function(key) {
                                 df[df[keys]==key,] %>%
                                     data.frame() %>%
-                                    dfun},
-                            mc.cores = opts_FRK$get("parallel"))
-        stopCluster(cl)
+                                    dfun})
+        clusterEvalQ(opts_FRK$get("cl"), {gc()})
+
+        # df_poly <- mclapply(unique_keys,
+        #                     function(key) {
+        #                         df[df[keys]==key,] %>%
+        #                             data.frame() %>%
+        #                             dfun},
+        #                     mc.cores = opts_FRK$get("parallel"))
+
     } else {
         df_poly <- plyr::dlply(df,keys,dfun)
     }
@@ -615,14 +623,14 @@ SpatialPolygonsDataFrame_to_df <- function(sp_polys,vars = names(sp_polys)) {
     n2 <- length(sp2)
     batching=cut(1:n1,breaks = seq(0,n1+batch_size,by=batch_size),labels=F)
 
-    cl <- makeCluster(opts_FRK$get("parallel"))
+    clusterExport(opts_FRK$get("cl"),
+                  c("batching","sp1","sp2"),envir=environment())
     over_list <- mclapply(1:max(unique(batching)),
                           function(i) {
                               idx <- which(batching == i)
                               over(sp1[idx,],sp2,fn=sum)
-                          },
-                          mc.cores = opts_FRK$get("parallel"))
-    stopCluster(cl)
+                          })
+    clusterEvalQ(opts_FRK$get("cl"), {gc()})
 
     if(is(over_list[[1]],"data.frame")) {
         over_res <- do.call(rbind,over_list)
@@ -921,7 +929,7 @@ setMethod("BuildC",signature(data="STIDF"),
 
 setMethod("BuildC",signature(data="STFDF"),
           function(data,BAUs) {
-              
+
               i_idx <- j_idx <- NULL
               count <- 0L
               C_one_time <- BuildC(data[,1],BAUs[,1])

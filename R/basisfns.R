@@ -110,7 +110,7 @@ auto_basis <- function(manifold = plane(),
                        prune=0,
                        max_basis = NULL,
                        subsamp=10000,
-                       type="Gaussian",
+                       type="bisquare",
                        isea3h_lo = 0,
                        bndary = NULL,
                        verbose = 0L,
@@ -351,15 +351,15 @@ setMethod("eval_basis",signature(basis="Basis",s="matrix"),function(basis,s,outp
         batching=cut(1:n,breaks = seq(0,n+10000,
                                       by=10000),labels=F)
 
-        cl <- makeCluster(opts_FRK$get("parallel"))
-        pnt_eval_list <- mclapply(1:max(unique(batching)),
+        clusterExport(opts_FRK$get("cl"),
+                      c("batching","basis","s","space_dim","output"),envir=environment())
+        pnt_eval_list <- parLapply(opts_FRK$get("cl"),1:max(unique(batching)),
                                   function(i) {
                                       idx <- which(batching == i)
-                                      .point_eval_fn(basis@fn,
-                                                     s[idx,1:space_dim,drop=F],output)
-                                  },
-                                  mc.cores = opts_FRK$get("parallel"))
-        stopCluster(cl)
+                                      return(.point_eval_fn(basis@fn,
+                                                     s[idx,1:space_dim,drop=F],output))
+                                  })
+        clusterEvalQ(opts_FRK$get("cl"), {gc()})
         do.call(rBind,pnt_eval_list)
     } else  {
         .point_eval_fn(basis@fn,s[,1:space_dim,drop=F],output)
@@ -377,15 +377,16 @@ setMethod("eval_basis",signature(basis="Basis",s="SpatialPointsDataFrame"),funct
         batching=cut(1:n,breaks = seq(0,n+10000,
                                       by=10000),labels=F)
 
-        cl <- makeCluster(opts_FRK$get("parallel"))
-        pnt_eval_list <- mclapply(1:max(unique(batching)),
-                              function(i) {
-                                  idx <- which(batching == i)
-                                  .point_eval_fn(basis@fn,
-                                                 coordinates(s)[idx,1:space_dim,drop=F],output)
-                              },
-                              mc.cores = opts_FRK$get("parallel"))
-        stopCluster(cl)
+
+        clusterExport(opts_FRK$get("cl"),
+                      c("batching","basis","s","space_dim","output"),envir=environment())
+        pnt_eval_list <- parLapply(opts_FRK$get("cl"),1:max(unique(batching)),
+                                   function(i) {
+                                       idx <- which(batching == i)
+                                       return( .point_eval_fn(basis@fn,
+                                                              coordinates(s)[idx,1:space_dim,drop=F],output))
+                                   })
+        clusterEvalQ(opts_FRK$get("cl"), {gc()})
         do.call(rBind,pnt_eval_list)
     } else  {
         .point_eval_fn(basis@fn,coordinates(s)[,1:space_dim,drop=F],output)
@@ -400,12 +401,21 @@ setMethod("eval_basis",signature(basis="Basis",s="SpatialPolygonsDataFrame"),fun
     print("Averaging over polygons")
 
     if(opts_FRK$get("parallel") > 1L) {
-        cl <- makeCluster(opts_FRK$parallel)
-        X <- mclapply(1:length(s), function(i) {
+
+        ## parLapply version not tested yet
+        clusterExport(opts_FRK$get("cl"),
+                      c("basis","s"),envir=environment())
+        X <- parLapply(opts_FRK$get("cl"),1:length(s), function(i) {
             samps <- .samps_in_polygon(basis,s,i)
             colSums(.point_eval_fn(basis@fn,samps))/nrow(samps)
-        },mc.cores = opts_FRK$get("parallel"))
-        stopCluster(cl)
+        })
+        clusterEvalQ(opts_FRK$get("cl"), {gc()})
+
+        # X <- mclapply(1:length(s), function(i) {
+        #     samps <- .samps_in_polygon(basis,s,i)
+        #     colSums(.point_eval_fn(basis@fn,samps))/nrow(samps)
+        # },mc.cores = opts_FRK$get("parallel"))
+
     } else  {
         X <- lapply(1:length(s), function(i) {
             samps <- .samps_in_polygon(basis,s,i)

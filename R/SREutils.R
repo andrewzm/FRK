@@ -1101,15 +1101,17 @@ SRE.simulate <- function(S,obs_fs) {
 
 .batch_compute_var <- function(X,Cov) {
   batching=cut(1:nrow(X),breaks = seq(0,nrow(X)+1000,by=1000),labels=F)
+  browser()
   if(opts_FRK$get("parallel") > 1) {
-    cl <- makeCluster(opts_FRK$get("parallel"))
-    var_list <- mclapply(1:max(unique(batching)),
-                         function(i) {
-                           idx = which(batching == i)
-                           as.numeric(rowSums((X[idx,] %*% Cov)*X[idx,]))},
-                         mc.cores = opts_FRK$get("parallel"))
+      clusterExport(opts_FRK$get("cl"),
+                    c("batching","X","Cov"),envir=environment())
+      var_list <- parLapply(opts_FRK$get("cl"),1:max(unique(batching)),
+                            function(i) {
+                                idx = which(batching == i)
+                                as.numeric(rowSums((X[idx,] %*% Cov)*X[idx,]))})
+      clusterEvalQ(opts_FRK$get("cl"), {gc()})
+
     temp <- do.call(c,var_list)
-    stopCluster(cl)
   } else {
     temp <- rep(0,nrow(X))
     for(i in 1:max(unique(batching))) {

@@ -6,10 +6,25 @@ new_opts_FRK <- function(d = list(progress = TRUE, verbose = FALSE, parallel=1L)
             stop("opt needs to be one of ('progress','verbose','parallel')")
         value <- .option_check(opt,value)
         defaults[[opt]] <<- value
+
+        if(opt == "parallel") {
+
+            if (value > 1)
+                if(!is.null(defaults[["cl"]])) stopCluster(defaults[["cl"]])
+                defaults[["cl"]] <<- makeCluster(value,useXDR=FALSE)
+                # parLapply( defaults[["cl"]], 1:length(opts_FRK$cl), function(xx){
+                #     lapply(c("Matrix","sp"), function(yy) {
+                #         require(yy , character.only=TRUE)
+                #         return(paste0("Package ",yy," loaded successfully on thread"))
+                #     })
+                # }) %>% invisible()
+        }
+
+
     },
     get = function(opt) {
-        if(!(opt %in% c("progress","verbose","parallel","Rhipe")))
-            stop("opt needs to be one of ('progress','verbose','parallel')")
+        if(!(opt %in% c("progress","verbose","parallel","cl")))
+            stop("opt needs to be one of ('progress','verbose','parallel','cl')")
         defaults[[opt]]
     }
     )}
@@ -39,9 +54,8 @@ new_opts_FRK <- function(d = list(progress = TRUE, verbose = FALSE, parallel=1L)
         if(!(value >= 0))
             stop("parallel should be a nonnegative integer")
     if(opt == "parallel")
-
-    if(!requireNamespace("parallel"))
-        stop("package parallel is required for using multiple cores. Please install parallel")
+        if(!requireNamespace("parallel"))
+            stop("package parallel is required for using multiple cores. Please install parallel")
 
     value
 
