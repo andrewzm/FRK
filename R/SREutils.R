@@ -1101,7 +1101,6 @@ SRE.simulate <- function(S,obs_fs) {
 
 .batch_compute_var <- function(X,Cov) {
   batching=cut(1:nrow(X),breaks = seq(0,nrow(X)+1000,by=1000),labels=F)
-  browser()
   if(opts_FRK$get("parallel") > 1) {
       clusterExport(opts_FRK$get("cl"),
                     c("batching","X","Cov"),envir=environment())
