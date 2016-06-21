@@ -106,16 +106,17 @@ local_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type
 auto_basis <- function(manifold = plane(),
                        data,
                        regular=1,
-                       nres=2,
+                       nres=3,
                        prune=0,
                        max_basis = NULL,
                        subsamp=10000,
                        type="bisquare",
-                       isea3h_lo = 0,
+                       isea3h_lo = 2,
                        bndary = NULL,
                        verbose = 0L,
                        ...) {
     m <- manifold
+
     if(!is(m,"manifold"))
         stop("manifold needs to be an object of class manifold")
     if(!is.numeric(prune) | prune < 0)
@@ -144,11 +145,14 @@ auto_basis <- function(manifold = plane(),
                             bndary=bndary, verbose=0)
             tot_basis <- nbasis(G)
         }
-        S <- eval_basis(G,data)
-        prune <- (colSums(S)[rev(order(colSums(S)))])[round(max_basis)] + 1e-10
+        nres <- nres - 1
+        #S <- eval_basis(G,data)
+        #prune <- (colSums(S)[rev(order(colSums(S)))])[round(max_basis)] + 1e-10
+        prune <- 0
+
     }
 
-    .auto_basis(manifold=manifold,data=data,regular=regular,nres=nres,
+   .auto_basis(manifold=manifold,data=data,regular=regular,nres=nres,
                 prune=prune,subsamp=subsamp,type=type,isea3h_lo = isea3h_lo,
                 bndary=bndary, verbose=verbose)
 
@@ -194,7 +198,6 @@ auto_basis <- function(manifold = plane(),
             bndary_seg <- INLA::inla.mesh.segment(bndary)
         }
     }
-
     if(is(m,"plane") & regular > 0) {
         asp_ratio <- diff(yrange) / diff(xrange)
         if(asp_ratio < 1) {
@@ -250,9 +253,10 @@ auto_basis <- function(manifold = plane(),
             }
 
             if(nrow(D) >0)
+                # R = 3*sd for similar bisquare shape
                 this_res_basis <- local_basis(manifold = m,
                                            loc=this_res_locs,
-                                           scale=ifelse(type=="bisquare",1.5,1.5)*this_res_scales,
+                                           scale=ifelse(type=="bisquare",4.5,1.5)*this_res_scales,
                                            type=type)
             if(prune > 0 & nrow(D)>0) {
                 if(j==1) {
@@ -278,8 +282,7 @@ auto_basis <- function(manifold = plane(),
     }
 
     G_basis <- Reduce("concat",G)
-    if(G_basis@n > nrow(data)) warning("More basis functions than data points")
-    if(G_basis@n > 2000) warning("More than 2000 basis functions")
+    #if(G_basis@n > nrow(data)) warning("More basis functions than data points")
     G_basis
 }
 

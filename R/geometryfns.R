@@ -53,7 +53,7 @@ setMethod("initialize",signature="manifold",function(.Object) {
 #' }
 #' @export
 auto_BAUs <- function(manifold, type="grid",cellsize = NULL,
-                      isea3h_res=NULL,data=NULL,convex=-0.05,tunit="days",...) {
+                      isea3h_res=NULL,data=NULL,convex=-0.05,tunit=NULL,...) {
 
 
     if(!(is(data,"Spatial") | is(data,"ST") | is(data,"Date") | is.null(data)))
@@ -61,7 +61,6 @@ auto_BAUs <- function(manifold, type="grid",cellsize = NULL,
     if(is(data,"Spatial") | is(data,"ST"))
         if((class(coordnames(data)) == "NULL"))
             stop("data needs to have coordinate names")
-
     if(!is(manifold,"manifold")) stop("manifold needs to be of class 'manifold'")
     if(is.null(type)) {
         if(grepl("longlat",proj4string(data[[1]]))) {
@@ -93,6 +92,10 @@ auto_BAUs <- function(manifold, type="grid",cellsize = NULL,
         if(!length(cellsize) == dimensions(manifold)) stop("cellsize needs to be of length equal to dimension of manifold")
     }
 
+
+    if(grepl("ST",class(manifold)) & is.null(data) & is.null(tunit)) stop("Need to specify tunit if data is not specified in ST case")
+    if(grepl("ST",class(manifold)) & is.null(tunit)) tunit  <-  .choose_BAU_tunit_from_data(data)
+
     auto_BAU(manifold=manifold,type=type,cellsize=cellsize,resl=resl,d=data,convex=convex,tunit=tunit)
 }
 
@@ -121,7 +124,18 @@ setMethod("auto_BAU",signature(manifold="plane"),
 
               xrange <- range(coords[,1])
               yrange <- range(coords[,2])
-              bndary_seg = INLA::inla.nonconvex.hull(coords,convex=convex)$loc %>%
+
+              ## Increase convex until domain is contiguous and smooth (distance betweeen successive points is small)
+              OK <- 0
+              while(!OK) {
+                  bndary_seg = INLA::inla.nonconvex.hull(coords,convex=convex)$loc
+                  D <- dist(bndary_seg) %>% as.matrix()
+                  distances <- unique(band(D,1,1)@x)[-1]
+                  OK <- sd(distances) < median(distances)
+                  convex <- convex*2
+              }
+
+              bndary_seg <- bndary_seg %>%
                   data.frame() %>%
                   mutate(x=X1,y=X2,id = 1) %>%
                   select(-X1,-X2) %>%
@@ -148,17 +162,28 @@ setMethod("auto_BAU",signature(manifold="plane"),
                   return(HexPols_df)
               } else if (type == "grid") {
                   coordnames(xy) <- coord_names
-                  xy <- xy %>%
-                      points2grid() %>%
-                      as.SpatialPolygons.GridTopology2()
+                  # xy <- xy %>%
+                  #   points2grid() %>%
+                  #    as.SpatialPolygons.GridTopology2()
+                  xy <- SpatialPixels(xy)
+
                   if(!all(coordnames(xy) == coord_names)) {
                       warning("Coordinate names different from (x,y).
                               Renaming polygons might take a while due to
                               structure of the function as.SpatialPolygons.GridTopology.")
                       coordnames(xy) <- coord_names
                   }
-                  idx <- which(!is.na(over(xy,bndary_seg)))
-                  xy <- xy[idx,]
+
+                  #keep pixels inside boundary
+                  idx1 <- which(!is.na(over(xy,bndary_seg)))
+                  # and pixels on boundary
+                  bndary_pts <- SpatialPoints(bndary_seg@polygons[[1]]@Polygons[[1]]@coords)
+                  idx2 <- unique(over(bndary_pts,xy))
+                  if(any(is.na(idx2))) idx2 <- idx2[-which(is.na(idx2))]
+                  # and pixels that contain any points
+                  idx3 <- over(d,xy) ## cannot contain NAs
+                  xy <- xy[union(union(idx1,idx2),idx3),]
+
                   xy_df <- SpatialPixelsDataFrame(xy,
                                                     data.frame(
                                                         coordinates(xy),
@@ -277,11 +302,12 @@ setMethod("auto_BAU",signature(manifold="sphere"),
 
         isea3h_res <- process_isea3h(isea3h,resl)
 
+        if(is.null(d)) prj <- CRS("+proj=longlat +ellps=sphere") else prj <-CRS(proj4string(d))
         isea3h_sp_pol <- df_to_SpatialPolygons(
             df=filter(isea3h_res,centroid==0),
             keys=c("id"),
             coords=c("lon","lat"),
-            proj=CRS("+proj=longlat +ellps=sphere"))
+            proj=prj)
 
         isea3h_sp_poldf <- SpatialPolygonsDataFrame(
             isea3h_sp_pol,
@@ -313,10 +339,11 @@ setMethod("auto_BAU",signature(manifold="sphere"),
 
         longrid <- seq(xmin + cellsize[1]/2,xmax - cellsize[1]/2,by=cellsize[1])
         latgrid <- seq(ymin + cellsize[2]/2,ymax - cellsize[2]/2,by=cellsize[2])
+        if(is.null(d)) prj <- CRS("+proj=longlat +ellps=sphere") else prj <-CRS(proj4string(d))
         lonlat <- expand.grid(lon=longrid,lat=latgrid) %>%
             SpatialPoints() %>%
             points2grid() %>%
-            as.SpatialPolygons.GridTopology(proj4string = CRS("+proj=longlat +ellps=sphere"))
+            as.SpatialPolygons.GridTopology(proj4string = prj)
 
         coordnames(lonlat) <- c("lon","lat")
 
@@ -335,7 +362,7 @@ setMethod("auto_BAU",signature(manifold="sphere"),
             mutate(id=1) %>%
             df_to_SpatialPolygons(keys="id",
                                   coords=c("lon","lat"),
-                                  proj=CRS("+proj=longlat +ellps=sphere"))
+                                  proj=CRS(proj4string(d)))
         sphere_BAUs$in_chull <- over(sphere_BAUs,conv_hull)
         sphere_BAUs <- subset(sphere_BAUs,!is.na(in_chull))
     }
@@ -693,17 +720,18 @@ setMethod("map_data_to_BAUs",signature(data_sp="Spatial"),
                               mean(x)
                           } else { x[1] }
                       }
+
+
                       timer <- system.time({
                               data_df <- data_sp@data[setdiff(names(data_sp),
                                                                   names(sp_pols)) %>%
                                                         intersect(names(data_sp))]
                               Data_in_BAU <- cbind(data_df,
-                                                            over(data_sp[av_var],
-                                                           sp_pols)) %>%
+                                                   over(data_sp[av_var],
+                                                        sp_pols)) %>%
                                                 group_by(BAU_name) %>%
                                                 summarise_each(funs(safe_mean(.))) %>%
                                              as.data.frame()})
-
                       new_sp_pts <- SpatialPointsDataFrame(
                           coords=Data_in_BAU[coordnames(data_sp)],
                           data=Data_in_BAU,
@@ -1186,10 +1214,19 @@ process_isea3h <- function(isea3h,resl) {
 
     new_polys$lon <- new_polys$lon - 360*(new_polys$lon >= 180)
 
+    ## Put polygon points back on boundary
+    idx <- which(new_polys$lon > 179.999)
+    new_polys$lon[idx] <- 180
+    idx <- which(new_polys$lon < -179.999)
+    new_polys$lon[idx] <- -180
+
     isea3h_res2 <- isea3h_res %>%
         data.frame() %>%
         filter(probpoly == FALSE) %>%
         rbind(new_polys)
+
+    # ## Consolidate edges
+    # isea3h_res2 <- isea3h_res2 %>%
 
     isea3h_res2
 
@@ -1324,12 +1361,25 @@ as.SpatialPolygons.GridTopology2 <- function (grd, proj4string = CRS(as.characte
 }
 
 .choose_BAU_cellsize_from_data <- function(data) {
+    cellsize <- c(diff(range(coordinates(data)[,1]))/100,
+                  diff(range(coordinates(data)[,2]))/100)
     if (is(data,"Spatial")) {
-        cellsize <- c(diff(range(coordinates(data)[,1]))/100,
-                      diff(range(coordinates(data)[,2]))/100)
+        cellsize
     } else {
-        stop("ST cellsize selection not implemented yet")
+       c(cellsize,1)
     }
+}
+
+.choose_BAU_tunit_from_data <- function(data) {
+    # Aim for no more than 30 BAUs
+    t1 <- range(time(data))[1]
+    t2 <- range(time(data))[2]
+    tunits <- c("days","weeks","months","years")
+    for(i in seq_along(tunits)) {
+        l <- length(seq(t1,t2,by=tunits[i]))
+        if(l < 40) break
+    }
+    tunits[i]
 }
 
 .polygons_to_points <- function(polys) {

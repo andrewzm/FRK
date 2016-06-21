@@ -586,8 +586,8 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", 
         # When we don't have tensor product idx_all and 1:nrow(K) should be the same
         K <- reverse_permute(K,idx_all)
 
-        cat("  Estimates of omega: ",unlist(omega),"  ")
-        cat("  Estimates of tau: ",unlist(tau),"  ")
+        #cat("  Estimates of omega: ",unlist(omega),"  ")
+        #cat("  Estimates of tau: ",unlist(tau),"  ")
 
         # K <- lapply(1:nrow(all_res),
         #             function(i) {
@@ -1048,7 +1048,11 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,obs_fs=TRUE,pred_polys = NUL
         }
 
         ## variance too hard to compute all at once -- do it in blocks of 1000
-        BAUs[["var"]] <- .batch_compute_var(PI,Cov)
+
+        ### Since we have all the elements we can use first principles from the sparse covariance matrix
+        #BAUs[["var"]] <- .batch_compute_var(PI,Cov)
+        BAUs[["var"]] <- .batch_compute_var(S0,Cov,obs_fs = !(!obs_fs & sigma2fs > 0))
+        BAUs[["sd"]] <- sqrt(BAUs[["var"]])
     }
 
     if(obs_fs) {
@@ -1064,7 +1068,7 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,obs_fs=TRUE,pred_polys = NUL
                              cholQp = temp$Qpermchol, P = temp$P) # FULL
         }
         BAUs[["mu"]] <- as.numeric(X %*% alpha) + as.numeric(S0 %*% x_mean)
-        BAUs[["var"]] <- .batch_compute_var(S0,Cov)
+        BAUs[["var"]] <- .batch_compute_var(S0,Cov,obs_fs = TRUE)
         #BAUs[["var"]] <- rowSums((S0 %*% Cov) * S0) + Sm@sigma2fshat*BAUs$fs
     }
 
@@ -1098,10 +1102,47 @@ SRE.simulate <- function(S,obs_fs) {
     print("Done ...")
 
 }
+.batch_compute_var <- function(S0,Cov,obs_fs = FALSE) {
+    # Don't consider more than 1e4 elements at a time
+    batch_size <- 1e4
+    batching=cut(1:nrow(S0),breaks = seq(0,nrow(S0)+batch_size,by=batch_size),labels=F)
+    r <- ncol(S0)
+    #if(opts_FRK$get("parallel") > 1 & batch_size < nrow(X)) {
+    if(0) { # disable parallel for now -- too memory consuming
+        clusterExport(opts_FRK$get("cl"),
+                      c("batching","S0","Cov"),envir=environment())
+        var_list <- parLapply(opts_FRK$get("cl"),1:max(unique(batching)),
+                              function(i) {
+                                  idx = which(batching == i)
+                                  rowSums((S0[idx,] %*% Cov[1:r,1:r]) * S0[idx,]) +
+                                      diag(Cov)[-(1:r)][idx] +
+                                      2*rowSums(Cov[r+idx,1:r] * S0[idx,])
+                                  })
+        clusterEvalQ(opts_FRK$get("cl"), {gc()})
+        temp <- do.call(c,var_list)
+    } else {
+        temp <- rep(0,nrow(S0))
+        for(i in 1:max(unique(batching))) {
+            idx = which(batching==i)
+            # if obs_fs then Cov is only of size ?
+            if(!obs_fs)
+                temp[idx] <- rowSums((S0[idx,] %*% Cov[1:r,1:r]) * S0[idx,]) +
+                    diag(Cov)[-(1:r)][idx] +
+                    2*rowSums(Cov[(r+idx),1:r] * S0[idx,])
+            else
+                temp[idx] <- rowSums((S0[idx,] %*% Cov) * S0[idx,])
 
-.batch_compute_var <- function(X,Cov) {
-  batching=cut(1:nrow(X),breaks = seq(0,nrow(X)+1000,by=1000),labels=F)
-  if(opts_FRK$get("parallel") > 1) {
+        }
+    }
+    temp
+}
+
+
+.batch_compute_var.deprecated <- function(X,Cov) {
+  # Don't consider more than 50e6 elements at a time
+  batch_size <- min(round(50e6 / nrow(Cov)),nrow(Cov))
+  batching=cut(1:nrow(X),breaks = seq(0,nrow(X)+batch_size,by=batch_size),labels=F)
+  if(opts_FRK$get("parallel") > 1 & batch_size < nrow(X)) {
       clusterExport(opts_FRK$get("cl"),
                     c("batching","X","Cov"),envir=environment())
       var_list <- parLapply(opts_FRK$get("cl"),1:max(unique(batching)),
