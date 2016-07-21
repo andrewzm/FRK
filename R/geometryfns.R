@@ -721,6 +721,12 @@ setMethod("map_data_to_BAUs",signature(data_sp="Spatial"),
                           } else { x[1] }
                       }
 
+                      ## Add coordinates to @data
+                      if(!(all(coordnames(sp_pols) %in% names(sp_pols@data)))) {
+                          sp_pols@data <- cbind(sp_pols@data,coordinates(sp_pols))
+                      }
+
+
 
                       timer <- system.time({
                               data_df <- data_sp@data[setdiff(names(data_sp),
@@ -732,6 +738,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="Spatial"),
                                                 group_by(BAU_name) %>%
                                                 summarise_each(funs(safe_mean(.))) %>%
                                              as.data.frame()})
+
                       new_sp_pts <- SpatialPointsDataFrame(
                           coords=Data_in_BAU[coordnames(data_sp)],
                           data=Data_in_BAU,
@@ -881,7 +888,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="ST"),
 
           })
 
-est_obs_error <- function(sp_pts,variogram.formula,vgm_model = NULL) {
+est_obs_error <- function(sp_pts,variogram.formula,vgm_model = NULL,BAU_width = NULL) {
 
     #stopifnot(is(variogram.formula,"formula"))
     stopifnot(is(sp_pts,"Spatial"))
@@ -896,14 +903,21 @@ est_obs_error <- function(sp_pts,variogram.formula,vgm_model = NULL) {
     } else {
         sp_pts_sub <- sp_pts
     }
+
+    diag_length <- sqrt(sum(apply(coordinates(sp_pts_sub),2,function(x) diff(range(x)))^2))
+    area <- prod(apply(coordinates(sp_pts_sub),2,function(x) diff(range(x))))  ## full area
+    cutoff <- sqrt(area * 100 / length(sp_pts_sub)) ## consider the area that contains about 100 data points in it
+
+    print("... Fitting variogram for estimating measurement error")
     L <- .gstat.formula(variogram.formula,data=sp_pts_sub)
     g <- gstat::gstat(formula=variogram.formula,data=sp_pts_sub)
-    v <- gstat::variogram(g,cressie=T)
+    v <- gstat::variogram(g,cressie=T,cutoff=cutoff,cutoff/10)
     if(is.null(vgm_model)) vgm_model <-  gstat::vgm(var(L$y)/2, "Lin", mean(v$dist), var(L$y)/2)
     vgm.fit = gstat::fit.variogram(v, model = vgm_model)
 
     if(vgm.fit$psill[1] == 0) { ## Try with Gaussian, maybe process is overly smooth or data is a large average
-        vgm.fit = gstat::fit.variogram(v, model = gstat::vgm(1, "Gau", mean(v$dist), 1))
+        vgm.fit = gstat::fit.variogram(v, model = gstat::vgm(1, "Gau", mean(v$dist), 1)) %>%
+            suppressWarnings()
     }
     plot(v,vgm.fit)
     print(paste0("sigma2e estimate = ",vgm.fit$psill[1]))
@@ -1387,7 +1401,8 @@ as.SpatialPolygons.GridTopology2 <- function (grd, proj4string = CRS(as.characte
     if(is(polys,"STFDF")) {
         as.matrix(cbind(coordinates(polys),polys@data$t))
     } else {
-        as.matrix(polys[coordnames(polys)]@data)
+        #as.matrix(polys[coordnames(polys)]@data)
+        as.matrix(coordinates(polys))
     }
 
 }

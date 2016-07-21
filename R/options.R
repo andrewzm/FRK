@@ -8,8 +8,12 @@ new_opts_FRK <- function(d = list(progress = TRUE, verbose = FALSE, parallel=1L)
         defaults[[opt]] <<- value
 
         if(opt == "parallel") {
+            if(!is.null(defaults[["cl"]])) {
+                stopCluster(defaults[["cl"]])
+                defaults[["cl"]] <<- NULL
+            }
             if (value > 1) {
-                if(!is.null(defaults[["cl"]])) stopCluster(defaults[["cl"]])
+
                 defaults[["cl"]] <<- makeCluster(value,useXDR=FALSE)
                 # parLapply( defaults[["cl"]], 1:length(opts_FRK$cl), function(xx){
                 #     lapply(c("Matrix","sp"), function(yy) {

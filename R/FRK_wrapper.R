@@ -43,7 +43,7 @@ FRK <- function(f,                     # formula
     print("Generating basis functions...")
     tot_data <- length(data[[1]])
     if(K_type == "unstructured") {
-        max_sp_basis <- tot_data^(0.75)
+        max_sp_basis <- min(tot_data^(0.75),2000)
     } else {
         max_sp_basis <- 2000
         if(is(manifold,"sphere")) {
@@ -52,6 +52,7 @@ FRK <- function(f,                     # formula
             isea3h_lo <- 2
         }
     }
+
 
     if(!(grepl("ST",class(manifold)))) {
 
@@ -81,7 +82,7 @@ FRK <- function(f,                     # formula
 
     }
 
-
+    print(paste0("Modelling using ",nbasis(G)," basis functions"))
     print("Constructing SRE model...")
     S <- SRE(f = f,                  # formula
              data = data,     # list of datasets

@@ -349,11 +349,10 @@ setMethod("TensorP",signature(Basis1="Basis",Basis2="Basis"),function(Basis1,Bas
 setMethod("eval_basis",signature(basis="Basis",s="matrix"),function(basis,s,output = "matrix"){
     stopifnot(output %in% c("list","matrix"))
     space_dim <- dimensions(manifold(basis))
+    n <- nrow(s)
+    batching=cut(1:n,breaks = seq(0,n+10000,
+                                  by=10000),labels=F)
     if(opts_FRK$get("parallel") > 1L) {
-        n <- nrow(s)
-        batching=cut(1:n,breaks = seq(0,n+10000,
-                                      by=10000),labels=F)
-
         clusterExport(opts_FRK$get("cl"),
                       c("batching","basis","s","space_dim","output"),envir=environment())
         pnt_eval_list <- parLapply(opts_FRK$get("cl"),1:max(unique(batching)),
@@ -363,37 +362,22 @@ setMethod("eval_basis",signature(basis="Basis",s="matrix"),function(basis,s,outp
                                                      s[idx,1:space_dim,drop=F],output))
                                   })
         clusterEvalQ(opts_FRK$get("cl"), {gc()})
-        do.call(rBind,pnt_eval_list)
     } else  {
-        .point_eval_fn(basis@fn,s[,1:space_dim,drop=F],output)
+        pnt_eval_list <- lapply(1:max(unique(batching)),
+                                function(i) {
+                                    idx <- which(batching == i)
+                                    return(.point_eval_fn(basis@fn,
+                                                          s[idx,1:space_dim,drop=F],output))
+                                })
     }
+    do.call(rBind,pnt_eval_list)
 })
 
 #' @rdname eval_basis
 #' @aliases eval_basis,Basis-SpatialPointsDataFrame-method
 setMethod("eval_basis",signature(basis="Basis",s="SpatialPointsDataFrame"),function(basis,s,output = "matrix"){
     stopifnot(output %in% c("matrix","list"))
-    space_dim <- dimensions(manifold(basis))
-
-    if(opts_FRK$get("parallel") > 1L) {
-        n <- length(s)
-        batching=cut(1:n,breaks = seq(0,n+10000,
-                                      by=10000),labels=F)
-
-
-        clusterExport(opts_FRK$get("cl"),
-                      c("batching","basis","s","space_dim","output"),envir=environment())
-        pnt_eval_list <- parLapply(opts_FRK$get("cl"),1:max(unique(batching)),
-                                   function(i) {
-                                       idx <- which(batching == i)
-                                       return( .point_eval_fn(basis@fn,
-                                                              coordinates(s)[idx,1:space_dim,drop=F],output))
-                                   })
-        clusterEvalQ(opts_FRK$get("cl"), {gc()})
-        do.call(rBind,pnt_eval_list)
-    } else  {
-        .point_eval_fn(basis@fn,coordinates(s)[,1:space_dim,drop=F],output)
-    }
+    eval_basis(basis=basis, s = coordinates(s),output=output)
 })
 
 #' @rdname eval_basis

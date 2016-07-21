@@ -95,6 +95,15 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mode
 
     for(i in 1:ndata) {
         if(est_error) data[[i]]$std <- 0 ## Just set it to something, this will be overwritten later on
+        if(est_error) {
+            if(is(data[[i]],"ST"))
+                stop("Estimation of error not yet implemented for spatio-temporal data")
+            data_proc <- data[[i]]
+            data_proc$Nobs <- 1
+            data_proc <- est_obs_error(data_proc,variogram.formula=f, vgm_model = vgm_model)
+            data[[i]]$std <- data_proc$std
+        }
+
 
         print("Binning data ...")
         data_proc <- map_data_to_BAUs(data[[i]],
@@ -104,12 +113,6 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mode
 
         if(any(is.na(data_proc@data[av_var])))
             stop("NAs found when mapping data to BAUs. Do you have NAs in your data? If not, are you sure all your data are covered by BAUs?")
-
-        if(est_error) {
-            if(is(data_proc,"ST"))
-                stop("Estimation of error not yet implemented for spatio-temporal data")
-            data_proc <- est_obs_error(data_proc,variogram.formula=f, vgm_model = vgm_model)
-        }
 
         L <- .gstat.formula(f,data=data_proc)
         X[[i]] <- as(L$X,"Matrix")
@@ -387,6 +390,11 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", 
             }
     }
     if(opts_FRK$get("progress")) close(pb)
+    if(SRE_model@sigma2fshat == 0)
+            warning("sigma2fs is being estimated to zero.
+             This might because of an incorrect binning procedure or because
+             too much measurement error is being assumed (or because the latent
+             field is indeed that smooth, but unlikely).")
 
     if(i == n_EM) print("Maximum EM iterations reached")
     if(print_lik & !is.na(tol)) {
@@ -701,8 +709,6 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", 
                 amp_factor <- amp_factor * 10
                 if(!(sign(J(sigma2fs/amp_factor)) == sign(J(sigma2fs*amp_factor)))) OK <- 1
                 if(amp_factor > 1e9) {
-                    warning("sigma2fs is being estimated to zero.
-                            This might because because of an incorrect binning procedure.")
                     OK <- 1
                 }
             }
@@ -730,9 +736,6 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", 
             Omega_diag <- Diagonal(x=Omega_diag)
             sigma2fs_new <- 1/b[1]*(sum(Omega_diag)/length(Sm@Z) - a[1])
             if(sigma2fs_new < 0) {
-                warning("sigma2fs is being estimated to zero.
-                            This might because because of an incorrect binning procedure or
-                    because too much measurement error is being assumed.")
                 sigma2fs_new = 0
             }
         }
@@ -900,7 +903,6 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", 
 #' @rdname SRE
 #' @export
 SRE.predict <- function(SRE_model,use_centroid=TRUE,obs_fs=TRUE,pred_polys = NULL,pred_time = NULL) {
-
     .check_args3(use_centroid=use_centroid,obs_fs=obs_fs,pred_polys=pred_polys,pred_time=pred_time)
 
     if(!is.null(pred_polys))
@@ -939,7 +941,7 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,obs_fs=TRUE,pred_polys = NUL
         CP <- Diagonal(length(BAUs))
     } else {
         ## Check if these are actually BAUs:
-        pred_polys_are_BAUs <- all(row.names(pred_polys) %in% row.names(BAUs))
+        pred_polys_are_BAUs <- all(row.names(pred_polys) %in% row.names(BAUs)) & length(BAUs) == length(pred_polys)
         if(pred_polys_are_BAUs) {
            BAUs_idx <- match(row.names(pred_polys), row.names(BAUs))
            CP <-  sparseMatrix(i=1:length(pred_polys),
@@ -949,6 +951,8 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,obs_fs=TRUE,pred_polys = NUL
                                      length(BAUs)))
 
         } else {
+            ## Make sure they are Polygons (not pixels etc.)
+            pred_polys <- as(pred_polys,"SpatialPolygonsDataFrame")
             C_idx <- BuildC(pred_polys,BAUs)
             CP <- sparseMatrix(i=C_idx$i_idx,
                                j=C_idx$j_idx,
@@ -1308,12 +1312,12 @@ setMethod("summary",signature(object="SRE"),
     if(!(use_centroid %in% 0:1)) stop("use_centroid needs to be logical")
     if(!(obs_fs %in% 0:1)) stop("obs_fs needs to be logical")
 
-    if(is(pred_polys,"Spatial") & !(is(pred_polys,"SpatialPolygons")))
-        stop("Predictions need to be over BAUs or spatial polygons")
+    if(is(pred_polys,"Spatial") & !(is(pred_polys,"SpatialPolygons") | is(pred_polys,"SpatialPixels")) )
+        stop("Predictions need to be over BAUs or spatial polygons or pixels")
 
     if(is(pred_polys,"ST") & !(is(pred_polys,"STFDF")))
-        if(!(is(pred_polys@sp,"SpatialPolygons")))
-            stop("Predictions need to be over BAUs or STFDFs with spatial polygons")
+        if(!(is(pred_polys@sp,"SpatialPolygons") | is(pred_polys@sp,"SpatialPixels")))
+            stop("Predictions need to be over BAUs or STFDFs with spatial polygons or pixels")
 
     if(!(is.integer(pred_time) | is.null(pred_time))) stop("pred_time needs to be of class integer")
 }
@@ -1391,8 +1395,8 @@ setMethod("summary",signature(object="SRE"),
                 amp_factor <- amp_factor * 10
                 if(!(sign(J(sigma2fs/amp_factor)) == sign(J(sigma2fs*amp_factor)))) OK <- 1
                 if(amp_factor > 1e9) {
-                    warning("sigma2fs is being estimated to zero.
-                            This might because because of an incorrect binning procedure.")
+                    #warning("sigma2fs is being estimated to zero.
+                    #        This might because because of an incorrect binning procedure.")
                     OK <- 1
                 }
             }
