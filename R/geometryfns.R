@@ -896,7 +896,10 @@ est_obs_error <- function(sp_pts,variogram.formula,vgm_model = NULL,BAU_width = 
         stop("Nobs (number of observations in grid cell) needs to be a field of the Spatial object")
     if(!requireNamespace("gstat"))
         stop("gstat is required for variogram estimation. Please install gstat")
-
+    if(!is.na(proj4string(sp_pts))) { ## Make sure we're not on sphere, otherwise variogram fitting is slow
+        sp_pts <- SpatialPointsDataFrame(coords=coordinates(sp_pts),
+                                         data = sp_pts@data,proj4string = CRS())
+    }
     if(length(sp_pts) > 50000) {
         print("Selecting 50000 data points at random for estimating the measurement error variance")
         sp_pts_sub <- sp_pts[sample(1:length(sp_pts),50000),]

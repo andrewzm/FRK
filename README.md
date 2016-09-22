@@ -36,9 +36,7 @@ Installation
 
     install_github("andrewzm/FRK",dependencies=TRUE,build_vignettes=TRUE)
 
-Installation will take a few minutes since the vignette is extensive and built from scratch. After installation see the  several examples provided in the vignette by typing
-
-    vignette("FRK_intro")
+A journel article, currently under preparation, will be uploaded as vignette once submitted. If you wish to see a draft of the paper please contact me on azm@uow.edu.au directly. Thank you.
 
 Quick start
 ------------

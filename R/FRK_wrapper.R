@@ -9,7 +9,7 @@ FRK <- function(f,                     # formula
                 fs_model = "ind",      # fine-scale variation component
                 average_in_BAU = TRUE, # average data into BAUs
                 est_error=TRUE,       # estimate measurement error
-                n_EM = 20,             # max. no. of EM iterations
+                n_EM = 100,             # max. no. of EM iterations
                 tol = 0.01,            # tolerance at which EM is assumed to have converged
                 method = "EM",         # method for parameter estimation
                 print_lik=TRUE,        # print log-likelihood at each iteration
@@ -43,7 +43,7 @@ FRK <- function(f,                     # formula
     print("Generating basis functions...")
     tot_data <- length(data[[1]])
     if(K_type == "unstructured") {
-        max_sp_basis <- min(tot_data^(0.75),2000)
+        max_sp_basis <- min(tot_data^(0.5),2000)
     } else {
         max_sp_basis <- 2000
         if(is(manifold,"sphere")) {

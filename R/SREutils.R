@@ -170,7 +170,8 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mode
     } else if(fs_model == "ICAR") {
         ## Make block diagonal for spatio-temporal
         message("Finding the polygon neighbours...")
-        nblist <- spdep::poly2nb(BAUs[,1][,1]) ## Caters for both spatial and ST
+        ## Caters for both spatial and ST
+        nblist <- spdep::poly2nb(as(BAUs,"SpatialPolygonsDataFrame")[,1][,1])
         Qfs_BAUs <- .prec_from_neighb(nblist)
         if(is(BAUs,"STFDF")) {
             Qfs_BAUs <- do.call("bdiag",
