@@ -105,7 +105,8 @@ auto_BAUs <- function(manifold, type="grid",cellsize = NULL,
 
 
 setMethod("auto_BAU",signature(manifold="plane"),
-          function(manifold,type="grid",cellsize = c(1,1),resl=resl,d=NULL,use_INLA=TRUE,convex=-0.05,...) {
+          function(manifold,type="grid",cellsize = c(1,1),resl=resl,d=NULL,
+                   use_INLA=TRUE,convex=-0.05,...) {
 
               if(use_INLA)
                if(!requireNamespace("INLA"))
@@ -201,7 +202,8 @@ setMethod("auto_BAU",signature(manifold="plane"),
 
 
 setMethod("auto_BAU",signature(manifold="timeline"),
-          function(manifold,type="grid",cellsize = c(1),resl=resl,d=NULL,convex=-0.05,...) {
+          function(manifold,type="grid",cellsize = c(1),resl=resl,d=NULL,
+                   convex=-0.05,...) {
 
               l <- list(...)
               if(is.null(cellsize)) cellsize <- 1
@@ -239,7 +241,8 @@ setMethod("auto_BAU",signature(manifold="timeline"),
 
 
 setMethod("auto_BAU",signature(manifold = c("STmanifold")),
-          function(manifold,type="grid",cellsize = c(1,1,1),resl=resl,d=NULL,convex=-0.05,...) {
+          function(manifold,type="grid",cellsize = c(1,1,1),resl=resl,d=NULL,
+                   use_INLA=TRUE,convex=-0.05,...) {
 
               if(is(d,"ST")) {
                   space_part <- d@sp
@@ -260,7 +263,8 @@ setMethod("auto_BAU",signature(manifold = c("STmanifold")),
               }
 
               spatial_BAUs <- auto_BAU(manifold=spat_manifold,cellsize=cellsize[1:2],
-                                       resl=resl,type=type,d=space_part,convex=convex,...)
+                                       resl=resl,type=type,d=space_part,use_INLA=use_INLA,
+                                       convex=convex,...)
               temporal_BAUs <- auto_BAU(manifold=timeline(), cellsize=cellsize[3],
                                         resl=resl,type=type,d=time_part,convex=convex,...)
 
@@ -778,7 +782,10 @@ setMethod("map_data_to_BAUs",signature(data_sp="Spatial"),
                   }
                   print(paste0("Binned data in ",timer[3]," seconds"))
               } else {
-                  warning("BAU of identical area are being assumed when computing the incidence matrix
+
+                  if(!is(sp_pols,"SpatialPixels"))
+                  warning("BAUs are Polygons and not Pixels. Currently BAU of identical
+                           area are being assumed when computing the incidence matrix
                            from observations having a large support.
                            Handling of different areas will be catered for in a future revision.
                            Please report this issue to the package maintainer.")
@@ -923,6 +930,7 @@ est_obs_error <- function(sp_pts,variogram.formula,vgm_model = NULL,BAU_width = 
     L <- .gstat.formula(variogram.formula,data=sp_pts_sub)
     g <- gstat::gstat(formula=variogram.formula,data=sp_pts_sub)
     v <- gstat::variogram(g,cressie=T,cutoff=cutoff,cutoff/10)
+
     if(is.null(vgm_model))
         vgm_model <-  gstat::vgm(var(L$y)/2, "Lin", mean(v$dist), var(L$y)/2)
     vgm.fit = gstat::fit.variogram(v, model = vgm_model)
