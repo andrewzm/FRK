@@ -39,6 +39,16 @@ test_that("plane_BAUs",{
     expect_is(Grid2D,"SpatialPixelsDataFrame")
     expect_equal(names(Grid2D),c("x","y"))
 
+    
+    ## Now without INLA
+    Grid2D <- auto_BAUs(manifold = plane(),
+                        type="grid",
+                        cellsize = 0.5,
+                        data=data,
+                        use_INLA = FALSE)
+    expect_is(Grid2D,"SpatialPixelsDataFrame")
+    expect_equal(names(Grid2D),c("x","y"))
+    
 
     f <- z ~ 1
     binned_data <- map_data_to_BAUs(data,Grid2D,av_var=all.vars(f)[1])

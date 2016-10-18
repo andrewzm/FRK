@@ -5,7 +5,7 @@
 \title{Automatic BAU generation}
 \usage{
 auto_BAUs(manifold, type = "grid", cellsize = NULL, isea3h_res = NULL,
-  data = NULL, convex = -0.05, tunit = "days", ...)
+  data = NULL, use_INLA = TRUE, convex = -0.05, tunit = NULL, ...)
 }
 \arguments{
 \item{manifold}{object of class \code{manifold}}

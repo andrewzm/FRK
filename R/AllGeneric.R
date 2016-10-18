@@ -146,10 +146,11 @@ setGeneric("nres", function(b) standardGeneric("nres"))
 #' @param resl resolution number of isea3h DGGRID cells for when \code{type} is ``hex'' and \code{manifold} is \code{sphere}
 #' @param type either ``hex'' or ``grid'', indicating whether gridded or hexagonal BAUs should be used
 #' @param d data, that is, an object of class SpatialPointsDataFrame or SpatialPolygonsDataFrame. Provision of data implies that the domain is bounded (necessary with \code{real_line} and \code{plane} but not necessary with \code{sphere})
-#' @param convex convex parameter used for smoothing an extended boundary when working on a finite domain (that is, when the object \code{d} is supplied), see details
+#' @param use_INLA flag indicating whether INLA should be used to create a non-convex domain boundary
+#' @param convex convex parameter for the INLA function inla.nonconvex.hull used for smoothing an extended boundary when working on a finite domain (that is, when the object \code{d} is supplied), see details
 #' @param ... currently unused
 #' @details This generic function is not called directly. Please refer to \code{auto_BAUs} for more details.
-setGeneric("auto_BAU", function(manifold,type,cellsize,resl,d,convex,...) standardGeneric("auto_BAU"))
+setGeneric("auto_BAU", function(manifold,type,cellsize,resl,d,use_INLA,convex,...) standardGeneric("auto_BAU"))
 
 #' @title Bin data into BAUs
 #' @description This is an internal function which bins data into BAUs or aggregates across BAUs if the data have a large footprint. If \code{est_error == TRUE}, the observation error is estimated as in Katzfuss & Cressie (2011)

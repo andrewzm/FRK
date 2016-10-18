@@ -39,7 +39,6 @@ FRK <- function(f,                     # formula
         BAUs$fs <- 1   # fine-scale variation at BAU level
     }
 
-
     print("Generating basis functions...")
     tot_data <- length(data[[1]])
     if(K_type == "unstructured") {

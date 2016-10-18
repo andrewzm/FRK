@@ -9,7 +9,7 @@
 \usage{
 FRK(f, data, basis = NULL, BAUs = NULL, K_type = "block-exponential",
   lambda = 0, fs_model = "ind", average_in_BAU = TRUE, est_error = TRUE,
-  n_EM = 20, tol = 0.01, method = "EM", print_lik = TRUE,
+  n_EM = 100, tol = 0.01, method = "EM", print_lik = TRUE,
   cross_validate = 1L, ...)
 
 SRE(f, data, basis, BAUs, est_error = FALSE, average_in_BAU = TRUE,
@@ -18,7 +18,7 @@ SRE(f, data, basis, BAUs, est_error = FALSE, average_in_BAU = TRUE,
 SRE.fit(SRE_model, n_EM = 100L, tol = 1e-05, lambda = 0, method = "EM",
   print_lik = FALSE, cross_validate = 1L)
 
-SRE.predict(SRE_model, use_centroid = TRUE, obs_fs = TRUE,
+SRE.predict(SRE_model, use_centroid = TRUE, obs_fs = FALSE,
   pred_polys = NULL, pred_time = NULL)
 }
 \arguments{
@@ -58,7 +58,7 @@ SRE.predict(SRE_model, use_centroid = TRUE, obs_fs = TRUE,
 
 \item{use_centroid}{flag indicating whether the basis functions are averaged over the BAU, or whether the basis functions are evaluated at the BAUs centroid in order to construct the matrix \eqn{S}. The flag can safely be set when the basis functions are approximately constant over the BAUs in order to reduce computational time}
 
-\item{obs_fs}{flag indicating whether the fine-scale variation sits in the observation model (systematic error) or in the process model (process fine-scale variation)}
+\item{obs_fs}{flag indicating whether the fine-scale variation sits in the observation model (systematic error) or in the process model (process fine-scale variation, default)}
 
 \item{pred_polys}{object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified}
 

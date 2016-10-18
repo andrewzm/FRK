@@ -13,7 +13,7 @@
 #' @param method parameter estimation method to employ. Currently only ``EM'' is supported
 #' @param print_lik flag indicating whether likelihood should be printed or not on convergence of the estimation algorithm
 #' @param use_centroid flag indicating whether the basis functions are averaged over the BAU, or whether the basis functions are evaluated at the BAUs centroid in order to construct the matrix \eqn{S}. The flag can safely be set when the basis functions are approximately constant over the BAUs in order to reduce computational time
-#' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error) or in the process model (process fine-scale variation)
+#' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error) or in the process model (process fine-scale variation, default)
 #' @param pred_polys object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified
 #' @param pred_time vector of time indices at which we wish to predict. All time points are used if this option is not specified
 #' @param vgm_model an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm} containing the variogram model to fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified the variogram used is \code{gstat::vgm(1, "Lin", d, 1)} where \code{d} is approximately one third of the maximum distance between any two points
@@ -391,15 +391,15 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", 
             }
     }
     if(opts_FRK$get("progress")) close(pb)
-    if(SRE_model@sigma2fshat == 0)
-            warning("sigma2fs is being estimated to zero.
-             This might because of an incorrect binning procedure or because
-             too much measurement error is being assumed (or because the latent
-             field is indeed that smooth, but unlikely).")
+    #if(SRE_model@sigma2fshat == 0)
+            #warning("sigma2fs is being estimated to zero.
+             #This might because of an incorrect binning procedure or because
+             #too much measurement error is being assumed (or because the latent
+             #field is indeed that smooth, but unlikely).")
 
     if(i == n_EM) print("Maximum EM iterations reached")
     if(print_lik & !is.na(tol)) {
-        plot(1:i,lk[1:i],ylab=lik_plot_ylab,xlab="EM iteration (from #1)")
+        plot(1:i,lk[1:i],ylab=lik_plot_ylab,xlab="EM iteration")
     }
     SRE_model
 }
@@ -575,7 +575,10 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", 
                                 par_init <- max(-Sm@D_basis[[i]][1,2]/log(Ki[1,2]),1e-9)
                             }
                             if(par_init[1] == 1e-9) par_init[1] <- max_l/10
-                            suppressWarnings(optim(par = par_init, fn = f_tau,gr = gr_f_tau,i=i,control=list(maxit=100L))$par)
+                            suppressWarnings(optim(par = par_init,
+                                                   fn = f_tau,
+                                                   gr = gr_f_tau,
+                                                   i=i,control=list(maxit=100L))$par)
                         })
 
         K <- lapply(1:nrow(all_res),
@@ -903,7 +906,7 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", 
 
 #' @rdname SRE
 #' @export
-SRE.predict <- function(SRE_model,use_centroid=TRUE,obs_fs=TRUE,pred_polys = NULL,pred_time = NULL) {
+SRE.predict <- function(SRE_model,use_centroid=TRUE,obs_fs=FALSE,pred_polys = NULL,pred_time = NULL) {
     .check_args3(use_centroid=use_centroid,obs_fs=obs_fs,pred_polys=pred_polys,pred_time=pred_time)
 
     if(!is.null(pred_polys))
@@ -928,7 +931,7 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,obs_fs=TRUE,pred_polys = NUL
     pred_locs
 }
 
-.SRE.predict <- function(Sm,use_centroid,obs_fs = TRUE,pred_polys = NULL,pred_time = NULL) {
+.SRE.predict <- function(Sm,use_centroid,obs_fs = FALSE,pred_polys = NULL,pred_time = NULL) {
 
 
     if(is.null(pred_time) & is(Sm@BAUs,"ST"))
@@ -1309,7 +1312,7 @@ setMethod("summary",signature(object="SRE"),
 }
 
 
-.check_args3 <- function(use_centroid=TRUE,obs_fs=TRUE,pred_polys = NULL,pred_time = NULL,...) {
+.check_args3 <- function(use_centroid=TRUE,obs_fs=FALSE,pred_polys = NULL,pred_time = NULL,...) {
     if(!(use_centroid %in% 0:1)) stop("use_centroid needs to be logical")
     if(!(obs_fs %in% 0:1)) stop("obs_fs needs to be logical")
 

@@ -4,8 +4,8 @@
 \alias{auto_basis}
 \title{Automatic basis-function placement}
 \usage{
-auto_basis(manifold = plane(), data, regular = 1, nres = 2, prune = 0,
-  max_basis = NULL, subsamp = 10000, type = "Gaussian", isea3h_lo = 0,
+auto_basis(manifold = plane(), data, regular = 1, nres = 3, prune = 0,
+  max_basis = NULL, subsamp = 10000, type = "bisquare", isea3h_lo = 2,
   bndary = NULL, verbose = 0L, ...)
 }
 \arguments{

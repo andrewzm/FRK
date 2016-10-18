@@ -53,7 +53,8 @@ setMethod("initialize",signature="manifold",function(.Object) {
 #' }
 #' @export
 auto_BAUs <- function(manifold, type="grid",cellsize = NULL,
-                      isea3h_res=NULL,data=NULL,convex=-0.05,tunit=NULL,...) {
+                      isea3h_res=NULL,data=NULL,use_INLA=TRUE,
+                      convex=-0.05,tunit=NULL,...) {
 
 
     if(!(is(data,"Spatial") | is(data,"ST") | is(data,"Date") | is.null(data)))
@@ -96,19 +97,21 @@ auto_BAUs <- function(manifold, type="grid",cellsize = NULL,
     if(grepl("ST",class(manifold)) & is.null(data) & is.null(tunit)) stop("Need to specify tunit if data is not specified in ST case")
     if(grepl("ST",class(manifold)) & is.null(tunit)) tunit  <-  .choose_BAU_tunit_from_data(data)
 
-    auto_BAU(manifold=manifold,type=type,cellsize=cellsize,resl=resl,d=data,convex=convex,tunit=tunit)
+    auto_BAU(manifold=manifold,type=type,cellsize=cellsize,resl=resl,
+             d=data,use_INLA=use_INLA,convex=convex,tunit=tunit)
 }
 
 
 
 
 setMethod("auto_BAU",signature(manifold="plane"),
-          function(manifold,type="grid",cellsize = c(1,1),resl=resl,d=NULL,convex=-0.05,...) {
+          function(manifold,type="grid",cellsize = c(1,1),resl=resl,d=NULL,use_INLA=TRUE,convex=-0.05,...) {
 
+              if(use_INLA)
                if(!requireNamespace("INLA"))
-                   stop("For automatic BAU generation INLA needs to be installed for
-                        constructing non-convex hull. Please install it using
-                        install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\")")
+                   stop("For creating a non-convex hull INLA needs to be installed. Please install it using
+                        install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\"). Alternatively
+                        please set use_INLA=FALSE to use a simple convex hull.")
 
               X1 <- X2 <- NULL # Suppress bindings warning
               if(is(d,"SpatialPoints")){
@@ -128,11 +131,14 @@ setMethod("auto_BAU",signature(manifold="plane"),
               ## Increase convex until domain is contiguous and smooth (distance betweeen successive points is small)
               OK <- 0
               while(!OK) {
-                  bndary_seg = INLA::inla.nonconvex.hull(coords,convex=convex)$loc
+                  bndary_seg <- .find_hull(coords,use_INLA=use_INLA,convex=convex)
                   D <- dist(bndary_seg) %>% as.matrix()
                   distances <- unique(band(D,1,1)@x)[-1]
-                  OK <- sd(distances) < median(distances)
-                  convex <- convex*2
+                  OK <- 1
+                  if(use_INLA) { # somtimes we get islands... check and redo
+                      OK <- sd(distances) < median(distances)
+                      convex <- convex*2
+                  }
               }
 
               bndary_seg <- bndary_seg %>%
@@ -907,22 +913,36 @@ est_obs_error <- function(sp_pts,variogram.formula,vgm_model = NULL,BAU_width = 
         sp_pts_sub <- sp_pts
     }
 
-    diag_length <- sqrt(sum(apply(coordinates(sp_pts_sub),2,function(x) diff(range(x)))^2))
-    area <- prod(apply(coordinates(sp_pts_sub),2,function(x) diff(range(x))))  ## full area
+    diag_length <- sqrt(sum(apply(coordinates(sp_pts_sub),2,
+                                  function(x) diff(range(x)))^2))
+    area <- prod(apply(coordinates(sp_pts_sub),2,
+                       function(x) diff(range(x))))  ## full area
     cutoff <- sqrt(area * 100 / length(sp_pts_sub)) ## consider the area that contains about 100 data points in it
 
     print("... Fitting variogram for estimating measurement error")
     L <- .gstat.formula(variogram.formula,data=sp_pts_sub)
     g <- gstat::gstat(formula=variogram.formula,data=sp_pts_sub)
     v <- gstat::variogram(g,cressie=T,cutoff=cutoff,cutoff/10)
-    if(is.null(vgm_model)) vgm_model <-  gstat::vgm(var(L$y)/2, "Lin", mean(v$dist), var(L$y)/2)
+    if(is.null(vgm_model))
+        vgm_model <-  gstat::vgm(var(L$y)/2, "Lin", mean(v$dist), var(L$y)/2)
     vgm.fit = gstat::fit.variogram(v, model = vgm_model)
 
-    if(vgm.fit$psill[1] == 0) { ## Try with Gaussian, maybe process is overly smooth or data is a large average
-        vgm.fit = gstat::fit.variogram(v, model = gstat::vgm(1, "Gau", mean(v$dist), 1)) %>%
-            suppressWarnings()
+    if(vgm.fit$psill[1] == 0) {
+        ## Try with line on first four points
+        L <- lm(gamma~dist,data=v[1:4,])
+        vgm.fit$psill[1] <- coefficients(L)[1]
     }
-    plot(v,vgm.fit)
+
+    if(vgm.fit$psill[1] == 0) {
+        ## Try with Gaussian, maybe process is very
+        ## smooth or data ihas a large support
+        vgm_model2 <-  gstat::vgm(var(L$y)/2, "Gau", mean(v$dist), var(L$y)/2)
+        vgm.fit = suppressWarnings(gstat::fit.variogram(v,model=vgm_model2))
+        print("... Estimating measurement error is not straightforward for this dataset.")
+        print("... Please specify the 'std' field in your data object or check that the variance")
+        print("... is reasonable (check S@Ve[1,1])")
+    }
+    #plot(v,vgm.fit)
     print(paste0("sigma2e estimate = ",vgm.fit$psill[1]))
     if(vgm.fit$psill[1] == 0)
         stop("Measurement error estimated to be zero. Please pre-specify measurement error. If
@@ -1408,4 +1428,23 @@ as.SpatialPolygons.GridTopology2 <- function (grd, proj4string = CRS(as.characte
         as.matrix(coordinates(polys))
     }
 
+}
+
+.find_hull <- function(coords,use_INLA=TRUE,convex = -0.05) {
+    if(use_INLA) {
+        bndary_seg = INLA::inla.nonconvex.hull(coords,convex=convex)$loc
+    } else {
+        conv_hull <- coordinates(coords)[chull(coordinates(coords)),]
+        bound_box <- bbox(coords)
+        centroid <- apply(bound_box,1,mean)
+        # expand convex hull out
+        bndary_seg <- conv_hull
+        delta <- max(apply(bound_box,1,function(x) diff(range(x))))
+        bndary_seg[,1] <- conv_hull[,1] + sign(conv_hull[,1] - centroid[1])*delta/5
+        bndary_seg[,2] <- conv_hull[,2] + sign(conv_hull[,2] - centroid[2])*delta/5
+        #bndary_seg[,1] <- centroid[1] + (conv_hull[,1] - centroid[1])*2
+        #bndary_seg[,2] <- centroid[2] + (conv_hull[,2] - centroid[2])*2
+        colnames(bndary_seg) <- NULL
+    }
+    bndary_seg
 }
