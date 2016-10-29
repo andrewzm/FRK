@@ -525,16 +525,32 @@ setMethod("initialize",signature="real_line",function(.Object,measure=Euclid_dis
 
 
 #' @name distances
+#' @aliases measure
 #' @aliases Euclid_dist
 #' @aliases gc_dist
 #' @aliases gc_dist_time
+#' 
 #' @title Pre-configured distances
 #'
 #' @description Useful objects of class \code{distance} included in package.
 #'
-#' @param dim dimension of Euclidian space
+#' @param dist a function taking two arguments \code{x1,x2}
+#' @param dim the dimension of the manifold (e.g., 2 for a plane)
 #' @param R great-circle radius
-#' @details Initialises an object of class \code{measure} which contains a function \code{dist} used for computing the distance between two points.  Currently the Euclidean distance and the great-circle distance are included. Distances are computed using functions extracted from the package \code{fields}.
+#' @details Initialises an object of class \code{measure} which contains a function \code{dist} used for computing the distance between two points.  Currently the Euclidean distance and the great-circle distance are included. Great-circle distances are computed using \code{rdist.earth} extracted from the package \code{fields}.
+#' @export
+#' @examples
+#' M1 <- measure(distR,2)
+#' D <- distance(M1,matrix(rnorm(10),5,2))
+measure <- function(dist,dim) {
+    if(!is.function(dist)) stop("dist needs to be a function that accepts dim arguments")
+    if(!(is.numeric(dim) | is.integer(dim))) stop("dim needs to be an integer, generally 1L, 2L or 3L")
+    dim = as.integer(dim)
+    new("measure",dist=dist,dim=dim)
+    
+}
+
+#' @rdname distances
 #' @export
 Euclid_dist <- function(dim=2L) {
     stopifnot(is.integer(dim))
@@ -555,6 +571,34 @@ gc_dist_time <- function(R=NULL) {
         tdist <- distR(x1[,3],x2[,3])
         sqrt(spatdist^2 + tdist^2) } ,dim=3L)
 }
+
+#' @name dist-matrix
+#' @title Distance Matrix Computation from Two Matrices
+#'
+#' @description This function extends \code{dist} to accept two arguments.
+#'
+#' @param x1 matrix of size N1 x n
+#' @param x2 matrix of size N2 x n
+#' @details Computes the distances between the coordinates in \code{x1} and the coordinates in \code{x2}. The matrices \code{x1} and \code{x2} do not need to have the same number of rows, but need to have the same number of columns (dimensions).
+#' @return Matrix of size N1 x N2
+#' @export
+#' @examples
+#' A <- matrix(rnorm(50),5,10)
+#' D <- distR(A,A[-3,])
+distR <- function (x1, x2 = NULL)  {
+    if (!is.matrix(x1)) {
+        x1 <- as.matrix(x1)
+    }
+    if (is.null(x2)) {
+        x2 <- x1
+    }
+    if (!is.matrix(x2)) {
+        x2 <- as.matrix(x2)
+    }
+    if(!(ncol(x1) == ncol(x2))) stop("x1 and x2 have to have same number of columns")
+    distR_C(x1,x2)
+}
+
 
 #' @title Convert data frame to SpatialPolygons
 #' @description Convert data frame to SpatialPolygons object.
@@ -1078,19 +1122,7 @@ setMethod("coordnames",signature(x="STIDF"),function(x) {
     return(c(coordnames(x@sp),"t"))
 })
 
-distR <- function (x1, x2 = NULL)  {
-    if (!is.matrix(x1)) {
-        x1 <- as.matrix(x1)
-    }
-    if (is.null(x2)) {
-        x2 <- x1
-    }
-    if (!is.matrix(x2)) {
-        x2 <- as.matrix(x2)
-    }
-    if(!(ncol(x1) == ncol(x2))) stop("x1 and x2 have to have same number of columns")
-    distR_C(x1,x2)
-}
+
 
 # ## The functions rdist and rdist.earth were taken from the package fields
 # ## fields is lincensed under GPL >=2

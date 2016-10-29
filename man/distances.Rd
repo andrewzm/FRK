@@ -5,8 +5,11 @@
 \alias{distances}
 \alias{gc_dist}
 \alias{gc_dist_time}
+\alias{measure}
 \title{Pre-configured distances}
 \usage{
+measure(dist, dim)
+
 Euclid_dist(dim = 2L)
 
 gc_dist(R = NULL)
@@ -14,7 +17,9 @@ gc_dist(R = NULL)
 gc_dist_time(R = NULL)
 }
 \arguments{
-\item{dim}{dimension of Euclidian space}
+\item{dist}{a function taking two arguments \code{x1,x2}}
+
+\item{dim}{the dimension of the manifold (e.g., 2 for a plane)}
 
 \item{R}{great-circle radius}
 }
@@ -22,6 +27,10 @@ gc_dist_time(R = NULL)
 Useful objects of class \code{distance} included in package.
 }
 \details{
-Initialises an object of class \code{measure} which contains a function \code{dist} used for computing the distance between two points.  Currently the Euclidean distance and the great-circle distance are included. Distances are computed using functions extracted from the package \code{fields}.
+Initialises an object of class \code{measure} which contains a function \code{dist} used for computing the distance between two points.  Currently the Euclidean distance and the great-circle distance are included. Great-circle distances are computed using \code{rdist.earth} extracted from the package \code{fields}.
+}
+\examples{
+M1 <- measure(distR,2)
+D <- distance(M1,matrix(rnorm(10),5,2))
 }
 
