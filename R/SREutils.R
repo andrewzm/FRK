@@ -119,6 +119,7 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mode
         Z[[i]] <- Matrix(L$y)
         Ve[[i]] <- Diagonal(x=data_proc$std^2)
 
+
         C_idx <- BuildC(data_proc,BAUs)
 
         Cmat[[i]] <- sparseMatrix(i=C_idx$i_idx,

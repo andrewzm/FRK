@@ -537,7 +537,7 @@ setMethod("BuildD",signature(G="TensorP_Basis"),function(G){
 .samps_in_polygon <- function(basis,s,i) {
     nMC <- 1000
     if(is(basis@manifold,"plane")) {
-        samps <- coordinates(spsample(s@polygons[[i]],n=nMC,type="random"))
+        samps <- coordinates(spsample(s[i,],n=nMC,type="random"))
     } else if(is(basis@manifold,"sphere")){
 
         ## Find coordinates
