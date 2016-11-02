@@ -147,7 +147,8 @@ setMethod("auto_BAU",signature(manifold="plane"),
                   mutate(x=X1,y=X2,id = 1) %>%
                   select(-X1,-X2) %>%
                   df_to_SpatialPolygons(keys="id",coords=c("x","y"),proj=CRS())
-
+                
+              if(!is.null(d)) proj4string(bndary_seg) <- proj4string(d)
               drangex <- diff(xrange)
               drangey <- diff(yrange)
               xgrid <- seq(xrange[1] - drangex*1.2,xrange[2] + drangex*1.2,by=cellsize[1])
@@ -155,7 +156,8 @@ setMethod("auto_BAU",signature(manifold="plane"),
 
               xy <- expand.grid(x=xgrid,y=ygrid)  %>%
                   SpatialPoints()
-
+              if(!is.null(d)) proj4string(xy) <- proj4string(d)
+              
               if(type == "hex") {
                   HexPts <- spsample(xy,type="hexagonal",cellsize = cellsize[1])
                   idx <- which(!is.na(over(HexPts,bndary_seg)))
@@ -185,6 +187,7 @@ setMethod("auto_BAU",signature(manifold="plane"),
                   idx1 <- which(!is.na(over(xy,bndary_seg)))
                   # and pixels on boundary
                   bndary_pts <- SpatialPoints(bndary_seg@polygons[[1]]@Polygons[[1]]@coords)
+                  if(!is.null(d)) proj4string(bndary_pts) <- proj4string(d)
                   idx2 <- unique(over(bndary_pts,xy))
                   if(any(is.na(idx2))) idx2 <- idx2[-which(is.na(idx2))]
                   # and pixels that contain any points

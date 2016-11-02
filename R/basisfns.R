@@ -198,14 +198,15 @@ auto_basis <- function(manifold = plane(),
             bndary_seg <- INLA::inla.mesh.segment(bndary)
         }
     }
+
     if(is(m,"plane") & regular > 0) {
         asp_ratio <- diff(yrange) / diff(xrange)
         if(asp_ratio < 1) {
             ny <- regular
-            nx <- round(ny / asp_ratio)
+            nx <- ny / asp_ratio
         } else {
             nx <- regular
-            ny <- round(nx * asp_ratio)
+            ny <- nx * asp_ratio
         }
     }
 
@@ -227,9 +228,10 @@ auto_basis <- function(manifold = plane(),
                                           boundary = list(bndary_seg),
                                           max.edge = max(diff(xrange),diff(yrange))/(2*2.5^(i-1)),
                                           cutoff = max(diff(xrange),diff(yrange))/(3*2.5^(i-1)))$loc[,1:2]
+            this_res_locs <- unique(this_res_locs) ## Sometimes INLA returns overlapping points
         } else if(is(m,"plane") & (regular> 0)) {
-           xgrid <- seq(xrange[1], xrange[2], length =nx*(3^(i)))
-           ygrid <- seq(yrange[1], yrange[2], length =ny*(3^(i)))
+           xgrid <- seq(xrange[1], xrange[2], length = round(nx*(3^(i))))
+           ygrid <- seq(yrange[1], yrange[2], length = round(ny*(3^(i))))
             ## Generate mesh and use these as centres
             #xgrid <- seq(xrange[1] + diff(xrange)/(2*nx*i), xrange[2] - diff(xrange)/(2*nx*i), length =nx*(3^(i-1)))
             #ygrid <- seq(yrange[1] + diff(yrange)/(2*ny*i), yrange[2] - diff(yrange)/(2*ny*i), length =ny*(3^(i-1)))
