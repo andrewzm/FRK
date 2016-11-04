@@ -147,7 +147,7 @@ setMethod("auto_BAU",signature(manifold="plane"),
                   mutate(x=X1,y=X2,id = 1) %>%
                   select(-X1,-X2) %>%
                   df_to_SpatialPolygons(keys="id",coords=c("x","y"),proj=CRS())
-                
+
               if(!is.null(d)) proj4string(bndary_seg) <- proj4string(d)
               drangex <- diff(xrange)
               drangey <- diff(yrange)
@@ -157,7 +157,7 @@ setMethod("auto_BAU",signature(manifold="plane"),
               xy <- expand.grid(x=xgrid,y=ygrid)  %>%
                   SpatialPoints()
               if(!is.null(d)) proj4string(xy) <- proj4string(d)
-              
+
               if(type == "hex") {
                   HexPts <- spsample(xy,type="hexagonal",cellsize = cellsize[1])
                   idx <- which(!is.na(over(HexPts,bndary_seg)))
@@ -532,7 +532,7 @@ setMethod("initialize",signature="real_line",function(.Object,measure=Euclid_dis
 #' @aliases Euclid_dist
 #' @aliases gc_dist
 #' @aliases gc_dist_time
-#' 
+#'
 #' @title Pre-configured distances
 #'
 #' @description Useful objects of class \code{distance} included in package.
@@ -550,7 +550,7 @@ measure <- function(dist,dim) {
     if(!(is.numeric(dim) | is.integer(dim))) stop("dim needs to be an integer, generally 1L, 2L or 3L")
     dim = as.integer(dim)
     new("measure",dist=dist,dim=dim)
-    
+
 }
 
 #' @rdname distances
@@ -838,14 +838,16 @@ setMethod("map_data_to_BAUs",signature(data_sp="Spatial"),
                            Please report this issue to the package maintainer.")
                   #data_sp$id <- rownames(data_sp@data)
                   data_sp$id <- row.names(data_sp)
-                  BAU_as_points <- SpatialPointsDataFrame(coordinates(sp_pols),sp_pols@data)
+                  BAU_as_points <- SpatialPointsDataFrame(coordinates(sp_pols),sp_pols@data,
+                                                          proj4string = CRS(proj4string(sp_pols)))
                   BAUs_aux_data <- over(data_sp,BAU_as_points)
                   ## The covariates are not averaged using this method... only the covariate in the last BAU
                   ## is recorded. In the following we find the average covariate over support
                   ## (needs to be done separately as my have overlapping observations)
                   for (i in 1L:length(data_sp)) {
                       #extract poly (a bit long-winded)
-                      this_poly <- SpatialPolygons(list(data_sp@polygons[[i]]),1L)
+                      this_poly <- SpatialPolygons(list(data_sp@polygons[[i]]),1L,
+                                                   proj4string=CRS(proj4string(data_sp)))
                       # find which points overlap observations
                       overlap <- which(over(BAU_as_points,this_poly) == 1)
                       # extract BAU data at these points
@@ -980,9 +982,11 @@ est_obs_error <- function(sp_pts,variogram.formula,vgm_model = NULL,BAU_width = 
 
     if(is.null(vgm_model))
         vgm_model <-  gstat::vgm(var(L$y)/2, "Lin", mean(v$dist), var(L$y)/2)
-    vgm.fit = gstat::fit.variogram(v, model = vgm_model)
 
-    if(vgm.fit$psill[1] == 0) {
+    suppressWarnings({vgm.fit = gstat::fit.variogram(v, model = vgm_model)})
+
+
+    if(vgm.fit$psill[1] == 0 | attributes(vgm.fit)$singular) {
         ## Try with line on first four points
         L <- lm(gamma~dist,data=v[1:4,])
         vgm.fit$psill[1] <- coefficients(L)[1]
