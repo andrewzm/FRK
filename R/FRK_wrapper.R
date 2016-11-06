@@ -28,57 +28,59 @@ FRK <- function(f,                     # formula
     }
 
     manifold <- .choose_manifold_from_data(data[[1]])
+    d <- which.max(sapply(data, function(d)
+        prod(apply(coordinates(d),2,function(x) diff(range(x))))))
     if(is.null(BAUs)) {
         print("Constructing BAUs...")
         ## Find dataset enclosing largest box area on which to construct BAUs
-        d <- which.max(sapply(data, function(d)
-            prod(apply(coordinates(d),2,function(x) diff(range(x))))))
         BAUs <- auto_BAUs(manifold = manifold,
                           data = data[[d]],
                           ...)
         BAUs$fs <- 1   # fine-scale variation at BAU level
     }
 
-    print("Generating basis functions...")
-    tot_data <- length(data[[1]])
-    if(K_type == "unstructured") {
-        max_sp_basis <- min(tot_data^(0.5),2000)
-    } else {
-        max_sp_basis <- 2000
-        if(is(manifold,"sphere")) {
-            max_basis <- NULL
-            nres <- 3
-            isea3h_lo <- 2
+    if(is.null(basis)) {
+        print("Generating basis functions...")
+        tot_data <- length(data[[1]])
+        if(K_type == "unstructured") {
+            max_sp_basis <- min(tot_data^(0.5),2000)
+        } else {
+            max_sp_basis <- 2000
+            if(is(manifold,"sphere")) {
+                max_basis <- NULL
+                nres <- 3
+                isea3h_lo <- 2
+            }
         }
-    }
 
 
-    if(!(grepl("ST",class(manifold)))) {
+        if(!(grepl("ST",class(manifold)))) {
 
-        G <- auto_basis(manifold =manifold,
-                        data=data[[1]],...,max_basis = max_sp_basis)
-    } else {
-        ## Construct spatial basis functions
-        spatial_manifold <- strsplit(class(manifold),"ST")[[1]][2]
-        if(identical(spatial_manifold,"plane")) spatial_manifold <- plane() else spatial_manifold <- sphere()
-        max_sp_basis <- max_sp_basis/10
+            G <- auto_basis(manifold =manifold,
+                            data=data[[1]],...,max_basis = max_sp_basis)
+        } else {
+            ## Construct spatial basis functions
+            spatial_manifold <- strsplit(class(manifold),"ST")[[1]][2]
+            if(identical(spatial_manifold,"plane")) spatial_manifold <- plane() else spatial_manifold <- sphere()
+            max_sp_basis <- max_sp_basis/10
 
-        G_spatial <- auto_basis(manifold = spatial_manifold,
-                                data=as(data[[d]],"Spatial"),  # flatten data
-                                ...,
-                                max_basis = max_sp_basis)
+            G_spatial <- auto_basis(manifold = spatial_manifold,
+                                    data=as(data[[d]],"Spatial"),  # flatten data
+                                    ...,
+                                    max_basis = max_sp_basis)
 
-        ## Construct temporal basis functions
-        #ntime <- min(length(unique(time(data[[d]]))),10)
-        ntime <- 10
-        time_knots <- seq(0,ncol(BAUs)+1,length=ntime)
-        G_temporal <- local_basis(manifold=real_line(),         # on R^1
-                                  loc = matrix(time_knots),       # locations
-                                  scale = rep(ncol(BAUs)/ntime/1.2,length(time_knots)))           # scales
+            ## Construct temporal basis functions
+            #ntime <- min(length(unique(time(data[[d]]))),10)
+            ntime <- 10
+            time_knots <- seq(0,ncol(BAUs)+1,length=ntime)
+            G_temporal <- local_basis(manifold=real_line(),         # on R^1
+                                      loc = matrix(time_knots),       # locations
+                                      scale = rep(ncol(BAUs)/ntime/1.2,length(time_knots)))           # scales
 
-        ## Construct spatio-temporal basis functions
-        G <- TensorP(G_spatial,G_temporal)         # take the tensor product
+            ## Construct spatio-temporal basis functions
+            G <- TensorP(G_spatial,G_temporal)         # take the tensor product
 
+        }
     }
 
     print(paste0("Modelling using ",nbasis(G)," basis functions"))
