@@ -45,18 +45,23 @@ Quick start
     library(ggplot2)
     library(FRK)
     
-    set.seed(1)
-    zdf <- Z <- data.frame(x = runif(1000), y= runif(1000))
-    zdf$z <- Z$z <- sin(8*Z$x) + cos(8*Z$y) + 0.5*rnorm(100)
-    coordinates(Z) = ~x+y
-    S <- FRK(f = z~1,
-                list(Z),
-                n_EM = 10)
-    Pred <- SRE.predict(SRE_model = S)              
-    xy <- data.frame(coordinates(Pred))
+    ## Setup
+    set.seed(1)                                               # Fix seed
+    zdf <- Z <- data.frame(x = runif(1000), y= runif(1000))   # Generate random locs
+    zdf$z <- Z$z <- sin(8*Z$x) + cos(8*Z$y) + 0.5*rnorm(100)  # Simulate data
+    coordinates(Z) = ~x+y                                     # Turn into sp object
+    
+    ## Run FRK
+    S <- FRK(f = z~1,                                         # Formula to FRK
+                list(Z),                                      # All datasets are supplied in list
+                n_EM = 10)                                    # Max number of EM iterations
+    Pred <- SRE.predict(SRE_model = S)                        # Prediction stage
+    
+    xy <- data.frame(coordinates(Pred))                       # Extract info from predictions
     xy$mu <- Pred$mu
     xy$se <- Pred$sd
-    spplot(Z,"z")
+    
+    ## Plotting
     ggplot(zdf) + geom_point(aes(x,y,colour=z)) + 
       scale_colour_distiller(palette="Spectral") + theme_bw() + coord_fixed()
     ggplot(xy) + geom_raster(aes(x,y,fill=mu)) + 
@@ -74,6 +79,8 @@ Quick start
 Known Issues
 ------------
 
+Currently no vignettes are supplied with the package. These will be provided shortly.
+
 [//]: # (Currently `FRK` is not installing on OSX with `build_vignettes=TRUE` as it fails to find `texi2dvi`. Set `build_vignettes=FALSE` to ensure installation. Then download the `.Rnw` file in the `vignettes` folder and compile the pdf file separately in `RStudio` with `knitr`. )
 
 
@@ -81,3 +88,5 @@ Demonstrations
 --------------
 
 FRK is currently being used to generate spatio-temporal animations of fields observed by satellite data. [Here](https://www.youtube.com/watch?v=_kPa8VoeSdM) we show a very low-resolution prediction of CO2 using data from the ACOS satellite and OCO-2 between 2009 and 2016.
+
+[![alt tag](https://img.youtube.com/vi/ENx4CIZdoQk/0.jpg)](https://www.youtube.com/watch?v=ENx4CIZdoQk)
