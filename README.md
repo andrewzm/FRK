@@ -65,9 +65,9 @@ Quick start
        geom_point(data=zdf,aes(x,y),pch=46) +
        scale_fill_distiller(palette="Spectral") + theme_bw() + coord_fixed()
     
-![alt tag](https://dl.dropboxusercontent.com/u/3028804/ckan/FRK_ex_data.jpg)
-![alt tag](https://dl.dropboxusercontent.com/u/3028804/ckan/FRK_ex_mu.jpg)
-![alt tag](https://dl.dropboxusercontent.com/u/3028804/ckan/FRK_ex_se.jpg)
+![alt tag](https://dl.dropboxusercontent.com/u/3028804/FRK/FRK_ex_data.jpg)
+![alt tag](https://dl.dropboxusercontent.com/u/3028804/FRK/FRK_ex_mu.jpg)
+![alt tag](https://dl.dropboxusercontent.com/u/3028804/FRK/FRK_ex_se.jpg)
 
 [//]: # (
 > ggsave(gdata,file="~/Dropbox/Public/FRK/FRK_ex_data.png",width=7,height=5)
