@@ -39,7 +39,7 @@ test_that("plane_BAUs",{
     expect_is(Grid2D,"SpatialPixelsDataFrame")
     expect_equal(names(Grid2D),c("x","y"))
 
-    
+
     ## Now without INLA
     Grid2D <- auto_BAUs(manifold = plane(),
                         type="grid",
@@ -48,7 +48,7 @@ test_that("plane_BAUs",{
                         use_INLA = FALSE)
     expect_is(Grid2D,"SpatialPixelsDataFrame")
     expect_equal(names(Grid2D),c("x","y"))
-    
+
 
     f <- z ~ 1
     binned_data <- map_data_to_BAUs(data,Grid2D,av_var=all.vars(f)[1])
@@ -107,7 +107,7 @@ test_that("SpaceTime_BAUs",{
 
     space_time_grid <- auto_BAUs(STplane(),
                                  type="hex",
-                                 cellsize = c(0.3,0.3,1),
+                                 cellsize = c(0.1,0.1,1),
                                  data = STobj1,
                                  tunit="days",
                                  convex= -0.2)
@@ -117,8 +117,13 @@ test_that("SpaceTime_BAUs",{
     STobj2$z <- 1
 
     f <- z ~ 1
-    binned_data1 <- FRK:::map_data_to_BAUs(STobj1,space_time_grid,av_var=all.vars(f)[1],average_in_BAU = TRUE)
-    binned_data2 <- FRK:::map_data_to_BAUs(STobj1,space_time_grid,av_var=all.vars(f)[1],average_in_BAU = FALSE)
+    binned_data1 <- FRK:::map_data_to_BAUs(STobj1,
+                                           space_time_grid,
+                                           av_var=all.vars(f)[1],
+                                           average_in_BAU = TRUE)
+    binned_data2 <- FRK:::map_data_to_BAUs(STobj1,
+                                           space_time_grid,
+                                           av_var=all.vars(f)[1],average_in_BAU = FALSE)
     expect_is(binned_data1,"STIDF")
     expect_is(binned_data2,"STIDF")
 
