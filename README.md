@@ -41,6 +41,7 @@ A journel article, currently under preparation, will be uploaded as vignette onc
 Quick start
 ------------
 
+```r
     library(sp)
     library(ggplot2)
     library(FRK)
@@ -69,7 +70,8 @@ Quick start
     ggplot(xy) + geom_tile(aes(x,y,fill=se)) + 
        geom_point(data=zdf,aes(x,y),pch=46) +
        scale_fill_distiller(palette="Spectral") + theme_bw() + coord_fixed()
-    
+```    
+
 ![alt tag](https://dl.dropboxusercontent.com/u/3028804/FRK/FRK_ex_data.png)
 ![alt tag](https://dl.dropboxusercontent.com/u/3028804/FRK/FRK_ex_mu.png)
 ![alt tag](https://dl.dropboxusercontent.com/u/3028804/FRK/FRK_ex_se.png)
