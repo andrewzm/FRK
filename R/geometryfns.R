@@ -137,7 +137,7 @@ setMethod("auto_BAU",signature(manifold="plane"),
                   distances <- unique(band(D,1,1)@x)[-1]
                   OK <- 1
                   if(use_INLA) { # somtimes we get islands... check and redo
-                      OK <- sd(distances) < median(distances)
+                      OK <- 0.5*sd(distances) < median(distances)
                       convex <- convex*2
                   }
               }
@@ -151,8 +151,8 @@ setMethod("auto_BAU",signature(manifold="plane"),
               if(!is.null(d)) proj4string(bndary_seg) <- proj4string(d)
               drangex <- diff(xrange)
               drangey <- diff(yrange)
-              xgrid <- seq(xrange[1] - drangex*1.2,xrange[2] + drangex*1.2,by=cellsize[1])
-              ygrid <- seq(yrange[1] - drangey*1.2,yrange[2] + drangey*1.2,by=cellsize[2])
+              xgrid <- seq(xrange[1] - drangex*0.2,xrange[2] + drangex*0.2,by=cellsize[1])
+              ygrid <- seq(yrange[1] - drangey*0.2,yrange[2] + drangey*0.2,by=cellsize[2])
 
               xy <- expand.grid(x=xgrid,y=ygrid)  %>%
                   SpatialPoints()
