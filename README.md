@@ -44,23 +44,36 @@ Quick start
     library(sp)
     library(ggplot2)
     library(FRK)
-    Z <- data.frame(x = runif(1000), y= runif(1000))
-    Z$z <- sin(8*Z$x) + cos(8*Z$y) + 0.5*rnorm(100)
+    
+    set.seed(1)
+    zdf <- Z <- data.frame(x = runif(1000), y= runif(1000))
+    zdf$z <- Z$z <- sin(8*Z$x) + cos(8*Z$y) + 0.5*rnorm(100)
     coordinates(Z) = ~x+y
     S <- FRK(f = z~1,
                 list(Z),
-                cellsize = c(0.02,0.02),
-                n_EM = 100)
-    Pred <- SRE.predict(SRE_model = S,
-                        obs_fs = TRUE)              
+                n_EM = 10)
+    Pred <- SRE.predict(SRE_model = S)              
     xy <- data.frame(coordinates(Pred))
     xy$mu <- Pred$mu
     xy$se <- Pred$sd
     spplot(Z,"z")
-    ggplot(xy) + geom_point(aes(x,y,color=mu)) + scale_color_distiller(palette="Spectral")
-    ggplot(xy) + geom_point(aes(x,y,colour=se)) + scale_color_distiller(palette="Spectral")
+    ggplot(zdf) + geom_point(aes(x,y,colour=z)) + 
+      scale_colour_distiller(palette="Spectral") + theme_bw() + coord_fixed()
+    ggplot(xy) + geom_raster(aes(x,y,fill=mu)) + 
+      scale_fill_distiller(palette="Spectral") + theme_bw() + coord_fixed()
+    ggplot(xy) + geom_tile(aes(x,y,fill=se)) + 
+       geom_point(data=zdf,aes(x,y),pch=46) +
+       scale_fill_distiller(palette="Spectral") + theme_bw() + coord_fixed()
     
-    
+![alt tag](https://dl.dropboxusercontent.com/u/3028804/ckan/FRK_ex_data.jpg)
+![alt tag](https://dl.dropboxusercontent.com/u/3028804/ckan/FRK_ex_mu.jpg)
+![alt tag](https://dl.dropboxusercontent.com/u/3028804/ckan/FRK_ex_se.jpg)
+
+[//]: # (
+> ggsave(gdata,file="~/Dropbox/Public/FRK/FRK_ex_data.png",width=7,height=5)
+> ggsave(gmu,file="~/Dropbox/Public/FRK/FRK_ex_mu.png",width=7,height=5)
+> ggsave(gse,file="~/Dropbox/Public/FRK/FRK_ex_se.png",width=7,height=5)
+)
 
 Known Issues
 ------------
