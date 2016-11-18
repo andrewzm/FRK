@@ -70,16 +70,14 @@ Quick start
        geom_point(data=zdf,aes(x,y),pch=46) +
        scale_fill_distiller(palette="Spectral") + theme_bw() + coord_fixed()
     
-![alt tag](https://dl.dropboxusercontent.com/u/3028804/FRK/FRK_ex_data.png)
-![alt tag](https://dl.dropboxusercontent.com/u/3028804/FRK/FRK_ex_mu.png)
-![alt tag](https://dl.dropboxusercontent.com/u/3028804/FRK/FRK_ex_se.png)
+![alt tag](https://dl.dropboxusercontent.com/u/3028804/FRK/FRK_ex_data.png =250x)
+![alt tag](https://dl.dropboxusercontent.com/u/3028804/FRK/FRK_ex_mu.png =250x)
+![alt tag](https://dl.dropboxusercontent.com/u/3028804/FRK/FRK_ex_se.png =250x)
 
 [//]: # ( > ggsave(gdata,file="~/Dropbox/Public/FRK/FRK_ex_data.png",width=7,height=5) > ggsave(gmu,file="~/Dropbox/Public/FRK/FRK_ex_mu.png",width=7,height=5) > ggsave(gse,file="~/Dropbox/Public/FRK/FRK_ex_se.png",width=7,height=5) )
 
 Known Issues
 ------------
-
-Currently no vignettes are supplied with the package. These will be provided shortly.
 
 [//]: # (Currently `FRK` is not installing on OSX with `build_vignettes=TRUE` as it fails to find `texi2dvi`. Set `build_vignettes=FALSE` to ensure installation. Then download the `.Rnw` file in the `vignettes` folder and compile the pdf file separately in `RStudio` with `knitr`. )
 
@@ -87,6 +85,6 @@ Currently no vignettes are supplied with the package. These will be provided sho
 Demonstrations
 --------------
 
-FRK is currently being used to generate spatio-temporal animations of fields observed by satellite data. [Here](https://www.youtube.com/watch?v=_kPa8VoeSdM) we show a very low-resolution prediction of CO2 using data from the ACOS satellite and OCO-2 between 2009 and 2016.
+The package `FRK` is currently being used to generate spatio-temporal animations of fields observed by satellite data. [Here](https://www.youtube.com/watch?v=_kPa8VoeSdM) we show a daily prediction of CO2 using data from the NASA OCO-2 between September 2014 and June 2016.
 
 [![alt tag](https://img.youtube.com/vi/ENx4CIZdoQk/0.jpg)](https://www.youtube.com/watch?v=ENx4CIZdoQk)
