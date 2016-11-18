@@ -34,7 +34,9 @@ Installation
 
 `FRK` is still under development but stable and ready for use with simple applications. To install, first please install `INLA` from `http://www.r-inla.org/download`, then please load `devtools` and type
 
-    install_github("andrewzm/FRK",dependencies=TRUE,build_vignettes=TRUE)
+```r
+install_github("andrewzm/FRK",dependencies=TRUE,build_vignettes=TRUE)
+```
 
 A journel article, currently under preparation, will be uploaded as vignette once submitted. If you wish to see a draft of the paper please contact me on azm@uow.edu.au directly. Thank you.
 
@@ -42,34 +44,34 @@ Quick start
 ------------
 
 ```r
-    library(sp)
-    library(ggplot2)
-    library(FRK)
-    
-    ## Setup
-    set.seed(1)                                               # Fix seed
-    zdf <- Z <- data.frame(x = runif(1000), y= runif(1000))   # Generate random locs
-    zdf$z <- Z$z <- sin(8*Z$x) + cos(8*Z$y) + 0.5*rnorm(100)  # Simulate data
-    coordinates(Z) = ~x+y                                     # Turn into sp object
-    
-    ## Run FRK
-    S <- FRK(f = z~1,                                         # Formula to FRK
-                list(Z),                                      # All datasets are supplied in list
-                n_EM = 10)                                    # Max number of EM iterations
-    Pred <- SRE.predict(SRE_model = S)                        # Prediction stage
-    
-    xy <- data.frame(coordinates(Pred))                       # Extract info from predictions
-    xy$mu <- Pred$mu
-    xy$se <- Pred$sd
-    
-    ## Plotting
-    ggplot(zdf) + geom_point(aes(x,y,colour=z)) + 
-      scale_colour_distiller(palette="Spectral") + theme_bw() + coord_fixed()
-    ggplot(xy) + geom_raster(aes(x,y,fill=mu)) + 
-      scale_fill_distiller(palette="Spectral") + theme_bw() + coord_fixed()
-    ggplot(xy) + geom_tile(aes(x,y,fill=se)) + 
-       geom_point(data=zdf,aes(x,y),pch=46) +
-       scale_fill_distiller(palette="Spectral") + theme_bw() + coord_fixed()
+library(sp)
+library(ggplot2)
+library(FRK)
+
+## Setup
+set.seed(1)                                               # Fix seed
+zdf <- Z <- data.frame(x = runif(1000), y= runif(1000))   # Generate random locs
+zdf$z <- Z$z <- sin(8*Z$x) + cos(8*Z$y) + 0.5*rnorm(100)  # Simulate data
+coordinates(Z) = ~x+y                                     # Turn into sp object
+
+## Run FRK
+S <- FRK(f = z~1,                                         # Formula to FRK
+list(Z),                                      # All datasets are supplied in list
+n_EM = 10)                                    # Max number of EM iterations
+Pred <- SRE.predict(SRE_model = S)                        # Prediction stage
+
+xy <- data.frame(coordinates(Pred))                       # Extract info from predictions
+xy$mu <- Pred$mu
+xy$se <- Pred$sd
+
+## Plotting
+ggplot(zdf) + geom_point(aes(x,y,colour=z)) + 
+scale_colour_distiller(palette="Spectral") + theme_bw() + coord_fixed()
+ggplot(xy) + geom_raster(aes(x,y,fill=mu)) + 
+scale_fill_distiller(palette="Spectral") + theme_bw() + coord_fixed()
+ggplot(xy) + geom_tile(aes(x,y,fill=se)) + 
+geom_point(data=zdf,aes(x,y),pch=46) +
+scale_fill_distiller(palette="Spectral") + theme_bw() + coord_fixed()
 ```    
 
 ![alt tag](https://dl.dropboxusercontent.com/u/3028804/FRK/FRK_ex_data.png)
@@ -78,8 +80,6 @@ Quick start
 
 [//]: # ( > ggsave(gdata,file="~/Dropbox/Public/FRK/FRK_ex_data.png",width=7,height=5) > ggsave(gmu,file="~/Dropbox/Public/FRK/FRK_ex_mu.png",width=7,height=5) > ggsave(gse,file="~/Dropbox/Public/FRK/FRK_ex_se.png",width=7,height=5) )
 
-Known Issues
-------------
 
 [//]: # (Currently `FRK` is not installing on OSX with `build_vignettes=TRUE` as it fails to find `texi2dvi`. Set `build_vignettes=FALSE` to ensure installation. Then download the `.Rnw` file in the `vignettes` folder and compile the pdf file separately in `RStudio` with `knitr`. )
 
