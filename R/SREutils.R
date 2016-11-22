@@ -1025,8 +1025,6 @@ SRE.predict <- function(SRE_model,use_centroid=TRUE,obs_fs=FALSE,pred_polys = NU
         idx <- match(BAUs@data$n,Sm@BAUs@data$n)
     }
 
-
-
     if(!obs_fs) {
         if(sigma2fs >0) {
             #LAMBDA <- as(bdiag(Sm@Khat,sig2_Vfs_pred),"symmetricMatrix")

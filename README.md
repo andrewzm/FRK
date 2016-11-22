@@ -5,7 +5,7 @@
 Fixed Rank Kriging
 ================
 
-The package FRK is still under development. However, both function interfaces and the underlying modelling approach are now relatively stable. This notice will be removed once a stable version is released.
+The package `FRK` is still under development. However, both function interfaces and the underlying modelling approach are now relatively stable. This notice will be removed once a stable version is released.
 
 Description
 ------------

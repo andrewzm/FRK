@@ -986,15 +986,21 @@ est_obs_error <- function(sp_pts,variogram.formula,vgm_model = NULL,BAU_width = 
     suppressWarnings({vgm.fit = gstat::fit.variogram(v, model = vgm_model)})
 
 
-    if(vgm.fit$psill[1] == 0 | attributes(vgm.fit)$singular) {
+    if(vgm.fit$psill[1] <= 0 | attributes(vgm.fit)$singular) {
         ## Try with line on first four points
         L <- lm(gamma~dist,data=v[1:4,])
         vgm.fit$psill[1] <- coefficients(L)[1]
     }
 
-    if(vgm.fit$psill[1] == 0) {
+    if(vgm.fit$psill[1] <= 0) {
+        ## Try with exponential
+        vgm_model <-  gstat::vgm(var(L$y)/2, "Exp", mean(v$dist), var(L$y)/2)
+        suppressWarnings({vgm.fit = gstat::fit.variogram(v, model = vgm_model)})
+    }
+
+    if(vgm.fit$psill[1] <= 0) {
         ## Try with Gaussian, maybe process is very
-        ## smooth or data ihas a large support
+        ## smooth or data has a large support
         vgm_model2 <-  gstat::vgm(var(L$y)/2, "Gau", mean(v$dist), var(L$y)/2)
         vgm.fit = suppressWarnings(gstat::fit.variogram(v,model=vgm_model2))
         print("... Estimating measurement error is not straightforward for this dataset.")
@@ -1003,7 +1009,7 @@ est_obs_error <- function(sp_pts,variogram.formula,vgm_model = NULL,BAU_width = 
     }
     #plot(v,vgm.fit)
     print(paste0("sigma2e estimate = ",vgm.fit$psill[1]))
-    if(vgm.fit$psill[1] == 0)
+    if(vgm.fit$psill[1] <= 0)
         stop("Measurement error estimated to be zero. Please pre-specify measurement error. If
               unknown please specify a reasonable value in the field 'std' and set
               est_error = FALSE or else try altering vgm_model")
