@@ -983,36 +983,39 @@ est_obs_error <- function(sp_pts,variogram.formula,vgm_model = NULL,BAU_width = 
     if(is.null(vgm_model))
         vgm_model <-  gstat::vgm(var(L$y)/2, "Lin", mean(v$dist), var(L$y)/2)
 
-    suppressWarnings({vgm.fit = gstat::fit.variogram(v, model = vgm_model)})
+    OK <- tryCatch({vgm.fit <- gstat::fit.variogram(v, model = vgm_model); 1},warning=function(w) 0)
+    vgm.fit <- suppressWarnings(gstat::fit.variogram(v, model = vgm_model))
 
-
-    if(vgm.fit$psill[1] <= 0 | attributes(vgm.fit)$singular) {
+    if(vgm.fit$psill[1] <= 0 | attributes(vgm.fit)$singular | !OK) {
         ## Try with line on first four points
-        L <- lm(gamma~dist,data=v[1:4,])
-        vgm.fit$psill[1] <- coefficients(L)[1]
+        linfit <- lm(gamma~dist,data=v[1:4,])
+        vgm.fit$psill[1] <- coefficients(linfit)[1]
     }
 
     if(vgm.fit$psill[1] <= 0) {
         ## Try with exponential
         vgm_model <-  gstat::vgm(var(L$y)/2, "Exp", mean(v$dist), var(L$y)/2)
-        suppressWarnings({vgm.fit = gstat::fit.variogram(v, model = vgm_model)})
+        OK <- tryCatch({vgm.fit = gstat::fit.variogram(v, model = vgm_model); OK <- 1},warning=function(w) 0)
+        vgm.fit <- suppressWarnings(gstat::fit.variogram(v, model = vgm_model))
     }
 
-    if(vgm.fit$psill[1] <= 0) {
-        ## Try with Gaussian, maybe process is very
-        ## smooth or data has a large support
-        vgm_model2 <-  gstat::vgm(var(L$y)/2, "Gau", mean(v$dist), var(L$y)/2)
-        vgm.fit = suppressWarnings(gstat::fit.variogram(v,model=vgm_model2))
-        print("... Estimating measurement error is not straightforward for this dataset.")
-        print("... Please specify the 'std' field in your data object or check that the variance")
-        print("... is reasonable (check S@Ve[1,1])")
+    if(vgm.fit$psill[1] <= 0 | attributes(vgm.fit)$singular | !OK) {
+        ## Try with Gaussian, maybe process is very smooth or data has a large support
+        vgm_model <-  gstat::vgm(var(L$y)/2, "Gau", mean(v$dist), var(L$y)/2)
+        OK <- tryCatch({vgm.fit = gstat::fit.variogram(v, model = vgm_model); OK <- 1},warning=function(w) 0)
+        vgm.fit <- suppressWarnings(gstat::fit.variogram(v, model = vgm_model))
     }
+
+    if(vgm.fit$psill[1] <= 0 | attributes(vgm.fit)$singular | !OK) {
+        ## Just take the first point and print warning
+        vgm.fit$psill[1] <- v$gamma[1]
+        warning("Estimate of measurement error is probably inaccurate.
+                 Please consider setting it through the std variable in the data object if known.")
+    }
+
     #plot(v,vgm.fit)
     print(paste0("sigma2e estimate = ",vgm.fit$psill[1]))
-    if(vgm.fit$psill[1] <= 0)
-        stop("Measurement error estimated to be zero. Please pre-specify measurement error. If
-              unknown please specify a reasonable value in the field 'std' and set
-              est_error = FALSE or else try altering vgm_model")
+
     # sp_pts$std <- sqrt(vgm.fit$psill[1] / sp_pts$Nobs)
     sp_pts$std <- sqrt(vgm.fit$psill[1])  ## Assume observations have correlated error in BAU
     ##Observational error estimation could be improved. Currently a variogram is fitted to the data, and then the error variance of a single observation is assumed to be the partial sill. Then the variance of the averaged observations in the BAU is divided by Nobs. Currently there is no accounting for multiple data in the same grid box during variogram fitting as it's not straightforward with gstat
