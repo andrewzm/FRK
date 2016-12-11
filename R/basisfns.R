@@ -676,4 +676,22 @@ setMethod("count_res",signature="Basis",function(.Object) {
     count(.Object@df,res)
 })
 
-
+## Evaluate basis over BAUs... deprecated?
+.eval_basis.BAUs <- function(basis,BAUs,use_centroid) {
+    if(is(BAUs,"Spatial")) {
+        if(use_centroid) {
+            #S0 <- eval_basis(Sm@basis,as.matrix(BAUs[coordnames(Sm@data[[1]])]@data))
+            S0 <- eval_basis(basis,.polygons_to_points(BAUs))
+        } else {
+            S0 <- eval_basis(basis,BAUs)
+        }
+    } else if(is(BAUs,"STFDF")) {
+        if(use_centroid) {
+            #S0 <- eval_basis(Sm@basis,as.matrix(cbind(coordinates(BAUs),BAUs@data$t)))
+            S0 <- eval_basis(basis,.polygons_to_points(BAUs))
+        } else {
+            stop("Can only use centroid when predicting with spatio-temporal data")
+        }
+    }
+    S0
+}
