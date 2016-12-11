@@ -29,7 +29,7 @@
 #'
 #'The actual computations for the E-step and M-step are relatively straightforward. The E-step contains an inverse of an \eqn{n \times n} matrix, where \code{n} is the number of basis functions which should not exceed 2000. The M-step first updates the matrix \eqn{K}, which only depends on the sufficient statistics of the basis weights \eqn{\eta}. Then, the regression parameter \eqn{\alpha} is updated and a simple optimisation routine (a line search) is used to update the fine-scale variance \eqn{\sigma^2_{\delta}}. If the fine-scale errors and measurement errors are homoscedastic a closed-form solution is available for the update of \eqn{\sigma^2_{fs}}. Irrespectively, since the udpates of \eqn{\alpha} and \eqn{\sigma^2_{\delta}} are dependent, these two updates are iterated until the change in \eqn{\sigma^2_{\delta}} is no more than 0.1\%.
 #'
-#'Once the parameters are fitted, the \code{SRE} object is passed onto the function \code{SRE.predict()} in order to carry out optimal predictions over the same BAUs used to construct the SRE model with \code{SRE()}. The first part of the prediction process is to construct the matrix \eqn{S} by averaging the basis functions over the prediction polygons/BAUs, using Monte Carlo integration with 1000 samples. This is a computationally-intensive process. On the other hand, one could set \code{use_centroid = TRUE} and treat the prediction over the entire polygon as that of a BAU at the centre of the polygon. This will yield valid results only if the BAUs are relatively small. Once the matrix \eqn{S} is found, a standard Gaussian inversion using the estimated parameters is used.
+#'Once the parameters are fitted, the \code{SRE} object is passed onto the function \code{SRE.predict()} in order to carry out optimal predictions over the same BAUs used to construct the SRE model with \code{SRE()}. The first part of the prediction process is to construct the matrix \eqn{S}. This is made computationally efficient by treating the prediction over polygons as that of the prediction over a combination of BAUs. This will yield valid results only if the BAUs are relatively small. Once the matrix \eqn{S} is found, a standard Gaussian inversion using the estimated parameters is used.
 #'
 #'\code{SRE.predict} returns the BAUs, which are of class \code{SpatialPolygonsDataFrame}, with two added attributes, \code{mu} and \code{var}. These can then be easily plotted using \code{spplot} or \code{ggplot2} (in conjunction with \code{\link{SpatialPolygonsDataFrame_to_df}}) as shown in the package vignettes.
 #'\code{FRK}  runs \code{SRE}, \code{SRE.fit} and \code{SRE.predict} in successions with suitable defaults. It returns a list with the SRE object and the prediction polygons.
@@ -68,7 +68,7 @@
 #' S <- SRE.fit(S,n_EM = 5,tol = 1e-5,print_lik=TRUE)
 #'
 #' ### Predict over BAUs
-#' grid_BAUs <- SRE.predict(S,use_centroid = TRUE)
+#' grid_BAUs <- SRE.predict(S)
 #'
 #' ### Plot
 #' X <- slot(grid_BAUs,"data") %>%
