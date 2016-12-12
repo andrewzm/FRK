@@ -932,6 +932,7 @@ SRE.predict <- function(SRE_model,obs_fs=FALSE,pred_polys = NULL,pred_time = NUL
     pred_locs
 }
 
+
 .SRE.predict <- function(Sm,obs_fs = FALSE,pred_polys = NULL,pred_time = NULL) {
 
 
