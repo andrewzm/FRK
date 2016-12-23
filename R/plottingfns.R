@@ -23,7 +23,7 @@ draw_world <- function(g = ggplot(),inc_border = TRUE) {
 #' @rdname show_basis
 #' @aliases show_basis,Basis-method
 setMethod("show_basis",signature(basis = "Basis"),  # GRBF basis with mean offset as last weight
-          function(basis,g=ggplot()) {
+          function(basis,g=ggplot() + theme_bw() + xlab("") + ylab("")) {
 
               message("Note: show_basis assumes spherical distance functions when plotting")
 

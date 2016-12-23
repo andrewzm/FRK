@@ -37,6 +37,9 @@ FRK <- function(f,                     # formula
                           data = data[[d]],
                           ...)
         BAUs$fs <- 1   # fine-scale variation at BAU level
+    } else {
+        print("Assuming fine-scale variation is homoscedastic")
+        if is.null(BAUs$fs) BAUs$fs <- 1
     }
 
     if(is.null(basis)) {
