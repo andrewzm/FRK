@@ -39,12 +39,14 @@ setMethod("show_basis",signature(basis = "Basis"),  # GRBF basis with mean offse
                      g <- g + geom_line(data=df,aes(x=s,y=y,col=as.factor(res))) + labs(colour="res")
                  }
               } else  if(is(manifold(basis),"plane")) {
-                  for (i in 1:basis@n) {
-                      g <- g + geom_path(data=cbind(circleFun(center=as.numeric(basis@df[i,1:2]),
-                                                        diameter = basis@df$scale[i]),
-                                                    res=as.factor(basis@df$res[i])),
-                                         aes(x=x,y=y,linetype=res))
-                  }
+                  l <- lapply(1:basis@n,function(i) {
+                      data.frame(circleFun(center=as.numeric(basis@df[i,1:2]),
+                                           diameter = basis@df$scale[i]),
+                                 res=as.factor(basis@df$res[i]),
+                                 id = i)})
+                  suppressWarnings(df <- bind_rows(l))
+                  g <- g + geom_path(data=df,aes(x=x,y=y,group=id,linetype=res))
+
               } else  if(is(manifold(basis),"sphere")) {
                   df <-basis@df
                   df <- df[rev(rownames(df)),]
@@ -69,7 +71,7 @@ setMethod("show_basis",signature(basis = "Basis"),  # GRBF basis with mean offse
                       facet_wrap(~loc3)
 
               }
-               return(g)
+               return(g + theme_bw())
 
           })
 
