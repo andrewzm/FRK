@@ -316,7 +316,7 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", 
                                                   cbind(Validate_obs$mu,sqrt(Validate_obs$var + diag(SRE_model@Ve)[rm_idx])))$CRPS
                     ESS[i] <- mean((Validate_obs$var + diag(SRE_model@Ve)[rm_idx] -
                                         (Validate_obs$mu - SRE_model@Z[rm_idx])^2)^2)
-                    hist((Validate_obs$mu - SRE_model@Z[rm_idx])/sqrt(Validate_obs$var + diag(SRE_model@Ve)[rm_idx]))
+                    #hist((Validate_obs$mu - SRE_model@Z[rm_idx])/sqrt(Validate_obs$var + diag(SRE_model@Ve)[rm_idx]))
                 }
                 cv_score[l] <- mean(sq_resid)
                 crps_score[l] <- mean(crps)
@@ -364,7 +364,7 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", 
         lik_plot_ylab <- "log likelihood"
     }
 
-    if(opts_FRK$get("progress")) pb <- txtProgressBar(min = 0, max = n_EM, style = 3)
+    if(opts_FRK$get("progress")) pb <- utils::txtProgressBar(min = 0, max = n_EM, style = 3)
     for(i in 1:n_EM) {
         if (!(SRE_model@fs_model == "ICAR")){
             #print(system.time( lk[i] <- .loglik(SRE_model)))  # Compute likelihood
@@ -385,7 +385,7 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", 
 
         SRE_model <- .SRE.Estep(SRE_model)
         SRE_model <- .SRE.Mstep(SRE_model)
-        if(opts_FRK$get("progress")) setTxtProgressBar(pb, i)
+        if(opts_FRK$get("progress")) utils::setTxtProgressBar(pb, i)
         if(i>1)
             if(abs(lk[i] - lk[i-1]) < tol) {
                 print("Minimum tolerance reached")
@@ -468,17 +468,6 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", 
     if (is.null(mu_eta)) mu_eta <- Sm@mu_eta
 
     if(any(Sm@lambda > 0)) {
-         # res_summ <- count_res(S)
-         # prec_struct <- do.call("bdiag",
-         #                        lapply(1:nrow(res_summ),
-         #                               function(i)
-         #                                   1000^(res_summ$res[i]-min(res_summ$res) - 0.5)*
-         #                                   Diagonal(res_summ$n[i])))
-        # #prec_struct <- 1*Diagonal(nrow(S_eta))
-         # K <- chol2inv(chol(
-         #     chol2inv(chol(S_eta +  tcrossprod(mu_eta))) + prec_struct))
-        # nu <- 20
-        #K <- (S_eta +  tcrossprod(mu_eta) + nu*solve(prec_struct))/nu
 
         ## Just one regulatisation parameter for all resolutions
         if(length(Sm@lambda) == 1) {
@@ -603,10 +592,12 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", 
         #cat("  Estimates of omega: ",unlist(omega),"  ")
         #cat("  Estimates of tau: ",unlist(tau),"  ")
 
+        # Deprecated:
         # K <- lapply(1:nrow(all_res),
         #             function(i) {
         #                 idx <- which(Sm@basis@df$res == 1)
-        #                 omega[[i]]*exp(-as.matrix(dist(filter(Sm@basis@df,res == i)[,1:2]))/0.15)
+        #                 omega[[i]]*exp(-as.matrix(dist(filter(
+        #                       Sm@basis@df,res == i)[,1:2]))/0.15)
         #                 })
         # K <- do.call("bdiag",K)
 
@@ -675,10 +666,6 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", 
             R_eta <- chol(S_eta + tcrossprod(mu_eta))
             S_R_eta <- Sm@S %*% t(R_eta)
             Omega_diag1 <- rowSums(S_R_eta^2)
-            # Partial_Cov <- Takahashi_Davis(Sm@Q_eta,cholQp = Sm@chol_Q_eta$Qpermchol,
-            #                        P = Sm@chol_Q_eta$P)
-            # Omega_diag1 <- as.numeric(diag2(Sm@S %*% Partial_Cov,t(Sm@S)) + (Sm@S %*% mu_eta)^2)
-            # warning("Doing sparse")
             J <- function(sigma2fs) {
                 if(sigma2fs < 0) {
                     return(Inf)
@@ -722,7 +709,7 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", 
             if(amp_factor > 1e9) {
                 sigma2fs_new <- 0
             } else {
-                sigma2fs_new <- uniroot(f = J,
+                sigma2fs_new <- stats::uniroot(f = J,
                                         interval = c(sigma2fs/amp_factor,sigma2fs*amp_factor))$root
             }
             D <- sigma2fs_new*Sm@Vfs + Sm@Ve
@@ -921,14 +908,6 @@ SRE.predict <- function(SRE_model,obs_fs=FALSE,pred_polys = NULL,pred_time = NUL
                               pred_polys = pred_polys,
                               pred_time = pred_time)
 
-    ## Rhipe VERSION (currently disabled)
-    # pred_locs <- rhwrapper(Ntot = length(Sm@BAUs),
-    #                        N = 4000,
-    #                        f_expr = .rhSRE.predict,
-    #                        Sm = SRE_model,
-    #                        pred_locs = pred_locs,
-    #                        use_centroid = use_centroid)
-
     pred_locs
 }
 
@@ -981,6 +960,7 @@ SRE.predict <- function(SRE_model,obs_fs=FALSE,pred_polys = NULL,pred_time = NUL
         CZ <- CZ[,needed_BAUs]
     }
 
+    # Deprecated:
     # if(is(BAUs,"ST")){
     #     needed_BAUs <- BAUs[,pred_time]$n
     #     BAUs <- BAUs[,pred_time]
@@ -1411,7 +1391,7 @@ setMethod("summary",signature(object="SRE"),
                 sigma2fs_new <- 0
                 converged <- TRUE
             }
-            sigma2fs_new <- uniroot(f = J,
+            sigma2fs_new <- stats::uniroot(f = J,
                                     interval = c(sigma2fs/amp_factor,sigma2fs*amp_factor))$root
         } else {
             sigma2fs_new <- 1/b[1]*(sum(Omega_diag)/length(Sm@Z) - a[1])

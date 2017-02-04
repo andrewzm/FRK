@@ -8,7 +8,8 @@ test_that("basic_wrapper",{
     S <- FRK(f = z~1,
              list(Z),
              cellsize = c(0.1,0.1),
-             n_EM = 2)
+             n_EM = 2,
+             use_INLA = FALSE)
     Pred <- SRE.predict(SRE_model = S,
                         obs_fs = TRUE)
 })

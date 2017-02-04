@@ -65,14 +65,15 @@ test_that("SRE 2D plane works",{
     grid_BAUs <- auto_BAUs(manifold=plane(),
                            type="grid",
                            data=sim_data,
-                           cellsize = c(0.4))
+                           cellsize = c(0.4),
+                           use_INLA=FALSE)
     grid_BAUs$fs = 1
 
     ### Set up SRE model
     G <- auto_basis(manifold = plane(),
                     data=sim_data,
                     nres = 1,
-                    regular = 2,
+                    regular = 1,
                     type = "bisquare",
                     subsamp = 20000)
     expect_is(G,"Basis")

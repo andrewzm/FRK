@@ -13,6 +13,7 @@ setMethod("initialize",signature="manifold",function(.Object) {
 #' @param cellsize denotes size of gridcell when \code{type} = ``grid''. Needs to be of length 1 (isotropic-grid case) or a vector of length \code{dimensions(manifold)}
 #' @param isea3h_res resolution number of the isea3h DGGRID cells for when type is ``hex'' and manifold is the surface of a \code{sphere}
 #' @param data object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame}. Provision of \code{data} implies that the domain is bounded, and is thus necessary when the manifold is a \code{real_line} or a \code{plane} but is not necessary when the manifold is the surface of a \code{sphere}
+#' @param use_INLA flag indicating whether to use INLA to generate a non-convex hull. Otherwise a convex hull is used
 #' @param convex convex parameter used for smoothing an extended boundary when working on a finite domain (that is, when the object \code{d} is supplied), see details.
 #' @param tunit temporal unit when requiring space-time BAUs. Can be either "secs", "mins", "hours" or "days".
 #' @param ... currently unused
@@ -100,8 +101,6 @@ auto_BAUs <- function(manifold, type="grid",cellsize = NULL,
     auto_BAU(manifold=manifold,type=type,cellsize=cellsize,resl=resl,
              d=data,use_INLA=use_INLA,convex=convex,tunit=tunit)
 }
-
-
 
 
 setMethod("auto_BAU",signature(manifold="plane"),
@@ -249,7 +248,7 @@ setMethod("auto_BAU",signature(manifold = c("STmanifold")),
 
               if(is(d,"ST")) {
                   space_part <- d@sp
-                  time_part <- time(d)
+                  time_part <- .time.ST(d)
               } else if (is(d,"Date")) {
                   space_part <- NULL
                   time_part <- d
@@ -728,6 +727,9 @@ SpatialPolygonsDataFrame_to_df <- function(sp_polys,vars = names(sp_polys)) {
 setMethod("map_data_to_BAUs",signature(data_sp="Spatial"),
           function(data_sp,sp_pols,av_var,average_in_BAU = TRUE)
           {
+              ## Suprress bindings warnings
+              BAU_name <- NULL
+              . <- NULL
               if(is(data_sp,"SpatialPointsDataFrame")) {
 
                   if(average_in_BAU) {
@@ -789,6 +791,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="Spatial"),
                               data_df <- data_sp@data[setdiff(names(data_sp),
                                                                   names(sp_pols)) %>%
                                                         intersect(names(data_sp))]
+
                               Data_in_BAU <- cbind(data_df,
                                                    over(data_sp[av_var],
                                                         sp_pols)) %>%
@@ -1068,8 +1071,9 @@ setMethod("BuildC",signature(data="STFDF"),
               C_one_time <- BuildC(data[,1],BAUs[,1])
               i <- C_one_time$i_idx
               j <- C_one_time$j_idx
-              for(k in seq_along(time(BAUs))) {
-                  overlap_time <- which(as.POSIXct(time(data)) == (time(BAUs)[k]))
+              for(k in seq_along(.time.ST(BAUs))) {
+                  overlap_time <- which(as.POSIXct(.time.ST(data)) ==
+                                            (.time.ST(BAUs)[k]))
                   if(length(overlap_time) > 1L) stop("Something is wrong in binning polygon data into BAUs")
                   if(length(overlap_time) == 1) {
                       t_idx <- as.numeric(BAUs@time[k])
@@ -1138,32 +1142,8 @@ setMethod("coordnames",signature(x="STIDF"),function(x) {
     return(c(coordnames(x@sp),"t"))
 })
 
-
-
-# ## The functions rdist and rdist.earth were taken from the package fields
+# ## The function rdist.earth was taken from the package fields
 # ## fields is lincensed under GPL >=2
-# rdist <- function (x1, x2 = NULL, compact = FALSE)
-# {
-#     if (!is.matrix(x1)) {
-#         x1 <- as.matrix(x1)
-#     }
-#     if (is.null(x2)) {
-#         storage.mode(x1) <- "double"
-#         if (compact)
-#             return(dist(x1))
-#         else return(.Call("RdistC", x1, x1, PACKAGE = "FRK"))
-#     }
-#     else {
-#         if (!is.matrix(x2)) {
-#             x2 <- as.matrix(x2)
-#         }
-#         storage.mode(x1) <- "double"
-#         storage.mode(x2) <- "double"
-#         return(.Call("RdistC", x1, x2))
-#     }
-# }
-
-
 rdist.earth <- function (x1, x2 = NULL, miles = TRUE, R = NULL)
 {
     if (is.null(R)) {
@@ -1212,7 +1192,8 @@ load_dggrids <- function (res = 3L){
 
 .extract.from.formula <- function (formula, data)
 {
-    m = model.frame(terms(formula), as(data, "data.frame"), na.action = na.fail)
+    m = model.frame(terms(formula), as(data, "data.frame"),
+                           na.action = na.fail)
     Y = model.extract(m, "response")
     if (length(Y) == 0)
         stop("no response variable present in formula")
@@ -1465,8 +1446,8 @@ as.SpatialPolygons.GridTopology2 <- function (grd, proj4string = CRS(as.characte
 
 .choose_BAU_tunit_from_data <- function(data) {
     # Aim for no more than 30 BAUs
-    t1 <- range(time(data))[1]
-    t2 <- range(time(data))[2]
+    t1 <- range(.time.ST(data))[1]
+    t2 <- range(.time.ST(data))[2]
     tunits <- c("days","weeks","months","years")
     for(i in seq_along(tunits)) {
         l <- length(seq(t1,t2,by=tunits[i]))
@@ -1504,3 +1485,6 @@ as.SpatialPolygons.GridTopology2 <- function (grd, proj4string = CRS(as.characte
     }
     bndary_seg
 }
+
+.time.ST <- function (x, ...)
+    index(x@time)

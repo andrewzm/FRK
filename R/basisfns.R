@@ -146,8 +146,6 @@ auto_basis <- function(manifold = plane(),
             tot_basis <- nbasis(G)
         }
         nres <- nres - 1
-        #S <- eval_basis(G,data)
-        #prune <- (colSums(S)[rev(order(colSums(S)))])[round(max_basis)] + 1e-10
         prune <- 0
 
     }
@@ -216,7 +214,6 @@ auto_basis <- function(manifold = plane(),
     if(is(m,"sphere")) {
         isea3h <- load_dggrids(res = nres) %>%
                   dplyr::filter(res >= isea3h_lo)
-        #nres <- nres - isea3h_lo
     }
 
 
@@ -232,9 +229,6 @@ auto_basis <- function(manifold = plane(),
         } else if(is(m,"plane") & (regular> 0)) {
            xgrid <- seq(xrange[1], xrange[2], length = round(nx*(3^(i))))
            ygrid <- seq(yrange[1], yrange[2], length = round(ny*(3^(i))))
-            ## Generate mesh and use these as centres
-            #xgrid <- seq(xrange[1] + diff(xrange)/(2*nx*i), xrange[2] - diff(xrange)/(2*nx*i), length =nx*(3^(i-1)))
-            #ygrid <- seq(yrange[1] + diff(yrange)/(2*ny*i), yrange[2] - diff(yrange)/(2*ny*i), length =ny*(3^(i-1)))
             this_res_locs <- xgrid %>%
                 expand.grid(ygrid) %>%
                 as.matrix()
@@ -284,7 +278,8 @@ auto_basis <- function(manifold = plane(),
     }
 
     G_basis <- Reduce("concat",G)
-    #if(G_basis@n > nrow(data)) warning("More basis functions than data points")
+    # Deprecated:
+    # if(G_basis@n > nrow(data)) warning("More basis functions than data points")
     G_basis
 }
 
@@ -430,12 +425,6 @@ setMethod("eval_basis",signature(basis="TensorP_Basis",s="matrix"),function(basi
     S1 <- eval_basis(basis@Basis1,s[,1:n1,drop=FALSE],output)
     S2 <- eval_basis(basis@Basis2,s[,-(1:n1),drop=FALSE],output)
 
-#     warning("Changed to matrix, improve")
-#     S <- matrix(0,nrow(S1),ncol(S1)*ncol(S2))
-#     for(i in 1:ncol(S1)) {
-#         XX <-  ((S1[,i] * S2) %>% as.matrix())
-#         S[,((i-1)*ncol(S2)+1):(i*ncol(S2))] <- XX
-#     }
     #XX <- lapply(1:ncol(S1),function(i)  (S1[,i] * S2))
     ## Order: First space then time
     XX <- lapply(1:ncol(S2),function(i)  (S2[,i] * S1))
@@ -519,21 +508,6 @@ setMethod("BuildD",signature(G="TensorP_Basis"),function(G){
 
     x <- do.call("cbind",sapply(flist,function(f) f(s),simplify=FALSE))
     as(x,"Matrix")
-
-    ## Rhipe Hadoop version (currently disabled)
-    ## The below works but likely to be slower.. whole prediction should be parallelised
-
-    # envlist <- lapply(flist, function(f) environment(f))
-    # flist <- lapply(flist, function(f) parse(text = deparse(f)))
-    # x <- rhwrapper(Ntot = nrow(s),
-    #                N = 4000,
-    #                type="Matrix",
-    #                f_expr = .rhpoint_eval_fn,
-    #                flist=flist,
-    #                envlist = envlist,
-    #                s=s)
-    # as(data.matrix(x),"Matrix")
-
 }
 
 .samps_in_polygon <- function(basis,s,i) {

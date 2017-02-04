@@ -15,12 +15,6 @@ new_opts_FRK <- function(d = list(progress = TRUE, verbose = FALSE, parallel=1L)
             if (value > 1) {
 
                 defaults[["cl"]] <<- makeCluster(value,useXDR=FALSE)
-                # parLapply( defaults[["cl"]], 1:length(opts_FRK$cl), function(xx){
-                #     lapply(c("Matrix","sp"), function(yy) {
-                #         require(yy , character.only=TRUE)
-                #         return(paste0("Package ",yy," loaded successfully on thread"))
-                #     })
-                # }) %>% invisible()
             }
         }
 
@@ -45,6 +39,7 @@ new_opts_FRK <- function(d = list(progress = TRUE, verbose = FALSE, parallel=1L)
     if(opt == "parallel") {
         if(!is.integer(value))
             stop("parallel should be a nonnegative integer")
+        # Deprecated:
         # if(Sys.info()[['sysname']] == "Windows") {
         #     if(!value == 1L) {
         #         warning("Windows detected. Currently FRK is only parallelisable on

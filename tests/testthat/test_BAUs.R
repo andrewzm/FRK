@@ -30,14 +30,18 @@ test_that("real_line_BAUs",{
 
 test_that("plane_BAUs",{
     library(sp)
+    set.seed(1)
     data <- data.frame(x = rnorm(5),y=rnorm(5),z = rnorm(5),std=1)
     coordinates(data) <- ~x+y
-    Grid2D <- auto_BAUs(manifold = plane(),
-                           type="grid",
-                           cellsize = 0.5,
-                           data=data)
-    expect_is(Grid2D,"SpatialPixelsDataFrame")
-    expect_equal(names(Grid2D),c("x","y"))
+    if(require("INLA")) {
+        Grid2D <- auto_BAUs(manifold = plane(),
+                            type="grid",
+                            cellsize = 0.5,
+                            data=data,
+                            use_INLA = TRUE)
+        expect_is(Grid2D,"SpatialPixelsDataFrame")
+        expect_equal(names(Grid2D),c("x","y"))
+    }
 
 
     ## Now without INLA
@@ -105,12 +109,24 @@ test_that("SpaceTime_BAUs",{
                            tunit="days")
     expect_is(time_grid,"POSIXt")
 
+    if(require("INLA")) {
+        space_time_grid <- auto_BAUs(STplane(),
+                                     type="hex",
+                                     cellsize = c(0.1,0.1,1),
+                                     data = STobj1,
+                                     tunit="days",
+                                     convex= -0.2,
+                                     use_INLA = TRUE)
+        expect_is(space_time_grid,"STFDF")
+    }
+
     space_time_grid <- auto_BAUs(STplane(),
                                  type="hex",
                                  cellsize = c(0.1,0.1,1),
                                  data = STobj1,
                                  tunit="days",
-                                 convex= -0.2)
+                                 convex= -0.2,
+                                 use_INLA = FALSE)
     expect_is(space_time_grid,"STFDF")
 
     STobj2 <- space_time_grid[1:5,1:3] # mock space-time STFDF data

@@ -18,6 +18,8 @@ auto_BAUs(manifold, type = "grid", cellsize = NULL, isea3h_res = NULL,
 
 \item{data}{object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame}. Provision of \code{data} implies that the domain is bounded, and is thus necessary when the manifold is a \code{real_line} or a \code{plane} but is not necessary when the manifold is the surface of a \code{sphere}}
 
+\item{use_INLA}{flag indicating whether to use INLA to generate a non-convex hull. Otherwise a convex hull is used}
+
 \item{convex}{convex parameter used for smoothing an extended boundary when working on a finite domain (that is, when the object \code{d} is supplied), see details.}
 
 \item{tunit}{temporal unit when requiring space-time BAUs. Can be either "secs", "mins", "hours" or "days".}

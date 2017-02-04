@@ -14,4 +14,7 @@
 #' @importFrom plyr ddply dlply rbind.fill
 #' @importFrom digest digest
 #' @importFrom Rcpp cppFunction
+#' @importFrom grDevices chull
+#' @importFrom stats .getXlevels coefficients dist kmeans lm median model.extract model.frame model.matrix na.fail optim runif sd terms var
+#' @importFrom utils data
 NULL
