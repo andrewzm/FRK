@@ -439,7 +439,7 @@ setMethod("initialize",signature="STsphere",function(.Object,radius=6371,measure
 #'
 #' @param measure an object of class \code{measure}
 #'
-#' @details A 2D plane is initialised using a \code{measure} object. By default, the measure object (\code{measure}) is the Euclidean distance in 2 dimensions, \link{Euclid_dist}. Distances are computed using functions from the \code{fields} package.
+#' @details A 2D plane is initialised using a \code{measure} object. By default, the measure object (\code{measure}) is the Euclidean distance in 2 dimensions, \link{Euclid_dist}. 
 #' @export
 #' @examples
 #' P <- plane()
@@ -539,7 +539,7 @@ setMethod("initialize",signature="real_line",function(.Object,measure=Euclid_dis
 #' @param dist a function taking two arguments \code{x1,x2}
 #' @param dim the dimension of the manifold (e.g., 2 for a plane)
 #' @param R great-circle radius
-#' @details Initialises an object of class \code{measure} which contains a function \code{dist} used for computing the distance between two points.  Currently the Euclidean distance and the great-circle distance are included. Great-circle distances are computed using \code{rdist.earth} extracted from the package \code{fields}.
+#' @details Initialises an object of class \code{measure} which contains a function \code{dist} used for computing the distance between two points.  Currently the Euclidean distance and the great-circle distance are included.
 #' @export
 #' @examples
 #' M1 <- measure(distR,2)
@@ -562,14 +562,14 @@ Euclid_dist <- function(dim=2L) {
 #' @rdname distances
 #' @export
 gc_dist <- function(R=NULL) {
-    new("measure",dist=function(x1,x2=NULL)  rdist.earth(x1,x2,miles=F,R=R),dim=2L)
+    new("measure",dist=function(x1,x2=NULL)  dist_sphere(x1,x2,R=R),dim=2L)
 }
 
 #' @rdname distances
 #' @export
 gc_dist_time <- function(R=NULL) {
     new("measure",dist=function(x1,x2)  {
-        spatdist <- rdist.earth(x1[,1:2,drop=FALSE],x2[,1:2,drop=FALSE],miles=F,R=R)
+        spatdist <- dist_sphere(x1[,1:2,drop=FALSE],x2[,1:2,drop=FALSE],R=R)
         tdist <- distR(x1[,3],x2[,3])
         sqrt(spatdist^2 + tdist^2) } ,dim=3L)
 }
@@ -1142,34 +1142,30 @@ setMethod("coordnames",signature(x="STIDF"),function(x) {
     return(c(coordnames(x@sp),"t"))
 })
 
-# ## The function rdist.earth was taken from the package fields
-# ## fields is lincensed under GPL >=2
-rdist.earth <- function (x1, x2 = NULL, miles = TRUE, R = NULL)
-{
-    if (is.null(R)) {
-        if (miles)
-            R <- 3963.34
-        else R <- 6378.388
-    }
-    coslat1 <- cos((x1[, 2] * pi)/180)
-    sinlat1 <- sin((x1[, 2] * pi)/180)
-    coslon1 <- cos((x1[, 1] * pi)/180)
-    sinlon1 <- sin((x1[, 1] * pi)/180)
-    if (is.null(x2)) {
-        pp <- cbind(coslat1 * coslon1, coslat1 * sinlon1, sinlat1) %*%
-            t(cbind(coslat1 * coslon1, coslat1 * sinlon1, sinlat1))
-        return(R * acos(ifelse(abs(pp) > 1, 1 * sign(pp), pp)))
-    }
-    else {
-        coslat2 <- cos((x2[, 2] * pi)/180)
-        sinlat2 <- sin((x2[, 2] * pi)/180)
-        coslon2 <- cos((x2[, 1] * pi)/180)
-        sinlon2 <- sin((x2[, 1] * pi)/180)
-        pp <- cbind(coslat1 * coslon1, coslat1 * sinlon1, sinlat1) %*%
-            t(cbind(coslat2 * coslon2, coslat2 * sinlon2, sinlat2))
-        return(R * acos(ifelse(abs(pp) > 1, 1 * sign(pp), pp)))
-    }
+dist_sphere <- function (x1, x2 = NULL, R = NULL)
+    {
+            # if R is null set to radius of Earth
+            if (is.null(R)) R <- 6378.137
+                if(is.null(x2)) x2 <- x1
+
+                # Convert to radians
+                x1 <- x1 * pi/180
+                x2 <- x2 * pi/180
+
+                # Formula from https://en.wikipedia.org/wiki/Great-circle_distance
+                # d = r.acos(n1.n2) where n1 and n2 are the normals to the ellipsoid at the two positions
+                n1 <- cbind(cos(x1[, 2]) * cos(x1[, 1]), cos(x1[, 2]) * sin(x1[, 1]), sin(x1[, 2]))
+                n2 <- cbind(cos(x2[, 2]) * cos(x2[, 1]), cos(x2[, 2]) * sin(x2[, 1]), sin(x2[, 2]))
+                delta <- sigma <- tcrossprod(n1,n2)
+
+                ## Clamp to one
+                return(R * acos(ifelse(abs(delta <- sigma) > 1,
+                                           sign(delta <- sigma),
+                                           delta <- sigma)))
+
 }
+
+
 
 load_dggrids <- function (res = 3L){
     if(!is.numeric(res))

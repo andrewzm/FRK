@@ -13,7 +13,7 @@ plane(measure = Euclid_dist(dim = 2L))
 Initialisation of a 2D plane.
 }
 \details{
-A 2D plane is initialised using a \code{measure} object. By default, the measure object (\code{measure}) is the Euclidean distance in 2 dimensions, \link{Euclid_dist}. Distances are computed using functions from the \code{fields} package.
+A 2D plane is initialised using a \code{measure} object. By default, the measure object (\code{measure}) is the Euclidean distance in 2 dimensions, \link{Euclid_dist}.
 }
 \examples{
 P <- plane()

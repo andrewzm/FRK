@@ -39,6 +39,7 @@ Additional_repositories: https://andrewzm.github.io/dggrids-repo, http://www.mat
 Imports:
     digest,
     dplyr,
+    Hmisc,
     Matrix,
     methods,
     ggplot2,

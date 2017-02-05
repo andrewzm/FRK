@@ -27,7 +27,7 @@ gc_dist_time(R = NULL)
 Useful objects of class \code{distance} included in package.
 }
 \details{
-Initialises an object of class \code{measure} which contains a function \code{dist} used for computing the distance between two points.  Currently the Euclidean distance and the great-circle distance are included. Great-circle distances are computed using \code{rdist.earth} extracted from the package \code{fields}.
+Initialises an object of class \code{measure} which contains a function \code{dist} used for computing the distance between two points.  Currently the Euclidean distance and the great-circle distance are included.
 }
 \examples{
 M1 <- measure(distR,2)
