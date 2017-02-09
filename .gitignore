@@ -3,7 +3,9 @@ FRK.Rproj
 .Rhistory
 .RData
 vignettes/*.log
+vignettes/*.aux
 vignettes/*.tex
+vignettes/*.tex~
 vignettes/*.synctex.gz
 vignettes/figure
 src/*.o
