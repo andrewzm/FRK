@@ -19,4 +19,3 @@ As with the spatial-only sphere, the sphere surface is initialised using a \code
 S <- STsphere()
 print(sp::dimensions(S))
 }
-

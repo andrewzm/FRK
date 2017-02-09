@@ -2,8 +2,8 @@
 % Please edit documentation in R/AllClass.R
 \docType{class}
 \name{Basis_obj-class}
-\alias{Basis-class}
 \alias{Basis_obj-class}
+\alias{Basis-class}
 \alias{TensorP_Basis-class}
 \title{Basis functions}
 \description{
@@ -25,6 +25,6 @@ Basis functions are a central component of \code{FRK}, and the package is design
 
 \item{\code{df}}{a data frame containing other attributes specific to each basis function (for example the geometric centre of the local basis function)}
 }}
+
 \keyword{Basis}
 \keyword{functions}
-

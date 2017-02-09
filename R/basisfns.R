@@ -19,7 +19,7 @@
 #'                    loc=matrix(1:10,10,1),
 #'                    scale=rep(2,10),
 #'                    type="bisquare")
-#' show_basis(G)
+#' # show_basis(G)
 #' @export
 local_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type="Gaussian") {
     stopifnot(is.matrix(loc))
@@ -83,10 +83,12 @@ local_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type
 #'
 #' Basis functions that are not influenced by data points may hinder convergence of the EM algorithm, since the associated hidden states are by and large unidentifiable. We hence provide a means to automatically remove such basis functions through the parameter \code{prune}. The final set only contains basis functions for which the column sums in the associated matrix \eqn{S} (which, recall, is the value/average of the basis functions at/over the data points/polygons) is greater than \code{prune}. If \code{prune == 0}, no basis functions are removed from the original design.
 #' @examples
+#' \dontrun{
 #' library(sp)
 #' library(ggplot2)
 #'
 #' ### Create a synthetic dataset
+#' set.seed(1)
 #' d <- data.frame(lon = runif(n=1000,min = -179, max = 179),
 #'                 lat = runif(n=1000,min = -90, max = 90),
 #'                 z = rnorm(5000))
@@ -100,8 +102,8 @@ local_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type
 #'                 subsamp = 20000)
 #'
 #' ### Plot
-#' show_basis(G,draw_world())
-#'
+#' # show_basis(G,draw_world())
+#' }
 #' @export
 auto_basis <- function(manifold = plane(),
                        data,
@@ -294,8 +296,8 @@ auto_basis <- function(manifold = plane(),
 #'                    scale=rep(20,10),
 #'                    type="bisquare")
 #' G_space_time <- sp_to_ST_basis(G_spatial,1:10,manifold=STsphere())
-#' library(ggplot2)
-#' show_basis(G_space_time)
+#' # library(ggplot2)
+#' # show_basis(G_space_time)
 #' @export
 sp_to_ST_basis <- function(G_spatial,t_knots = 1,manifold=STsphere()) {
     stopifnot(dimensions(manifold(G_spatial))==2)

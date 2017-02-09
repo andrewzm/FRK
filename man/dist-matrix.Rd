@@ -25,4 +25,3 @@ Computes the distances between the coordinates in \code{x1} and the coordinates 
 A <- matrix(rnorm(50),5,10)
 D <- distR(A,A[-3,])
 }
-

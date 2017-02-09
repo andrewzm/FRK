@@ -11,7 +11,7 @@
 #' data(meuse)
 #' coordinates(meuse) = ~x+y # change into an sp object
 #' G <- auto_basis(manifold = plane(),data=meuse,nres = 2,regular=2,prune=10,type = "Gaussian")
-#' show_basis(G,ggplot()) + geom_point(data=data.frame(meuse),aes(x,y))
+#' # show_basis(G,ggplot()) + geom_point(data=data.frame(meuse),aes(x,y))
 #' @export
 setGeneric("show_basis", function(basis,...) standardGeneric("show_basis"))
 
@@ -69,6 +69,7 @@ setGeneric("distance", function(d,x1,x2=NULL) standardGeneric("distance"))
 #' library(sp)
 #'
 #' ### Create a synthetic dataset
+#' set.seed(1)
 #' d <- data.frame(lon = runif(n=1000,min = -179, max = 179),
 #'                 lat = runif(n=1000,min = -90, max = 90),
 #'                 z = rnorm(5000))
@@ -112,8 +113,8 @@ setGeneric("eval_basis", function(basis,s,output="matrix") standardGeneric("eval
 #'                         subsamp = 20000)
 #' G_temporal <- local_basis(manifold=real_line(),loc = matrix(c(1,3)),scale = rep(1,2))
 #' G <- TensorP(G_spatial,G_temporal)
-#' #show_basis(G_spatial)
-#' #show_basis(G_temporal)
+#' # show_basis(G_spatial)
+#' # show_basis(G_temporal)
 setGeneric("TensorP", function(Basis1,Basis2) standardGeneric("TensorP"))
 
 #' @title Return number of resolutions
@@ -121,6 +122,7 @@ setGeneric("TensorP", function(Basis1,Basis2) standardGeneric("TensorP"))
 #' @param b object of class \code{Basis} or \code{SRE}
 #' @examples
 #' library(sp)
+#' set.seed(1)
 #' d <- data.frame(lon = runif(n=1000,min = -179, max = 179),
 #'                 lat = runif(n=1000,min = -90, max = 90),
 #'                 z = rnorm(5000))
@@ -146,11 +148,11 @@ setGeneric("nres", function(b) standardGeneric("nres"))
 #' @param resl resolution number of isea3h DGGRID cells for when \code{type} is ``hex'' and \code{manifold} is \code{sphere}
 #' @param type either ``hex'' or ``grid'', indicating whether gridded or hexagonal BAUs should be used
 #' @param d data, that is, an object of class SpatialPointsDataFrame or SpatialPolygonsDataFrame. Provision of data implies that the domain is bounded (necessary with \code{real_line} and \code{plane} but not necessary with \code{sphere})
-#' @param use_INLA flag indicating whether INLA should be used to create a non-convex domain boundary
+#' @param nonconvex_hull flag indicating whether INLA should be used to create a non-convex domain boundary
 #' @param convex convex parameter for the INLA function inla.nonconvex.hull used for smoothing an extended boundary when working on a finite domain (that is, when the object \code{d} is supplied), see details
 #' @param ... currently unused
 #' @details This generic function is not called directly. Please refer to \code{auto_BAUs} for more details.
-setGeneric("auto_BAU", function(manifold,type,cellsize,resl,d,use_INLA,convex,...) standardGeneric("auto_BAU"))
+setGeneric("auto_BAU", function(manifold,type,cellsize,resl,d,nonconvex_hull,convex,...) standardGeneric("auto_BAU"))
 
 #' @title Bin data into BAUs
 #' @description This is an internal function which bins data into BAUs or aggregates across BAUs if the data have a large footprint. If \code{est_error == TRUE}, the observation error is estimated as in Katzfuss & Cressie (2011)

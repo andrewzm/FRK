@@ -20,4 +20,3 @@ Retrieve slot \code{type} from object
 S <- sphere()
 print(type(S))
 }
-

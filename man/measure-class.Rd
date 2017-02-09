@@ -14,4 +14,3 @@ An object of class \code{measure} contains a distance function and a variable \c
 \keyword{Manifolds,}
 \keyword{planes}
 \keyword{spheres,}
-

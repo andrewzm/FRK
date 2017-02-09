@@ -22,7 +22,6 @@ G_spatial <-  local_basis(manifold = sphere(),
                    scale=rep(20,10),
                    type="bisquare")
 G_space_time <- sp_to_ST_basis(G_spatial,1:10,manifold=STsphere())
-library(ggplot2)
-show_basis(G_space_time)
+# library(ggplot2)
+# show_basis(G_space_time)
 }
-

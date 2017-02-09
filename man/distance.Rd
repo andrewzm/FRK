@@ -3,8 +3,8 @@
 \docType{methods}
 \name{distance}
 \alias{distance}
-\alias{distance,manifold-method}
 \alias{distance,measure-method}
+\alias{distance,manifold-method}
 \title{Compute distance}
 \usage{
 distance(d, x1, x2 = NULL)
@@ -27,4 +27,3 @@ Compute distance using object of class \code{measure} or \code{manifold}.
 distance(sphere(),matrix(0,1,2),matrix(10,1,2))
 distance(plane(),matrix(0,1,2),matrix(10,1,2))
 }
-

@@ -23,4 +23,3 @@ This world map was extracted from the package \code{maps} v.3.0.1 by running \co
 Original S code by Becker, R.A. and Wilks, R.A. This R version is by Brownrigg, R. Enhancements have been made by Minka, T.P. and Deckmyn, A. (2015) maps: Draw Geographical Maps, R package version 3.0.1.
 }
 \keyword{datasets}
-

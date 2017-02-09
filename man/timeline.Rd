@@ -20,4 +20,3 @@ P <- timeline()
 print(type(P))
 print(sp::dimensions(P))
 }
-

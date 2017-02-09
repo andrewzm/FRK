@@ -4,8 +4,10 @@ Title: Fixed Rank Kriging
 Version: 0.1.1
 Date: 2017-01-21
 Authors@R: c(
-    person("Andrew", "Zammit-Mangion", , "andrewzm@gmail.com", c("aut", "cre","cph"))
-    )
+    person("Andrew", "Zammit-Mangion", , "andrewzm@gmail.com", c("aut", "cre")),
+    person("Timothy", "Davis", , "davis@tamu.edu", role = "ctb"),
+    person("Patrick","Amestoy", ,"Patrick.Amestoy@enseeiht.fr", role = "ctb"),
+    person("Iain","Duff", ,"iain.duff@stfc.ac.uk", role = "ctb"))
 Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
 VignetteBuilder: knitr
 Description: Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling
@@ -14,11 +16,11 @@ Description: Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling
     using a fixed set of n basis functions, where n is typically much smaller than
     the number of data points (or polygons) m. The method naturally allows for
     non-stationary, anisotropic covariance functions and the use of observations
-    with varying support (with known error variance). The projected field is a
-    key building block of the Spatial Random Effects (SRE) model, on which this
-    package is based. The package FRK provides helper functions to model, fit, and
-    predict using an SRE with relative ease. Reference: Cressie, N. and Johannesson,
-    G. (2008) <DOI:10.1111/j.1467-9868.2007.00633.x>.
+    with varying support (with known error variance). The projected field is a key
+    building block of the Spatial Random Effects (SRE) model, on which this package
+    is based. The package FRK provides helper functions to model, fit, and predict
+    using an SRE with relative ease. Reference: Cressie, N. and Johannesson, G.
+    (2008) <DOI:10.1111/j.1467-9868.2007.00633.x>.
 BugReports: http://github.com/andrewzm/FRK/issues
 Depends:
     R (>= 3.1)
@@ -53,5 +55,5 @@ Imports:
 License: GPL (>= 2.1)
 NeedsCompilation: yes
 LazyData: true
-RoxygenNote: 5.0.1
+RoxygenNote: 6.0.0
 LinkingTo: Rcpp

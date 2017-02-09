@@ -28,7 +28,7 @@ test_that("can predict over polygons in plane", {
                             type = "grid",
                             data = meuse,
                             convex=-0.05,
-                            use_INLA=FALSE)
+                            nonconvex_hull=FALSE)
     HexPols_df$fs <- 1
     f <- log(zinc) ~ 1
     S <- SRE(f,data = list(meuse),basis = G,BAUs = HexPols_df,est_error = FALSE)

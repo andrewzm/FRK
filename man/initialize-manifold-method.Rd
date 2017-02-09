@@ -13,4 +13,3 @@
 \description{
 Manifold initialisation. This function should not be called directly as \code{manifold} is a virtual class.
 }
-

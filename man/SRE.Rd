@@ -90,7 +90,8 @@ sim_process <- data.frame(x = seq(0.005,0.995,by=0.01)) \%>\%
 sim_data <- sample_n(sim_process,50) \%>\%
     mutate(z = proc + 0.1*rnorm(length(x)), std = 0.1)
 coordinates(sim_data) = ~x + y# change into an sp object
-grid_BAUs <- auto_BAUs(manifold=real_line(),data=sim_data,cellsize = c(0.01),type="grid")
+grid_BAUs <- auto_BAUs(manifold=real_line(),data=sim_data,
+                       nonconvex_hull=FALSE,cellsize = c(0.01),type="grid")
 grid_BAUs$fs = 1
 
 ### Set up SRE model
@@ -112,18 +113,17 @@ S <- SRE.fit(S,n_EM = 5,tol = 1e-5,print_lik=TRUE)
 grid_BAUs <- SRE.predict(S)
 
 ### Plot
-X <- slot(grid_BAUs,"data") \%>\%
-     filter(x >= 0 & x <= 1)
-g1 <- LinePlotTheme() +
-   geom_line(data=X,aes(x,y=mu)) +
-   geom_errorbar(data=X,aes(x=x,ymax = mu + 2*sqrt(var), ymin= mu - 2*sqrt(var))) +
-   geom_point(data = data.frame(sim_data),aes(x=x,y=z),size=3) +
-   geom_line(data=sim_process,aes(x=x,y=proc),col="red")
-print(g1)
+# X <- slot(grid_BAUs,"data") \%>\%
+#      filter(x >= 0 & x <= 1)
+# g1 <- LinePlotTheme() +
+#    geom_line(data=X,aes(x,y=mu)) +
+#    geom_errorbar(data=X,aes(x=x,ymax = mu + 2*sqrt(var), ymin= mu - 2*sqrt(var))) +
+#    geom_point(data = data.frame(sim_data),aes(x=x,y=z),size=3) +
+#    geom_line(data=sim_process,aes(x=x,y=proc),col="red")
+# print(g1)
 }
 \references{
 Katzfuss, M., & Cressie, N. (2011). Spatio-temporal smoothing and EM estimation for massive remote-sensing data sets. Journal of Time Series Analysis, 32(4), 430--446.
 
 Erisman, A. M., & Tinney, W. F. (1975). On computing certain elements of the inverse of a sparse matrix. Communications of the ACM, 18(3), 177--179.
 }
-

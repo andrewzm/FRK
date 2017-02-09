@@ -95,17 +95,3 @@ sparseinv* are taken from the sparseinv package in SuiteSparse. Since sparseinv 
     HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR 
     TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
     EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-rdist.f and rdistC.c are from the R package fields. rdist.f contains the following license information
-
-    c fields, Tools for spatial data
-    c Copyright 2004-2013, Institute for Mathematics Applied Geosciences
-    c University Corporation for Atmospheric Research
-    c Licensed under the GPL -- www.gpl.org/licenses/gpl.html
-
-rdistC.c contains no license information, but LICENSE.note shipped with the package fields contains the following:
-
-    All R code and documentation in this package (fields) is licensed
-    under the terms of the GPL license.
-
-

@@ -74,7 +74,7 @@ new_opts_FRK <- function(d = list(progress = TRUE, verbose = FALSE, parallel=1L)
 #'  \item{"parallel":}{ an integer indicating the number of cores to use. A number 0 or 1 indicates no parallelism}
 #' }
 #' @examples
-#' opts_FRK$set("parallel",2L)
+#' opts_FRK$set("progress",1L)
 #' opts_FRK$get("parallel")
 #' @export
 opts_FRK = new_opts_FRK()

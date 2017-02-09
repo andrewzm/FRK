@@ -4,10 +4,11 @@
 \name{nres}
 \alias{nres}
 \alias{nres,Basis-method}
-\alias{nres,SRE-method}
-\alias{nres,TensorP_Basis-method}
-\alias{nres_SRE,SRE-method}
 \alias{nres_basis,Basis-method}
+\alias{nres,TensorP_Basis-method}
+\alias{nres_basis,Basis-method}
+\alias{nres,SRE-method}
+\alias{nres_SRE,SRE-method}
 \title{Return number of resolutions}
 \usage{
 nres(b)
@@ -26,6 +27,7 @@ Return the number of resolutions from a basis function object.
 }
 \examples{
 library(sp)
+set.seed(1)
 d <- data.frame(lon = runif(n=1000,min = -179, max = 179),
                 lat = runif(n=1000,min = -90, max = 90),
                 z = rnorm(5000))
@@ -39,4 +41,3 @@ G <- auto_basis(manifold = sphere(),data=d,
                 subsamp = 20000)
 nres(G)
 }
-

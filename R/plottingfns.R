@@ -6,7 +6,7 @@
 #' @export
 #' @examples
 #' library(ggplot2)
-#' draw_world(g = ggplot())
+#' # draw_world(g = ggplot())
 draw_world <- function(g = ggplot(),inc_border = TRUE) {
     if(!(is(g, "ggplot"))) stop("g has to be of class ggplot")
     if(!(is.logical(inc_border))) stop("inc_border needs to be TRUE or FALSE")

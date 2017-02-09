@@ -26,4 +26,3 @@ coordinates(meuse) = ~x+y # change into an sp object
 G <- auto_basis(manifold = plane(),data=meuse,nres = 2,regular=2,prune=10,type = "Gaussian")
 print(nbasis(G))
 }
-

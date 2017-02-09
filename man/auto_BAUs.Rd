@@ -5,7 +5,7 @@
 \title{Automatic BAU generation}
 \usage{
 auto_BAUs(manifold, type = "grid", cellsize = NULL, isea3h_res = NULL,
-  data = NULL, use_INLA = TRUE, convex = -0.05, tunit = NULL, ...)
+  data = NULL, nonconvex_hull = TRUE, convex = -0.05, tunit = NULL, ...)
 }
 \arguments{
 \item{manifold}{object of class \code{manifold}}
@@ -18,7 +18,7 @@ auto_BAUs(manifold, type = "grid", cellsize = NULL, isea3h_res = NULL,
 
 \item{data}{object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame}. Provision of \code{data} implies that the domain is bounded, and is thus necessary when the manifold is a \code{real_line} or a \code{plane} but is not necessary when the manifold is the surface of a \code{sphere}}
 
-\item{use_INLA}{flag indicating whether to use INLA to generate a non-convex hull. Otherwise a convex hull is used}
+\item{nonconvex_hull}{flag indicating whether to use INLA to generate a non-convex hull. Otherwise a convex hull is used}
 
 \item{convex}{convex parameter used for smoothing an extended boundary when working on a finite domain (that is, when the object \code{d} is supplied), see details.}
 
@@ -39,12 +39,13 @@ Two types of BAUs are supported by \code{FRK}: ``hex'' (hexagonal) and ``grid'' 
 \examples{
 ## First a 1D example
 library(sp)
+set.seed(1)
 data <- data.frame(x = runif(10)*10, y = 0, z= runif(10)*10)
 coordinates(data) <- ~x+y
 Grid1D_df <- auto_BAUs(manifold = real_line(),
                        cellsize = 1,
                        data=data)
-spplot(Grid1D_df)
+# spplot(Grid1D_df)
 
 ## Now a 2D example
 data(meuse)
@@ -56,7 +57,7 @@ coordinates(meuse) = ~x+y # change into an sp object
                              type = "grid",
                              data = meuse,
                              convex=-0.05)
-    plot(GridPols_df)
+    # plot(GridPols_df)
 
     ## Hex BAUs
     HexPols_df <- auto_BAUs(manifold = plane(),
@@ -64,7 +65,6 @@ coordinates(meuse) = ~x+y # change into an sp object
                             type = "hex",
                             data = meuse,
                             convex=-0.05)
-    plot(HexPols_df)
+    # plot(HexPols_df)
 }
 }
-

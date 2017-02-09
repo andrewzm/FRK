@@ -25,4 +25,3 @@ Maximum temperature data obtained from the National Oceanic and Atmospheric Admi
 Chahine, M. et al. (2006). AIRS: Improving weather forecasting and providing new data on greenhouse gases. Bulletin of the American Meteorological Society 87, 911--26.
 }
 \keyword{datasets}
-

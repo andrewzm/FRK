@@ -22,4 +22,3 @@ The data used here was obtained from http://webpages.sou.edu/~sahrk/dgg/isea.old
 Sahr, K. (2008) Location coding on icosahedral aperture 3 hexagon discrete global grids. Computers, Environment and Urban Systems, 32, 174--187.
 }
 \keyword{datasets}
-

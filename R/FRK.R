@@ -11,7 +11,7 @@
 #' @import spacetime
 #' @import parallel
 #' @import dplyr
-#' @importFrom Hmisc round.POSIXt trunc.POSIXt
+#' @importFrom Hmisc round.POSIXt trunc.POSIXt ceil
 #' @importFrom plyr ddply dlply rbind.fill
 #' @importFrom digest digest
 #' @importFrom Rcpp cppFunction

@@ -13,7 +13,7 @@ setMethod("initialize",signature="manifold",function(.Object) {
 #' @param cellsize denotes size of gridcell when \code{type} = ``grid''. Needs to be of length 1 (isotropic-grid case) or a vector of length \code{dimensions(manifold)}
 #' @param isea3h_res resolution number of the isea3h DGGRID cells for when type is ``hex'' and manifold is the surface of a \code{sphere}
 #' @param data object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame}. Provision of \code{data} implies that the domain is bounded, and is thus necessary when the manifold is a \code{real_line} or a \code{plane} but is not necessary when the manifold is the surface of a \code{sphere}
-#' @param use_INLA flag indicating whether to use INLA to generate a non-convex hull. Otherwise a convex hull is used
+#' @param nonconvex_hull flag indicating whether to use INLA to generate a non-convex hull. Otherwise a convex hull is used
 #' @param convex convex parameter used for smoothing an extended boundary when working on a finite domain (that is, when the object \code{d} is supplied), see details.
 #' @param tunit temporal unit when requiring space-time BAUs. Can be either "secs", "mins", "hours" or "days".
 #' @param ... currently unused
@@ -25,12 +25,13 @@ setMethod("initialize",signature="manifold",function(.Object) {
 #' @examples
 #' ## First a 1D example
 #' library(sp)
+#' set.seed(1)
 #' data <- data.frame(x = runif(10)*10, y = 0, z= runif(10)*10)
 #' coordinates(data) <- ~x+y
 #' Grid1D_df <- auto_BAUs(manifold = real_line(),
 #'                        cellsize = 1,
 #'                        data=data)
-#' spplot(Grid1D_df)
+#' # spplot(Grid1D_df)
 #'
 #' ## Now a 2D example
 #' data(meuse)
@@ -42,7 +43,7 @@ setMethod("initialize",signature="manifold",function(.Object) {
 #'                              type = "grid",
 #'                              data = meuse,
 #'                              convex=-0.05)
-#'     plot(GridPols_df)
+#'     # plot(GridPols_df)
 #'
 #'     ## Hex BAUs
 #'     HexPols_df <- auto_BAUs(manifold = plane(),
@@ -50,11 +51,11 @@ setMethod("initialize",signature="manifold",function(.Object) {
 #'                             type = "hex",
 #'                             data = meuse,
 #'                             convex=-0.05)
-#'     plot(HexPols_df)
+#'     # plot(HexPols_df)
 #' }
 #' @export
 auto_BAUs <- function(manifold, type="grid",cellsize = NULL,
-                      isea3h_res=NULL,data=NULL,use_INLA=TRUE,
+                      isea3h_res=NULL,data=NULL,nonconvex_hull=TRUE,
                       convex=-0.05,tunit=NULL,...) {
 
 
@@ -99,19 +100,19 @@ auto_BAUs <- function(manifold, type="grid",cellsize = NULL,
     if(grepl("ST",class(manifold)) & is.null(tunit)) tunit  <-  .choose_BAU_tunit_from_data(data)
 
     auto_BAU(manifold=manifold,type=type,cellsize=cellsize,resl=resl,
-             d=data,use_INLA=use_INLA,convex=convex,tunit=tunit)
+             d=data,nonconvex_hull=nonconvex_hull,convex=convex,tunit=tunit)
 }
 
 
 setMethod("auto_BAU",signature(manifold="plane"),
           function(manifold,type="grid",cellsize = c(1,1),resl=resl,d=NULL,
-                   use_INLA=TRUE,convex=-0.05,...) {
+                   nonconvex_hull=TRUE,convex=-0.05,...) {
 
-              if(use_INLA)
+              if(nonconvex_hull)
                if(!requireNamespace("INLA"))
                    stop("For creating a non-convex hull INLA needs to be installed. Please install it using
                         install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\"). Alternatively
-                        please set use_INLA=FALSE to use a simple convex hull.")
+                        please set nonconvex_hull=FALSE to use a simple convex hull.")
 
               X1 <- X2 <- NULL # Suppress bindings warning
               if(is(d,"SpatialPoints")){
@@ -131,11 +132,11 @@ setMethod("auto_BAU",signature(manifold="plane"),
               ## Increase convex until domain is contiguous and smooth (distance betweeen successive points is small)
               OK <- 0
               while(!OK) {
-                  bndary_seg <- .find_hull(coords,use_INLA=use_INLA,convex=convex)
+                  bndary_seg <- .find_hull(coords,nonconvex_hull=nonconvex_hull,convex=convex)
                   D <- dist(bndary_seg) %>% as.matrix()
                   distances <- unique(band(D,1,1)@x)[-1]
                   OK <- 1
-                  if(use_INLA) { # somtimes we get islands... check and redo
+                  if(nonconvex_hull) { # somtimes we get islands... check and redo
                       OK <- 0.5*sd(distances) < median(distances)
                       convex <- convex*2
                   }
@@ -244,7 +245,7 @@ setMethod("auto_BAU",signature(manifold="timeline"),
 
 setMethod("auto_BAU",signature(manifold = c("STmanifold")),
           function(manifold,type="grid",cellsize = c(1,1,1),resl=resl,d=NULL,
-                   use_INLA=TRUE,convex=-0.05,...) {
+                   nonconvex_hull=TRUE,convex=-0.05,...) {
 
               if(is(d,"ST")) {
                   space_part <- d@sp
@@ -265,7 +266,7 @@ setMethod("auto_BAU",signature(manifold = c("STmanifold")),
               }
 
               spatial_BAUs <- auto_BAU(manifold=spat_manifold,cellsize=cellsize[1:2],
-                                       resl=resl,type=type,d=space_part,use_INLA=use_INLA,
+                                       resl=resl,type=type,d=space_part,nonconvex_hull=nonconvex_hull,
                                        convex=convex,...)
               temporal_BAUs <- auto_BAU(manifold=timeline(), cellsize=cellsize[3],
                                         resl=resl,type=type,d=time_part,convex=convex,...)
@@ -439,7 +440,7 @@ setMethod("initialize",signature="STsphere",function(.Object,radius=6371,measure
 #'
 #' @param measure an object of class \code{measure}
 #'
-#' @details A 2D plane is initialised using a \code{measure} object. By default, the measure object (\code{measure}) is the Euclidean distance in 2 dimensions, \link{Euclid_dist}. 
+#' @details A 2D plane is initialised using a \code{measure} object. By default, the measure object (\code{measure}) is the Euclidean distance in 2 dimensions, \link{Euclid_dist}.
 #' @export
 #' @examples
 #' P <- plane()
@@ -616,7 +617,7 @@ distR <- function (x1, x2 = NULL)  {
 #'                  x = c(0,1,0,0,2,3,2,2),
 #'                  y=c(0,0,1,0,0,1,1,0))
 #' pols <- df_to_SpatialPolygons(df,"id",c("x","y"),CRS())
-#' plot(pols)
+#' # plot(pols)
 df_to_SpatialPolygons <- function(df,keys,coords,proj) {
     if(!is(df,"data.frame")) stop("df needs to be a data frame")
     if(!is(keys,"character")) stop("keys needs to be of class character")
@@ -685,7 +686,7 @@ df_to_SpatialPolygons <- function(df,keys,coords,proj) {
 #' pols <- df_to_SpatialPolygons(df,"id",c("x","y"),CRS())
 #' polsdf <- SpatialPolygonsDataFrame(pols,data.frame(p = c(1,2),row.names=row.names(pols)))
 #' df2 <- SpatialPolygonsDataFrame_to_df(polsdf)
-#' ggplot(df2,aes(x=x,y=y,group=id)) + geom_polygon()
+#' # ggplot(df2,aes(x=x,y=y,group=id)) + geom_polygon()
 SpatialPolygonsDataFrame_to_df <- function(sp_polys,vars = names(sp_polys)) {
     #if(!("id" %in% names(sp_polys@data))) stop("sp_polys has to have an id columns in its data frame")
     #if("id" %in% vars) stop("vars should not contain the variable 'id' (this is implicitly assumed)")
@@ -1210,6 +1211,8 @@ process_isea3h <- function(isea3h,resl) {
     ## Algorithm taken from
     ## https://stat.ethz.ch/pipermail/r-sig-geo/2015-July/023168.html
 
+    if(!requireNamespace("rgeos"))
+        stop("rgeos is required for processing hexagons on the sphere. Please install using install.packages().")
     res <- lon <- probpoly <- centroid <- lat <- NULL # suppress bindings warning
 
     isea3h_res <- filter(isea3h,res == resl) %>%
@@ -1463,8 +1466,8 @@ as.SpatialPolygons.GridTopology2 <- function (grd, proj4string = CRS(as.characte
 
 }
 
-.find_hull <- function(coords,use_INLA=TRUE,convex = -0.05) {
-    if(use_INLA) {
+.find_hull <- function(coords,nonconvex_hull=TRUE,convex = -0.05) {
+    if(nonconvex_hull) {
         bndary_seg = INLA::inla.nonconvex.hull(coords,convex=convex)$loc
     } else {
         conv_hull <- coordinates(coords)[chull(coordinates(coords)),]

@@ -26,4 +26,3 @@ G <-  local_basis(manifold = plane(),
                    type="bisquare")
 manifold(G)
 }
-

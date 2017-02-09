@@ -9,7 +9,7 @@ test_that("basic_wrapper",{
              list(Z),
              cellsize = c(0.1,0.1),
              n_EM = 2,
-             use_INLA = FALSE)
+             nonconvex_hull = FALSE)
     Pred <- SRE.predict(SRE_model = S,
                         obs_fs = TRUE)
 })

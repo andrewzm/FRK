@@ -27,6 +27,5 @@ df <- data.frame(id = c(rep(1,4),rep(2,4)),
 pols <- df_to_SpatialPolygons(df,"id",c("x","y"),CRS())
 polsdf <- SpatialPolygonsDataFrame(pols,data.frame(p = c(1,2),row.names=row.names(pols)))
 df2 <- SpatialPolygonsDataFrame_to_df(polsdf)
-ggplot(df2,aes(x=x,y=y,group=id)) + geom_polygon()
+# ggplot(df2,aes(x=x,y=y,group=id)) + geom_polygon()
 }
-

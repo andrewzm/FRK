@@ -1,8 +1,9 @@
 ## Test environments
 * local ubuntu 14.04, R 3.2.0
 * local ubuntu 14.04, R 3.3.2
-* win-builder (R 3.3.1)
-* R-devel
+* local Win64, R 3.3.2
+* win-builder, R 3.3.2
+* win-builder, R-devel
 
 ## R CMD check results
 There were no ERRORs, WARNINGs.
@@ -14,3 +15,5 @@ There were three NOTEs
 ## Downstream dependencies
 There are no downstream dependencies
 
+## Additional comments
+- Some source code is copyrighted; following CRAN policy the authors of this code have been listed as package contributors after having notified them and obtained their consent.

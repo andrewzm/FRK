@@ -19,4 +19,3 @@ The 2D surface of a sphere is initialised using a \code{radius} parameter. The d
 S <- sphere()
 print(sp::dimensions(S))
 }
-

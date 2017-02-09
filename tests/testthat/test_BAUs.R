@@ -38,7 +38,7 @@ test_that("plane_BAUs",{
                             type="grid",
                             cellsize = 0.5,
                             data=data,
-                            use_INLA = TRUE)
+                            nonconvex_hull = TRUE)
         expect_is(Grid2D,"SpatialPixelsDataFrame")
         expect_equal(names(Grid2D),c("x","y"))
     }
@@ -49,7 +49,7 @@ test_that("plane_BAUs",{
                         type="grid",
                         cellsize = 0.5,
                         data=data,
-                        use_INLA = FALSE)
+                        nonconvex_hull = FALSE)
     expect_is(Grid2D,"SpatialPixelsDataFrame")
     expect_equal(names(Grid2D),c("x","y"))
 
@@ -116,7 +116,7 @@ test_that("SpaceTime_BAUs",{
                                      data = STobj1,
                                      tunit="days",
                                      convex= -0.2,
-                                     use_INLA = TRUE)
+                                     nonconvex_hull = TRUE)
         expect_is(space_time_grid,"STFDF")
     }
 
@@ -126,7 +126,7 @@ test_that("SpaceTime_BAUs",{
                                  data = STobj1,
                                  tunit="days",
                                  convex= -0.2,
-                                 use_INLA = FALSE)
+                                 nonconvex_hull = FALSE)
     expect_is(space_time_grid,"STFDF")
 
     STobj2 <- space_time_grid[1:5,1:3] # mock space-time STFDF data

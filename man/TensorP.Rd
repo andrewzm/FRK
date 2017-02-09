@@ -40,7 +40,6 @@ G_spatial <- auto_basis(manifold = sphere(),
                         subsamp = 20000)
 G_temporal <- local_basis(manifold=real_line(),loc = matrix(c(1,3)),scale = rep(1,2))
 G <- TensorP(G_spatial,G_temporal)
-#show_basis(G_spatial)
-#show_basis(G_temporal)
+# show_basis(G_spatial)
+# show_basis(G_temporal)
 }
-

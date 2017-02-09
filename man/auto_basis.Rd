@@ -59,10 +59,12 @@ If the manifold is the surface of a sphere, then basis functions are placed on t
 Basis functions that are not influenced by data points may hinder convergence of the EM algorithm, since the associated hidden states are by and large unidentifiable. We hence provide a means to automatically remove such basis functions through the parameter \code{prune}. The final set only contains basis functions for which the column sums in the associated matrix \eqn{S} (which, recall, is the value/average of the basis functions at/over the data points/polygons) is greater than \code{prune}. If \code{prune == 0}, no basis functions are removed from the original design.
 }
 \examples{
+\dontrun{
 library(sp)
 library(ggplot2)
 
 ### Create a synthetic dataset
+set.seed(1)
 d <- data.frame(lon = runif(n=1000,min = -179, max = 179),
                 lat = runif(n=1000,min = -90, max = 90),
                 z = rnorm(5000))
@@ -76,7 +78,6 @@ G <- auto_basis(manifold = sphere(),data=d,
                 subsamp = 20000)
 
 ### Plot
-show_basis(G,draw_world())
-
+# show_basis(G,draw_world())
 }
-
+}

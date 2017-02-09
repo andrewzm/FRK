@@ -20,4 +20,3 @@ P <- STplane()
 print(type(P))
 print(sp::dimensions(P))
 }
-

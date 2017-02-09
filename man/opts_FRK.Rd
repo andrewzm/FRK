@@ -24,8 +24,7 @@ The main options list for the FRK package.
 }
 }
 \examples{
-opts_FRK$set("parallel",2L)
+opts_FRK$set("progress",1L)
 opts_FRK$get("parallel")
 }
 \keyword{datasets}
-

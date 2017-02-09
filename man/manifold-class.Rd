@@ -2,13 +2,13 @@
 % Please edit documentation in R/AllClass.R
 \docType{class}
 \name{manifold-class}
-\alias{STmanifold-class}
-\alias{STplane-class}
-\alias{STsphere-class}
 \alias{manifold-class}
-\alias{plane-class}
-\alias{real_line-class}
+\alias{STmanifold-class}
 \alias{sphere-class}
+\alias{STsphere-class}
+\alias{plane-class}
+\alias{STplane-class}
+\alias{real_line-class}
 \alias{timeline-class}
 \title{@docType class
  @title manifold}
@@ -23,4 +23,3 @@ A \code{manifold} object is characterised by a character variable \code{type}, w
 \keyword{Manifolds,}
 \keyword{planes}
 \keyword{spheres,}
-

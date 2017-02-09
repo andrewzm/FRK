@@ -66,7 +66,7 @@ test_that("SRE 2D plane works",{
                            type="grid",
                            data=sim_data,
                            cellsize = c(0.4),
-                           use_INLA=FALSE)
+                           nonconvex_hull=FALSE)
     grid_BAUs$fs = 1
 
     ### Set up SRE model

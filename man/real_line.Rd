@@ -20,4 +20,3 @@ R <- real_line()
 print(type(R))
 print(sp::dimensions(R))
 }
-

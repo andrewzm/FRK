@@ -49,7 +49,8 @@
 #' sim_data <- sample_n(sim_process,50) %>%
 #'     mutate(z = proc + 0.1*rnorm(length(x)), std = 0.1)
 #' coordinates(sim_data) = ~x + y# change into an sp object
-#' grid_BAUs <- auto_BAUs(manifold=real_line(),data=sim_data,cellsize = c(0.01),type="grid")
+#' grid_BAUs <- auto_BAUs(manifold=real_line(),data=sim_data,
+#'                        nonconvex_hull=FALSE,cellsize = c(0.01),type="grid")
 #' grid_BAUs$fs = 1
 #'
 #' ### Set up SRE model
@@ -71,14 +72,14 @@
 #' grid_BAUs <- SRE.predict(S)
 #'
 #' ### Plot
-#' X <- slot(grid_BAUs,"data") %>%
-#'      filter(x >= 0 & x <= 1)
-#' g1 <- LinePlotTheme() +
-#'    geom_line(data=X,aes(x,y=mu)) +
-#'    geom_errorbar(data=X,aes(x=x,ymax = mu + 2*sqrt(var), ymin= mu - 2*sqrt(var))) +
-#'    geom_point(data = data.frame(sim_data),aes(x=x,y=z),size=3) +
-#'    geom_line(data=sim_process,aes(x=x,y=proc),col="red")
-#' print(g1)
+#' # X <- slot(grid_BAUs,"data") %>%
+#' #      filter(x >= 0 & x <= 1)
+#' # g1 <- LinePlotTheme() +
+#' #    geom_line(data=X,aes(x,y=mu)) +
+#' #    geom_errorbar(data=X,aes(x=x,ymax = mu + 2*sqrt(var), ymin= mu - 2*sqrt(var))) +
+#' #    geom_point(data = data.frame(sim_data),aes(x=x,y=z),size=3) +
+#' #    geom_line(data=sim_process,aes(x=x,y=proc),col="red")
+#' # print(g1)
 SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_model = "ind",vgm_model = NULL, K_type = "block-exponential") {
 
     .check_args1(f=f,data=data,basis=basis,BAUs=BAUs,est_error=est_error)
@@ -283,7 +284,7 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", 
             num_at_res <- count_res(SRE_model)[res,]$n
             if(num_at_res < m/4 & length(cross_validate) > 1) {
                 print(paste0("Dividing data into ",num_at_res*2," clusters"))
-                numclusters = ceil(min(num_at_res*2, m))
+                numclusters = Hmisc::ceil(min(num_at_res*2, m))
                 cluster_labels <- kmeans(all_coords,centers = numclusters)$cluster
             } else {
                 numclusters = m
