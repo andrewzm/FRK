@@ -66,7 +66,7 @@
 #'          est_error = FALSE)
 #'
 #' ### Fit with 5 EM iterations so as not to take too much time
-#' S <- SRE.fit(S,n_EM = 5,tol = 1e-5,print_lik=TRUE)
+#' S <- SRE.fit(S,n_EM = 5,tol = 0.01,print_lik=TRUE)
 #'
 #' ### Predict over BAUs
 #' grid_BAUs <- SRE.predict(S)
@@ -255,7 +255,7 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mode
 
 #' @rdname SRE
 #' @export
-SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", print_lik=FALSE, cross_validate=1L) {
+SRE.fit <- function(SRE_model,n_EM = 100L, tol = 0.01, lambda = 0, method="EM", print_lik=FALSE, cross_validate=1L) {
     .check_args2(n_EM = n_EM,tol = tol,lambda = lambda,method = method,print_lik = print_lik,cross_validate = cross_validate)
     if(!(length(cross_validate) == 1 | length(cross_validate) == nrow(count_res(SRE_model))))
         stop("cross_validate needs to be of length one or of length equal to the number of basis-function resolutions")
@@ -351,7 +351,7 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", 
     S_part
 }
 
-.SRE.fit <- function(SRE_model,n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", print_lik=FALSE) {
+.SRE.fit <- function(SRE_model,n_EM = 100L, tol = 0.01, lambda = 0, method="EM", print_lik=FALSE) {
     n <- nbasis(SRE_model)
     X <- SRE_model@X
     lk <- rep(0,n_EM)
@@ -1282,7 +1282,7 @@ setMethod("summary",signature(object="SRE"),
 }
 
 
-.check_args2 <- function(n_EM = 100L, tol = 1e-5, lambda = 0, method="EM", print_lik=FALSE, cross_validate=1L,...) {
+.check_args2 <- function(n_EM = 100L, tol = 0.01, lambda = 0, method="EM", print_lik=FALSE, cross_validate=1L,...) {
     if(!is.numeric(n_EM)) stop("n_EM needs to be an integer")
     if(!(n_EM <- round(n_EM)) > 0) stop("n_EM needs to be greater than 0")
     if(!is.numeric(tol)) stop("tol needs to be a number greater than zero")
