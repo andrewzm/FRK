@@ -84,6 +84,8 @@ FRK <- function(f,                     # formula
             G <- TensorP(G_spatial,G_temporal)         # take the tensor product
 
         }
+    } else {
+        G <- basis
     }
 
     print(paste0("Modelling using ",nbasis(G)," basis functions"))
