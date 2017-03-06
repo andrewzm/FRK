@@ -71,7 +71,7 @@ SuiteSparse_config.h is from SuiteSparse. The file contains the following licens
  
 
 
-sparseinv* are taken from the sparseinv package in SuiteSparse. Since sparseinv is posted at MATLAB Central, it falls under the BSD liense. The BSD license is the following
+sparseinv* are taken from the sparseinv package in SuiteSparse. Since sparseinv is posted at MATLAB Central, it falls under the BSD license. The BSD license is the following
 
     Copyright (c)   Copyright 2011, Timothy A. Davis, University of Florida
     All rights reserved.

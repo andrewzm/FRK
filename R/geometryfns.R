@@ -1476,8 +1476,8 @@ as.SpatialPolygons.GridTopology2 <- function (grd, proj4string = CRS(as.characte
         # expand convex hull out
         bndary_seg <- conv_hull
         delta <- max(apply(bound_box,1,function(x) diff(range(x))))
-        bndary_seg[,1] <- conv_hull[,1] + sign(conv_hull[,1] - centroid[1])*delta/5
-        bndary_seg[,2] <- conv_hull[,2] + sign(conv_hull[,2] - centroid[2])*delta/5
+        bndary_seg[,1] <- conv_hull[,1] + sign(conv_hull[,1] - centroid[1])*delta*(-convex)
+        bndary_seg[,2] <- conv_hull[,2] + sign(conv_hull[,2] - centroid[2])*delta*(-convex)
         #bndary_seg[,1] <- centroid[1] + (conv_hull[,1] - centroid[1])*2
         #bndary_seg[,2] <- centroid[2] + (conv_hull[,2] - centroid[2])*2
         colnames(bndary_seg) <- NULL

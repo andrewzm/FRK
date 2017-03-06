@@ -15,7 +15,7 @@ FRK(f, data, basis = NULL, BAUs = NULL, K_type = "block-exponential",
 SRE(f, data, basis, BAUs, est_error = FALSE, average_in_BAU = TRUE,
   fs_model = "ind", vgm_model = NULL, K_type = "block-exponential")
 
-SRE.fit(SRE_model, n_EM = 100L, tol = 1e-05, lambda = 0, method = "EM",
+SRE.fit(SRE_model, n_EM = 100L, tol = 0.01, lambda = 0, method = "EM",
   print_lik = FALSE, cross_validate = 1L)
 
 SRE.predict(SRE_model, obs_fs = FALSE, pred_polys = NULL,
@@ -107,7 +107,7 @@ S <- SRE(f,list(sim_data),G,
          est_error = FALSE)
 
 ### Fit with 5 EM iterations so as not to take too much time
-S <- SRE.fit(S,n_EM = 5,tol = 1e-5,print_lik=TRUE)
+S <- SRE.fit(S,n_EM = 5,tol = 0.01,print_lik=TRUE)
 
 ### Predict over BAUs
 grid_BAUs <- SRE.predict(S)

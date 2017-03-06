@@ -959,6 +959,7 @@ SRE.predict <- function(SRE_model,obs_fs=FALSE,pred_polys = NULL,pred_time = NUL
         BAUs <- BAUs[needed_BAUs,]
         CP <- CP[,needed_BAUs]
         CZ <- CZ[,needed_BAUs]
+        Sm@S0 <- Sm@S0[needed_BAUs,]
     }
 
     # Deprecated:

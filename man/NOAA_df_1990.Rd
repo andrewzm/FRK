@@ -19,9 +19,9 @@
 NOAA_df_1990
 }
 \description{
-Maximum temperature data obtained from the National Oceanic and Atmospheric Administration (NOAA) for a part of the USA between 1990 and 1993 (inclusive).
+Maximum temperature data obtained from the National Oceanic and Atmospheric Administration (NOAA) for a part of the USA between 1990 and 1993 (inclusive). See http://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCDC/.DAILY/.FSOD/.
 }
 \references{
-Chahine, M. et al. (2006). AIRS: Improving weather forecasting and providing new data on greenhouse gases. Bulletin of the American Meteorological Society 87, 911--26.
+National Climatic Data Center, March 1993: Local Climatological Data. Environmental Information summary (C-2), NOAA-NCDC, Asheville, NC.
 }
 \keyword{datasets}

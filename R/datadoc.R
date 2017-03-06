@@ -18,7 +18,7 @@
 
 #' @title NOAA maximum temperature data for 1990-1993
 #'
-#' @description Maximum temperature data obtained from the National Oceanic and Atmospheric Administration (NOAA) for a part of the USA between 1990 and 1993 (inclusive).
+#' @description Maximum temperature data obtained from the National Oceanic and Atmospheric Administration (NOAA) for a part of the USA between 1990 and 1993 (inclusive). See http://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCDC/.DAILY/.FSOD/.
 #'
 #' @format A data frame with 196253 rows and 8 variables:
 #' \describe{
@@ -32,7 +32,7 @@
 #'   \item{lat}{latitude coordinate of retrieval}
 #' }
 #' @docType data
-#' @references  Chahine, M. et al. (2006). AIRS: Improving weather forecasting and providing new data on greenhouse gases. Bulletin of the American Meteorological Society 87, 911--26.
+#' @references  National Climatic Data Center, March 1993: Local Climatological Data. Environmental Information summary (C-2), NOAA-NCDC, Asheville, NC.
 "NOAA_df_1990"
 
 #' @title ISEA Aperture 3 Hexagon (ISEA3H) Discrete Global Grid

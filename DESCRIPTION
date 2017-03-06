@@ -7,7 +7,8 @@ Authors@R: c(
     person("Andrew", "Zammit-Mangion", , "andrewzm@gmail.com", c("aut", "cre")),
     person("Timothy", "Davis", , "davis@tamu.edu", role = "ctb"),
     person("Patrick","Amestoy", ,"Patrick.Amestoy@enseeiht.fr", role = "ctb"),
-    person("Iain","Duff", ,"iain.duff@stfc.ac.uk", role = "ctb"))
+    person("Iain","Duff", ,"iain.duff@stfc.ac.uk", role = "ctb"),
+	person("John K.","Reid", ,"John.Reid@stfc.ac.uk", role = "ctb"))
 Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
 VignetteBuilder: knitr
 Description: Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling

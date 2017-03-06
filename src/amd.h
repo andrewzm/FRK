@@ -4,7 +4,7 @@
 
 /* ------------------------------------------------------------------------- */
 /* AMD Version 2.2, Copyright (c) 2007 by Timothy A. Davis,                  */
-/* Patrick R. Amestoy, and Iain S. Duff.  See ../README.txt for License.     */
+/* Patrick R. Amestoy, and Iain S. Duff.  See ../LICENSE.note for License.     */
 /* email: DrTimothyAldenDavis@gmail.com                                      */
 /* ------------------------------------------------------------------------- */
 
