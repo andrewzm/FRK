@@ -176,7 +176,7 @@ Takahashi_Davis <- function(Q,return_perm_chol = 0,cholQp = matrix(0,0,0),P=0) {
 
 }
 
-
+# #' @useDynLib FRK AMD_order_wrapper
 amd_Davis <- function(Q) {
   n <- nrow(Q)
   Ap <- Q@p
@@ -186,6 +186,8 @@ amd_Davis <- function(Q) {
           P = integer(n), Control=double(5),Info=double(20))
   return(X$P + 1)
 }
+
+# #' @useDynLib FRK AMD_order_wrapper
 amd_test <- function() {
   n=24
   Ap = c( 0, 9, 15, 21, 27, 33, 39, 48, 57, 61, 70, 76, 82, 88, 94, 100,
@@ -222,7 +224,7 @@ amd_test <- function() {
 }
 
 
-
+# #' @useDynLib FRK sparseinv
 sparseinv_wrapper <- function(L,d,U,Zpattern) {
 
   n <- nrow(L)
@@ -272,7 +274,7 @@ quickrBind <- function(L) {
 }
 
 quickBind <- function(L,rc = "c") {
-  
+
   ## http://stackoverflow.com/questions/8843700/creating-sparse-matrix-from-a-list-of-sparse-vectors
   ## L list a list of sparseMatrices
   ## Should do in C
@@ -302,11 +304,11 @@ quickBind <- function(L,rc = "c") {
       nc <- nc + ncol(tempMat)
       nr <- nrow(tempMat)
     } else if (rc == "r") {
-      nr <- nr + nrow(tempMat)  
+      nr <- nr + nrow(tempMat)
       nc <- ncol(tempMat)
     }
   }
-  return (sparseMatrix(i=r,j=c,x=v,dims = c(nr,nc)));  
+  return (sparseMatrix(i=r,j=c,x=v,dims = c(nr,nc)));
 }
 
 reverse_permute <- function(X,idx) {

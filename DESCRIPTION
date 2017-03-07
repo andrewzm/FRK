@@ -2,7 +2,7 @@ Package: FRK
 Type: Package
 Title: Fixed Rank Kriging
 Version: 0.1.1
-Date: 2017-01-21
+Date: 2017-03-06
 Authors@R: c(
     person("Andrew", "Zammit-Mangion", , "andrewzm@gmail.com", c("aut", "cre")),
     person("Timothy", "Davis", , "davis@tamu.edu", role = "ctb"),
@@ -37,22 +37,23 @@ Suggests:
     splancs,
     testthat,
     verification
-Enhances: dggrids
-Additional_repositories: https://andrewzm.github.io/dggrids-repo, http://www.math.ntnu.no/inla/R/stable
 Imports:
     digest,
     dplyr,
+    ggplot2,
+    grDevices,
     Hmisc,
     Matrix,
     methods,
-    ggplot2,
-    grDevices,
     plyr,
+    Rcpp,
     sp,
     spacetime,
     stats,
-    Rcpp,
     utils
+Enhances: dggrids
+Additional_repositories: https://andrewzm.github.io/dggrids-repo, 
+                         http://www.math.ntnu.no/inla/R/stable
 License: GPL (>= 2.1)
 NeedsCompilation: yes
 LazyData: true
