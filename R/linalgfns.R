@@ -1,41 +1,49 @@
+
+##########################################
+######### NOT EXPORTED ###################
+##########################################
+
 #' @title Sparse Cholesky Factorisation with fill-in reducing permutations
 #'
 #' @noRd
-#' @description This function is similar to chol(A,pivot=T) when A is a sparse matrix. The fill-in reduction permutation is the approximate minimum degree permutation of
-#' Davis' SuiteSparse package configured to be slightly more aggressive than that in the Matrix package. If the Cholesky factor fails, the matrix is coerced to be symmetric.
-#'
+#' @description This function is similar to chol(A,pivot=T) when A is a sparse matrix. By default, the fill-in reduction permutation is the approximate minimum degree permutation of Davis' SuiteSparse package configured to be slightly more aggressive than that in the Matrix package. When using the \code{R} Cholesyk decomposition, if the Cholesky factor fails because of lack of symmetry, the matrix is coerced to be symmetric using \code{forceSymmetric()}.
 #' @param Q matrix (sparse or dense), the Cholesky factor of which needs to be found
-#' @param method If "amd", Timothy Davis SuiteSparse algorithm is used, if not that in the R Matrix package is employed
+#' @param method If "amd", the SuiteSparse amd algorithm is used, if not that in the R Matrix package is employed
 #' @return A list with two elements, Qpermchol (the permuted Cholesky factor) and P (the pivoting order matrix)
 #' @keywords Cholesky factor
 #' @examples
 #' require(Matrix)
 #' cholPermute(sparseMatrix(i=c(1,1,2,2),j=c(1,2,1,2),x=c(0.1,0.2,0.2,1)))
-#' @references Havard Rue and Leonhard Held (2005). Gaussian Markov Random Fields: Theory and Applications. Chapman & Hall/CRC Press
+#' @references Davis T (2011). “SPARSEINV: a MATLAB toolbox for computing the sparse inverse subset using the Takahashi equations.” http://faculty.cse.tamu.edu/davis/suitesparse.html, Online: Last accessed 01 February 2016.
+#' Havard Rue and Leonhard Held (2005). Gaussian Markov Random Fields: Theory and Applications. Chapman & Hall/CRC Press, Boca Raton, FL.
 cholPermute <- function(Q,method="amd")  {
-  n <- nrow(Q)
+  n <- nrow(Q)   # matrix dimension
 
-  if(method == "amd") {
-    P <- amd_Davis(Q)
-    Qp <- Q[P,P]
-    Qpermchol  <- t(chol(Qp))
-    P <- sparseMatrix(i=P,j=1:n,x=1)
-    return(list(Qpermchol=Qpermchol,P=P))
+  if(method == "amd") {  # is we will use the SuiteSparse amd
+    P <- amd_Davis(Q)    # call the permutation algorithm
+    Qp <- Q[P,P]         # permute the matrix
+    Qpermchol  <- t(chol(Qp))                # do the Cholesky decomposition
+    P <- sparseMatrix(i=P,j=1:n,x=1)         # construct the permutation matrix
+    return(list(Qpermchol=Qpermchol,P=P))    # return both in a list
 
   } else {
-    e <-tryCatch({ symchol <- Cholesky(Q)},error= function(temp) {print("Cholesky failed, coercing to symmetric")},finally="Cholesky successful")
+    ## Try to do the Cholesky decomposition with R (usually this is done just for testing purposes)
+    e <-tryCatch({ symchol <- Cholesky(Q)},
+                 error= function(temp) {print("Cholesky failed, coercing to symmetric")},
+                 finally="Cholesky successful")
+
+    ## If an error was returned try to symmetrise it first using forceSymmetric().
     if (class(e) == "character")  {
       symchol <- Cholesky(forceSymmetric(Q))
     }
 
-
-    j <- 1:n
-    i <- symchol@perm + 1
-    P <- sparseMatrix(i,j,x=rep(1,n))
+    j <- 1:n                               # column indicies
+    i <- symchol@perm + 1                  # row indices
+    P <- sparseMatrix(i,j,x=rep(1,n))      # construct permutation matrix
     if (class(e) == "character")  {
-      Qpermchol <- t(chol(forceSymmetric(t(P)%*%Q%*%P)))
-    } else { Qpermchol <- t(chol(t(P)%*%Q%*%P)) }
-    return(list(Qpermchol=Qpermchol,P=P))
+      Qpermchol <- t(chol(forceSymmetric(t(P)%*%Q%*%P)))   # do the Cholesky decomposition on the
+    } else { Qpermchol <- t(chol(t(P)%*%Q%*%P)) }          # permuted matrix, possibly after a
+    return(list(Qpermchol=Qpermchol,P=P))                  # forceSymmetric, then return list
   }
 
 }
@@ -43,9 +51,7 @@ cholPermute <- function(Q,method="amd")  {
 #' @title Solve the equation Qx = y
 #'
 #' @noRd
-#' @description This function is similar to \code{solve(Q,y)} but with the added benefit that it allows for permuted matrices. This function does the job in order to minimise
-#' user error when attempting to re-permute the matrices prior or after solving. The user also has an option for the permuted Cholesky factorisation of Q to be carried out
-#' internally.
+#' @description This function is similar to \code{solve(Q,y)} but with the added benefit that it allows for permuted matrices. This function does the job in order to minimise user error when attempting to re-permute the matrices prior to after solving. The user also has an option for the permuted Cholesky factorisation of Q to be carried out internally. This function is not exported.
 #'
 #' @param Q matrix (sparse or dense), the Cholesky factor of which needs to be found
 #' @param y matrix with the same number of rows as Q
@@ -63,29 +69,32 @@ cholPermute <- function(Q,method="amd")  {
 #' @references Havard Rue and Leonhard Held (2005). Gaussian Markov Random Fields: Theory and Applications. Chapman & Hall/CRC Press
 cholsolve <- function(Q,y,perm=F,cholQ = matrix(1,0,0),cholQp = matrix(1,0,0),P=NA)  {
   ## Solve Qx = y
-  if (perm == F) {
-    if (dim(cholQ)[1] == 0) {
-      e <-tryCatch({L <- t(chol(Q))},error= function(temp) {print("Cholesky failed, coercing to symmetric")},finally="Cholesky successful")
+  if (perm == F) {                                    # of there is no permutation
+    if (dim(cholQ)[1] == 0) {                         # and the Cholesky is not already supplied
+      e <-tryCatch({L <- t(chol(Q))},                 # try to do the Cholesky decomposition without permuting
+                   error= function(temp) {            # possibly after attempting a forceSymmetric
+                       print("Cholesky failed, coercing to symmetric")},
+                   finally="Cholesky successful")
       if (class(e) == "character") {
         L <- t(chol(forceSymmetric(Q))) }
     }  else {
       L <- cholQ
     }
 
-    v <- solve(L,y)
+    v <- solve(L,y)                # standard solving of Ax=b using Cholesky
     x <- solve(t(L),v)
   }
-  if (perm == T) {
-    if (dim(cholQp)[1] == 0) {
-      QP <- cholPermute(Q)
-      Lp <- QP$Qpermchol
-      P <- QP$P
+  if (perm == T) {                 # If we wish to use permutations
+    if (dim(cholQp)[1] == 0) {     # and the Cholesky factor was not supplied
+      QP <- cholPermute(Q)         # permute and find the Cholesky
+      Lp <- QP$Qpermchol           # Cholesky of permuted Q
+      P <- QP$P                    # Permutation matrix
     } else {
-      Lp <- cholQp
+      Lp <- cholQp                 # If supplied, just assign
     }
 
-    v <- solve(Lp,t(P)%*%y)
-    w <- solve(t(Lp),v)
+    v <- solve(Lp,t(P)%*%y)        # Standard solving for Ax=b under a permutation
+    w <- solve(t(Lp),v)            # of the matrix A
     x <- P%*%w
   }
   return(x)
@@ -95,7 +104,6 @@ cholsolve <- function(Q,y,perm=F,cholQ = matrix(1,0,0),cholQp = matrix(1,0,0),P=
 #' @noRd
 #' @description This function is a wrapper of solve() for finding \code{X = AQ^{-1}t(A)} when the permuted Cholesky factor of Q is known.
 #' #'
-#' @param Q ignored (deprecated)
 #' @param A matrix
 #' @param Lp Permuted Cholesky factor of Q
 #' @param P the pivot matrix
@@ -107,52 +115,51 @@ cholsolve <- function(Q,y,perm=F,cholQ = matrix(1,0,0),cholQp = matrix(1,0,0),P=
 #' X <- cholPermute(Q)
 #' y <- matrix(c(1,2),2,1)
 #' A <- y %*% t(y)
-#' cholsolveAQinvAT(Q,A,X$Qpermchol,X$P)
-cholsolveAQinvAT <- function(Q,A,Lp,P) {
-  #Solve X = AQ^{-1}t(A)
+#' cholsolveAQinvAT(A,X$Qpermchol,X$P)
+cholsolveAQinvAT <- function(A,Lp,P) {
+  ## Solve X = AQ^{-1}t(A) using the permuted Cholesky factor
   W <- t(solve(Lp,t(P)%*%t(A)))
   return(W %*% t(W))
-
 }
-
 
 #' @title Compute the Takahashi equations
 #' @noRd
-#' @description This function is wrapper for the Takahashi equations required to compute the marginal variances from the Cholesky factor of a precision matrix.
-#' The equations themselves are implemented in C using the SparseSuite package of Timothy Davis.
-#'
+#' @description This function is wrapper for the Takahashi equations required to compute the marginal variances from the Cholesky factor of a precision matrix. The equations themselves are implemented in C using the SparseSuite package.
 #' @param Q precision matrix (sparse or dense)
 #' @param return_perm_chol if 1 returns the permuted Cholesky factor (not advisable for large systems)
 #' @param cholQp the permuted Cholesky factor of Q (if known already)
 #' @param P the pivot matrix (if known already)
-#' @return if return_perm_chol == 0, returns the partial matrix inverse of Q, where the non-zero elements correspond to those in the Cholesky factor.
-#' If !(return_perm_chol  == 0), returns a list with three elements, S (the partial matrix inverse), Lp (the Cholesky factor of the permuted matrix) and P (the
-#' permutation matrix)
+#' @return If return_perm_chol == 0, returns the partial matrix inverse of Q, where the non-zero elements correspond to those in the Cholesky factor.
+#' If !(return_perm_chol  == 0), returns a list with three elements, S (the partial matrix inverse), Lp (the Cholesky factor of the permuted matrix) and P (the permutation matrix).
 #' @keywords Cholesky factor, linear solve
 #' @examples
 #' require(Matrix)
 #' Q = sparseMatrix(i=c(1,1,2,2),j=c(1,2,1,2),x=c(0.1,0.2,0.2,1))
 #' X <- cholPermute(Q)
 #' S_partial = Takahashi_Davis(Q,cholQp = X$Qpermchol,P=X$P)
-#' @references Yogin E. Campbell and Timothy A Davis (1995). Computing the sparse inverse subset: an inverse multifrontal approach. \url{http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.37.9276&rep=rep1&type=pdf}
+#' @references Takahashi, K., Fagan, J., Chin, M.-S., 1973. Formation of a sparse bus impedance matrix and
+#' its application to short circuit study. 8th PICA Conf. Proc.June 4–6, Minneapolis, Minn.
+#' Davis T (2011). “SPARSEINV: a MATLAB toolbox for computing the sparse inverse subset using the Takahashi equations.” http://faculty.cse.tamu.edu/davis/suitesparse.html, Online: Last accessed 01 February 2016.
 Takahashi_Davis <- function(Q,return_perm_chol = 0,cholQp = matrix(0,0,0),P=0) {
 
-  n <- nrow(Q)
+  n <- nrow(Q)  # matrix dimension
 
-
-  if (dim(cholQp)[1] == 0) {
-    symchol <- Cholesky(forceSymmetric(Q))
-    j <- 1:n
-    i <- symchol@perm + 1
-    P <- sparseMatrix(i,j,x=rep(1,n))
-    Lperm <- L <- t(chol(t(P)%*%Q%*%P))
+  if (dim(cholQp)[1] == 0) {                    # if permuted Cholesky factor not supplied
+    symchol <- Cholesky(forceSymmetric(Q))      # find symbolic Cholesky decomposition
+    j <- 1:n                                    # column indices
+    i <- symchol@perm + 1                       # row indices
+    P <- sparseMatrix(i,j,x=rep(1,n))           # Permutation matrix
+    Lperm <- L <- t(chol(t(P)%*%Q%*%P))         # Cholesky factor
   } else {
-    L <- cholQp
+    L <- cholQp                                 # else just assign
     P <- P
   }
-  rm(Q)
-  if (return_perm_chol == 0) rm(cholQp)
+  rm(Q)                                         # we don't need Q anymore, remove it
+  if (return_perm_chol == 0) rm(cholQp)         # we also don't need the factor if it was supplied
 
+
+  ## The following commands are adapted from sparseinv.m
+  ## See https://au.mathworks.com/matlabcentral/fileexchange/33966-sparseinv-sparse-inverse-subset/content/sparseinv/sparseinv.m
   d <- diag (L)
   L <- tril(L%*%sparseMatrix(i=1:n,j=1:n,x=1/d),-1)
   d <- d^2
@@ -176,18 +183,19 @@ Takahashi_Davis <- function(Q,return_perm_chol = 0,cholQp = matrix(0,0,0),P=0) {
 
 }
 
-# #' @useDynLib FRK AMD_order_wrapper
+## The AMD algrithm in the SuiteSparse package
 amd_Davis <- function(Q) {
-  n <- nrow(Q)
-  Ap <- Q@p
+  n <- nrow(Q)  # matrix dimension
+  Ap <- Q@p     # indices of compressed format matrix
   Ai <- Q@i
 
+  ## Call the C functions in the SuiteSparse library
   X <- .C("AMD_order_wrapper",as.integer(n),as.integer(Ap),as.integer(Ai),
           P = integer(n), Control=double(5),Info=double(20))
   return(X$P + 1)
 }
 
-# #' @useDynLib FRK AMD_order_wrapper
+## Simple test function to ensure AMD works as it should
 amd_test <- function() {
   n=24
   Ap = c( 0, 9, 15, 21, 27, 33, 39, 48, 57, 61, 70, 76, 82, 88, 94, 100,
@@ -224,82 +232,96 @@ amd_test <- function() {
 }
 
 
-# #' @useDynLib FRK sparseinv
+## Wrapper for the sparse inverse function in the SuiteSparse package
 sparseinv_wrapper <- function(L,d,U,Zpattern) {
 
-  n <- nrow(L)
-  Lp <- L@p
+  n <- nrow(L)  # number of columns
+  Lp <- L@p     # matrix description of Cholesky factor in column-compressed format
   Li <- L@i
   Lx <- L@x
 
-  Up <- U@p
+  Up <- U@p     # same as above -- in our case U = L
   Uj <- U@i
   Ux <- U@x
 
+  ## Set up Zpattern matrix (see sparseinv.m for details)
   Zpatp <- Zpattern@p
   Zpati <- Zpattern@i
   znz = Zpatp [n+1]
 
-
+  ## Call SuiteSparse package
   X <- .C("sparseinv",as.integer(n),as.integer(Lp),as.integer(Li),as.double(Lx),as.double(d),as.integer(Up),as.integer(Uj),as.double(Ux),as.integer(Zpatp),as.integer(Zpati),result = double(znz))
+
+  ## Retrive result
   X <- X$result
 
+  ## Remove other variables (this seemed to help for enormous systems)
   rm(U,L,Zpattern,Ux,Uj,Up,Lp,Li,Lx)
+
+  ## Construct matrix from returned results
   Z <- sparseMatrix(p = Zpatp, i =Zpati, x = X,index1=F)
 
   return(Z)
 }
 
-
+## Return trace of matrix
 tr <- function(X) {
     sum(diag(X))
 }
 
-diag2 <- function(X,Y) {
-    rowSums(X * t(Y))
+## Efficient method of finding the diagonal of the product of two matrices
+## If the matrix is symmetric we don't need to transpose and save some time
+diag2 <- function(X,Y,symm=FALSE) {
+    if(!symm) rowSums(X * t(Y)) else rowSums(X * Y)
 }
 
+## Compute the log determinant from a Cholesky factor L
 logdet <- function (L)
 {
     diagL <- diag(L)
     return(2 * sum(log(diagL)))
 }
 
+## quickBinds on columns
 quickcBind <- function(L) {
   quickBind(L,"c")
 }
 
+## quickBinds on rows
 quickrBind <- function(L) {
   quickBind(L,"r")
 }
 
+## Performs a quick binding of sparse matrices by extract the indices and rearranging. This code was adapted fro
+## http://stackoverflow.com/questions/8843700/creating-sparse-matrix-from-a-list-of-sparse-vectors
+## This function should probably be implemented in C at some point
 quickBind <- function(L,rc = "c") {
 
-  ## http://stackoverflow.com/questions/8843700/creating-sparse-matrix-from-a-list-of-sparse-vectors
   ## L list a list of sparseMatrices
-  ## Should do in C
-  nzCount<-lapply(L, function(x) length(as(x,"dgTMatrix")@x));
-  nz<-sum(do.call(rbind,nzCount));
-  r<-vector(mode="integer",length=nz);
-  c<-vector(mode="integer",length=nz);
-  v<-vector(mode="double",length=nz);
-  ind <- 1
-  nc  <- 0
-  nr  <- 0
-  for(i in 1:length(L)){
-    tempMat <- as(L[[i]],"dgTMatrix")
-    ln<-length(tempMat@x);
-    if(ln>0){
-      if(rc == "c") {
-        r[ind:(ind+ln-1)] <- tempMat@i + 1;
-        c[ind:(ind+ln-1)] <- tempMat@j+ nc + 1
-      } else if (rc == "r") {
-        r[ind:(ind+ln-1)] <- tempMat@i + nr + 1;
-        c[ind:(ind+ln-1)] <- tempMat@j + 1
+  nzCount<-lapply(L, function(x) length(as(x,"dgTMatrix")@x));    # number off non-zeros in each matrix
+  nz<-sum(do.call(rbind,nzCount));                                # total number of non-zeros
+  r<-vector(mode="integer",length=nz);                            # row indices
+  c<-vector(mode="integer",length=nz);                            # column indices
+  v<-vector(mode="double",length=nz);                             # values to go in matrix
+  ind <- 1                                                        # starting
+  nc  <- 0                                                        # column number
+  nr  <- 0                                                        # row number
+  for(i in 1:length(L)){                                          # for each matrix
+    tempMat <- as(L[[i]],"dgTMatrix")                             # convert to row-column storage format
+    ln<-length(tempMat@x);                                        # number of nonzeros for this matrix
+    if(ln>0){                                                     # if there is at least one non-zero
+      if(rc == "c") {                                             # if column bind
+        r[ind:(ind+ln-1)] <- tempMat@i + 1;                       # add to row indices
+        c[ind:(ind+ln-1)] <- tempMat@j+ nc + 1                    # add to column indices
+      } else if (rc == "r") {                                     # if row bind
+        r[ind:(ind+ln-1)] <- tempMat@i + nr + 1;                  # add to row indices
+        c[ind:(ind+ln-1)] <- tempMat@j + 1                        # add to column indices
       }
-      v[ind:(ind+ln-1)] <- tempMat@x
-      ind<-ind+ln;
+      v[ind:(ind+ln-1)] <- tempMat@x                              # add to final matrix values
+      ind<-ind+ln;                                                # update "starting index"
     }
+
+    ## Adjust number of rows and columns so far in matrix
     if(rc == "c") {
       nc <- nc + ncol(tempMat)
       nr <- nrow(tempMat)
@@ -308,11 +330,13 @@ quickBind <- function(L,rc = "c") {
       nc <- ncol(tempMat)
     }
   }
+
+  ## Return final sparse matrix
   return (sparseMatrix(i=r,j=c,x=v,dims = c(nr,nc)));
 }
 
+## Given a matrix X returns Y such that Y[idx,idx] = X
 reverse_permute <- function(X,idx) {
-  ## Given a matrix X returns Y such that Y[idx,idx] = X
   X <- as(X,"dgTMatrix")
   dict <- data.frame(from = 1:length(idx),to = idx)
   i_idx <- data.frame(from = X@i+1) %>% left_join(dict,by="from")

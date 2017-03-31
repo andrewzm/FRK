@@ -9,7 +9,7 @@
 \alias{nres_basis,Basis-method}
 \alias{nres,SRE-method}
 \alias{nres_SRE,SRE-method}
-\title{Return number of resolutions}
+\title{Return  the number of resolutions}
 \usage{
 nres(b)
 

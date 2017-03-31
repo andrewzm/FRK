@@ -5,17 +5,17 @@
 \title{Automatic basis-function placement}
 \usage{
 auto_basis(manifold = plane(), data, regular = 1, nres = 3, prune = 0,
-  max_basis = NULL, subsamp = 10000, type = "bisquare", isea3h_lo = 2,
-  bndary = NULL, verbose = 0L, ...)
+  max_basis = NULL, subsamp = 10000, type = c("bisquare", "Gaussian",
+  "exp", "Matern32"), isea3h_lo = 2, bndary = NULL, verbose = 0L, ...)
 }
 \arguments{
 \item{manifold}{object of class \code{manifold}, for example, \code{sphere} or \code{plane}}
 
 \item{data}{object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame} containing the data on which basis-function placement is based, or a list of these; see details}
 
-\item{regular}{an integer indicating the number of regularly-placed basis functions at the first resolution. In two dimensions, this dictates smallest number of basis functions in a row or column at the lowest resolution. If \code{regular=0}, an irregular grid is used, one that is based on the triangulation of the domain with increased mesh density in areas of high data density, see details}
+\item{regular}{an integer indicating the number of regularly-placed basis functions at the first resolution. In two dimensions, this dictates the smallest number of basis functions in a row or column at the lowest resolution. If \code{regular=0}, an irregular grid is used, one that is based on the triangulation of the domain with increased mesh density in areas of high data density, see details}
 
-\item{nres}{if \code{manifold = real_line()} or \code{manifold = plane()}, then \code{nres} is the number of basis-function resolutions to use. If \code{manifold = sphere()}, then \code{nres} is the resolution number of the ISEA3H grid to use and and can also be a vector indicating multiple resolutions}
+\item{nres}{the number of basis-function resolutions to use}
 
 \item{prune}{a threshold parameter which dictates when a basis function is considered irrelevent or unidentifiable, and thus removed, see details}
 
@@ -25,7 +25,7 @@ auto_basis(manifold = plane(), data, regular = 1, nres = 3, prune = 0,
 
 \item{type}{the type of basis functions to use; see details}
 
-\item{isea3h_lo}{if \code{manifold = sphere()}, this argument dictates which ISEA3H resolution is the lowest one that should be used for basis-function placement}
+\item{isea3h_lo}{if \code{manifold = sphere()}, this argument dictates which ISEA3H resolution is the lowest one that should be used for the first resolution}
 
 \item{bndary}{a \code{matrix} containing points containing the boundary. If \code{regular == 0} this can be used to define a boundary in which irregularly-spaced basis functions are placed}
 
@@ -52,11 +52,11 @@ The parameters \eqn{\sigma, R, \tau} and \eqn{\kappa} are \code{scale} arguments
 
 If the manifold is the real line, the basis functions are placed regularly inside the domain, and the number of basis functions at the lowest resolution is dictated by the integer parameter \code{regular} which has to be greater than zero. On the real line, each subsequent resolution has twice as many basis functions. The scale of the basis function is set based on the minimum distance between the centre locations following placement. The scale is equal to the minimum distance if the type of basis function is Gaussian, exponential or Matern32, and is equal to 1.5 times this value if the function is bisquare.
 
-If the manifold is a plane, and \code{regular > 0}, then basis functions are placed regularly within the bounding box of \code{data}, with the smallest number of basis functions in each row or column equal to the value of \code{regular} in the lowest resolution. Subsequent resolutions have twice the number of basis functions in each row or column. If \code{regular = 0}, then the function \code{INLA::inla.nonconvex.hull} is used to construct a (non-convex) hull around the data. The buffer and smoothness of the hull is determined by the parameter \code{convex}. Once the domain boundary is found,  \code{INLA::inla.mesh.2d} is used to construct a triangular mesh such that the node vertices coincide with data locations, subject to some minimum and maximum triangular side length constraints. The result is a mesh which is dense in regions of high data density and not dense in regions of sparse data. Even in this case, the scale is taken to be a function of the minimum distance between basis function centres, as detailed above. This may be changed in a future revision.
+If the manifold is a plane, and \code{regular > 0}, then basis functions are placed regularly within the bounding box of \code{data}, with the smallest number of basis functions in each row or column equal to the value of \code{regular} in the lowest resolution (note, this is just the smallest number of basis functions). Subsequent resolutions have twice the number of basis functions in each row or column. If \code{regular = 0}, then the function \code{INLA::inla.nonconvex.hull} is used to construct a (non-convex) hull around the data. The buffer and smoothness of the hull is determined by the parameter \code{convex}. Once the domain boundary is found,  \code{INLA::inla.mesh.2d} is used to construct a triangular mesh such that the node vertices coincide with data locations, subject to some minimum and maximum triangular side length constraints. The result is a mesh which is dense in regions of high data density and not dense in regions of sparse data. Even in this case, the scale is taken to be a function of the minimum distance between basis function centres, as detailed above. This may be changed in a future revision.
 
-If the manifold is the surface of a sphere, then basis functions are placed on the centroids of the discrete global grid (DGG), with the first basis resolution corresponding to the first resolution of the DGG (ISEA3H resolution 0, which yields 12 basis functions globally).  It is not recommended to go above \code{nres == 5} (ISEA3H resolutions 0--4) for the whole sphere, which would yield a total of 1220 basis functions. Up to ISEA3H resolution 6 is available with \code{FRK}; for higher resolutions please install \code{dggrids} from \code{https://github.com/andrewzm/dggrids}.
+If the manifold is the surface of a sphere, then basis functions are placed on the centroids of the discrete global grid (DGG), with the first basis resolution corresponding to the third resolution of the DGG (ISEA3H resolution 2, which yields 92 basis functions globally).  It is not recommended to go above \code{nres == 3} (ISEA3H resolutions 2--4) for the whole sphere, which would yield a total of 1176 basis functions. Up to ISEA3H resolution 6 is available with \code{FRK}; for higher resolutions please install \code{dggrids} from \code{https://github.com/andrewzm/dggrids} using \code{devtools}.
 
-Basis functions that are not influenced by data points may hinder convergence of the EM algorithm, since the associated hidden states are by and large unidentifiable. We hence provide a means to automatically remove such basis functions through the parameter \code{prune}. The final set only contains basis functions for which the column sums in the associated matrix \eqn{S} (which, recall, is the value/average of the basis functions at/over the data points/polygons) is greater than \code{prune}. If \code{prune == 0}, no basis functions are removed from the original design.
+Basis functions that are not influenced by data points may hinder convergence of the EM algorithm when \code{K_type = ``unstructured''}, since the associated hidden states are by and large unidentifiable. We hence provide a means to automatically remove such basis functions through the parameter \code{prune}. The final set only contains basis functions for which the column sums in the associated matrix \eqn{S} (which, recall, is the value/average of the basis functions at/over the data points/polygons) is greater than \code{prune}. If \code{prune == 0}, no basis functions are removed from the original design.
 }
 \examples{
 \dontrun{
@@ -78,6 +78,6 @@ G <- auto_basis(manifold = sphere(),data=d,
                 subsamp = 20000)
 
 ### Plot
-# show_basis(G,draw_world())
+\dontrun{show_basis(G,draw_world())}
 }
 }

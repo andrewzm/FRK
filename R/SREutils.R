@@ -1,54 +1,52 @@
 #' @title Construct SRE object, fit and predict
-#' @description Main constructor of spatial random effects (SRE) object. Please see \code{\link{SRE-class}} for more details on the object's properties and methods.
+#' @description The Spatial Random Effects (SRE) model is the central object in FRK. The function \code{FRK} provides a wrapper for the construction and estimation of the SRE object from data, using the functions \code{SRE} (the object constructor) and \code{SRE.fit} (for fitting it to the data). Please see \code{\link{SRE-class}} for more details on the SRE object's properties and methods.
 #' @param f \code{R} formula relating the dependent variable (or transformations thereof) to covariates
-#' @param data list of objects of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame}
-#' @param basis object of class \code{Basis}
-#' @param BAUs object of class \code{SpatialPolygonsDataFrame}, the data frame which must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality. If the function \code{FRK} is used directly, then BAUs are created automatically but only coordinates can then be used as covariates
+#' @param data list of objects of class \code{SpatialPointsDataFrame}, \code{SpatialPolygonsDataFrame}, \code{STIDF}, or  \code{STFDF}. If using space-time objects, the data frame should have another field, \code{t}, containing the time index of the data point
+#' @param basis object of class \code{Basis} (or \code{TensorP_Basis})
+#' @param BAUs object of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame}, \code{STIDF}, or \code{STFDF}. The object's data frame must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality. If the function \code{FRK} is used directly, then BAUs are created automatically but only coordinates can then be used as covariates
 #' @param est_error flag indicating whether the measurement-error variance should be estimated from variogram techniques. If this is set to 0, then \code{data} must contain a field \code{std}. Measurement-error estimation is not implemented for spatio-temporal datasets
 #' @param average_in_BAU if \code{TRUE}, then multiple data points falling in the same BAU are averaged; the measurement error of the averaged data point is taken as the average of the individual measurement errors
 #' @param fs_model if "ind" then the fine-scale variation is independent at the BAU level. If "ICAR", then an ICAR model is placed on the BAUs
-#' @param SRE_model object returned from the constructor \code{SRE()}
+#' @param vgm_model an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm} containing the variogram model to fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified the variogram used is \code{gstat::vgm(1, "Lin", d, 1)} where \code{d} is approximately one third of the maximum distance between any two data points
+#' @param K_type the parameterisation used for the \code{K} matrix. Currently this can be "unstructured" or "block-exponential" (default)
+#' @param SRE_model object returned from the constructor \code{SRE()} containing all the parameters and information on the SRE model
 #' @param n_EM maximum number of iterations for the EM algorithm
 #' @param tol convergence tolerance for the EM algorithm
 #' @param method parameter estimation method to employ. Currently only ``EM'' is supported
+#' @param lambda ridge-regression regularisation parameter for when \code{K} is unstructured (0 by default). Can be a single number, or a vector (one parameter for each resolution)
 #' @param print_lik flag indicating whether likelihood should be printed or not on convergence of the estimation algorithm
 # #' @param use_centroid flag indicating whether the basis functions are averaged over the BAU, or whether the basis functions are evaluated at the BAUs centroid in order to construct the matrix \eqn{S}. The flag can safely be set when the basis functions are approximately constant over the BAUs in order to reduce computational time
-#' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error) or in the process model (process fine-scale variation, default)
+#' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error, Case 1) or in the process model (process fine-scale variation, Case 2, default)
 #' @param pred_polys object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified
 #' @param pred_time vector of time indices at which we wish to predict. All time points are used if this option is not specified
-#' @param vgm_model an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm} containing the variogram model to fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified the variogram used is \code{gstat::vgm(1, "Lin", d, 1)} where \code{d} is approximately one third of the maximum distance between any two points
-#' @param K_type the parameterisation used for the \code{K} matrix. Currently this can be "unstructured" or "block-exponential"
-#' @param lambda regularisation parameter (0 by default)
-#' @param cross_validate the number \eqn{k} in \eqn{k}-fold cross-validation. If greater than 1, \code{lambda} is ignored and estimated through cross-validation
-#' @param ... other parameters passed on to \code{auto_basis} and \code{auto_BAUs}
-#' @details \code{SRE()} is the main function in the package as it constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of Basic Areal Units (BAUs). The function first takes each object in the list \code{data} and maps it to the BAUs -- this entails binning the point-referenced data into BAUs (and averaging within the BAU) if \code{average_in_BAU = TRUE}, and finding which BAUs are influenced by the polygon datasets. Following this, the incidence matrix \code{Cmat} is constructed, which appears in the observation model \eqn{Z = CY + e}, where \eqn{C} is the incidence matrix.
+#' @param ... other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling the function \code{FRK}
+#' @details \code{SRE()} is the main function in the package as it constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of Basic Areal Units (BAUs). The function first takes each object in the list \code{data} and maps it to the BAUs -- this entails binning the point-referenced data into BAUs (and averaging within the BAU) if \code{average_in_BAU = TRUE}, and finding which BAUs are influenced by the polygon datasets. Following this, the incidence matrix \code{Cmat} is constructed, which appears in the observation model \eqn{Z = CY + C\delta + e}, where \eqn{C} is the incidence matrix and \eqn{\delta} is systematic error at the BAU level.
 #'
-#' The SRE model is given by \eqn{Y = T\alpha + S\eta + \delta}, where \eqn{X} are the covariates at BAU level, \eqn{\alpha} are the regression coefficients, \eqn{S} are the basis functions evaluated at the BAU level, \eqn{\eta} are the basis function weights, and \eqn{\delta} is the fine scale variation (at the BAU level). The covariance matrix of \eqn{\delta} is diagonal and proportional to the field `fs' in the BAUs (typically set to one). The constant of proportionality is estimated in the EM algorithm. All required matrices (\eqn{S,T} etc.) are computed and returned as part of the object, please see \code{\link{SRE-class}} for more details.
+#' The SRE model is given by \eqn{Y = T\alpha + S\eta + \xi}, where \eqn{T} are the covariates at BAU level, \eqn{\alpha} are the regression coefficients, \eqn{S} are the basis functions evaluated at the BAU level, \eqn{\eta} are the basis function coefficients, and \eqn{\xi} is the fine scale variation (at the BAU level). The covariance matrix of \eqn{\xi} is diagonal, with its diagonal elements proportional to the field `fs' in the BAUs (typically set to one). The constant of proportionality is estimated in the EM algorithm. All required matrices (\eqn{S,T} etc.) are initialised using sensible defaults and returned as part of the object, please see \code{\link{SRE-class}} for more details.
 #'
-#'\code{SRE.fit()} takes an object of class \code{SRE} and estimates all unknown parameters, namely the covariance matrix \eqn{K}, the fine scale variance \eqn{\sigma^2_{\delta}} and the regression parameters \eqn{\alpha}. The only method currently implemented is the Expectation Maximisation (EM) algorithm, which the user configures through \code{n_EM} and \code{tol}. The latter parameter, \code{tol}, is used as in Katzfuss and Cressie to, that is, the log-likelihood (given in Equation (16) in that work) is evaluated at each iteration at the current parameter estimate, and convergence is assumed to have been reached when this quantity stops changing by more than \code{tol}.
+#'\code{SRE.fit()} takes an object of class \code{SRE} and estimates all unknown parameters, namely the covariance matrix \eqn{K}, the fine scale variance (\eqn{\sigma^2_{\xi}} or \eqn{\sigma^2_{\delta}}, depending on which Case is chosen, see vignette) and the regression parameters \eqn{\alpha}. The only method currently implemented is the Expectation Maximisation (EM) algorithm, which the user configures through \code{n_EM} and \code{tol}. The log-likelihood (given in, Section 2.2 of the vignette) is evaluated at each iteration at the current parameter estimate, and convergence is assumed to have been reached when this quantity stops changing by more than \code{tol}.
 #'
-#'The actual computations for the E-step and M-step are relatively straightforward. The E-step contains an inverse of an \eqn{n \times n} matrix, where \code{n} is the number of basis functions which should not exceed 2000. The M-step first updates the matrix \eqn{K}, which only depends on the sufficient statistics of the basis weights \eqn{\eta}. Then, the regression parameter \eqn{\alpha} is updated and a simple optimisation routine (a line search) is used to update the fine-scale variance \eqn{\sigma^2_{\delta}}. If the fine-scale errors and measurement errors are homoscedastic a closed-form solution is available for the update of \eqn{\sigma^2_{fs}}. Irrespectively, since the udpates of \eqn{\alpha} and \eqn{\sigma^2_{\delta}} are dependent, these two updates are iterated until the change in \eqn{\sigma^2_{\delta}} is no more than 0.1\%.
+#'The actual computations for the E-step and M-step are relatively straightforward. The E-step contains an inverse of an \eqn{r \times r} matrix, where \code{r} is the number of basis functions which should not exceed 2000. The M-step first updates the matrix \eqn{K}, which only depends on the sufficient statistics of the basis weights \eqn{\eta}. Then, the regression parameter \eqn{\alpha} is updated and a simple optimisation routine (a line search) is used to update the fine-scale variance \eqn{\sigma^2_{\delta}} or \eqn{\sigma^2_{\xi}}. If the fine-scale errors and measurement random errors are homoscedastic, then a closed-form solution is available for the update of \eqn{\sigma^2_{\xi}} or \eqn{\sigma^2_{\delta}}. Irrespectively, since the udpates of \eqn{\alpha} and \eqn{\sigma^2_{\cdot}} are dependent, these two updates are iterated until the change in \eqn{\sigma^2_{\cdot}} is no more than 0.1\%.
 #'
-#'Once the parameters are fitted, the \code{SRE} object is passed onto the function \code{SRE.predict()} in order to carry out optimal predictions over the same BAUs used to construct the SRE model with \code{SRE()}. The first part of the prediction process is to construct the matrix \eqn{S}. This is made computationally efficient by treating the prediction over polygons as that of the prediction over a combination of BAUs. This will yield valid results only if the BAUs are relatively small. Once the matrix \eqn{S} is found, a standard Gaussian inversion using the estimated parameters is used.
+#'The function \code{FRK} acts as a wrapper for the functions \code{SRE} and \code{SRE.fit}. An added advantage of using \code{FRK} directly is that it automatically generates BAUs and basis functions automatically based on the data. Hence \code{FRK} can be called using only a list of data objects and an \code{R} formula, although the \code{R} formula can only contain space-time independent variables when BAUs are not supplied.
 #'
-#'\code{SRE.predict} returns the BAUs, which are of class \code{SpatialPolygonsDataFrame}, with two added attributes, \code{mu} and \code{var}. These can then be easily plotted using \code{spplot} or \code{ggplot2} (in conjunction with \code{\link{SpatialPolygonsDataFrame_to_df}}) as shown in the package vignettes.
-#'\code{FRK}  runs \code{SRE}, \code{SRE.fit} and \code{SRE.predict} in successions with suitable defaults. It returns a list with the SRE object and the prediction polygons.
-#' @references
-#' Katzfuss, M., & Cressie, N. (2011). Spatio-temporal smoothing and EM estimation for massive remote-sensing data sets. Journal of Time Series Analysis, 32(4), 430--446.
+#'Once the parameters are fitted, the \code{SRE} object is passed onto the function \code{SRE.predict()} in order to carry out optimal predictions over the same BAUs used to construct the SRE model with \code{SRE()}. The first part of the prediction process is to construct the matrix \eqn{S} over the prediction polygons. This is made computationally efficient by treating the prediction over polygons as that of the prediction over a combination of BAUs. This will yield valid results only if the BAUs are relatively small. Once the matrix \eqn{S} is found, a standard Gaussian inversion using the estimated parameters is used for prediction.
 #'
-#' Erisman, A. M., & Tinney, W. F. (1975). On computing certain elements of the inverse of a sparse matrix. Communications of the ACM, 18(3), 177--179.
+#'\code{SRE.predict} returns the BAUs, which are of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame}, or \code{STFDF}, with two added attributes, \code{mu} and \code{var}. These can then be easily plotted using \code{spplot} or \code{ggplot2} (possibly in conjunction with \code{\link{SpatialPolygonsDataFrame_to_df}}) as shown in the package vignettes.
 #' @export
 #' @examples
 #' library(sp)
-#' library(ggplot2)
-#' library(dplyr)
 #'
 #' ### Generate process and data
-#' sim_process <- data.frame(x = seq(0.005,0.995,by=0.01)) %>%
-#'     mutate(y=0,proc = sin(x*10) + 0.3*rnorm(length(x)))
-#' sim_data <- sample_n(sim_process,50) %>%
-#'     mutate(z = proc + 0.1*rnorm(length(x)), std = 0.1)
-#' coordinates(sim_data) = ~x + y# change into an sp object
+#' n <- 100
+#' sim_process <- data.frame(x = seq(0.005,0.995,length=n))
+#' sim_process$y <- 0
+#' sim_process$proc <- sin(sim_process$x*10) + 0.3*rnorm(n)
+#'
+#' sim_data <- sim_process[sample(1:n,50),]
+#' sim_data$z <- sim_data$proc + 0.1*rnorm(50)
+#' sim_data$std <- 0.1
+#' coordinates(sim_data) = ~x + y # change into an sp object
 #' grid_BAUs <- auto_BAUs(manifold=real_line(),data=sim_data,
 #'                        nonconvex_hull=FALSE,cellsize = c(0.01),type="grid")
 #' grid_BAUs$fs = 1
@@ -72,63 +70,94 @@
 #' grid_BAUs <- SRE.predict(S)
 #'
 #' ### Plot
-#' # X <- slot(grid_BAUs,"data") %>%
-#' #      filter(x >= 0 & x <= 1)
-#' # g1 <- LinePlotTheme() +
-#' #    geom_line(data=X,aes(x,y=mu)) +
-#' #    geom_errorbar(data=X,aes(x=x,ymax = mu + 2*sqrt(var), ymin= mu - 2*sqrt(var))) +
-#' #    geom_point(data = data.frame(sim_data),aes(x=x,y=z),size=3) +
-#' #    geom_line(data=sim_process,aes(x=x,y=proc),col="red")
-#' # print(g1)
-SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_model = "ind",vgm_model = NULL, K_type = "block-exponential") {
+#' \dontrun{
+#' library(ggplot2)
+#' X <- slot(grid_BAUs,"data")
+#' X <- subset(X, x >= 0 & x <= 1)
+#'  g1 <- LinePlotTheme() +
+#'     geom_line(data=X,aes(x,y=mu)) +
+#'     geom_errorbar(data=X,aes(x=x,ymax = mu + 2*sqrt(var), ymin= mu - 2*sqrt(var))) +
+#'     geom_point(data = data.frame(sim_data),aes(x=x,y=z),size=3) +
+#'     geom_line(data=sim_process,aes(x=x,y=proc),col="red")
+#'  print(g1)}
+SRE <- function(f,data,basis,BAUs,est_error=TRUE,average_in_BAU = TRUE,
+                fs_model = "ind",vgm_model = NULL, K_type = "block-exponential") {
 
+    ## Check that the arguments are OK
     .check_args1(f=f,data=data,basis=basis,BAUs=BAUs,est_error=est_error)
-    av_var <-all.vars(f)[1]
+
+    ## Extract the dependent variable from the formula
+    av_var <- all.vars(f)[1]
+
+    ## Number of data objects
     ndata <- length(data)
 
+    ## Initialise list of matrices (We construct one for every data object then concatenate)
     S <- Ve <- Vfs <- X <- Z <- Cmat <- list()
 
+    ## Normalise basis functions for the prior process to have constant variance. This was seen to pay dividends in
+    ## LatticeKrig, however we only do it once initially
     print("Normalising basis function evaluations at BAU level ...")
-    S0 <- eval_basis(basis,.polygons_to_points(BAUs))
-    xx <- sqrt(rowSums((S0) * S0))
-    xx <- xx + 1*(xx == 0) ## Where there are no basis functions do not divide zero by zero..
-    S0 <- S0 / (xx %>% as.numeric())
+    S0 <- eval_basis(basis,.polygons_to_points(BAUs))     # evaluate basis functions over BAU centroids
+    xx <- sqrt(rowSums((S0) * S0))                        # Find the standard deviation (assuming unit basis function weight)
+    xx <- xx + 1*(xx == 0)                                # In the rare case all basis functions evaluate to zero don't do anything
+    S0 <- S0 / (as.numeric(xx))                           # Normalise the S matrix
 
+    ## Find the distance matrix associated with the basis-function centroids
+    D_basis <- BuildD(basis)
+
+
+    ## For each data object
     for(i in 1:ndata) {
-        if(est_error) data[[i]]$std <- 0 ## Just set it to something, this will be overwritten later on
+
+        ## If we are estimating measurement error
         if(est_error) {
+            ## Algorithm for estimating measurement error in space-time objects still not implemented
             if(is(data[[i]],"ST"))
                 stop("Estimation of error not yet implemented for spatio-temporal data")
-            data_proc <- data[[i]]
-            data_proc$Nobs <- 1
-            data_proc <- est_obs_error(data_proc,variogram.formula=f, vgm_model = vgm_model)
-            data[[i]]$std <- data_proc$std
+            data[[i]]$std <- 0            # Set it to zero initially
+            this_data <- data[[i]]        # Allocate current data object
+
+            ## Now estimate the measurement error using variogram methods
+            this_data <- .est_obs_error(this_data,variogram.formula=f,
+                                       vgm_model = vgm_model)
+
+            ## Allocate the measurement standard deviation from variogram analysis
+            data[[i]]$std <- this_data$std
         }
 
 
+        ## The next step is to allocate all data (both point and polygon referenced) to BAUs. We can either average data points falling in
+        ## the same BAU (average_in_BAU == TRUE) or not (average_in_BAU == FALSE)
         print("Binning data ...")
-        data_proc <- map_data_to_BAUs(data[[i]],
-                                      BAUs,
-                                      av_var = av_var,
-                                      average_in_BAU = average_in_BAU)
+        data_proc <- map_data_to_BAUs(data[[i]],       # data object
+                                      BAUs,            # BAUs
+                                      average_in_BAU = average_in_BAU)   # average in BAU?
 
+        ## The mapping can fail if not all data are covered by BAUs. Throw an error message if this is the case
         if(any(is.na(data_proc@data[av_var])))
-            stop("NAs found when mapping data to BAUs. Do you have NAs in your data? If not, are you sure all your data are covered by BAUs?")
+            stop("NAs found when mapping data to BAUs. Do you have NAs in your data?
+                 If not, are you sure all your data are covered by BAUs?")
 
-        L <- .gstat.formula(f,data=data_proc)
-        X[[i]] <- as(L$X,"Matrix")
-        Z[[i]] <- Matrix(L$y)
-        Ve[[i]] <- Diagonal(x=data_proc$std^2)
+        ## Extract information from the data using the .extract.from.formula internal function
+        L <- .extract.from.formula(f,data=data_proc)
+        X[[i]] <- as(L$X,"Matrix")                # covariate information
+        Z[[i]] <- Matrix(L$y)                     # data values
+        Ve[[i]] <- Diagonal(x=data_proc$std^2)    # measurement-error variance
 
 
+        ## Construct the incidence matrix mapping data to BAUs. This just returns indices and values which then need to be
+        ## assembled into a sparse matrix
         C_idx <- BuildC(data_proc,BAUs)
 
+        ## Construct the sparse incidence Matrix from above indices. This is the matrix C_Z in the vignette
         Cmat[[i]] <- sparseMatrix(i=C_idx$i_idx,
                                   j=C_idx$j_idx,
-                                  x=1,
-                                  dims=c(length(data_proc),
+                                  x=1,                       # just set to unity for now
+                                  dims=c(length(data_proc),  # ensure dimensions of C are good
                                              length(BAUs)))
 
+        ## Every data should be affected by at least one BAU. If this is not the case throw an error message.
         if(any(rowSums(Cmat[[i]])==0))
             stop("I have found difficulty in associating the data with the BAUs.
                   If you have point-referenced data
@@ -137,64 +166,48 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mode
                  within the polygons. For polygon data, influence on a BAU is determined from
                  whether the BAU centroid falls within the polygon or not.")
 
-        Cmat[[i]] <- Cmat[[i]] / rowSums(Cmat[[i]]) ## Average BAUs for polygon observations
+        ## Ensure the polygon observations are AVERAGES over the BAUs (and not sums). Since we set all values to unity above
+        ## this just means dividing each row by the number of ones in each row.
+        ## Future implementation may allow user to distinguish between sum or average
+        Cmat[[i]] <- Cmat[[i]] / rowSums(Cmat[[i]])
 
+        ## Only the independent model is allowed for now, future implementation will include CAR/ICAR (in development)
         if(fs_model == "ind") {
             Vfs[[i]] <- tcrossprod(Cmat[[i]] %*% Diagonal(x=sqrt(BAUs$fs)))
-        } else if(fs_model == "ICAR") {
-            Vfs[[i]] <- Matrix(ncol=0,nrow=0) ## Ignore variance matrix if ICAR
-        } else {
-            stop("Model needs to be ``ind'' or ``ICAR''.")
-        }
+        } else stop("No other fs-model implemented yet")
 
-
-        # if(length(Cmat[[i]]@x) == nrow(Cmat[[i]]))  { # if point observations
-        #     Vfs[[i]] <- Diagonal(x = Cmat[[i]] %*% sqrt(BAUs$fs) %>% as.numeric())
-        # } else {
-        #     Vfs[[i]] <- Diagonal(x = rep(0,nrow(Cmat[[i]])))
-        # }
-
-        ## The following code was used when we assumed the BAUs were large
-        ## compared to basis functions, we now have deprecated it
-        # print("Evaluating basis functions at observation locations...")
-        # S[[i]] <- eval_basis(basis, s = data_proc)
-        # print("Done.")
-
+        ## S0 is the matrix S in the vignette. Here S is the matrix SZ in the vignette.
         S[[i]] <- Cmat[[i]] %*% S0
-
-        ## Note that S constructed in this way is similar to Cmat %*% S_BAUs where S_BAUs is the
-        ## basis functions evaluated at the BAUs. Verify this by checking the following are similar
-        ## S2 <- eval_basis(basis, s = BAUs)
-        ## (Cmat[[i]] %*% S2) - S[[i]]
     }
 
     if(fs_model == "ind") {
         Qfs_BAUs <- Diagonal(x=1/BAUs$fs)
         Vfs_BAUs <- Diagonal(x=BAUs$fs)
-    } else if(fs_model == "ICAR") {
-        ## Make block diagonal for spatio-temporal
-        message("Finding the polygon neighbours...")
-        ## Caters for both spatial and ST
-        nblist <- spdep::poly2nb(as(BAUs,"SpatialPolygonsDataFrame")[,1][,1])
-        Qfs_BAUs <- .prec_from_neighb(nblist)
-        if(is(BAUs,"STFDF")) {
-            Qfs_BAUs <- do.call("bdiag",
-                                lapply(1:length(BAUs@time),function(i) {Qfs_BAUs}))
-        }
-        Vfs_BAUs <- Matrix(ncol=0,nrow=0)
-    }
+    } else stop("No other fs-model implemented yet")
 
+    ## Now concatenate the matrices obtained from all the observations together
     S <- do.call("rBind",S)
     X <- do.call("rBind",X)
+    Cmat <- do.call("rBind",Cmat)
     Z <- do.call("rBind",Z)
     Ve <- do.call("bdiag",Ve)
     Vfs <- do.call("bdiag",Vfs)
-    D_basis <- BuildD(basis)
-    #K_norm <- .initialise_K(basis,D_basis)
-    #K_init <- var(Z[,1])*K_norm
-    K_init = Diagonal(n=nbasis(basis),x = 1/(1/var(Z[,1])))
-    K_inv_init = Diagonal(n=nbasis(basis),x = (1/var(Z[,1])))
 
+    ## Initialise the expectations and covariances from E-step to reasonable values
+    mu_eta_init <- Matrix(0,nbasis(basis),1)
+    S_eta_init <- Diagonal(x = rep(1,nbasis(basis)))
+    Q_eta_init <- Diagonal(x = rep(1,nbasis(basis)))
+
+    ## Start with reasonable parameter estimates (that will be updated in M-step)
+    K_init = Diagonal(n=nbasis(basis),x = 1/(1/var(Z[,1])))
+    K_inv_init = solve(K_init)
+
+    if(!is.finite(determinant(t(X) %*% X)$modulus))
+        stop("Matrix of covariates has columns that are linearly dependent. Please change formula or covariates.")
+    alphahat_init <- solve(t(X) %*% X) %*% t(X) %*% Z
+    sigma2fshat_init <- mean(diag(Ve)) / 4
+
+    ## Construct the SRE object
     new("SRE",
         data=data,
         basis=basis,
@@ -202,958 +215,62 @@ SRE <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mode
         f = f,
         S = S,
         S0 = S0,
+        D_basis = D_basis,
         Ve = Ve,
         Vfs = Vfs,
         Vfs_BAUs = Vfs_BAUs,
         Qfs_BAUs = Qfs_BAUs,
-        X = X,
         Z = Z,
-        Cmat = do.call("rBind",Cmat),
-        mu_eta = Matrix(0,nbasis(basis),1),
-        mu_xi = Matrix(0,length(BAUs),1),
-        S_eta = Diagonal(x = rep(1,nbasis(basis))),
-        alphahat = solve(t(X) %*% X) %*% t(X) %*% Z,
+        Cmat = Cmat,
+        X = X,
+        mu_eta = mu_eta_init,
+        S_eta = S_eta_init,
+        Q_eta = Q_eta_init,
+        K_type = K_type,
         Khat = K_init,
         Khat_inv = K_inv_init,
-        Q_eta = Diagonal(x = rep(1,nbasis(basis))),
-        B_run = Diagonal(n=nbasis(basis),x = 1/var(Z[,1])),
-        v_run = Matrix(0,nbasis(basis),nbasis(basis)),
-        sigma2fshat = mean(diag(Ve)) / 4,
-        fs_model = fs_model,
-        D_basis = D_basis,
-        K_type = K_type,
-        lambda = 0)
-}
-
-.initialise_K <- function(basis,D_basis) {
-
-    all_res <- count_res(basis)
-    K_norm <- lapply(1:nrow(all_res),
-                    function(i) {
-                        idx <- which(basis@df$res == i)
-                        if(is(basis,"TensorP_Basis")) {
-                            tau_init_space <- max(D_basis$Basis1[[i]])/5 ## space
-                            tau_init_time <- 3 ## time
-                            Ki <- kronecker(exp(-D_basis$Basis2[[1]]/tau_init_time),
-                                            exp(-D_basis$Basis1[[i]]/tau_init_space))
-                        } else {
-                            tau_init_space <- max(D_basis[[i]])/5 ## space
-                            Ki <- exp(-D_basis[[i]]/tau_init_space)
-                        }
-                    })
-
-    K_norm <- do.call("bdiag",K_norm)
-    idx_all <- unlist(lapply(1:nrow(all_res), function(i) which(basis@df$res == i)))
-
-    # Rearrange in order time/resolution when we have tensor products
-    # When we don't have tensor product idx_all and 1:nrow(K) should be the same
-    K_norm <- reverse_permute(K_norm,idx_all)
-
-
+        alphahat = alphahat_init,
+        sigma2fshat = sigma2fshat_init,
+        fs_model = fs_model)
 }
 
 
 #' @rdname SRE
 #' @export
-SRE.fit <- function(SRE_model,n_EM = 100L, tol = 0.01, lambda = 0, method="EM", print_lik=FALSE, cross_validate=1L) {
-    .check_args2(n_EM = n_EM,tol = tol,lambda = lambda,method = method,print_lik = print_lik,cross_validate = cross_validate)
-    if(!(length(cross_validate) == 1 | length(cross_validate) == nrow(count_res(SRE_model))))
-        stop("cross_validate needs to be of length one or of length equal to the number of basis-function resolutions")
+SRE.fit <- function(SRE_model,n_EM = 100L, tol = 0.01, method="EM", lambda = 0, print_lik=FALSE) {
 
-    if(any(cross_validate > 1L) & length(lambda) == 1) {
-        VarZ <- var(SRE_model@Z[,1])
-        lambda = c(0,1/VarZ,10/VarZ,100/VarZ)
-        print("Cross-validating on lambda = ")
-        print(lambda)
-    }
+    ## Check the arguments are OK
+    .check_args2(n_EM = n_EM,tol = tol,method = method,print_lik = print_lik)
 
-
-    if(all(cross_validate == 1)) {
-        .SRE.fit(SRE_model = SRE_model, n_EM = n_EM, tol = tol, lambda = lambda, method = "EM", print_lik=print_lik)
-    } else {
-        m <- nrow(SRE_model@Z)
-        all_coords <- SRE_model@Cmat %*% coordinates(SRE_model@BAUs)
-
-        nres <- nrow(count_res(SRE_model))
-        current_lambda <- rep(0,nres)
-        max_lambda = Inf  ## Make sure lambdas are monotonic in resolution
-        if(length(cross_validate) == 1) {
-            nres = 1 # Only optimise one lambda (for all resolutions)
-        }
-        for(res in nres : 1) {
-            num_at_res <- count_res(SRE_model)[res,]$n
-            if(num_at_res < m/4 & length(cross_validate) > 1) {
-                print(paste0("Dividing data into ",num_at_res*2," clusters"))
-                numclusters = Hmisc::ceil(min(num_at_res*2, m))
-                cluster_labels <- kmeans(all_coords,centers = numclusters)$cluster
-            } else {
-                numclusters = m
-                cluster_labels <- sample(1:m,m)
-            }
-
-            partitions <- cut(1:numclusters,
-                              seq(0,numclusters+1,length=cross_validate[nres] + 1),
-                              labels=FALSE)
-            ESS <- crps <- sq_resid <- ESS_score <- crps_score <- cv_score <- NULL
-
-            for(l in seq_along(lambda[lambda <= max_lambda])) {
-                if(length(cross_validate) > 1) {
-                    current_lambda[res] <- lambda[l]
-                } else {
-                    current_lambda <- rep(lambda[l],nres)
-                }
-                for (i in 1:cross_validate[nres]) {
-                    these_clusters <- which(partitions == i)
-                    rm_idx <- which(cluster_labels %in% these_clusters)
-                    S_part <- .remove_obs_from_SRE(S = SRE_model, rm_idx = rm_idx)
-                    S_part <- .SRE.fit(SRE_model = S_part, n_EM = n_EM, tol = tol, lambda = current_lambda,
-                                       method = "EM", print_lik=FALSE)
-                    BAUs_to_predict <- apply(SRE_model@Cmat[rm_idx,],1,function(x) which(x==1))
-                    Validate_obs <- SRE.predict(SRE_model = S_part,      # SRE model
-                                                pred_polys = S_part@BAUs[BAUs_to_predict,],
-                                                obs_fs = FALSE)
-                    sq_resid[i] <- mean((Validate_obs$mu - SRE_model@Z[rm_idx])^2)
-                    crps[i] <- verification::crps(SRE_model@Z[rm_idx],
-                                                  cbind(Validate_obs$mu,sqrt(Validate_obs$var + diag(SRE_model@Ve)[rm_idx])))$CRPS
-                    ESS[i] <- mean((Validate_obs$var + diag(SRE_model@Ve)[rm_idx] -
-                                        (Validate_obs$mu - SRE_model@Z[rm_idx])^2)^2)
-                    #hist((Validate_obs$mu - SRE_model@Z[rm_idx])/sqrt(Validate_obs$var + diag(SRE_model@Ve)[rm_idx]))
-                }
-                cv_score[l] <- mean(sq_resid)
-                crps_score[l] <- mean(crps)
-                ESS_score[l] <- mean(ESS)
-            }
-            print(paste0("Cross validation results for ",
-                         ifelse(length(cross_validate) > 1,paste0("resolution ",res),"all resolutions"),":"))
-            print("---------------------------------------------")
-            print(data.frame(lambda = lambda[lambda <= max_lambda],
-                             sq_res = cv_score, crps=crps_score, ESS = ESS_score))
-            lambda_best <- lambda[which.min(cv_score)]
-            print(paste0("Proceeding with lambda = ", lambda_best," for this(these) resolution(s)"))
-            current_lambda[res] <- lambda_best
-            max_lambda <- lambda_best
-        }
-
-        .SRE.fit(SRE_model = SRE_model, n_EM = n_EM, tol = tol, lambda = current_lambda, method = "EM", print_lik=print_lik)
-
-    }
+    ## Call internal fitting function with checked arguments
+    .SRE.fit(SRE_model = SRE_model, n_EM = n_EM, tol = tol, method = "EM", lambda = lambda, print_lik=print_lik)
 
 }
-
-.remove_obs_from_SRE <- function(S, rm_idx) {
-    S_part <- S
-    S_part@S <- S@S[-rm_idx,]
-    S_part@Ve <- S@Ve[-rm_idx,-rm_idx]
-    S_part@Vfs <- S@Vfs[-rm_idx,-rm_idx]
-    S_part@Z <- S@Z[-rm_idx,,drop=FALSE]
-    S_part@Cmat <- S@Cmat[-rm_idx,,drop=FALSE]
-    S_part@X <- S@X[-rm_idx,,drop=FALSE]
-    S_part
-}
-
-.SRE.fit <- function(SRE_model,n_EM = 100L, tol = 0.01, lambda = 0, method="EM", print_lik=FALSE) {
-    n <- nbasis(SRE_model)
-    X <- SRE_model@X
-    lk <- rep(0,n_EM)
-    SRE_model@lambda <- lambda
-
-    if(!is.na(tol) & (SRE_model@fs_model == "ICAR")) {
-        warning("Cannot monitor the observed likelihood with the ICAR model.
-                Monitoring changes in eta instead.")
-        lik_plot_ylab <- "norm(eta)"
-    } else {
-        lik_plot_ylab <- "log likelihood"
-    }
-
-    if(opts_FRK$get("progress")) pb <- utils::txtProgressBar(min = 0, max = n_EM, style = 3)
-    for(i in 1:n_EM) {
-        if (!(SRE_model@fs_model == "ICAR")){
-            #print(system.time( lk[i] <- .loglik(SRE_model)))  # Compute likelihood
-            lk[i] <- .loglik(SRE_model)
-        } else {
-            lk[i] <- sqrt(sum(SRE_model@mu_eta^2))
-        }
-
-        # Still in development:
-        # if(i == 2) {
-        #     print("Normalising basis function evaluations at BAUs ...")
-        #     S0 <- eval_basis(SRE_model@basis,as.matrix(SRE_model@BAUs[coordnames(SRE_model@data[[1]])]@data))
-        #     xx <<- sqrt(rowSums((S0 %*% SRE_model@S_eta) * S0))
-        #     S0 <- S0/xx
-        #     SRE_model@S <- SRE_model@Cmat %*% S0
-        #     print("Done ...")
-        # }
-
-        SRE_model <- .SRE.Estep(SRE_model)
-        SRE_model <- .SRE.Mstep(SRE_model)
-        if(opts_FRK$get("progress")) utils::setTxtProgressBar(pb, i)
-        if(i>1)
-            if(abs(lk[i] - lk[i-1]) < tol) {
-                print("Minimum tolerance reached")
-                break
-            }
-    }
-    if(opts_FRK$get("progress")) close(pb)
-    #if(SRE_model@sigma2fshat == 0)
-            #warning("sigma2fs is being estimated to zero.
-             #This might because of an incorrect binning procedure or because
-             #too much measurement error is being assumed (or because the latent
-             #field is indeed that smooth, but unlikely).")
-
-    if(i == n_EM) print("Maximum EM iterations reached")
-    if(print_lik & !is.na(tol)) {
-        plot(1:i,lk[1:i],ylab=lik_plot_ylab,xlab="EM iteration")
-    }
-    SRE_model
-}
-
-.SRE.Estep <- function(Sm) {
-    if(Sm@fs_model == "ind") {
-        Sm <- .SRE.Estep.ind(Sm)
-    } else if(Sm@fs_model == "ICAR") {
-        Sm <- .SRE.EMstep.ICAR(Sm)
-    }
-}
-
-.SRE.Mstep <- function(Sm) {
-    if(Sm@fs_model == "ind") {
-        Sm <- .SRE.Mstep.ind(Sm)
-    } else if(Sm@fs_model == "ICAR") {
-        Sm # M-step already carried out
-    }
-}
-
-.SRE.Estep.ind <- function(Sm) {
-    alpha <- Sm@alphahat
-    K <- Sm@Khat
-    Kinv <- Sm@Khat_inv
-    sigma2fs <- Sm@sigma2fshat
-
-    D <- sigma2fs*Sm@Vfs + Sm@Ve
-    if(is(D,"dtCMatrix")) {
-        cholD <- sqrt(D)
-        cholDinv <- solve(cholD)
-        Dinv <- solve(D)
-    } else {
-        cholD <- Matrix::chol(D)
-        cholDinv <- solve(cholD)
-        Dinv <- chol2inv(chol(D))
-    }
-
-    Q_eta <- (crossprod(t(cholDinv) %*% Sm@S) + Kinv)
-    S_eta <- chol2inv(chol(Q_eta))
-    mu_eta <- (S_eta) %*%(t(Sm@S) %*% Dinv %*% (Sm@Z - Sm@X %*% alpha))
-
-
-    ## Deprecated:
-    # if(!is(Q_eta,"dsCMatrix")) Q_eta <- as(Q_eta,"dsCMatrix")
-    # chol_Q_eta <- cholPermute(Q_eta)
-    # mu_eta <- cholsolve(Q_eta,(t(Sm@S) %*% Dinv %*% (Sm@Z - Sm@X %*% alpha)),
-    #                     perm=TRUE, cholQp = chol_Q_eta$Qpermchol,P = chol_Q_eta$P)
-    # S_eta <- Matrix()
-
-    ## Deprecated:
-    # S_eta <- chol2inv(chol(crossprod(t(cholDinv) %*% Sm@S) + Kinv))
-    # mu_eta <- S_eta %*% (t(Sm@S) %*% Dinv %*% (Sm@Z - Sm@X %*% alpha))
-
-    Sm@mu_eta <- mu_eta
-    Sm@S_eta <- S_eta
-    Sm@Q_eta <- Q_eta
-    Sm
-
-}
-
-
-.regularise_K <- function(Sm,S_eta= NULL,mu_eta = NULL) {
-    if (is.null(S_eta)) S_eta <- Sm@S_eta
-    if (is.null(mu_eta)) mu_eta <- Sm@mu_eta
-
-    if(any(Sm@lambda > 0)) {
-
-        ## Just one regulatisation parameter for all resolutions
-        if(length(Sm@lambda) == 1) {
-            reg_matrix <- Sm@lambda*Diagonal(nrow(S_eta))
-        } else {
-            ## One regularisation parameter per resolution
-            reg_matrix <- Diagonal(x = do.call("c",
-                                  apply(count_res(Sm),1,
-                                        function(x) rep(Sm@lambda[x[1]],x[2]))))
-        }
-
-        Q <- chol2inv(chol(S_eta + tcrossprod(mu_eta))) + reg_matrix
-        K <- chol2inv(chol(Q))
-    } else {
-        K <- S_eta + tcrossprod(mu_eta)
-    }
-    K
-}
-
-.update_K <- function(Sm,method="unstructured",S_eta= NULL,mu_eta = NULL) {
-    if (is.null(S_eta)) S_eta <- Sm@S_eta
-    if (is.null(mu_eta)) mu_eta <- Sm@mu_eta
-
-    if(method == "unstructured") {
-        K <- .regularise_K(Sm)
-    } else if (method == "block-exponential") {
-        all_res <- count_res(Sm)
-        omega <- lapply(1:nrow(all_res),
-                        function(i) {
-                            ni <- all_res[i,]$n
-                            idx <- which(Sm@basis@df$res == i)
-                            Ki <- Sm@Khat[idx,idx]/Sm@Khat[idx[1],idx[1]] # normalised
-                            Ki_inv <- chol2inv(chol(Ki))
-                            ni / sum(diag2(Ki_inv,S_eta[idx,idx] + tcrossprod(mu_eta[idx])))
-                        })
-        f_tau <- function(tau_i,i) {
-            if(any(tau_i <= 1e-10)) {
-                Inf
-            } else {
-                idx <- which(Sm@basis@df$res == i)
-                if(is(Sm@basis,"TensorP_Basis")) {
-                    Ki <- kronecker(exp(-Sm@D_basis$Basis2[[1]]/tau_i[2]),
-                                    exp(-Sm@D_basis$Basis1[[i]]/tau_i[1]))
-                } else {
-                    Ki <- exp(-Sm@D_basis[[i]]/tau_i)
-                }
-                Ki_inv <- chol2inv(chol(Ki))
-                -(0.5*determinant(Ki_inv)$modulus -
-                      omega[[i]]/2*sum(diag2(Ki_inv,S_eta[idx,idx] +
-                                                 tcrossprod(mu_eta[idx])))) %>%
-                as.numeric()
-            }
-        }
-
-        gr_f_tau <- function(tau_i,i) {
-            idx <- which(Sm@basis@df$res == i)
-            if(is(Sm@basis,"TensorP_Basis")) {
-                Ki <- kronecker(exp(-Sm@D_basis$Basis2[[1]]/tau_i[2]),
-                                exp(-Sm@D_basis$Basis1[[i]]/tau_i[1]))
-                dKi <- kronecker(exp(-Sm@D_basis$Basis2[[1]]/tau_i[2]),
-                                 (Sm@D_basis$Basis1[[i]]/(tau_i[1]^2))*exp(-Sm@D_basis$Basis1[[i]]/tau_i[1]))
-                dKit <- kronecker((Sm@D_basis$Basis2[[1]]/(tau_i[2]^2))*exp(-Sm@D_basis$Basis2[[1]]/tau_i[2]),
-                                  exp(-Sm@D_basis$Basis1[[i]]/tau_i[1]))
-            } else {
-                Ki <- exp(-Sm@D_basis[[i]]/tau_i)
-                dKi <- (Sm@D_basis[[i]]/(tau_i^2))*exp(-Sm@D_basis[[i]]/tau_i)
-            }
-            Ki_inv <- chol2inv(chol(Ki))
-            tau_i1 <- -(-0.5*sum(diag2(dKi,Ki_inv)) +
-                  0.5*omega[[i]]*sum(diag2((S_eta[idx,idx] + tcrossprod(mu_eta[idx]))%*% Ki_inv,
-                                           dKi %*% Ki_inv))) %>%
-                as.numeric()
-            if(length(tau_i) == 1) {
-                return(tau_i1)
-            } else {
-                tau_i2 <-  -(-0.5*sum(diag2(dKit,Ki_inv)) +
-                                 0.5*omega[[i]]*sum(diag2((S_eta[idx,idx] + tcrossprod(mu_eta[idx]))%*% Ki_inv,
-                                                    dKit %*% Ki_inv))) %>%
-                        as.numeric()
-                return(c(tau_i1,tau_i2))
-            }
-        }
-
-        max_l <- max(unlist(Sm@D_basis[[1]]))
-
-        tau <- lapply(1:nrow(all_res),
-                        function(i) {
-                            ## Extract current length scales
-                            idx <- which(Sm@basis@df$res == i)
-                            Ki <- Sm@Khat[idx,idx]/Sm@Khat[idx[1],idx[1]]
-                            if(is(Sm@basis,"TensorP_Basis")) {
-                                par_init <- max(-Sm@D_basis$Basis1[[i]][1,2]/log(Ki[1,2]),1e-9) ## space
-                                par_init[2] <- max(-Sm@D_basis$Basis2[[1]][1,2]/log(Ki[1,1+count_res(Sm@basis@Basis1)$n[i]]),1e-9) ## time
-                                if(par_init[2] == 1e-9) par_init[2] <- 1
-                            } else {
-                                par_init <- max(-Sm@D_basis[[i]][1,2]/log(Ki[1,2]),1e-9)
-                            }
-                            if(par_init[1] == 1e-9) par_init[1] <- max_l/10
-                            suppressWarnings(optim(par = par_init,
-                                                   fn = f_tau,
-                                                   gr = gr_f_tau,
-                                                   i=i,control=list(maxit=100L))$par)
-                        })
-
-        K <- lapply(1:nrow(all_res),
-                    function(i) {
-                        if(is(Sm@basis,"TensorP_Basis")) {
-                            Ki <- kronecker(exp(-Sm@D_basis$Basis2[[1]]/tau[[i]][2]),
-                                            exp(-Sm@D_basis$Basis1[[i]]/tau[[i]][1]))/omega[[i]]
-                        } else {
-                            Ki <- exp(-Sm@D_basis[[i]]/tau[[i]])/omega[[i]]
-                        }
-
-                    })
-        K <- do.call("bdiag",K)
-        idx_all <- unlist(lapply(1:nrow(all_res), function(i) which(Sm@basis@df$res == i)))
-
-        # Rearrange in order time/resolution when we have tensor products
-        # When we don't have tensor product idx_all and 1:nrow(K) should be the same
-        K <- reverse_permute(K,idx_all)
-
-        #cat("  Estimates of omega: ",unlist(omega),"  ")
-        #cat("  Estimates of tau: ",unlist(tau),"  ")
-
-        # Deprecated:
-        # K <- lapply(1:nrow(all_res),
-        #             function(i) {
-        #                 idx <- which(Sm@basis@df$res == 1)
-        #                 omega[[i]]*exp(-as.matrix(dist(filter(
-        #                       Sm@basis@df,res == i)[,1:2]))/0.15)
-        #                 })
-        # K <- do.call("bdiag",K)
-
-    }
-    K
-}
-
-.SRE.Mstep.ind <- function(Sm) {
-
-    mu_eta <- Sm@mu_eta
-    S_eta <- Sm@S_eta
-    alpha_init <- Sm@alphahat
-    sigma2fs_init <- Sm@sigma2fshat
-
-    K <- .update_K(Sm,method=Sm@K_type)
-    Khat_inv <- chol2inv(chol(K))
-    alpha <- alpha_init
-    sigma2fs <- sigma2fs_init
-
-    if(all((a <- diag(Sm@Ve)) == a[1]) &
-       all((b <- diag(Sm@Vfs)) == b[1]) &
-       all(rowSums(Sm@Vfs) == b[1]))    {
-        homoscedastic <- TRUE
-    } else {
-        homoscedastic <- FALSE
-    }
-
-    if( all(rowSums(Sm@Ve) == diag(Sm@Ve)) &
-        all(rowSums(Sm@Vfs) == diag(Sm@Vfs)))    {
-        diagonal_mats <- TRUE
-    } else {
-        diagonal_mats <- FALSE
-    }
-
-
-
-    if(!all(diag(Sm@Vfs) == 0))
-        if(!diagonal_mats) {
-
-            J <- function(sigma2fs) {
-                if(sigma2fs < 0) {
-                    return(Inf)
-                } else {
-                    D <- sigma2fs*Sm@Vfs + Sm@Ve
-                    Dinv <- chol2inv(chol(D))
-                    DinvV <- Dinv %*% Sm@Vfs
-                    DinvVDinv <- Dinv %*% Sm@Vfs %*% Dinv
-
-                    alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*%
-                        (Sm@Z - Sm@S %*% mu_eta)
-                    resid <- Sm@Z - Sm@X %*% alpha
-
-                    Dinvr <- DinvVDinv %*% resid
-                    DinvS <- DinvVDinv %*% Sm@S
-
-                    tr1 <- tr(DinvV)
-                    tr2 <- sum(diag2(DinvS %*% (S_eta +  tcrossprod(mu_eta)),t(Sm@S))  -
-                                   2*diag2(DinvS %*% mu_eta,t(resid)) +
-                                   diag2(Dinvr,t(resid)))
-
-                    -(-0.5*tr1 +0.5*tr2)
-                }
-            }
-        } else {
-
-            R_eta <- chol(S_eta + tcrossprod(mu_eta))
-            S_R_eta <- Sm@S %*% t(R_eta)
-            Omega_diag1 <- rowSums(S_R_eta^2)
-            J <- function(sigma2fs) {
-                if(sigma2fs < 0) {
-                    return(Inf)
-                } else {
-                    D <- sigma2fs*Sm@Vfs + Sm@Ve
-                    if(is(D,"dtCMatrix")) {
-                        Dinv <- solve(D)
-                    } else {
-                        Dinv <- chol2inv(chol(D))
-                    }
-                    DinvV <- Dinv %*% Sm@Vfs
-
-                    alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*% (Sm@Z - Sm@S %*% mu_eta)
-                    resid <- Sm@Z - Sm@X %*% alpha
-                    Omega_diag <- Omega_diag1 -
-                        2*diag2(Sm@S %*% mu_eta, t(resid)) +
-                        diag2(resid,t(resid))
-                    Omega_diag <- Diagonal(x=Omega_diag)
-
-                    -(-0.5*tr(DinvV) +
-                          0.5*tr(DinvV %*% Dinv %*% Omega_diag)
-                    )
-                }
-            }
-        }
-
-
-
-    # Repeat until finding values on opposite sides of zero if heteroscedastic
-    if(!all(diag(Sm@Vfs) == 0))
-        if(!homoscedastic) {
-            amp_factor <- 10; OK <- 0
-            while(!OK) {
-                amp_factor <- amp_factor * 10
-                if(!(sign(J(sigma2fs/amp_factor)) == sign(J(sigma2fs*amp_factor)))) OK <- 1
-                if(amp_factor > 1e9) {
-                    OK <- 1
-                }
-            }
-
-            if(amp_factor > 1e9) {
-                sigma2fs_new <- 0
-            } else {
-                sigma2fs_new <- stats::uniroot(f = J,
-                                        interval = c(sigma2fs/amp_factor,sigma2fs*amp_factor))$root
-            }
-            D <- sigma2fs_new*Sm@Vfs + Sm@Ve
-            if(is(D,"dtCMatrix")) {
-                Dinv <- solve(D)
-            } else {
-                Dinv <- chol2inv(chol(D))
-            }
-            alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*% (Sm@Z - Sm@S %*% mu_eta)
-        } else {
-
-            alpha <- solve(t(Sm@X) %*% Sm@X) %*% t(Sm@X) %*% (Sm@Z - Sm@S %*% mu_eta)
-            resid <- Sm@Z - Sm@X %*% alpha
-            Omega_diag <- Omega_diag1 -
-                2*diag2(Sm@S %*% mu_eta, t(resid)) +
-                diag2(resid,t(resid))
-            Omega_diag <- Diagonal(x=Omega_diag)
-            sigma2fs_new <- 1/b[1]*(sum(Omega_diag)/length(Sm@Z) - a[1])
-            if(sigma2fs_new < 0) {
-                sigma2fs_new = 0
-            }
-        }
-    if(all(diag(Sm@Vfs) == 0)) {
-        alpha <- solve(t(Sm@X) %*% solve(Sm@Ve) %*% Sm@X) %*% t(Sm@X) %*%
-            solve(Sm@Ve) %*% (Sm@Z - Sm@S %*% mu_eta)
-        sigma2fs_new <- 0
-    }
-
-    Sm@Khat <- K
-    Sm@Khat_inv <- Khat_inv
-    Sm@alphahat <- alpha
-    Sm@sigma2fshat <- sigma2fs_new
-
-    Sm
-}
-
-.SRE.EMstep.ICAR <- function(Sm) {
-
-    alpha <- Sm@alphahat
-    K <- Sm@Khat
-    Kinv <- Sm@Khat_inv
-    sigma2fs <- Sm@sigma2fshat
-    Qfs_norm <- Sm@Qfs_BAUs %>% as("dgTMatrix")
-    Cmat <- Sm@Cmat
-    r <- nrow(K)
-    n <- length(Sm@BAUs)
-    Qe <- solve(Sm@Ve)
-
-    GAMMA <- as(bdiag(Kinv,(1/sigma2fs) * Qfs_norm),"symmetricMatrix") %>% as("dgTMatrix")
-    PI <- cBind(Sm@S, Cmat %*% .symDiagonal(n=length(Sm@BAUs)))
-    Qx <- (t(PI) %*% solve(Sm@Ve) %*% PI + GAMMA) %>% as("dgTMatrix")
-
-    ## Add (zero) elements to Qx so that all covariance elements associated with eta are computed
-    ## This may be removed in the future if we work with uniformly sparse K
-    ij <- expand.grid(i=0:(r-1),j=0:(r-1))
-    miss_idx <- setdiff(ij,data.frame(i=Qx@i,j=Qx@j))
-    Qx@i <- c(Qx@i,miss_idx[,1])
-    Qx@j <- c(Qx@j,miss_idx[,2])
-    Qx@x <- c(Qx@x,rep(0L,nrow(miss_idx)))
-    Qx <- as(Qx,"dgCMatrix")
-    temp <- cholPermute(Qx)
-    ybar <- t(PI) %*% Qe %*% (Sm@Z - Sm@X %*% alpha)
-    x_mean <- cholsolve(Qx,ybar,perm=TRUE,cholQp = temp$Qpermchol, P = temp$P)
-    Cov <- Takahashi_Davis(Qx,cholQp = temp$Qpermchol,P = temp$P) # PARTIAL
-
-    MeanOuter_sparse <- sparseMatrix(i=GAMMA@i + 1, j=GAMMA@j + 1,
-                                     x = x_mean[GAMMA@i+1] * x_mean[GAMMA@j+1])
-    MeanOuter_eta <- tcrossprod(Matrix(x_mean[1:r]))
-
-    Sm@Khat <- .regularise_K(Sm = Sm,
-                             S_eta = as(forceSymmetric(Cov[(1:r),(1:r)]),"symmetricMatrix"),
-                             mu_eta = (Matrix(x_mean[1:r])))
-    Sm@Khat_inv <- chol2inv(chol(Sm@Khat))
-
-    Sm@sigma2fshat <- sum(Qfs_norm * (Cov[-(1:r),-(1:r)] + MeanOuter_sparse[-(1:r),-(1:r)]))/ length(Sm@BAUs)
-    Sm@alphahat <- solve(t(Sm@X) %*% Qe %*% Sm@X) %*% t(Sm@X) %*% Qe %*% (Sm@Z - PI %*% x_mean)
-    Sm@mu_eta <- Matrix(x_mean[1:r])
-    Sm@mu_xi <- Matrix(x_mean[-(1:r)])
-    Sm@S_eta <- Cov[1:r,1:r]
-    Sm
-
-}
-
-.loglik <- function(Sm) {
-    if(Sm@fs_model == "ind") {
-        .loglik.ind(Sm)
-    } else if(Sm@fs_model == "ICAR") {
-        .loglik.ICAR(Sm)
-    }
-}
-
-.loglik.ind <- function(Sm) {
-
-    S <- Sm@S
-    K <- Sm@Khat
-    chol_K <- chol(K)
-    Kinv <- chol2inv(chol_K)
-    resid <- Sm@Z - Sm@X %*% Sm@alphahat
-    N <- length(Sm@Z)
-
-    D <- Sm@sigma2fshat*Sm@Vfs + Sm@Ve
-    if(is(D,"dtCMatrix")) {
-        cholD <- sqrt(D)
-        cholDinvT <- solve(cholD)
-    } else {
-        cholD <- chol(D)
-        cholDinvT <- t(solve(cholD))
-    }
-
-    S_Dinv_S <-  crossprod(cholDinvT %*% S)
-    log_det_SigmaZ <- determinant(Kinv + S_Dinv_S,logarithm = TRUE)$modulus +
-        determinant(K,logarithm = TRUE)$modulus +
-        logdet(cholD)
-
-    ## Alternatively: (slower but more direct)
-    # Dinv <- chol2inv(chol(D))
-    # SigmaZ_inv <- Dinv - Dinv %*% S %*% solve(Kinv + S_Dinv_S) %*% t(S) %*% Dinv
-    # SigmaZ_inv2 <- Dinv - tcrossprod(Dinv %*% S %*% solve(R))
-
-    R <- chol(Kinv + S_Dinv_S)
-
-    rDinv <- crossprod(cholDinvT %*% resid,cholDinvT)
-    ## Alternatively: # rDinv <- t(resid) %*% Dinv
-
-    quad_bit <- crossprod(cholDinvT %*% resid) - tcrossprod(rDinv %*% S %*% solve(R))
-    ## Alternatively: # quad_bit <- rDinv %*% resid - tcrossprod(rDinv %*% S %*% solve(R))
-
-    llik <- -0.5 * N * log(2*pi) -
-        0.5 * log_det_SigmaZ -
-        0.5 * quad_bit
-    as.numeric(llik)
-
-}
-
-.loglik.ICAR <- function(Sm) {
-
-    # warning("Monitoring complete-data likelihood")
-    # res <- Sm@Z - Sm@X %*% Sm@alphahat - Sm@S %*% Sm@mu_eta - Sm@Cmat %*% Sm@mu_xi
-    # (-0.5 * t(res) %*% solve(Sm@Ve) %*%  res) %>% as.numeric()
-    S <- Sm@S
-    K <- Sm@Khat
-    chol_K <- chol(K)
-    Kinv <- chol2inv(chol_K)
-    resid <- Sm@Z - Sm@X %*% Sm@alphahat
-    N <- length(Sm@Z)
-    Qe <- solve(Sm@Ve)
-    Cmat <- Sm@Cmat
-    Qfs <- (1/Sm@sigma2fshat) * Sm@Qfs_BAUs
-    R <- chol(Qfs  + t(Cmat) %*% Qe %*% Cmat)
-    Dinv <- Qe*1.000000001 - crossprod(t(solve(R)) %*% t(Cmat) %*% Qe)
-    chol_Dinv <- chol(Dinv)
-    D <- chol2inv(chol_Dinv)
-    cholD <- chol(D)
-    cholDinvT <- t(solve(cholD))
-    S_Dinv_S <-  crossprod(cholDinvT %*% S)
-    log_det_SigmaZ <- determinant(Kinv + S_Dinv_S,logarithm = TRUE)$modulus +
-        determinant(K,logarithm = TRUE)$modulus +
-        logdet(cholD)
-
-    ## Alternatively: (slower but more direct)
-    # Dinv <- chol2inv(chol(D))
-    # SigmaZ_inv <- Dinv - Dinv %*% S %*% solve(Kinv + S_Dinv_S) %*% t(S) %*% Dinv
-    # SigmaZ_inv2 <- Dinv - tcrossprod(Dinv %*% S %*% solve(R))
-
-    R <- chol(Kinv + S_Dinv_S)
-
-    rDinv <- crossprod(cholDinvT %*% resid,cholDinvT)
-    ## Alternatively: # rDinv <- t(resid) %*% Dinv
-
-    quad_bit <- crossprod(cholDinvT %*% resid) - tcrossprod(rDinv %*% S %*% solve(R))
-    ## Alternatively: # quad_bit <- rDinv %*% resid - tcrossprod(rDinv %*% S %*% solve(R))
-
-    llik <- -0.5 * N * log(2*pi) -
-        0.5 * log_det_SigmaZ -
-        0.5 * quad_bit
-    as.numeric(llik)
-
-
-
-}
-
 
 
 #' @rdname SRE
 #' @export
 SRE.predict <- function(SRE_model,obs_fs=FALSE,pred_polys = NULL,pred_time = NULL) {
-    .check_args3(obs_fs=obs_fs,pred_polys=pred_polys,pred_time=pred_time)
 
-    if(!is.null(pred_polys))
-        if(is(SRE_model@BAUs,"ST"))
+    ## Check the arguments are OK
+    .check_args3(obs_fs = obs_fs,pred_polys = pred_polys,pred_time = pred_time)
+
+    ## If we are predicting over polygons and require space-time prediction regions
+    ## Throw an error as it's not implemented yet
+    if(!is.null(pred_polys) & is(SRE_model@BAUs,"ST"))
             stop("Prediciton is currently only possible at BAU level with
                   spatio-temporal models. Please do not use pred_polys")
 
-    pred_locs <- .SRE.predict(Sm=SRE_model,
-                              obs_fs=obs_fs,
-                              pred_polys = pred_polys,
-                              pred_time = pred_time)
+    ## Call internal prediction function
+    pred_locs <- .SRE.predict(Sm = SRE_model,            # Fitted SRE model
+                              obs_fs = obs_fs,           # Case 1 or Case 2?
+                              pred_polys = pred_polys,   # Prediction polygons
+                              pred_time = pred_time)     # Prediction time points
 
+    ## Return predictions
     pred_locs
 }
 
-
-.SRE.predict <- function(Sm,obs_fs = FALSE,pred_polys = NULL,pred_time = NULL) {
-
-
-    if(is.null(pred_time) & is(Sm@BAUs,"ST"))
-        pred_time <- 1:length(Sm@BAUs@time)
-
-
-    predict_BAUs <- TRUE
-    BAUs <- Sm@BAUs
-
-    if(is.null(pred_polys)) {
-        CP <- Diagonal(length(BAUs))
-    } else {
-        ## Check if these are actually BAUs:
-        pred_polys_are_BAUs <- all(row.names(pred_polys) %in% row.names(BAUs)) & length(BAUs) == length(pred_polys)
-        if(pred_polys_are_BAUs) {
-           BAUs_idx <- match(row.names(pred_polys), row.names(BAUs))
-           CP <-  sparseMatrix(i=1:length(pred_polys),
-                              j=BAUs_idx,
-                              x=1,
-                              dims=c(length(pred_polys),
-                                     length(BAUs)))
-
-        } else {
-            ## Make sure they are Polygons (not pixels etc.)
-            pred_polys <- as(pred_polys,"SpatialPolygonsDataFrame")
-            C_idx <- BuildC(pred_polys,BAUs)
-            CP <- sparseMatrix(i=C_idx$i_idx,
-                               j=C_idx$j_idx,
-                               x=1,
-                               dims=c(length(pred_polys),
-                                      length(BAUs)))
-            CP <- CP / rowSums(CP) ## Average over polygon
-            if(!all(table(C_idx$i_idx) == 1))
-                predict_BAUs <- FALSE   ## Need to compute full covariance matrix
-        }
-    }
-
-    CZ <- Sm@Cmat
-
-    ## Now, we only need those BAUs that are influenced by observations and prediction locations
-    if(!is.null(pred_polys)) {
-        needed_BAUs <- union(as(CP,"dgTMatrix")@j+1, as(CZ,"dgTMatrix")@j+1)
-        BAUs <- BAUs[needed_BAUs,]
-        CP <- CP[,needed_BAUs]
-        CZ <- CZ[,needed_BAUs]
-        Sm@S0 <- Sm@S0[needed_BAUs,]
-    }
-
-    # Deprecated:
-    # if(is(BAUs,"ST")){
-    #     needed_BAUs <- BAUs[,pred_time]$n
-    #     BAUs <- BAUs[,pred_time]
-    #     CP <- CP[,needed_BAUs]
-    #     CZ <- CZ[,needed_BAUs]
-    # }
-
-    depname <- all.vars(Sm@f)[1]
-    BAUs[[depname]] <- 0.1
-    L <- .gstat.formula(Sm@f,data=BAUs)
-    X = as(L$X,"Matrix")
-    S0 <- Sm@S0
-
-    BAUs[[depname]] <- NULL
-
-    alpha <- Sm@alphahat
-    K <- Sm@Khat
-    sigma2fs <- Sm@sigma2fshat
-    mu_eta <- Sm@mu_eta
-    S_eta <- Sm@S_eta
-
-    if(Sm@fs_model == "ind") {
-        D <- sigma2fs*Sm@Vfs + Sm@Ve
-        if(is(D,"dtCMatrix")) {
-            Dchol <- sqrt(D)
-            Dinv <- solve(D)
-        } else {
-            Dchol <- chol(D)
-            Dinv <- chol2inv(Dchol)
-        }
-
-        sig2_Vfs_pred <- Diagonal(x=sigma2fs*BAUs$fs)
-        Q <- solve(sig2_Vfs_pred)
-
-
-    } else if(Sm@fs_model == "ICAR") {
-        Q <- (1/sigma2fs) * Sm@Qfs_BAUs
-    }
-
-    if(is(BAUs,"Spatial")) {
-        idx <- match(row.names(BAUs),row.names(Sm@BAUs))
-    } else if (is(BAUs,"STFDF")){
-        idx <- match(BAUs@data$n,Sm@BAUs@data$n)
-    }
-
-    if(!obs_fs) {
-        if(sigma2fs >0) {
-            #LAMBDA <- as(bdiag(Sm@Khat,sig2_Vfs_pred),"symmetricMatrix")
-            LAMBDAinv <- bdiag(Sm@Khat_inv,Q)
-            PI <- cBind(S0, .symDiagonal(n=length(BAUs)))
-            tC_Ve_C <- t(CZ) %*% solve(Sm@Ve) %*% CZ + 0*.symDiagonal(ncol(CZ)) # Ensure zeros
-            Qx <- t(PI) %*% tC_Ve_C %*% PI + LAMBDAinv
-            chol_Qx <- cholPermute(as(Qx,"dgCMatrix"))
-            ybar <- t(PI) %*%t(CZ) %*% solve(Sm@Ve) %*% (Sm@Z - CZ %*% X %*% alpha)
-            x_mean <- cholsolve(Qx,ybar,perm=TRUE,cholQp = chol_Qx$Qpermchol, P = chol_Qx$P)
-            if(predict_BAUs) {
-                Cov <- Takahashi_Davis(Qx,cholQp = chol_Qx$Qpermchol,P = chol_Qx$P) # PARTIAL
-                BAUs[["var"]] <- .batch_compute_var(S0,Cov,obs_fs = !(!obs_fs & sigma2fs > 0))
-                BAUs[["sd"]] <- sqrt(BAUs[["var"]])
-            } else {
-                ## Do not compute covariance now
-                #Cov <- cholsolve(Qx,Diagonal(nrow(Qx)),perm=TRUE,
-                #                 cholQp = chol_Qx$Qpermchol, P = chol_Qx$P) # FULL
-            }
-
-
-        } else {
-            LAMBDA <- as(Sm@Khat,"symmetricMatrix")
-            LAMBDAinv <- chol2inv(chol(LAMBDA))
-            PI <- S0
-            Qx <- crossprod(solve(sqrt(Sm@Ve)) %*% CZ %*% PI) + LAMBDAinv
-            ybar <- t(PI) %*%t(CZ) %*% solve(Sm@Ve) %*% (Sm@Z - CZ %*% X %*% alpha)
-            Cov <- as(chol2inv(chol(Qx)),"dgeMatrix")  ## Do all covariance matrix
-            ## We can do all the covariance matrix since the dimension is equal to those of eta
-            x_mean <- Cov %*% ybar
-            ## variance too hard to compute all at once -- do it in blocks of 1000
-            BAUs[["var"]] <- .batch_compute_var(S0,Cov,obs_fs = !(!obs_fs & sigma2fs > 0))
-            BAUs[["sd"]] <- sqrt(BAUs[["var"]])
-        }
-        BAUs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
-
-        ### Since we have all the elements we can use first principles from the sparse covariance matrix
-        #BAUs[["var"]] <- .batch_compute_var(PI,Cov)
-
-    }
-
-    if(obs_fs) {
-        Qobs <- solve(Sm@Ve)
-        Qx <- (crossprod(t(sqrt(Qobs)) %*% (Sm@S %>% as("dgCMatrix"))) + chol2inv(chol(K)) %>% as("dsCMatrix"))
-        temp <- cholPermute(Qx)
-        ybar <- t(Sm@S) %*% Qobs %*% (Sm@Z - CZ %*% X %*% alpha)
-        x_mean <- cholsolve(Qx,ybar,perm=TRUE,cholQp = temp$Qpermchol, P = temp$P)
-        if(predict_BAUs) {
-            Cov <- Takahashi_Davis(Qx,cholQp = temp$Qpermchol,P = temp$P) # PARTIAL
-        } else {
-            Cov <- cholsolve(Qx,Diagonal(nrow(Qx)),perm=TRUE,
-                             cholQp = temp$Qpermchol, P = temp$P) # FULL
-        }
-        BAUs[["mu"]] <- as.numeric(X %*% alpha) + as.numeric(S0 %*% x_mean)
-        BAUs[["var"]] <- .batch_compute_var(S0,Cov,obs_fs = TRUE)
-        #BAUs[["var"]] <- rowSums((S0 %*% Cov) * S0) + Sm@sigma2fshat*BAUs$fs
-    }
-
-    if(is.null(pred_polys)) {
-        BAUs[["sd"]] <- sqrt(BAUs[["var"]])
-        if(!is.null(pred_time)) {
-            BAUs[,pred_time]
-        } else {
-            BAUs
-        }
-    } else {
-        pred_polys[["mu"]] <- as.numeric(CP %*% BAUs[["mu"]])
-        if(!obs_fs) CPM <- CP %*% PI else CPM <- CP %*% S0
-        if(sigma2fs == 0)  pred_polys[["var"]] <- diag2(CPM %*% Cov, t(CPM)) ## All Cov available
-        else pred_polys[["var"]] <- diag2(CPM, cholsolve(Q=Qx,y=t(CPM), ## Cov not available
-                                                  perm = TRUE,cholQp = chol_Qx$Qpermchol,P = chol_Qx$P))
-        pred_polys[["sd"]] <- sqrt(pred_polys[["var"]])
-        pred_polys
-    }
-
-}
-
-SRE.simulate <- function(S,obs_fs) {
-
-    ## Still in development:
-    print("Normalising basis function evaluations at BAUs ...")
-    xx <- sqrt(rowSums(S0* S0))
-    xx <- xx + 1*(xx == 0) ## Where there are no basis functions do not divide zero by zero..
-    S0 <- S0/xx
-    print("Done ...")
-
-}
-.batch_compute_var <- function(S0,Cov,obs_fs = FALSE) {
-    # Don't consider more than 1e4 elements at a time
-    batch_size <- 1e4
-    batching=cut(1:nrow(S0),breaks = seq(0,nrow(S0)+batch_size,by=batch_size),labels=F)
-    r <- ncol(S0)
-    #if(opts_FRK$get("parallel") > 1 & batch_size < nrow(X)) {
-    if(0) { # disable parallel for now -- too memory consuming
-        clusterExport(opts_FRK$get("cl"),
-                      c("batching","S0","Cov"),envir=environment())
-        var_list <- parLapply(opts_FRK$get("cl"),1:max(unique(batching)),
-                              function(i) {
-                                  idx = which(batching == i)
-                                  rowSums((S0[idx,] %*% Cov[1:r,1:r]) * S0[idx,]) +
-                                      diag(Cov)[-(1:r)][idx] +
-                                      2*rowSums(Cov[r+idx,1:r] * S0[idx,])
-                                  })
-        clusterEvalQ(opts_FRK$get("cl"), {gc()})
-        temp <- do.call(c,var_list)
-    } else {
-        temp <- rep(0,nrow(S0))
-        for(i in 1:max(unique(batching))) {
-            idx = which(batching==i)
-            # if obs_fs then Cov is only of size ?
-            if(!obs_fs)
-                temp[idx] <- rowSums((S0[idx,] %*% Cov[1:r,1:r]) * S0[idx,]) +
-                    diag(Cov)[-(1:r)][idx] +
-                    2*rowSums(Cov[(r+idx),1:r] * S0[idx,])
-            else
-                temp[idx] <- rowSums((S0[idx,] %*% Cov) * S0[idx,])
-
-        }
-    }
-    temp
-}
-
-
-.batch_compute_var.deprecated <- function(X,Cov) {
-  # Don't consider more than 50e6 elements at a time
-  batch_size <- min(round(50e6 / nrow(Cov)),nrow(Cov))
-  batching=cut(1:nrow(X),breaks = seq(0,nrow(X)+batch_size,by=batch_size),labels=F)
-  if(opts_FRK$get("parallel") > 1 & batch_size < nrow(X)) {
-      clusterExport(opts_FRK$get("cl"),
-                    c("batching","X","Cov"),envir=environment())
-      var_list <- parLapply(opts_FRK$get("cl"),1:max(unique(batching)),
-                            function(i) {
-                                idx = which(batching == i)
-                                as.numeric(rowSums((X[idx,] %*% Cov)*X[idx,]))})
-      clusterEvalQ(opts_FRK$get("cl"), {gc()})
-
-    temp <- do.call(c,var_list)
-  } else {
-    temp <- rep(0,nrow(X))
-    for(i in 1:max(unique(batching))) {
-      idx = which(batching==i)
-      temp[idx] <- as.numeric(rowSums((X[idx,] %*% Cov)*X[idx,]))
-    }
-  }
-  temp
-}
 
 setMethod("summary",signature(object="SRE"),
           function(object,...) {
@@ -1197,64 +314,1014 @@ setMethod("summary",signature(object="SRE"),
           })
 
 
+##################################
+#### NOT EXPORTED ################
+##################################
 
+## Main prediction routine
+.SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method="EM", lambda = 0, print_lik=FALSE) {
 
-.check_args1 <- function(f,data,basis,BAUs,est_error) {
-    if(!is(f,"formula")) stop("f needs to be a formula.")
+    n <- nbasis(SRE_model)  # number of basis functions
+    X <- SRE_model@X        # covariates
+    lk <- rep(0,n_EM)       # likelihood
 
-    if(is(BAUs,"Spatial"))
-        if(!all(all.vars(f)[-1] %in% c(names(BAUs@data),coordnames(BAUs))))
-            stop("All covariates need to be in the SpatialPolygons BAU object")
-    if(is(BAUs,"ST"))
-        if(!all(all.vars(f)[-1] %in% c(names(BAUs@data),coordnames(BAUs))))
-            stop("All covariates need to be in the SpatialPolygons BAU object")
-    if(!is(data,"list"))
-        stop("Please supply a list of Spatial objects.")
-    if(!all(sapply(data,function(x) is(x,"Spatial") | is(x,"ST"))))
-        stop("All data list elements need to be of class Spatial or ST")
-    if(!all(sapply(data,function(x) all.vars(f)[1] %in% names(x@data))))
-        stop("All data list elements to have values for the dependent variable")
-    if(!all(sapply(data,function(x) identical(proj4string(x), proj4string(BAUs)))))
-        stop("Please ensure all data items and BAUs have the same coordinate reference system")
-    if(!(is(basis,"Basis") | is(basis,"TensorP_Basis")))
-        stop("basis needs to be of class Basis  or TensorP_Basis (package FRK)")
-    if(!("fs" %in% names(BAUs@data))) {
-        warning("BAUs should contain a field 'fs' containing a basis
-                function for fine-scale variation. Setting basis function equal to one everywhere.")
-        BAUs$fs <- 1
+    ## If user wishes to show progress show progress bar
+    if(opts_FRK$get("progress"))
+        pb <- utils::txtProgressBar(min = 0, max = n_EM, style = 3)
+
+    ## For each EM iteration step
+    for(i in 1:n_EM) {
+            lk[i] <- .loglik(SRE_model)                          # compute the log-lik
+            SRE_model <- .SRE.Estep(SRE_model)                   # compute E-step
+            SRE_model <- .SRE.Mstep(SRE_model, lambda = lambda)  # compute M-step
+            if(opts_FRK$get("progress"))
+                utils::setTxtProgressBar(pb, i)                  # update progress bar
+            if(i>1)                                              # If we're not on first iteration
+                if(abs(lk[i] - lk[i-1]) < tol) {                 # Compute change in log-lik
+                    print("Minimum tolerance reached")           # and stop if less than tol
+                    break
+                }
     }
-    if(!(all(BAUs$fs >= 0)))
-        stop("fine-scale variation basis function needs to be nonnegative everywhere")
-    if(!(is(BAUs,"SpatialPolygonsDataFrame") | is(BAUs,"SpatialPixelsDataFrame") | is(BAUs,"STFDF")))
-        stop("BAUs should be a SpatialPolygonsDataFrame, SpatialPixelsDataFrame, or a STFDF object")
-    if(is(BAUs,"STFDF")) if(!(is(BAUs@sp,"SpatialPolygonsDataFrame") | is(BAUs@sp,"SpatialPixelsDataFrame")))
-        stop("The spatial component of the BAUs should be a SpatialPolygonsDataFrame or SpatialPixelsDataFrame")
-    if((is(manifold(basis),"sphere")) & !all((coordnames(BAUs) == c("lon","lat"))))
-        stop("Since a sphere is being used, please ensure that
-             all coordinates (including those of BAUs) are in (lon,lat)")
-    if(!est_error & !all(sapply(data,function(x) "std" %in% names(x@data))))
-        stop("If observational error is not going to be estimated,
-             please supply a field 'std' in the data objects")
+
+    if(opts_FRK$get("progress")) close(pb)           # close progress bar
+
+    ## If zero fine-scale variation detected just make sure user knows.
+    ## This can be symptomatic of poor fitting
+    if(SRE_model@sigma2fshat == 0)
+            message("sigma2fs is being estimated to zero.
+             This might because of an incorrect binning
+             procedure or because too much measurement error
+             is being assumed (or because the latent
+             field is indeed that smooth, but unlikely).")
+
+    ## If we have reached max. iterations, tell the user
+    if(i == n_EM) print("Maximum EM iterations reached")
+
+    ## If user wants to see the log-lik vs EM iteration plot, plot it
+    if(print_lik & !is.na(tol)) {
+        plot(1:i,lk[1:i],
+             ylab="log likelihood",xlab="EM iteration")
+    }
+
+    ## Return fitted SRE model
+    SRE_model
 }
 
+## E-Step
+.SRE.Estep <- function(Sm) {
+    # This is structured this way so that extra models for fs-variation
+    # can be implemented later
+    if(Sm@fs_model == "ind")
+         Sm <- .SRE.Estep.ind(Sm)
+    else stop("E-step only for independent fs-variation model currently implemented")
+}
+
+## Compute log-likelihood
+.loglik <- function(Sm) {
+    # This is structured this way so that extra models for fs-variation
+    # can be implemented later
+    if(Sm@fs_model == "ind")
+        .loglik.ind(Sm)
+    else stop("Currently onle independent fine-scale model is implemented")
+}
+
+## Compute log-likelihood for independent fs-variation model
+.loglik.ind <- function(Sm) {
+
+    S <- Sm@S                               # basis-function matrix
+    K <- Sm@Khat                            # random-effects cov. matrix
+    chol_K <- chol(K)                       # its Cholesky
+    Kinv <- chol2inv(chol_K)                # random-effects prec. matrix
+    resid <- Sm@Z - Sm@X %*% Sm@alphahat    # residuals at fitted estimates
+    N <- length(Sm@Z)                       # number of data points
+
+    D <- Sm@sigma2fshat*Sm@Vfs + Sm@Ve      # total variance of data
+    if(isDiagonal(D)) {                     # if this is diagonal
+        cholD <- sqrt(D)                    # just compute sqrt
+        cholDinvT <- solve(cholD)           # and the inverse is just the reciprocal
+    } else {
+        cholD <- chol(D)                    # otherwise do the Cholesky
+        cholDinvT <- t(solve(cholD))        # find the transposed (lower) inverse of the factor
+    }
+
+    ## Compute log-determinant. This is given by a formula in Section 2.2
+    S_Dinv_S <-  crossprod(cholDinvT %*% S)
+    log_det_SigmaZ <- determinant(Kinv + S_Dinv_S,logarithm = TRUE)$modulus +
+        determinant(K,logarithm = TRUE)$modulus +
+        logdet(cholD)  # this computes the log-determinant of a matrix from its Cholesky factor
+
+    ## Alternatively: (slower but more direct)
+    # Dinv <- chol2inv(chol(D))
+    # SigmaZ_inv <- Dinv - Dinv %*% S %*% solve(Kinv + S_Dinv_S) %*% t(S) %*% Dinv
+    # SigmaZ_inv2 <- Dinv - tcrossprod(Dinv %*% S %*% solve(R))
+
+    R <- chol(Kinv + S_Dinv_S)
+
+    ## Compute efficiently rDinv <- t(resid) %*% Dinv
+    rDinv <- crossprod(cholDinvT %*% resid,cholDinvT)
+
+    ## Compute the quadratic portion of the log-lik
+    ## This is the same as quad_bit <- rDinv %*% resid - tcrossprod(rDinv %*% S %*% solve(R))
+    ## but more efficient
+    quad_bit <- crossprod(cholDinvT %*% resid) - tcrossprod(rDinv %*% S %*% solve(R))
+
+    ## Now just add the bits together
+    llik <- -0.5 * N * log(2*pi) -
+        0.5 * log_det_SigmaZ -
+        0.5 * quad_bit
+
+    as.numeric(llik) # convert to numeric and return
+
+}
+
+## M-step
+.SRE.Mstep <- function(Sm, lambda = 0) {
+    # This is structured this way so that extra models for fs-variation
+    # can be implemented later
+    if(Sm@fs_model == "ind")
+        Sm <- .SRE.Mstep.ind(Sm, lambda = lambda)
+    else stop("M-step only for independent fs-variation model currently implemented")
+}
+
+## E-step for independent fs-variation model
+.SRE.Estep.ind <- function(Sm) {
+    alpha <- Sm@alphahat           # current regression coefficients estimates
+    K <- Sm@Khat                   # current random effects covariance matrix estimate
+    Kinv <- Sm@Khat_inv            # current random effects precision matrix estimate
+    sigma2fs <- Sm@sigma2fshat     # current fs-variation factor estimate
+
+    D <- sigma2fs*Sm@Vfs + Sm@Ve   # total variance-covariance of Z
+    if(isDiagonal(D)) {            # if this is diagonal
+        cholD <- sqrt(D)           # then the Cholesky is the sqrt
+        cholDinv <- solve(cholD)   # the inverse Cholesky is the inverse-sqrt
+        Dinv <- solve(D)           # the inverse is just reciprocal of diagonal elements
+    } else {
+        cholD <- Matrix::chol(D)   # if not diagonal then do Cholesky
+        cholDinv <- solve(cholD)   # invery Cholesky factor
+        Dinv <- chol2inv(cholD)    # find the inverse from the Cholesky factor
+    }
+
+    ## The below are simple Gaussian updating equations in Section 2.2 of the vignette
+    Q_eta <- (crossprod(t(cholDinv) %*% Sm@S) + Kinv)
+    S_eta <- chol2inv(chol(Q_eta))  # we can invert since we are low rank in FRK
+    mu_eta <- (S_eta) %*%(t(Sm@S) %*% Dinv %*% (Sm@Z - Sm@X %*% alpha))
+
+
+    ## Deprecated:
+    # if(!is(Q_eta,"dsCMatrix")) Q_eta <- as(Q_eta,"dsCMatrix")
+    # chol_Q_eta <- cholPermute(Q_eta)
+    # mu_eta <- cholsolve(Q_eta,(t(Sm@S) %*% Dinv %*% (Sm@Z - Sm@X %*% alpha)),
+    #                     perm=TRUE, cholQp = chol_Q_eta$Qpermchol,P = chol_Q_eta$P)
+    # S_eta <- Matrix()
+
+    ## Deprecated:
+    # S_eta <- chol2inv(chol(crossprod(t(cholDinv) %*% Sm@S) + Kinv))
+    # mu_eta <- S_eta %*% (t(Sm@S) %*% Dinv %*% (Sm@Z - Sm@X %*% alpha))
+
+    Sm@mu_eta <- mu_eta  # update conditional mean
+    Sm@S_eta <- S_eta    # update conditional covariance
+    Sm@Q_eta <- Q_eta    # update conditional precision
+    Sm                   # return SRE object
+}
+
+## M-step for the indepdent fine-scale variation model
+.SRE.Mstep.ind <- function(Sm, lambda = 0) {
+
+    mu_eta <- Sm@mu_eta              # current cond. mean of random effects
+    S_eta <- Sm@S_eta                # current cond. cov. matrix of random effects
+    alpha <- Sm@alphahat             # regression coefficients
+    sigma2fs <- Sm@sigma2fshat       # fine-scale variance
+
+    K <- .update_K(Sm,method=Sm@K_type,  # update the prior covariance matrix K
+                   lambda = lambda)
+    Khat_inv <- chol2inv(chol(K))        # compute the precision
+
+    ## If the measurement and fs. variational covariance matricies
+    ## are proportional to the identity then we have the
+    ## special case of homoscedasticity
+    if(all((a <- diag(Sm@Ve)) == a[1]) &
+       all((b <- diag(Sm@Vfs)) == b[1]) &
+       isDiagonal(Sm@Vfs))    {
+        homoscedastic <- TRUE
+    } else {
+        homoscedastic <- FALSE
+    }
+
+    ## If the measurement and fs. variational covariance matricies
+    ## are diagonal then we have another special case
+    if(isDiagonal(Sm@Ve) & isDiagonal(Sm@Vfs))    {
+        diagonal_mats <- TRUE
+    } else {
+        diagonal_mats <- FALSE
+    }
+
+    ## If we have some fine-scale variation terms
+    if(!all(diag(Sm@Vfs) == 0))
+        ## And we're not in the diagonal case (this is the most comp. intensive)
+        if(!diagonal_mats) {
+            ## We first need to create a function whose root is sigma2fshat
+            ## See 2.2 of vignette for equation details
+            J <- function(sigma2fs) {
+                if(sigma2fs < 0) {
+                    return(Inf)                              # cannot be less than 0
+                } else {
+                    D <- sigma2fs*Sm@Vfs + Sm@Ve             # total data variance-covariance
+                    Dinv <- chol2inv(chol(D))                # it's inverse (this will be blocked so still sparse)
+                    DinvV <- Dinv %*% Sm@Vfs                 # summary matrix
+                    DinvVDinv <- Dinv %*% Sm@Vfs %*% Dinv    # summary matrix
+
+                    alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*%
+                        t(Sm@X) %*% Dinv %*%                 # regression coefficients GLS estimates
+                        (Sm@Z - Sm@S %*% mu_eta)
+                    resid <- Sm@Z - Sm@X %*% alpha           # fitted residuals
+
+                    Dinvr <- DinvVDinv %*% resid             # summary vector
+                    DinvS <- DinvVDinv %*% Sm@S              # summary vector
+
+                    tr1 <- tr(DinvV)                         # compute trace of first term
+
+                    ## Compute trace of second term
+                    tr2 <- sum(diag2(DinvS %*% (S_eta +  tcrossprod(mu_eta)),t(Sm@S))  -
+                                   2*diag2(DinvS %*% mu_eta,t(resid)) +
+                                   diag2(Dinvr,t(resid)))
+
+                    ## return value of function
+                    -(-0.5*tr1 +0.5*tr2)
+                }
+            }
+        } else {
+
+            ## If we have diagonal matrices then some simplifications are possible
+            R_eta <- chol(S_eta + tcrossprod(mu_eta)) # Cholesky factor of E(eta eta^T)
+            S_R_eta <- Sm@S %*% t(R_eta)              # summary matrix
+            Omega_diag1 <- rowSums(S_R_eta^2)         # first part of diag(Omega) as in vignette
+            J <- function(sigma2fs) {
+                if(sigma2fs < 0) {
+                    return(Inf)                       # sigma2fs >= 0
+                } else {
+                    D <- sigma2fs*Sm@Vfs + Sm@Ve    # total data variance. This must be diagonal
+                    Dinv <- solve(D)                # just take reciprocal since D is defo. diagonal here
+                    DinvV <- Dinv %*% Sm@Vfs        # summary matrix (diagonal)
+
+                    alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*%
+                        t(Sm@X) %*% Dinv %*%          # regression coefficients GLS estimates
+                        (Sm@Z - Sm@S %*% mu_eta)
+                    resid <- Sm@Z - Sm@X %*% alpha    # fitted residuals
+                    Omega_diag <- Omega_diag1 -       # other parts of diag(Omega)
+                        2*diag2(Sm@S %*% mu_eta, t(resid)) +
+                        diag2(resid,t(resid))
+                    Omega_diag <- Diagonal(x=Omega_diag)  # compute a diagonal Omega matrix
+
+                    ## Since DinvV and Dinv are diagonal and we only want the trace,
+                    ## we only need the diagonal elements of Omega in the following
+                    -(-0.5*tr(DinvV) +
+                          0.5*tr(DinvV %*% Dinv %*% Omega_diag)
+                    )
+                }
+            }
+        }
+
+    ## We need to find the root in J. For this we need to start uniroot with
+    ## values on either side of sigma2fshat. The below implements
+    ## a simple search algorithm for finding a good starting values.
+
+    ## If we have some fine-scale variation terms
+    if(!all(diag(Sm@Vfs) == 0))
+        ## And we're not in the special homoscedastic case
+        if(!homoscedastic) {
+            amp_factor <- 10; OK <- 0  # initialise
+            while(!OK) {
+                amp_factor <- amp_factor * 10 # widen the interval
+
+                ## If the signs are different, then we're OK, otherwise not
+                if(!(sign(J(sigma2fs/amp_factor)) == sign(J(sigma2fs*amp_factor)))) OK <- 1
+
+                ## If we have a really big amp_factor, it means we're not getting anywhere and
+                ## sigma2fshat is probably tending to zero.
+                if(amp_factor > 1e9) {
+                    OK <- 1
+                }
+            }
+
+            if(amp_factor > 1e9) {
+                sigma2fs_new <- 0  # fix sigma2fshat to zero since we couldn't estimate it
+            } else {
+                ## Otherwise find the root of the equation with the sought initial conditions
+                sigma2fs_new <- stats::uniroot(f = J,
+                                        interval = c(sigma2fs/amp_factor,
+                                                     sigma2fs*amp_factor))$root
+            }
+            D <- sigma2fs_new*Sm@Vfs + Sm@Ve  # total data variance-covariance
+            if(isDiagonal(D)) {               # inverse of D (as above)
+                Dinv <- solve(D)
+            } else {
+                Dinv <- chol2inv(chol(D))
+            }
+            alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*%      # alpha GLS estimate (as above)
+                t(Sm@X) %*% Dinv %*% (Sm@Z - Sm@S %*% mu_eta)
+        } else {
+            ## Here we are in the homoscedastic (diagonal) case and we can
+            ## solve for alpha independently of sigma2fshat
+            alpha <- solve(t(Sm@X) %*% Sm@X) %*%      # alpha GLS estimate
+                t(Sm@X) %*% (Sm@Z - Sm@S %*% mu_eta)
+            resid <- Sm@Z - Sm@X %*% alpha            # residual
+            Omega_diag <- Omega_diag1 -               # just compute Omega once
+                2*diag2(Sm@S %*% mu_eta, t(resid)) +
+                diag2(resid,t(resid))
+            Omega_diag <- Diagonal(x=Omega_diag)
+
+            ## Closed-form solution for sigma2fs (see vignette)
+            sigma2fs_new <- 1/b[1]*(sum(Omega_diag)/length(Sm@Z) - a[1])
+            if(sigma2fs_new < 0) {  # If we get less than zero because of numeric instability
+                sigma2fs_new = 0    # just fix to zero
+            }
+        }
+
+    ## If we do NOT have any fine-scale variation (e.g., estimated to zero in previous iteration)
+    if(all(diag(Sm@Vfs) == 0)) {
+        alpha <- solve(t(Sm@X) %*% solve(Sm@Ve) %*% Sm@X) %*% t(Sm@X) %*%  # just find GLS
+            solve(Sm@Ve) %*% (Sm@Z - Sm@S %*% mu_eta)
+        sigma2fs_new <- 0                                                  # and keep sigma2fs at zero
+    }
+
+    ## Update SRE model with estimated quantities
+    Sm@Khat <- K
+    Sm@Khat_inv <- Khat_inv
+    Sm@alphahat <- alpha
+    Sm@sigma2fshat <- sigma2fs_new
+
+    ## Return SRE model
+    Sm
+}
+
+## This routines updates the covariance matrix of the random effects
+.update_K <- function(Sm,method="unstructured",
+                      S_eta= NULL,mu_eta = NULL,
+                      lambda = 0) {
+
+    if (is.null(S_eta)) S_eta <- Sm@S_eta      # Conditional covariance matrix of random effects
+    if (is.null(mu_eta)) mu_eta <- Sm@mu_eta   # Conditional mean of random effects
+
+    if(method == "unstructured") {
+        ## If K is unstructured, then the update is trivial, see vignette Section 2.2
+        ## I allow for some regularisation through lambda should this be deemed required
+        ## (This is useful for when we have lots of basis and few data points)
+        K <- .regularise_K(Sm, lambda = lambda)
+    } else if (method == "block-exponential") {
+        ## If K is block exponential (blocked dby resolution) then
+        ## we need to find the (i) precision, (ii) spatial length scale, and
+        ## (iii) temporal length scale by resolution
+        all_res <- count_res(Sm)               # number of resolutions
+        eta2 <- lapply(1:nrow(all_res),function(i) {
+                       ## find which indices correspond to these basis functions
+                       idx <- which(data.frame(Sm@basis)$res == i)
+                       S_eta[idx,idx] +
+                           tcrossprod(mu_eta[idx])
+        })
+
+        ## (i) Find the precision associated with each resolution
+        omega <- lapply(1:nrow(all_res),       # for each resolution
+                        function(i) {
+                            ## number of basis functions in i-th resolution
+                            ni <- all_res[i,]$n
+
+                            ## find which indices correspond to these basis functions
+                            idx <- which(data.frame(Sm@basis)$res == i)
+
+                            ## # find the current CORRELATION matrix associated with this resolution
+                            Ki <- Sm@Khat[idx,idx]/Sm@Khat[idx[1],idx[1]]
+
+                            ## Compute INVERSE CORRELATION matrix associated with this resolution
+                            Ki_inv <- chol2inv(chol(Ki))
+
+                            ## The precision is given by n / tr(Kinv %*% (S_eta + mu.mu'))
+                            ni / sum(diag2(Ki_inv,eta2[[i]]))
+                        })
+
+        ## (ii,iii) Likelihood function for spatial/temporal length scales
+        f_tau <- function(tau_i,i) {   # tau_i are the scales, i is the resolution
+            if(any(tau_i <= 1e-10)) {  # do not let any of the taus be too small
+                Inf
+            } else {
+
+                ## Find which bases are at this resolution
+                idx <- which(data.frame(Sm@basis)$res == i)
+
+                ## Since we're block exponential, the correlation matrix is simply the
+                ## computed from the distances using the appropriate decay parameters
+                if(is(Sm@basis,"TensorP_Basis")) {
+                    ## If we have a tensor basis then construct Ki using the Kronecker product
+                    Ki1 <- exp(-Sm@D_basis$Basis2[[1]]/tau_i[2])  # temporal part
+                    Ki2 <- exp(-Sm@D_basis$Basis1[[i]]/tau_i[1])  # spatial part
+                    ## time runs slowest (and only one time resolution),  space runs fastest
+                    Ki <- kronecker(Ki1,Ki2)
+
+                    ## Compute the inverse correlation matrix
+                    Qi1 <- chol2inv(chol(Ki1))
+                    Qi2 <- chol2inv(chol(Ki2))
+                    Ki_inv <- kronecker(Qi1,Qi2)
+
+                    ## Compute log determinant
+                    R1 <- chol(Qi1)
+                    R2 <- chol(Qi2)
+                    det_part <- 0.5*(nrow(R2)*logdet(R1) + nrow(R1)*logdet(R2))
+
+                    ## Compute the log=likelihood. There doesn't seem to be a way to
+                    ## simplify this using the Kronecker product
+                    -as.numeric(det_part - omega[[i]]/2*sum(diag2(Ki_inv,eta2[[i]],symm=TRUE)))
+
+                } else {
+                    ## Just spatial, from distances between centroid
+                    Ki <- exp(-Sm@D_basis[[i]]/tau_i)
+
+                    ## Compute the inverse correlation matrix
+                    Ki_inv <- chol2inv(chol(Ki))
+
+                    ## Compute the log-likelihood
+                    -as.numeric(0.5*determinant(Ki_inv)$modulus -
+                                    omega[[i]]/2*sum(diag2(Ki_inv,eta2[[i]],symm=TRUE)))
+                }
+
+            }
+        }
+
+        ## (ii,iii) GRADIENT of the likelihood function for spatial/temporal length scales
+        gr_f_tau <- function(tau_i,i) {
+            idx <- which(Sm@basis@df$res == i)  # tau_i are the scales, i is the resolution
+
+            if(is(Sm@basis,"TensorP_Basis")) {
+                Ki1 <- exp(-Sm@D_basis$Basis2[[1]]/tau_i[2])  # temporal part
+                Ki2 <- exp(-Sm@D_basis$Basis1[[i]]/tau_i[1])  # spatial part
+                Ki <- kronecker(Ki1,Ki2)                      # Kronecker of the two
+
+                ## Compute the inverse correlation matrix
+                Qi1 <- chol2inv(chol(Ki1))
+                Qi2 <- chol2inv(chol(Ki2))
+                Ki_inv <- kronecker(Qi1,Qi2)
+
+                ## d(X kron Y) = dX kron Y + X cron dY. Compute these below
+                dKi <- kronecker(Ki1,(Sm@D_basis$Basis1[[i]]/(tau_i[1]^2))*Ki2)
+                dKit <- kronecker((Sm@D_basis$Basis2[[1]]/(tau_i[2]^2))*Ki1,Ki2)
+
+            } else {
+                ## If only spatial then just compute derivative of exponential
+                Ki <- exp(-Sm@D_basis[[i]]/tau_i)
+                dKi <- (Sm@D_basis[[i]]/(tau_i^2))*exp(-Sm@D_basis[[i]]/tau_i)
+                Ki_inv <- chol2inv(chol(Ki))  # inverse
+            }
+
+            ## derivative of log-likelihodd w.r.t tau_1 (spatial)
+            tau_i1 <- -(-0.5*sum(diag2(dKi,Ki_inv)) +
+                            0.5*omega[[i]]*sum(diag2(eta2[[i]]%*% Ki_inv,
+                                                     dKi %*% Ki_inv)))
+            tau_i1 <- as.numeric(tau_i1)
+
+            if(length(tau_i) == 1) {  # Then we just have space
+                return(tau_i1)
+            } else {                  # We have time aswell
+
+                ## derivative of log-likelihood w.r.t tau_2 (temporal)
+                tau_i2 <-  -(-0.5*sum(diag2(dKit,Ki_inv)) +
+                                 0.5*omega[[i]]*sum(diag2(eta2[[i]]%*% Ki_inv,
+                                                          dKit %*% Ki_inv)))
+                tau_i2 <- as.numeric(tau_i2)
+
+                ## Return both derivatives
+                return(c(tau_i1,tau_i2))
+            }
+        }
+
+        ## Find the maximum spatial distance between centroids of all basis functions. This is used for initialisation
+        max_l <- max(unlist(Sm@D_basis[[1]]))
+
+        ## Below we actually estimate the parameters
+        ## For each resolution
+        tau <- lapply(1:nrow(all_res),
+                      function(i) {
+                          ## Find the basis functions for this resolution
+                          idx <- which(Sm@basis@df$res == i)
+
+                          ## Compute the correlation matrix
+                          Ki <- Sm@Khat[idx,idx]/Sm@Khat[idx[1],idx[1]]
+
+                          ## If we are in space-time
+                          if(is(Sm@basis,"TensorP_Basis")) {
+                              ## Extract previous estimate from current covariance matrix.
+                              ## If zero (e.g., initial matrix is the identity), then pin to 1e-9
+                              par_init <- max(-Sm@D_basis$Basis1[[i]][1,2]/log(Ki[1,2]),1e-9) ## space
+
+                              ## Same as above but for temporal
+                              par_init[2] <- max(-Sm@D_basis$Basis2[[1]][1,2]/log(Ki[1,1+count_res(Sm@basis@Basis1)$n[i]]),1e-9) ## time
+
+                              ## If we clamped the temporal length scale then set it initially to 1
+                              if(par_init[2] == 1e-9) par_init[2] <- 1
+                          } else {
+                              ## As above but just for space
+                              par_init <- max(-Sm@D_basis[[i]][1,2]/log(Ki[1,2]),1e-9)
+                          }
+
+                          ## If we clamped the spatial length scale then set it initially to max(length) / 10
+                          if(par_init[1] == 1e-9) par_init[1] <- max_l/10
+
+                          ## Suppress warnings in case we hit max-iterations. If it hasn't converged we would be
+                          ## in a GEM settings which is still OK
+                          suppressWarnings(optim(par = par_init,
+                                                 fn = f_tau,
+                                                 gr = gr_f_tau,
+                                                 i=i,control=list(maxit=100L,reltol=1e-4))$par)
+                      })
+
+        ## Reconstruct the K matrix based on above parameter estimates
+        K <- lapply(1:nrow(all_res),
+                    function(i) {
+                        if(is(Sm@basis,"TensorP_Basis")) {
+                            Ki <- kronecker(exp(-Sm@D_basis$Basis2[[1]]/tau[[i]][2]),
+                                            exp(-Sm@D_basis$Basis1[[i]]/tau[[i]][1]))/omega[[i]]
+                        } else {
+                            Ki <- exp(-Sm@D_basis[[i]]/tau[[i]])/omega[[i]]
+                        }
+
+                    })
+
+        ## Since we are in block diagonal mode we can just block-diagonalise across resolutions
+        K <- do.call("bdiag",K)
+
+        ## Now, if we have space AND time, block diagonalising by resolution is not correct
+        ## as we have the following indices (res1t1....res1tN,res2t1,...,res2tN,...)
+        ## This can be corrected by seeing how the indices were in the original data frame
+        ## (which were correct by construction), and then permuting the K matrix using
+        ## and internal function reverse_permute
+        idx_all <- unlist(lapply(1:nrow(all_res),
+                                 function(i) which(Sm@basis@df$res == i)))
+
+        # reverse_permute rearranges the order of time/resolution when we have tensor products
+        # When we don't have tensor product idx_all and 1:nrow(K) are the same so nothing changes
+        K <- reverse_permute(K,idx_all)
+
+        ## If user wants verbose output show estimates
+        if( opts_FRK$get("verbose") > 0) {
+            cat("  Estimates of omega: ",unlist(omega),"  ")
+            cat("  Estimates of tau: ",unlist(tau),"  ")
+        }
+
+    }
+
+    ## Return the estimated matrix
+    K
+}
+
+## The function below regularises the K matrix when the K_type is "unstructured"
+.regularise_K <- function(Sm,S_eta= NULL,mu_eta = NULL, lambda = 0) {
+
+    if (is.null(S_eta)) S_eta <- Sm@S_eta      # extract from SRE model if not supplied
+    if (is.null(mu_eta)) mu_eta <- Sm@mu_eta   # extract from SRE model if not supplied
+
+    if(any(lambda > 0)) {  # if at least one lambda > 0
+
+        ## If we have just one regulatisation parameter for all resolutions
+        if(length(lambda) == 1) {
+            reg_matrix <- lambda*Diagonal(nrow(S_eta)) # reg. matrix = lambda*I
+        } else {
+            ## If we have one regularisation parameter per resolution then the reg. matrix
+            ## is diagonal but not proportional to the identity matrix
+            ## We use the data frame returned by count_res which has the resolution number
+            ## in the first column and the number of basis in the second column
+            reg_matrix <- Diagonal(x = do.call("c",
+                                               apply(count_res(Sm),1,
+                                                     function(x) rep(lambda[x[1]],x[2]))))
+        }
+
+        ## Update K but this time regularising
+        Q <- chol2inv(chol(S_eta + tcrossprod(mu_eta))) + reg_matrix
+        K <- chol2inv(chol(Q))
+    } else {
+        ## If there is no regularisation then use the following simple update (see vignette for details)
+        K <- S_eta + tcrossprod(mu_eta)
+    }
+
+    ## Return K
+    K
+}
+
+## The following function is the internal prediction function
+.SRE.predict <- function(Sm,obs_fs = FALSE,pred_polys = NULL,pred_time = NULL) {
+
+    ## If the user does not specify time points to predict at when in space-time
+    ## Then predict at every time point
+    if(is.null(pred_time) & is(Sm@BAUs,"ST"))
+        pred_time <- 1:length(Sm@BAUs@time)
+
+    ## We start by assuming that we will predict at BAUs
+    predict_BAUs <- TRUE
+
+    ## Get BAUs from the SRE model
+    BAUs <- Sm@BAUs
+
+    ## If the user has not specified polygons over which to predict, then CP is
+    ## just the diagonal matrix and we predict over all the BAUs
+    if(is.null(pred_polys)) {
+        CP <- Diagonal(length(BAUs))
+    } else {
+        ## The user has maybe specified a subset of (could be all) the BAUs over which to predict.
+        ## The following checks whether pred_polys is a subset of the BAUs through the row names
+        pred_polys_are_BAUs <- all(row.names(pred_polys) %in% row.names(BAUs))
+
+        ## If the user has specified a subset of BAUs
+        if(pred_polys_are_BAUs) {
+           ## See which BAUs the user has specified
+           BAUs_idx <- match(row.names(pred_polys), row.names(BAUs))
+
+           ## Construct an incidence matrix that picks out these BAUs
+           CP <-  sparseMatrix(i=1:length(pred_polys),
+                              j=BAUs_idx,
+                              x=1,
+                              dims=c(length(pred_polys),
+                                     length(BAUs)))
+
+        } else {
+            ## The user has specified arbitrary polygons
+            ## First try to coerce what the user supplied to Polygons (not pixels etc.)
+            ## Recall that for now only Spatial pred_polys are allowed so the following is
+            ## always valid
+            pred_polys <- as(pred_polys,"SpatialPolygonsDataFrame")
+
+            ## Based on these polygons construct the C matrix
+            C_idx <- BuildC(pred_polys,BAUs)
+            CP <- sparseMatrix(i=C_idx$i_idx,
+                               j=C_idx$j_idx,
+                               x=1,
+                               dims=c(length(pred_polys),
+                                      length(BAUs)))
+
+            ## As in SRE(), make sure the polgons are averages (not sums)
+            CP <- CP / rowSums(CP)
+
+            ## If even one polygon encompasses more than one BAU, then we need to
+            ## predict over linear combinations of BAUs, and hence need to
+            ## compute the full covariance matrix. Note this by setting
+            ## predict_BAUs <- FALSE
+            if(!all(table(C_idx$i_idx) == 1))
+                predict_BAUs <- FALSE   ## Need to compute full covariance matrix
+        }
+    }
+
+    ## Get the CZ matrix
+    CZ <- Sm@Cmat
+
+    ## If the user has specified which polygons he want we can remove the ones we don't need
+    ## We only need those BAUs that are influenced by observations and prediction locations
+    if(!is.null(pred_polys)) {
+
+        ## The needed BAUs are the nonzero column indices of CZ and CP
+        needed_BAUs <- union(as(CP,"dgTMatrix")@j+1,
+                             as(CZ,"dgTMatrix")@j+1)
+
+        ## Filter the BAUs and the matrices
+        BAUs <- BAUs[needed_BAUs,]
+        CP <- CP[,needed_BAUs]
+        CZ <- CZ[,needed_BAUs]
+        Sm@S0 <- Sm@S0[needed_BAUs,]
+    }
+
+    # Deprecated:
+    # if(is(BAUs,"ST")){
+    #     needed_BAUs <- BAUs[,pred_time]$n
+    #     BAUs <- BAUs[,pred_time]
+    #     CP <- CP[,needed_BAUs]
+    #     CZ <- CZ[,needed_BAUs]
+    # }
+
+    ## Retrieve the dependent variable name
+    depname <- all.vars(Sm@f)[1]
+
+    ## Set the dependent variable in BAUs to something just so that .extract.from.formula doesn't
+    ## throw an error.. we will NULL it shortly after
+    BAUs[[depname]] <- 0.1
+
+    ## Extract covariates from BAUs
+    L <- .extract.from.formula(Sm@f,data=BAUs)
+    X = as(L$X,"Matrix")
+    BAUs[[depname]] <- NULL
+
+    ## Set variables to make code more concise
+    S0 <- Sm@S0
+    alpha <- Sm@alphahat
+    K <- Sm@Khat
+    sigma2fs <- Sm@sigma2fshat
+    mu_eta <- Sm@mu_eta
+    S_eta <- Sm@S_eta
+
+    if(Sm@fs_model == "ind") {
+        D <- sigma2fs*Sm@Vfs + Sm@Ve   # compute total variance (data)
+        if(isDiagonal(D)) {
+            Dchol <- sqrt(D)           # find the inverse of the variance-covariance matrix
+            Dinv <- solve(D)           # if Diagonal the Cholesky and inverse are just sqrt and reciprocal
+        } else {
+            Dchol <- chol(D)           # otherwise they need to be computed in full
+            Dinv <- chol2inv(Dchol)
+        }
+        sig2_Vfs_pred <- Diagonal(x=sigma2fs*BAUs$fs)   # fine-scale variation including estimated factor
+        Q <- solve(sig2_Vfs_pred)                       # precision of fine-scale variation
+    } else  {
+        stop("Prediction for other models not yet implemented")
+    }
+
+    ## The prediction equations
+    ## If !obs_fs, then we are in Case 2 (default). We have to cater for when the
+    ## fine-scale variance is zero or non-zero
+
+    ## Case 2 (fs variation in process)
+    if(!obs_fs) {
+        if(sigma2fs >0) {   # fine-scale variance not zero
+
+            ## The below equations implement Section 2.3
+            LAMBDAinv <- bdiag(Sm@Khat_inv,Q)                # block diagonal precision matrix
+            PI <- cBind(S0, .symDiagonal(n=length(BAUs)))    # PI = [S I]
+            tC_Ve_C <- t(CZ) %*% solve(Sm@Ve) %*% CZ +       # summary matrix
+                       0*.symDiagonal(ncol(CZ))              # Ensure zeros on diagonal
+            Qx <- t(PI) %*% tC_Ve_C %*% PI + LAMBDAinv       # conditional precision matrix
+            chol_Qx <- cholPermute(as(Qx,"dgCMatrix"))       # permute and do Cholesky
+            ybar <- t(PI) %*%t(CZ) %*% solve(Sm@Ve) %*%      # Qx = ybar, see vignette
+                    (Sm@Z - CZ %*% X %*% alpha)
+            x_mean <- cholsolve(Qx,ybar,perm=TRUE,           # solve Qx = ybar using permutations
+                                cholQp = chol_Qx$Qpermchol, P = chol_Qx$P)
+
+            if(predict_BAUs) {
+                ## If we are predicting at BAUs then we only need a few covariance elements.
+                ## Find these elements
+                Cov <- Takahashi_Davis(Qx,cholQp = chol_Qx$Qpermchol,P = chol_Qx$P)
+
+                ## Compute the variance and std over the BAUs in batches
+                BAUs[["var"]] <- .batch_compute_var(S0,Cov,fs_in_process = TRUE)
+            } else {
+                ## Do not compute covariance now, do it later
+                #  Cov <- cholsolve(Qx,Diagonal(nrow(Qx)),perm=TRUE,
+                #                   cholQp = chol_Qx$Qpermchol, P = chol_Qx$P) # FULL
+            }
+
+
+        } else {
+            ## If sigma2fs = 0 then the prediction is much simpler and all our
+            ## predictions / uncertainty come from the random effects
+            PI <- S0
+            x_mean <- Sm@mu_eta  # conditional mean of eta
+            Cov <- Sm@S_eta      # conditional covariance of eta
+
+            ## Compute variances, this time indicating there is no fs variation in process
+            BAUs[["var"]] <- .batch_compute_var(S0,Cov,fs_in_process = FALSE)
+        }
+
+        ## The conditional mean is simply given by fitted random effects + fitted fixed effects
+        BAUs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
+
+    }
+
+    ## Case 1 (fs variation in measurement equation)
+    if(obs_fs) {
+        ## All predictions and prediction uncertainties comes from our prediction of and uncertainty over eta
+        x_mean <- Sm@mu_eta   # conditional mean
+        Cov <- Sm@S_eta       # conditional covariance
+
+        ## Compute variances, this time indicating there is no fs variation in process
+        BAUs[["mu"]] <- as.numeric(X %*% alpha) + as.numeric(S0 %*% x_mean)
+        BAUs[["var"]] <- .batch_compute_var(S0,Cov,fs_in_process = FALSE)
+    }
+
+
+    ## Now, if the user hasn't specified prediction polygons, our job is done and we just return the BAUs,
+    ## possibly at selected time points
+    if(predict_BAUs) {
+        BAUs[["sd"]] <- sqrt(BAUs[["var"]])  # compute the standard error
+        if(!is.null(pred_polys)) { # User had specified a specific set of BAUs. Return only these (spatial only for now)
+            BAUs <- BAUs[row.names(pred_polys),]
+        }
+        if(!is.null(pred_time)) BAUs <- BAUs[,pred_time]  # return only specified time points
+        BAUs
+
+    } else {
+        ## Otherwise we need to find the mean and variance of linear combinations of these BAUs
+
+        ## The linear combination of the mean is easy
+        pred_polys[["mu"]] <- as.numeric(CP %*% BAUs[["mu"]])
+
+        ## If we have fs variation in the process layer we need to consider the fine-scale variation (PI = [S I])
+        ## when predicting over the polygons, otherwise we just need the variance over eta
+        if(!obs_fs & sigma2fs > 0) CPM <- CP %*% PI else CPM <- CP %*% S0
+
+        ## If there is no fine-scale variation then simply find linear combination
+        if(sigma2fs == 0 | obs_fs)  pred_polys[["var"]] <- diag2(CPM %*% Cov, t(CPM)) ## All Cov available
+
+        ## Otherwise find full covariance matrix (including over fs-variation). This is a last-case resort and
+        ## may crash the computer if there are several prediction polygons. However this shouldn't be the case
+        ## if these polygons span multiple BAUs
+        else pred_polys[["var"]] <- diag2(CPM, cholsolve(Q=Qx,y=t(CPM),
+                                                  perm = TRUE,cholQp = chol_Qx$Qpermchol,P = chol_Qx$P))
+
+        # Compute standard error
+        pred_polys[["sd"]] <- sqrt(pred_polys[["var"]])
+
+        ## Return the prediction polygons
+        pred_polys
+    }
+
+}
+
+## The function below is used to facilitate the computation of multiple marginal variances
+## by splitting up the problem into batches (prediction is an embarassingly parallel procedure)
+.batch_compute_var <- function(S0,Cov,fs_in_process = TRUE) {
+
+    ## Don't consider more than 1e4 elements at a time
+    batch_size <- 1e4
+
+    ## Create batching indices by simply dividing the n rows into batches of size 10000
+    batching=cut(1:nrow(S0),
+                 breaks = seq(0,nrow(S0)+batch_size,
+                              by=batch_size),labels=F)
+    r <- ncol(S0) # number of columns
+
+    ## At first this was parallelised, but the memory demand was becoming too large in many instances
+    ## So for now parallelism is disabled. The following line can be uncommented if we wish to
+    ## re-enable parallelism in the predictions
+
+    #if(opts_FRK$get("parallel") > 1 & batch_size < nrow(X)) {
+    if(0) {
+        ## Export variables to the cluster
+        clusterExport(opts_FRK$get("cl"),
+                      c("batching","S0","Cov"),envir=environment())
+
+        ## Compute the variances over max(10000) BAUs per batch
+        var_list <- parLapply(opts_FRK$get("cl"),1:max(unique(batching)),
+                              function(i) {
+                                  ## Find which BAUs this batch predicts over
+                                  idx = which(batching == i)
+
+                                  ## Compute the marginal variance for these BAUs
+                                  if(fs_in_process) {
+                                      rowSums((S0[idx,] %*% Cov[1:r,1:r]) * S0[idx,]) +  # eta contribution
+                                          diag(Cov)[-(1:r)][idx] +                       # fs contribution
+                                          2*rowSums(Cov[r+idx,1:r] * S0[idx,])           # cross.cov between eta
+                                                                                         # and fs variation
+                                  } else {
+                                      rowSums((S0[idx,] %*% Cov) * S0[idx,])             # just eta contribution
+                                  }
+                                  })
+        clusterEvalQ(opts_FRK$get("cl"), {gc()})   # clear memory of cluster
+        temp <- do.call(c,var_list)                # concatenate results
+    } else {
+        temp <- rep(0,nrow(S0))                    # initialise the vector of variances
+        for(i in 1:max(unique(batching))) {        # for each batch
+
+            ## Find which BAUs this batch predicts over
+            idx = which(batching==i)
+
+            ## If we have fs variation in the process
+            if(fs_in_process)
+                temp[idx] <- rowSums((S0[idx,] %*% Cov[1:r,1:r]) * S0[idx,]) +  # eta contribution
+                    diag(Cov)[-(1:r)][idx] +                                    # fs contribution
+                    2*rowSums(Cov[(r+idx),1:r] * S0[idx,])                      # cross-cov between eta
+            else                                                                # and fs variation
+                temp[idx] <- rowSums((S0[idx,] %*% Cov) * S0[idx,])             # otherwise we just have the eta
+                                                                                # contribution
+
+        }
+    }
+
+    ## Return all variances
+    temp
+}
+
+
+## This function attempts to estimate the measurement error by fitting a variogram to the data
+## and see where it crosses the y-axis. This captures the super-fine-scale variation that we
+## characterise as measurement error. FRK then effectively fits a smooth variogram -- the difference
+## between where this cross the y-axis and the measurement error will be the fs-variation (estimated)
+.est_obs_error <- function(sp_pts,variogram.formula,vgm_model = NULL,BAU_width = NULL) {
+
+    ## Notify user (even if not verbose == TRUE)
+    print("... Fitting variogram for estimating measurement error")
+
+    ## Basic checks
+    if(!is(variogram.formula,"formula"))
+        stop("variogram.formula needs to be of class formula")
+    if(!is(sp_pts,"Spatial"))
+        stop("sp_pts needs to be of class Spatial")
+    if(!requireNamespace("gstat"))
+        stop("gstat is required for variogram estimation. Please install gstat")
+
+    ## Make sure we're not on sphere here, otherwise variogram fitting is too slow. Just remove
+    ## CRS (this is only approximate anyways)
+    if(!is.na(proj4string(sp_pts))) {
+        sp_pts <- SpatialPointsDataFrame(coords = coordinates(sp_pts),
+                                         data = sp_pts@data,proj4string = CRS())
+    }
+
+    ## If we have many points (say > 50000) then subsample
+    if(length(sp_pts) > 50000) {
+        if(opts_FRK$get("verbose") > 0)
+            print("Selecting 50000 data points at random for estimating the measurement error variance")
+        sp_pts_sub <- sp_pts[sample(1:length(sp_pts),50000),]
+    } else sp_pts_sub <- sp_pts
+
+    ## Find the maximum extent in each dimension
+    coords_range <-  apply(coordinates(sp_pts_sub),2,
+                           function(x) diff(range(x)))
+
+    ## Find a maximum effective length scale by computing the "diagonal"
+    diag_length <- sqrt(sum(coords_range^2))
+
+    ## Compute the area of the domain
+    area <- prod(coords_range)
+
+    ## Consider the area that contains about 100 data points in it (we only want
+    ## to study variogram points close to the origin)
+    cutoff <- sqrt(area * 100 / length(sp_pts_sub))
+
+    ## Extract  data values from data object
+    L <- .extract.from.formula(variogram.formula,data=sp_pts_sub)
+
+    ## Create a gstat object with this formula and data
+    g <- gstat::gstat(formula=variogram.formula,data=sp_pts_sub)
+
+    ## Compute the empirical variogram
+    v <- gstat::variogram(g,cressie=T,            # Cressie's robust variogram estimate
+                          cutoff = cutoff,        # maximum spatial separation distance
+                          width = cutoff/10)      # width for semivariance estimates
+
+    ## Fit the model. First, if the user did not supply any desired model, try to fit a linear model
+    ## with initial conditions as given to vgm()
+    if(is.null(vgm_model))
+        vgm_model <-  gstat::vgm(psill = var(L$y)/2,
+                                 model = "Lin",
+                                 range = mean(v$dist),
+                                 nugget = var(L$y)/2)
+
+    ## Try to fit the model.
+    vgm.fit <- suppressWarnings(gstat::fit.variogram(v, model = vgm_model))
+
+    ## Check if the process of fitting generates a warning. If it did then OK == 0
+    ## otherwise OK == 1 (this fits twice but since it's so quick it's not an issue)
+    OK <- tryCatch({vgm.fit <- gstat::fit.variogram(v, model = vgm_model); 1},
+                   warning=function(w) 0)
+
+    ## If the reporte psill is less or equal to zero, or fit.variogram reported a singularity,
+    ## or a Warning was thrown, then retry fitting using a linear model on just the first
+    ## four points (cf. Kang and Cressie)
+    if(vgm.fit$psill[1] <= 0 | attributes(vgm.fit)$singular | !OK) {
+        linfit <- lm(gamma~dist,data=v[1:4,])         # fit only first four points
+        vgm.fit$psill[1] <- coefficients(linfit)[1]   # extract psill from intercept
+    }
+
+    ## If this still didn't work then try to fit an exponential model
+    if(vgm.fit$psill[1] <= 0) {
+        vgm_model <-  gstat::vgm(psill = var(L$y)/2,
+                                 model = "Exp",
+                                 range = mean(v$dist),
+                                 nugget = var(L$y)/2)
+        OK <- tryCatch({vgm.fit = gstat::fit.variogram(v, model = vgm_model); OK <- 1},warning=function(w) 0)
+        vgm.fit <- suppressWarnings(gstat::fit.variogram(v, model = vgm_model))
+    }
+
+    if(vgm.fit$psill[1] <= 0 | attributes(vgm.fit)$singular | !OK) {
+        ## Try with Gaussian, maybe process is very smooth or data has a large support
+        vgm_model <-  gstat::vgm(var(L$y)/2, "Gau", mean(v$dist), var(L$y)/2)
+
+        ## Try to fit the model.
+        vgm.fit <- suppressWarnings(gstat::fit.variogram(v, model = vgm_model))
+
+        ## Like above, we return OK = 0 if fit is still not good
+        OK <- tryCatch({vgm.fit = gstat::fit.variogram(v, model = vgm_model); OK <- 1},warning=function(w) 0)
+    }
+
+    ## If we still have problems, then just take the first point of the the empirical semivariogram and
+    ## throw a warning that this estimate is probably not very good
+    if(vgm.fit$psill[1] <= 0 | attributes(vgm.fit)$singular | !OK) {
+        vgm.fit$psill[1] <- v$gamma[1]
+        warning("Estimate of measurement error is probably inaccurate.
+                 Please consider setting it through the std variable
+                in the data object if known.")
+    }
+
+    print(paste0("sigma2e estimate = ",vgm.fit$psill[1]))
+
+    ## Return the sqrt of the psill as the measurement error
+    sp_pts$std <- sqrt(vgm.fit$psill[1])
+    sp_pts
+
+}
+
+## The function below checks the arguments for the function FRK. The code is self-explanatory
+## This is similar, but slightly different to, .check_args1()
 .check_args_wrapper <- function(f,data,basis,BAUs,est_error) {
     if(!is(f,"formula")) stop("f needs to be a formula.")
-
-    if(is(BAUs,"Spatial"))
-        if(!all(all.vars(f)[-1] %in% c(names(BAUs@data),coordnames(BAUs))))
-            stop("All covariates need to be in the SpatialPolygons BAU object")
-    if(is(BAUs,"ST"))
-        if(!all(all.vars(f)[-1] %in% c(names(BAUs@data),coordnames(BAUs))))
-            stop("All covariates need to be in the SpatialPolygons BAU object")
     if(!is(data,"list"))
         stop("Please supply a list of Spatial objects.")
     if(!all(sapply(data,function(x) is(x,"Spatial") | is(x,"ST"))))
-        stop("All data list elements need to be of class Spatial or ST")
+        stop("All data list elements need to be of class Spatial or ST.")
     if(!all(sapply(data,function(x) all.vars(f)[1] %in% names(x@data))))
-        stop("All data list elements to have values for the dependent variable")
+        stop("All data list elements to have values for the dependent variable.")
     if(!est_error & !all(sapply(data,function(x) "std" %in% names(x@data))))
         stop("If observational error is not going to be estimated,
-             please supply a field 'std' in the data objects")
+             please supply a field 'std' in the data objects.")
     if(!(is.null(BAUs))) {
         if(!(is(BAUs,"SpatialPolygonsDataFrame") | is(BAUs,"SpatialPixelsDataFrame") | is(BAUs,"STFDF")))
             stop("BAUs should be a SpatialPolygonsDataFrame or a STFDF object")
@@ -1264,26 +1331,63 @@ setMethod("summary",signature(object="SRE"),
             stop("fine-scale variation basis function needs to be nonnegative everywhere")
         if(!("fs" %in% names(BAUs@data))) {
             stop("BAUs should contain a field 'fs' containing a basis
-                function for fine-scale variation. ")
+                 function for fine-scale variation. ")
         }
         if(is(BAUs,"STFDF")) if(!(is(BAUs@sp,"SpatialPolygonsDataFrame") | is(BAUs@sp,"SpatialPixelsDataFrame")))
             stop("The spatial component of the BAUs should be a SpatialPolygonsDataFrame")
-    }
+        if(any(sapply(data,function(x) any(names(x@data) %in% names(BAUs@data)))))
+            stop("Please don't have overlapping variable names in data and BAUs. All covariates need to be in the BAUs.")
+        if(!all(all.vars(f)[-1] %in% c(names(BAUs@data),coordnames(BAUs))))
+            stop("All covariates need to be in the SpatialPolygons BAU object.")
+        }
 
     if(!(is.null(basis))) {
         if(!(is(basis,"Basis") | is(basis,"TensorP_Basis")))
             stop("basis needs to be of class Basis  or TensorP_Basis (package FRK)")
     }
-
-
-
-    # if((is(manifold(basis),"sphere")) & !all((coordnames(BAUs) == c("lon","lat"))))
-    #     stop("Since a sphere is being used, please ensure that
-    #          all coordinates (including those of BAUs) are in (lon,lat)")
 }
 
 
-.check_args2 <- function(n_EM = 100L, tol = 0.01, lambda = 0, method="EM", print_lik=FALSE, cross_validate=1L,...) {
+## Checks arguments for the SRE() function. Code is self-explanatory
+.check_args1 <- function(f,data,basis,BAUs,est_error) {
+    if(!is(f,"formula")) stop("f needs to be a formula.")
+    if(!(is(BAUs,"SpatialPolygonsDataFrame") | is(BAUs,"SpatialPixelsDataFrame") | is(BAUs,"STFDF")))
+        stop("BAUs should be a SpatialPolygonsDataFrame, SpatialPixelsDataFrame, or a STFDF object")
+    if(is(BAUs,"STFDF")) if(!(is(BAUs@sp,"SpatialPolygonsDataFrame") | is(BAUs@sp,"SpatialPixelsDataFrame")))
+        stop("The spatial component of the BAUs should be a SpatialPolygonsDataFrame or SpatialPixelsDataFrame")
+    if(!is(data,"list"))
+        stop("Please supply a list of Spatial objects.")
+    if(!all(sapply(data,function(x) is(x,"Spatial") | is(x,"ST"))))
+        stop("All data list elements need to be of class Spatial or ST")
+
+
+    if(!all(all.vars(f)[-1] %in% c(names(BAUs@data),coordnames(BAUs))))
+            stop("All covariates need to be in the SpatialPolygons BAU object")
+    if(any(sapply(data,function(x) any(names(x@data) %in% names(BAUs@data)))))
+        stop("Please don't have overlapping variable names in data and BAUs. All covariates need to be in the BAUs")
+    if(!all(sapply(data,function(x) all.vars(f)[1] %in% names(x@data))))
+        stop("All data list elements to have values for the dependent variable")
+    if(!all(sapply(data,function(x) identical(proj4string(x), proj4string(BAUs)))))
+        stop("Please ensure all data items and BAUs have the same coordinate reference system")
+    if(!(is(basis,"Basis") | is(basis,"TensorP_Basis")))
+        stop("basis needs to be of class Basis  or TensorP_Basis (package FRK)")
+    if(!("fs" %in% names(BAUs@data))) {
+        stop("BAUs should contain a field 'fs' containing a basis
+                function for fine-scale variation. Do BAUs$fs <- 1 if you don't know what this is.")
+    }
+    if(!(all(BAUs$fs >= 0)))
+        stop("fine-scale variation basis function needs to be nonnegative everywhere")
+    if((is(manifold(basis),"sphere")) & !all((coordnames(BAUs) %in% c("lon","lat"))))
+        stop("Since a sphere is being used, please ensure that
+             all coordinates (including those of BAUs) are in (lon,lat)")
+    if(!est_error & !all(sapply(data,function(x) "std" %in% names(x@data))))
+        stop("If observational error is not going to be estimated,
+             please supply a field 'std' in the data objects")
+}
+
+
+## Checks arguments for the SRE.fit() function. Code is self-explanatory
+.check_args2 <- function(n_EM = 100L, tol = 0.01, lambda = 0, method="EM", print_lik=FALSE,...) {
     if(!is.numeric(n_EM)) stop("n_EM needs to be an integer")
     if(!(n_EM <- round(n_EM)) > 0) stop("n_EM needs to be greater than 0")
     if(!is.numeric(tol)) stop("tol needs to be a number greater than zero")
@@ -1292,11 +1396,9 @@ setMethod("summary",signature(object="SRE"),
     if(!(is.logical(print_lik))) stop("print_lik needs to be a logical quantity")
     if(!(is.numeric(lambda))) stop("lambda needs to be a number")
     if(!(all(lambda >= 0))) stop("lambda needs to be greater or equal to zero")
-    if(!(is.integer(cross_validate))) stop("cross_validate needs to be an integer or a vector of integers")
-    if(length(lambda) > 1 & cross_validate == 1L) stop("to find an optimal lambda cross_validate must be greater than one to split the data into training sets and validation sets")
 }
 
-
+## Checks arguments for the SRE.predict() function. Code is self-explanatory
 .check_args3 <- function(obs_fs=FALSE,pred_polys = NULL,pred_time = NULL,...) {
     if(!(obs_fs %in% 0:1)) stop("obs_fs needs to be logical")
 
@@ -1310,109 +1412,4 @@ setMethod("summary",signature(object="SRE"),
     if(!(is.integer(pred_time) | is.null(pred_time))) stop("pred_time needs to be of class integer")
 }
 
-.gstat.formula <- function (formula, data)
-{
-    m = model.frame(terms(formula), as(data, "data.frame"), na.action = na.fail)
-    Y = model.extract(m, "response")
-    if (length(Y) == 0)
-        stop("no response variable present in formula")
-    Terms = attr(m, "terms")
-    X = model.matrix(Terms, m)
-    has.intercept = attr(Terms, "intercept")
-    grid = numeric(0)
-    xlevels = .getXlevels(Terms, m)
-    list(y = Y, locations = coordinates(data), X = X, call = call,
-         has.intercept = has.intercept, grid = as.double(unlist(grid)),
-         xlevels = xlevels)
-}
-
-############ DEPRECATED #####################
-
-.SRE.Mstep.deprecated <- function(Sm,alpha_OLS = FALSE) {
-
-    mu_eta <- Sm@mu_eta
-    S_eta <- Sm@S_eta
-    alpha_init <- Sm@alphahat
-    sigma2fs_init <- Sm@sigma2fshat
-
-    K <- S_eta + tcrossprod(mu_eta)
-    alpha <- alpha_init
-    sigma2fs <- sigma2fs_init
-    converged <- FALSE
-
-    # Deprecated:
-    #   Omega_diag1 <- diag2(Sm@S %*% as(S_eta,"dgeMatrix"),t(Sm@S)) +
-    #                 diag2(Sm@S %*% mu_eta %*% t(mu_eta), t(Sm@S))
-
-    R_eta <- chol(S_eta + tcrossprod(mu_eta))
-    S_R_eta <- Sm@S %*% t(R_eta)
-    Omega_diag1 <- rowSums(S_R_eta^2)
-
-    if(all((a <- diag(Sm@Ve)) == a[1]) &
-       all((b <- diag(Sm@Vfs)) == b[1]) &
-       all(rowSums(Sm@Vfs) == a[1]))    {
-        homoscedastic <- TRUE
-    } else {
-        homoscedastic <- FALSE
-    }
-
-    while(!converged) {
-        J <- function(sigma2fs) {
-            if(sigma2fs < 0) {
-                return(Inf)
-            } else {
-                D <- sigma2fs*Sm@Vfs + Sm@Ve
-                Dinv <- chol2inv(chol(D))
-                DinvV <- Dinv %*% Sm@Vfs
-                -(-0.5*tr(DinvV) +
-                      0.5*tr(DinvV %*% Dinv %*% Omega_diag)
-                )
-            }
-        }
-
-        resid <- Sm@Z - Sm@X %*% alpha
-        Omega_diag <- Omega_diag1 -
-            2*diag2(Sm@S %*% mu_eta, t(resid)) +
-            diag2(resid,t(resid))
-        Omega_diag <- Diagonal(x=Omega_diag)
-
-        # Repeat until finding values on opposite sides of zero if heteroscedastic
-        if(!homoscedastic) {
-            amp_factor <- 10; OK <- 0
-            while(!OK) {
-                amp_factor <- amp_factor * 10
-                if(!(sign(J(sigma2fs/amp_factor)) == sign(J(sigma2fs*amp_factor)))) OK <- 1
-                if(amp_factor > 1e9) {
-                    #warning("sigma2fs is being estimated to zero.
-                    #        This might because because of an incorrect binning procedure.")
-                    OK <- 1
-                }
-            }
-
-            if(amp_factor > 1e9) {
-                sigma2fs_new <- 0
-                converged <- TRUE
-            }
-            sigma2fs_new <- stats::uniroot(f = J,
-                                    interval = c(sigma2fs/amp_factor,sigma2fs*amp_factor))$root
-        } else {
-            sigma2fs_new <- 1/b[1]*(sum(Omega_diag)/length(Sm@Z) - a[1])
-        }
-        D <- sigma2fs_new*Sm@Vfs + Sm@Ve
-        Dinv <- chol2inv(chol(D))
-        if(alpha_OLS) {
-            converged <- TRUE
-        } else {
-            alpha <- solve(t(Sm@X) %*% Dinv %*% Sm@X) %*% t(Sm@X) %*% Dinv %*% (Sm@Z - Sm@S %*% mu_eta)
-            if(max(sigma2fs_new / sigma2fs, sigma2fs / sigma2fs_new) < 1.001) converged <- TRUE
-        }
-        sigma2fs <- sigma2fs_new
-    }
-
-    Sm@Khat <- K
-    Sm@alphahat <- alpha
-    Sm@sigma2fshat <- sigma2fs
-
-    Sm
-}
 

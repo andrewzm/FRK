@@ -15,7 +15,7 @@ SpatialPolygonsDataFrame_to_df(sp_polys, vars = names(sp_polys))
 Convert \code{SpatialPolygonsDataFrame} object to data frame.
 }
 \details{
-This function is mainly used for plotting \code{SpatialPolygonsDataFrame} objects with \code{ggplot} rather than \code{spplot}. The coordinates of each polygon are extracted and concatenated into one long data frame. The attributes of each polygon are then attached to this data frame as variables which vary by polygon \code{id}.  The returned \code{id} variable describes the polygon `id' and ranges from 1 to the number of polygons represented in the data frame.
+This function is mainly used for plotting \code{SpatialPolygonsDataFrame} objects with \code{ggplot} rather than \code{spplot}. The coordinates of each polygon are extracted and concatenated into one long data frame. The attributes of each polygon are then attached to this data frame as variables which vary by polygon \code{id} (the rownames of the object).
 }
 \examples{
 library(sp)
@@ -27,5 +27,5 @@ df <- data.frame(id = c(rep(1,4),rep(2,4)),
 pols <- df_to_SpatialPolygons(df,"id",c("x","y"),CRS())
 polsdf <- SpatialPolygonsDataFrame(pols,data.frame(p = c(1,2),row.names=row.names(pols)))
 df2 <- SpatialPolygonsDataFrame_to_df(polsdf)
-# ggplot(df2,aes(x=x,y=y,group=id)) + geom_polygon()
+\dontrun{ggplot(df2,aes(x=x,y=y,group=id)) + geom_polygon()}
 }

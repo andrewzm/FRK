@@ -3,12 +3,12 @@
 #' @param manifold object of class \code{manifold}, for example, \code{sphere}
 #' @param loc a matrix of size \code{n} by \code{dimensions(manifold)} indicating centres of basis functions
 #' @param scale vector of length \code{n} containing the scale parameters of the basis functions; see details
-#' @param type either ``Gaussian'', ``bisquare,'' ``exp,'' or ``Matern32''
-#' @details This functions lays out local basis functions in a domain of interest based on pre-specified location and scale parameters. If \code{type} is ``Gaussian'', then
-#' \deqn{\phi(u) = \exp\left(-\frac{\|u \|^2}{2\sigma^2}\right),}
-#' and \code{scale} is given by \eqn{\sigma}, the standard deviation. If \code{type} is ``bisquare'', then
+#' @param type either ``bisquare,'' ``Gaussian'', ``exp,'' or ``Matern32''
+#' @details This functions lays out local basis functions in a domain of interest based on pre-specified location and scale parameters. If \code{type} is ``bisquare'', then
 #'\deqn{\phi(u) = \left(1- \left(\frac{\| u \|}{R}\right)^2\right)^2 I(\|u\| < R),}
-#' and \code{scale} is given by \eqn{R}, the range of support of the bisquare function. If the \code{type} is ``exp'', then
+#' and \code{scale} is given by \eqn{R}, the range of support of the bisquare function. If \code{type} is ``Gaussian'', then
+#' \deqn{\phi(u) = \exp\left(-\frac{\|u \|^2}{2\sigma^2}\right),}
+#' and \code{scale} is given by \eqn{\sigma}, the standard deviation. If the \code{type} is ``exp'', then
 #'\deqn{\phi(u) = \exp\left(-\frac{\|u\|}{ \tau}\right),}
 #' and \code{scale} is given by \eqn{\tau}, the e-folding length. If \code{type} is ``Matern32'', then
 #'\deqn{\phi(u) = \left(1 + \frac{\sqrt{3}\|u\|}{\kappa}\right)\exp\left(-\frac{\sqrt{3}\| u \|}{\kappa}\right),}
@@ -19,32 +19,46 @@
 #'                    loc=matrix(1:10,10,1),
 #'                    scale=rep(2,10),
 #'                    type="bisquare")
-#' # show_basis(G)
+#' \dontrun{show_basis(G)}
 #' @export
-local_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type="Gaussian") {
-    stopifnot(is.matrix(loc))
-    stopifnot(dimensions(manifold) == ncol(loc))
-    stopifnot(length(scale) == nrow(loc))
-    stopifnot(type %in% c("Gaussian","bisquare","exp","Matern32"))
-    n <- nrow(loc)
-    colnames(loc) <- c(outer("loc",1:ncol(loc),FUN = paste0))
+local_basis <- function(manifold=sphere(),          # default manifold is sphere
+                        loc=matrix(c(1,0),nrow=1),  # one centroid at (1,0)
+                        scale=1,                    # std = 1, and Gaussian RBF
+                        type=c("bisquare","Gaussian","exp","Matern32")) {
 
-    fn <- pars <- list()
+    ## Basic checks
+    if(!is.matrix(loc)) stop("loc needs to be a matrix")
+    if(!(dimensions(manifold) == ncol(loc))) stop("number of columns in loc needs to be the
+                                                   same as the number of manifold dimensions")
+    if(!(length(scale) == nrow(loc))) stop("need to have as many scale parameters as centroids")
+    type <- match.arg(type)
+
+    n <- nrow(loc)                                # n is the number of centroids
+    colnames(loc) <- c(outer("loc",1:ncol(loc),   # label dimensions as loc1,loc2,...,locn
+                             FUN = paste0))
+
+    fn <- pars <- list()  # initialise lists of functions and parameters
     for (i in 1:n) {
-        if(type=="Gaussian") {
-            fn[[i]] <-  .GRBF_wrapper(manifold,matrix(loc[i,],nrow=1),scale[i])
-        } else if (type=="bisquare") {
+        ## Assign the functions as determined by user
+        if(type=="bisquare") {
             fn[[i]] <-  .bisquare_wrapper(manifold,matrix(loc[i,],nrow=1),scale[i])
+        } else if (type=="Gaussian") {
+            fn[[i]] <-  .GRBF_wrapper(manifold,matrix(loc[i,],nrow=1),scale[i])
         } else if (type=="exp") {
             fn[[i]] <-  .exp_wrapper(manifold,matrix(loc[i,],nrow=1),scale[i])
         } else if (type=="Matern32") {
             fn[[i]] <-  .Matern32_wrapper(manifold,matrix(loc[i,],nrow=1),scale[i])
         }
 
+        ## Save the parameters to the parameter list (loc and scale)
         pars[[i]] <- list(loc = matrix(loc[i,],nrow=1), scale=scale[i])
     }
+
+    ## Create a data frame which summarises info about the functions. Set resolution = 1
     df <- data.frame(loc,scale,res=1)
-    this_basis <- new("Basis", manifold=manifold, pars=pars, n=n, fn=fn, df=df)
+
+    ## Create new basis function, using the manifold, n, functions, parameters list, and data frame.
+    this_basis <- new("Basis", manifold=manifold,  n=n, fn=fn, pars=pars, df=df)
     return(this_basis)
 }
 
@@ -52,13 +66,13 @@ local_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type
 #' @description Generate automatically a set of local basis functions in the domain, and automatically prune in regions of sparse data.
 #' @param manifold object of class \code{manifold}, for example, \code{sphere} or \code{plane}
 #' @param data object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame} containing the data on which basis-function placement is based, or a list of these; see details
-#' @param regular an integer indicating the number of regularly-placed basis functions at the first resolution. In two dimensions, this dictates smallest number of basis functions in a row or column at the lowest resolution. If \code{regular=0}, an irregular grid is used, one that is based on the triangulation of the domain with increased mesh density in areas of high data density, see details
-#' @param nres if \code{manifold = real_line()} or \code{manifold = plane()}, then \code{nres} is the number of basis-function resolutions to use. If \code{manifold = sphere()}, then \code{nres} is the resolution number of the ISEA3H grid to use and and can also be a vector indicating multiple resolutions
+#' @param regular an integer indicating the number of regularly-placed basis functions at the first resolution. In two dimensions, this dictates the smallest number of basis functions in a row or column at the lowest resolution. If \code{regular=0}, an irregular grid is used, one that is based on the triangulation of the domain with increased mesh density in areas of high data density, see details
+#' @param nres the number of basis-function resolutions to use
 #' @param prune a threshold parameter which dictates when a basis function is considered irrelevent or unidentifiable, and thus removed, see details
 #' @param max_basis maximum number of basis functions. This overrides the parameter \code{nres}
 #' @param subsamp the maximum amount of data points to consider when carrying out basis-function placement: these data objects are randomly sampled from the full dataset. Keep this number fairly high (on the order of 10^5) otherwise high resolution basis functions may be spuriously removed
 #' @param type the type of basis functions to use; see details
-#' @param isea3h_lo if \code{manifold = sphere()}, this argument dictates which ISEA3H resolution is the lowest one that should be used for basis-function placement
+#' @param isea3h_lo if \code{manifold = sphere()}, this argument dictates which ISEA3H resolution is the lowest one that should be used for the first resolution
 #' @param bndary a \code{matrix} containing points containing the boundary. If \code{regular == 0} this can be used to define a boundary in which irregularly-spaced basis functions are placed
 #' @param verbose a logical variable indicating whether to output a summary of the basis functions created or not
 #' @param ... unused
@@ -77,11 +91,11 @@ local_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type
 #'
 #' If the manifold is the real line, the basis functions are placed regularly inside the domain, and the number of basis functions at the lowest resolution is dictated by the integer parameter \code{regular} which has to be greater than zero. On the real line, each subsequent resolution has twice as many basis functions. The scale of the basis function is set based on the minimum distance between the centre locations following placement. The scale is equal to the minimum distance if the type of basis function is Gaussian, exponential or Matern32, and is equal to 1.5 times this value if the function is bisquare.
 #'
-#' If the manifold is a plane, and \code{regular > 0}, then basis functions are placed regularly within the bounding box of \code{data}, with the smallest number of basis functions in each row or column equal to the value of \code{regular} in the lowest resolution. Subsequent resolutions have twice the number of basis functions in each row or column. If \code{regular = 0}, then the function \code{INLA::inla.nonconvex.hull} is used to construct a (non-convex) hull around the data. The buffer and smoothness of the hull is determined by the parameter \code{convex}. Once the domain boundary is found,  \code{INLA::inla.mesh.2d} is used to construct a triangular mesh such that the node vertices coincide with data locations, subject to some minimum and maximum triangular side length constraints. The result is a mesh which is dense in regions of high data density and not dense in regions of sparse data. Even in this case, the scale is taken to be a function of the minimum distance between basis function centres, as detailed above. This may be changed in a future revision.
+#' If the manifold is a plane, and \code{regular > 0}, then basis functions are placed regularly within the bounding box of \code{data}, with the smallest number of basis functions in each row or column equal to the value of \code{regular} in the lowest resolution (note, this is just the smallest number of basis functions). Subsequent resolutions have twice the number of basis functions in each row or column. If \code{regular = 0}, then the function \code{INLA::inla.nonconvex.hull} is used to construct a (non-convex) hull around the data. The buffer and smoothness of the hull is determined by the parameter \code{convex}. Once the domain boundary is found,  \code{INLA::inla.mesh.2d} is used to construct a triangular mesh such that the node vertices coincide with data locations, subject to some minimum and maximum triangular side length constraints. The result is a mesh which is dense in regions of high data density and not dense in regions of sparse data. Even in this case, the scale is taken to be a function of the minimum distance between basis function centres, as detailed above. This may be changed in a future revision.
 #'
-#' If the manifold is the surface of a sphere, then basis functions are placed on the centroids of the discrete global grid (DGG), with the first basis resolution corresponding to the first resolution of the DGG (ISEA3H resolution 0, which yields 12 basis functions globally).  It is not recommended to go above \code{nres == 5} (ISEA3H resolutions 0--4) for the whole sphere, which would yield a total of 1220 basis functions. Up to ISEA3H resolution 6 is available with \code{FRK}; for higher resolutions please install \code{dggrids} from \code{https://github.com/andrewzm/dggrids}.
+#' If the manifold is the surface of a sphere, then basis functions are placed on the centroids of the discrete global grid (DGG), with the first basis resolution corresponding to the third resolution of the DGG (ISEA3H resolution 2, which yields 92 basis functions globally).  It is not recommended to go above \code{nres == 3} (ISEA3H resolutions 2--4) for the whole sphere, which would yield a total of 1176 basis functions. Up to ISEA3H resolution 6 is available with \code{FRK}; for higher resolutions please install \code{dggrids} from \code{https://github.com/andrewzm/dggrids} using \code{devtools}.
 #'
-#' Basis functions that are not influenced by data points may hinder convergence of the EM algorithm, since the associated hidden states are by and large unidentifiable. We hence provide a means to automatically remove such basis functions through the parameter \code{prune}. The final set only contains basis functions for which the column sums in the associated matrix \eqn{S} (which, recall, is the value/average of the basis functions at/over the data points/polygons) is greater than \code{prune}. If \code{prune == 0}, no basis functions are removed from the original design.
+#' Basis functions that are not influenced by data points may hinder convergence of the EM algorithm when \code{K_type = ``unstructured''}, since the associated hidden states are by and large unidentifiable. We hence provide a means to automatically remove such basis functions through the parameter \code{prune}. The final set only contains basis functions for which the column sums in the associated matrix \eqn{S} (which, recall, is the value/average of the basis functions at/over the data points/polygons) is greater than \code{prune}. If \code{prune == 0}, no basis functions are removed from the original design.
 #' @examples
 #' \dontrun{
 #' library(sp)
@@ -102,93 +116,108 @@ local_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type
 #'                 subsamp = 20000)
 #'
 #' ### Plot
-#' # show_basis(G,draw_world())
+#' \dontrun{show_basis(G,draw_world())}
 #' }
 #' @export
 auto_basis <- function(manifold = plane(),
                        data,
-                       regular=1,
-                       nres=3,
-                       prune=0,
+                       regular = 1,
+                       nres = 3,
+                       prune = 0,
                        max_basis = NULL,
-                       subsamp=10000,
-                       type="bisquare",
+                       subsamp = 10000,
+                       type = c("bisquare","Gaussian","exp","Matern32"),
                        isea3h_lo = 2,
                        bndary = NULL,
                        verbose = 0L,
-                       ...) {
-    m <- manifold
+                       ...) {      # currently unused
 
-    if(!is(m,"manifold"))
+    ## Basic checks
+    type <- match.arg(type)
+    if(!is(manifold,"manifold"))
         stop("manifold needs to be an object of class manifold")
     if(!is.numeric(prune) | prune < 0)
         stop("prune needs to be greater than zero")
     if(!is.numeric(subsamp) | subsamp < 0)
         stop("subsamp needs to be greater than zero")
-    if(!type %in% c("bisquare","Gaussian","exp","Matern32"))
-        stop("type of basis functions must be 'Gaussian,' 'bisquare,' 'exp,' or 'Matern32'.")
-    if((is(m,"sphere")  | is(m,"real_line")) & regular == 0)
+    if((is(manifold,"sphere")  | is(manifold,"real_line")) & regular == 0)
         stop("Irregular basis only available on planes")
     if(!(is(isea3h_lo,"numeric")))
         stop("isea3h_lo needs to be an integer greater than 0")
     if(!(is.numeric(nres) | is.null(nres)))
         stop("nres needs to be greater than zero or NULL")
-    if(!is.null(max_basis)) {
-        print("...Automatically choosing functions...")
-        tot_basis <- 0
-        tot_data <- length(data)
-        nres <- 1
-        while(tot_basis <= max_basis) {
-            nres <- nres + 1
-            G <- .auto_basis(manifold =manifold,
-                            data=data,
-                            prune =0,regular=regular,nres=nres,
-                            subsamp=subsamp,type=type,isea3h_lo = isea3h_lo,
-                            bndary=bndary, verbose=0)
-            tot_basis <- nbasis(G)
-        }
-        nres <- nres - 1
-        prune <- 0
 
+    ## If the user has specified a maximum number of basis functions then
+    ## we need to add resolutions iteratively and stop when exceed the maximum
+    ## of basis functions
+    if(!is.null(max_basis)) {
+        print("...Automatically choosing number of functions...")
+        tot_basis <- 0                  # start of with 0 basis functions
+        tot_data <- length(data)        # number of data points
+        nres <- 1                       # start off with one resolution (we have a minimum of one resolution)
+        while(tot_basis <= max_basis) { # while we have less basis than the max
+            nres <- nres + 1            # incremement the res number
+            G <- .auto_basis(manifold = manifold,  # arguments as described above
+                            data = data,
+                            prune = prune,
+                            regular = regular,
+                            nres = nres,
+                            subsamp = subsamp,
+                            type = type,
+                            isea3h_lo = isea3h_lo,
+                            bndary = bndary,
+                            verbose = 0)  # force verbose to 0 for this procedure of finding the
+                                        # number of basis functions
+            tot_basis <- nbasis(G)      # record the number of basis functions
+        }
+        nres <- nres - 1  # nres resolutions was too much, deduct by one
     }
 
+    ## Now call the local function with checked parameters
    .auto_basis(manifold=manifold,data=data,regular=regular,nres=nres,
                 prune=prune,subsamp=subsamp,type=type,isea3h_lo = isea3h_lo,
                 bndary=bndary, verbose=verbose)
-
 }
 
 
 .auto_basis <- function(manifold = plane(),
                        data,
                        regular=1,
-                       nres=2,
+                       nres=3,
                        prune=0,
                        subsamp=10000,
-                       type="Gaussian",
-                       isea3h_lo = 0,
+                       type = c("bisquare","Gaussian","exp","Matern32"),
+                       isea3h_lo = 2,
                        bndary = NULL,
                        verbose = 0L) {
 
-    m <- manifold
-    isea3h <- centroid <- res <- NULL #(suppress warnings, these are loaded from data)
-    coords <- coordinates(data)
+    type <- match.arg(type)            # match type
+    m <- manifold                      # abbreviate for convenience
+    isea3h <- centroid <- res <- NULL  # (suppress warnings, these are loaded from data)
+    coords <- coordinates(data)        # data coordinates or centroids
 
+    ## Irregular basis function placement can only proceed with INLA. Throw an error
+    ## if INLA is not installed
     if(is(m,"plane") & regular == 0 & is.null(bndary)) {
-         if(!requireNamespace("INLA"))
-             stop("For irregularly-placed basis-function generation INLA needs to be installed
+        if(!requireNamespace("INLA"))
+            stop("For irregularly-placed basis-function generation INLA needs to be installed
                   for constructing basis function centres. Please install it
                   using install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\")")
     }
 
+    ## Subsamp can be used to make the placement/pruning process more efficient with big data.
+    ## If subsamp  < number of data points then sample the number of data randomly.
     if(nrow(coords)>subsamp) {
         coords <- coords[sample(nrow(coords),size=subsamp,replace=FALSE),]
     }
 
+    ## Find the x and y extent of the (subsampled) data
     xrange <- range(coords[,1])
     yrange <- range(coords[,2])
 
-
+    ## If we are on the plane and want an irregular function placement, then call INLA
+    ## and find a nonconvex hull in which the basis functions can be enclosed. If
+    ## a boundary is supplied as a matrix, convert it an inla.mesh.segment object.
     if(is(m,"plane") & regular == 0) {
         if(is.null(bndary)) {
             bndary_seg = INLA::inla.nonconvex.hull(coords,concave = 0)
@@ -199,6 +228,12 @@ auto_basis <- function(manifold = plane(),
         }
     }
 
+    ## If we want basis functions regularly placed on the plane then
+    ## first calculate the aspect ratio (extent of y / extent of x)
+    ## Then set the number of basis functions in y = regular if
+    ## the aspect ratio < 1, or number of basis functions in x = regular
+    ## if the aspect ratio >= 1. The number of basis functions in the other
+    ## axis is then amplified by 1/aspect ratio, or aspect ratio, respectively
     if(is(m,"plane") & regular > 0) {
         asp_ratio <- diff(yrange) / diff(xrange)
         if(asp_ratio < 1) {
@@ -210,312 +245,486 @@ auto_basis <- function(manifold = plane(),
         }
     }
 
+    ## Initialise the variables loc and scale which we will fill in later (centroids and scales)
     loc <- scale <- NULL
+
+    ## Initialise G which will contain a list of basis function objects by resolution (1 resolution per list item)
     G <- list()
 
+    ## If we are on the sphere, then load the dggrids. This will be either
+    ## from FRK if isea3h_lo + nres - 1 <= 6, or else from the dggrids package if
+    ## sea3h_lo + nres - 1 > 6. See load_dggrids() for details
     if(is(m,"sphere")) {
-        isea3h <- load_dggrids(res = nres) %>%
-                  dplyr::filter(res >= isea3h_lo)
+        isea3h <- load_dggrids(res = isea3h_lo + nres - 1) %>%
+            dplyr::filter(res >= isea3h_lo) # keep only the resolutions we need
     }
 
 
-    ## Find possible grid points for basis locations
+    ## Find possible grid points for basis locations in each resolution
     for(i in 1:nres) {
+
+        ## If we are on the plane and we do not want a regular set
         if(is(m,"plane") & (regular == 0)) {
-            ## Generate mesh and use these as centres
-            this_res_locs <- INLA::inla.mesh.2d(loc = matrix(apply(coords,2,mean),nrow=1),
-                                          boundary = list(bndary_seg),
-                                          max.edge = max(diff(xrange),diff(yrange))/(2*2.5^(i-1)),
-                                          cutoff = max(diff(xrange),diff(yrange))/(3*2.5^(i-1)))$loc[,1:2]
-            this_res_locs <- unique(this_res_locs) ## Sometimes INLA returns overlapping points
-        } else if(is(m,"plane") & (regular> 0)) {
-           xgrid <- seq(xrange[1], xrange[2], length = round(nx*(3^(i))))
-           ygrid <- seq(yrange[1], yrange[2], length = round(ny*(3^(i))))
+            ## Generate mesh using INLA and use the triangle vertices as notes
+            ## The maximum and minimum triangle edges are a function of i
+            ## The exact constants were found to be suitable by trial and error
+            this_res_locs <- INLA::inla.mesh.2d(
+                loc = matrix(apply(coords,2,mean),nrow=1),   # data locations
+                boundary = list(bndary_seg),                 # boundary
+                max.edge = max(diff(xrange),diff(yrange))/(2*2.5^(i-1)),
+                cutoff = max(diff(xrange),diff(yrange))/(3*2.5^(i-1)))$loc[,1:2]
+
+            ## Sometimes INLA returns overlapping points, therefore find the unique set of locations
+            this_res_locs <- unique(this_res_locs)
+
+            ## If we want a regular set of basis functions
+        } else if(is(m,"plane") & (regular > 0)) {
+            ## Make a grid that gets more dense as i increases
+            xgrid <- seq(xrange[1], xrange[2], length = round(nx*(3^(i)))) # x coordinates of centroids
+            ygrid <- seq(yrange[1], yrange[2], length = round(ny*(3^(i)))) # y coordinates of centroids
             this_res_locs <- xgrid %>%
-                expand.grid(ygrid) %>%
-                as.matrix()
+                expand.grid(ygrid) %>%   # form the grid in long-table format
+                as.matrix()              # convert to matrix
+            ## If we are on the real line
         } else if(is(m,"real_line")) {
+            ## Simply set the centroids equally spaced on the line
             this_res_locs <- matrix(seq(xrange[1],xrange[2],length=i*regular))
+            ## If we are on the sphere
         } else if(is(m,"sphere")) {
-            this_res_locs <- as.matrix(filter(isea3h,centroid==1,res==(i-1 + isea3h_lo))[c("lon","lat")])
+            ## Simply take the centroids of the ISEA3H polygons at the appropriate resolutions to be the centroids
+            this_res_locs <- filter(isea3h,centroid==1,res==(i + isea3h_lo - 1))[c("lon","lat")] %>%
+                               as.matrix() # and convert to matrix
         }
-        ## Set scales: To 1.5x the distance to nearest basis if bisquare
-        ## Refine: Remove basis which are not influenced by data and re-find the scales
-        for(j in 1:2) {
-            D <- FRK::distance(m,this_res_locs,this_res_locs)
-            if(nrow(D) == 1) {
-                this_res_scales <-max(diff(xrange),diff(yrange))/2
+
+        ## Setting the scales and Refinement stage
+        ##      Set scales: e.g., set to 1.5x the distance to nearest basis if bisquare
+        ##      Refine/Prune: Remove basis which are not influenced by data and re-find the scales
+        for(j in 1:2) { ## Need to go over this twice for refinement
+            D <- FRK::distance(m,this_res_locs,this_res_locs)       # compute distance
+            if(nrow(D) == 1) {                                      # if we only have one basis function
+                this_res_scales <-max(diff(xrange),diff(yrange))/2  # set the "base" scale parameter to span most of the range
             } else {
-                diag(D) <- Inf
-                this_res_scales <- apply(D,1,min)
+                diag(D) <- Inf                                      # otherwise set the "base" scale parameter to be based
+                this_res_scales <- apply(D,1,min)                   # on the distance to the nearest centroid
             }
 
+            ## If we have more than one basis at this resolution (could be 0 because of pruning)
             if(nrow(D) >0)
-                # R = 3*sd for similar bisquare shape
+                ## The following code can be used to verify that the following basis functions have a similar shape:
+                ## Bisquare: R = 1.5,
+                ## Gaussian: sigma = 0.7,
+                ## Exp: tau = 0.7,
+                ## Matern32: kappa = 0.7
+                # f1 <- .bisquare_wrapper(real_line(),c = matrix(0),1.5)
+                # f2 <- .GRBF_wrapper(real_line(),mu = matrix(0),0.7)
+                # f3 <- .exp_wrapper(real_line(),c = matrix(0),tau = 0.7)
+                # f4 <- .Matern32_wrapper(real_line(),c = matrix(0),kappa = 0.7)
+                # x <- seq(-4,4,length=100)
+                # plot(x,f1(x)); lines(x,f2(x)); lines(x,f3(x)); lines(x,f4(x))
+                ## This explains the choice of scaling below
                 this_res_basis <- local_basis(manifold = m,
-                                           loc=this_res_locs,
-                                           scale=ifelse(type=="bisquare",4.5,1.5)*this_res_scales,
-                                           type=type)
+                                              loc=this_res_locs,
+                                              scale=ifelse(type=="bisquare",1.5,0.7)*this_res_scales,
+                                              type=type)
+
+            ## Now refine/prune these basis functions
             if(prune > 0 & nrow(D)>0) {
+                ## Only in the first step
                 if(j==1) {
+                    ## The basis functions to remove are those which are not "considerably affected"
+                    ## by observations. We determine this influence by evaluating the basis functions
+                    ## at the data locations and summing over the function values. If the sum is less
+                    ## then 'prune' we remove the basis function
                     rm_idx <- which(colSums(eval_basis(this_res_basis,coords)) < prune)
+
+                    ## Throw a warning if all basis functions at a given resolution have been removed
                     if(length(rm_idx) == length(this_res_scales))
                         warning("prune is too large -- all functions at a resolution removed.
                              Consider also removing number of resolutions.")
-                    if(length(rm_idx) >0) this_res_locs <- this_res_locs[-rm_idx,,drop=FALSE]
+
+                    ## If there are basis functions to remove,then remove them and reset scales in j==2
+                    if(length(rm_idx) > 0)
+                        this_res_locs <- this_res_locs[-rm_idx,,drop=FALSE]
                 }
             } else {
+                ## If we are not pruning just stop after j = 1 (no need to refind scales twice)
                 break
             }
         }
-        if(verbose) print(paste0("Number of basis at resolution ",i," = ",nrow(this_res_locs)))
 
+        ## Print the number of basis functions at each resolution if verbose
+        if(verbose)
+            print(paste0("Number of basis at resolution ",i," = ",nrow(this_res_locs)))
+
+        ## Now that we actually have the centroids and scales we can construct the basis functions for this
+        ## resolution. If all the basis functions have been removed at this resolution don't do anything
         if(nrow(D) > 0) {
             G[[i]] <-  local_basis(manifold = m,
-                                    loc=this_res_locs,
-                                    scale=ifelse(type=="bisquare",1.5,1.5)*this_res_scales,
-                                    type=type)
-            G[[i]]@df$res=i
+                                   loc=this_res_locs,
+                                   scale=ifelse(type=="bisquare",1.5,0.7)*this_res_scales,
+                                   type=type)
+            G[[i]]$res=i  # put resolution in the basis function data frame
         }
     }
 
+    ## Finally concatenate all the basis functions together using the S4 method concat
     G_basis <- Reduce("concat",G)
-    # Deprecated:
-    # if(G_basis@n > nrow(data)) warning("More basis functions than data points")
     G_basis
 }
 
-#' @title Add the time coordinate to 2D spatial basis functions
-#' @description Given a set of 2D spatial basis functions and a vector of knots in time, this function repeats the spatial basis at every temporal knot, adding the third dimension (i.e., time) to the centroid as appropriate.
-#' @param G_spatial an object of class Basis on a 2D manifold
-#' @param t_knots a vector of numbers locating the knots in time
-#' @param manifold a 3D space-time manifold, typically \code{STsphere()} or \code{STplane()}
-#' @examples
-#' G_spatial <-  local_basis(manifold = sphere(),
-#'                    loc=matrix(runif(20,min=-90,max=90),10,2),
-#'                    scale=rep(20,10),
-#'                    type="bisquare")
-#' G_space_time <- sp_to_ST_basis(G_spatial,1:10,manifold=STsphere())
-#' # library(ggplot2)
-#' # show_basis(G_space_time)
-#' @export
-sp_to_ST_basis <- function(G_spatial,t_knots = 1,manifold=STsphere()) {
-    stopifnot(dimensions(manifold(G_spatial))==2)
-    stopifnot(dimensions(manifold)==3)
-    stopifnot(is.numeric(t_knots))
-
-    n <- G_spatial@n
-    G <- list()
-    for(i in seq_along(t_knots)) {
-        Gt <- G_spatial
-        sapply(1:n, function(j) {
-            this_c <-   get("c",environment(Gt@fn[[j]]))    # retrieve centroid
-            new_c <- cbind(this_c,t_knots[i])               # add time coordinate
-            assign("c",new_c,environment(Gt@fn[[j]]))
-        })
-        Gt@df <- cbind(Gt@df,loc3=t_knots[i])
-        Gt@manifold <- manifold
-
-        G[[i]] <- Gt
-    }
-    G <- Reduce("concat",G)
-}
 
 #' @rdname TensorP
 #' @aliases TensorP,Basis-Basis-method
 setMethod("TensorP",signature(Basis1="Basis",Basis2="Basis"),function(Basis1,Basis2) {
-    if(nres(Basis2) > 1) stop("Only one basis can be multiresolution (Basis 1)")
-    df1 <- Basis1@df
-    df2 <- Basis2@df
+    ## This function constructs the Tensor product of two sets of basis functions
+    ## Currently there is the restriction that only one can be multiresolution
+    ## (This is typically the case, as time usually has one resolution of basis functions in FRK)
+    if(nres(Basis2) > 1)
+        stop("Only one basis can be multiresolution (Basis 1)")
+
+    ## Extract data frames and dimensions
+    df1 <- data.frame(Basis1)
+    df2 <- data.frame(Basis2)
     n1 <- dimensions(Basis1)
     n2 <- dimensions(Basis2)
-    expand.grid(df1[,1:n1,drop=FALSE],df2[,1:n2,drop=FALSE])
-    df <- cbind(df1[rep(1:nrow(df1),times = nrow(df2)),1:n1], ## One resolution in df2 being assumed
-                df2[rep(1:nrow(df2),each = nrow(df1)),1:n2],
-                df1[rep(1:nrow(df1),times = nrow(df2)),"res"])
+
+    ## Create long data frame with all possible centroid combinations
+    ## (Kronecker of space and time)
+    expand.grid(df1[,1:n1,drop=FALSE],
+                df2[,1:n2,drop=FALSE])
+
+    ## We adopt a space-first approach, where the spatial index changes quicker than the
+    ## temporal index. So we repeat the centroids of Basis1 for as many time points as
+    ## we have, and we repeat the time points so they look like 1111111,222222,33333 etc.
+    ## The resolution of the basis function is inherited from the spatial resolution
+    ## NB: Only one resolution for Basis2 is assumed. This is checked aboce.
+    df <- cbind(df1[rep(1:nrow(df1),times = nrow(df2)),1:n1,drop=FALSE],
+                df2[rep(1:nrow(df2),each = nrow(df1)),1:n2,drop=FALSE],
+                df1[rep(1:nrow(df1),times = nrow(df2)),"res",drop=FALSE])
+
+    ## Change the names of the data frame to what is standard in this package
     names(df) <- c(paste0("loc",1:(n1 + n2)),"res")
 
+    ## Create new Tensor Basis function from this information
     new("TensorP_Basis",
         Basis1=Basis1,
         Basis2=Basis2,
-        n = Basis1@n * Basis2@n,
+        n = nbasis(Basis1) * nbasis(Basis2),
         df = df)
 })
 
 
 #' @rdname eval_basis
 #' @aliases eval_basis,Basis-matrix-method
-setMethod("eval_basis",signature(basis="Basis",s="matrix"),function(basis,s,output = "matrix"){
-    stopifnot(output %in% c("list","matrix"))
-    space_dim <- dimensions(manifold(basis))
-    n <- nrow(s)
-    batching=cut(1:n,breaks = seq(0,n+10000,
-                                  by=10000),labels=F)
-    if(opts_FRK$get("parallel") > 1L) {
-        clusterExport(opts_FRK$get("cl"),
-                      c("batching","basis","s","space_dim","output"),envir=environment())
+setMethod("eval_basis",signature(basis="Basis",s="matrix"),
+          function(basis,s){
+
+    space_dim <- dimensions(basis)  # spatial dimensions
+    n <- nrow(s)                    # number of points over which to evaluate basis functions
+
+    batching=cut(1:n,                      # create batches of computation (in batches of 10000)
+                 breaks = seq(0,           # break up into batches ot 10000
+                              n+10000,
+                              by=10000),
+                 labels=F)                 # do not assign labels to batches
+
+    if(opts_FRK$get("parallel") > 1L) {    # if we have a parallel backend when compute in parallel
+
+        clusterExport(opts_FRK$get("cl"),  # export variables to the cluster
+                      c("batching","basis","s","space_dim"),
+                      envir=environment())
+
+        ## Use parLapply to compute batches in parallel. The drop = FALSE in the end is required
+        ## for when we have one spatial dimension
         pnt_eval_list <- parLapply(opts_FRK$get("cl"),1:max(unique(batching)),
                                   function(i) {
-                                      idx <- which(batching == i)
-                                      return(.point_eval_fn(basis@fn,
-                                                     s[idx,1:space_dim,drop=F],output))
+                                      idx <- which(batching == i)     # see which spatial locations to evaluate on
+                                      return(.point_eval_fn(basis@fn, # evaluate on these locations
+                                                     s[idx,1:space_dim,drop = FALSE]))
                                   })
-        clusterEvalQ(opts_FRK$get("cl"), {gc()})
+        clusterEvalQ(opts_FRK$get("cl"), {gc()})  # clear data from the cluster workers
     } else  {
+        ## Same as above but using lapply
         pnt_eval_list <- lapply(1:max(unique(batching)),
                                 function(i) {
                                     idx <- which(batching == i)
                                     return(.point_eval_fn(basis@fn,
-                                                          s[idx,1:space_dim,drop=F],output))
+                                                          s[idx,1:space_dim,drop = FALSE]))
                                 })
     }
+
+    ## Finally concatenate all the bits together using rBind
     do.call(rBind,pnt_eval_list)
 })
 
 #' @rdname eval_basis
 #' @aliases eval_basis,Basis-SpatialPointsDataFrame-method
-setMethod("eval_basis",signature(basis="Basis",s="SpatialPointsDataFrame"),function(basis,s,output = "matrix"){
-    stopifnot(output %in% c("matrix","list"))
-    eval_basis(basis=basis, s = coordinates(s),output=output)
+setMethod("eval_basis",signature(basis="Basis",s="SpatialPointsDataFrame"),
+          function(basis,s){
+
+    ## Now just evaluate the basis functions at the coordinates of the SpatialPoints
+    eval_basis(basis=basis,
+               s = coordinates(s))
 })
+
 
 #' @rdname eval_basis
 #' @aliases eval_basis,Basis-SpatialPolygonsDataFrame-method
-setMethod("eval_basis",signature(basis="Basis",s="SpatialPolygonsDataFrame"),function(basis,s,output = "matrix"){
-    stopifnot(output %in% c("matrix","list"))
-    X <- list()
-    print("Averaging over polygons")
+setMethod("eval_basis",signature(basis="Basis",s="SpatialPolygonsDataFrame"),
+          function(basis,s){
 
+    ## Inform user this might take a while
+    print("Averaging over polygons...")
+
+
+    ## If we have a parallel backend use parLapply
     if(opts_FRK$get("parallel") > 1L) {
 
-        ## parLapply version not tested yet
+        ## Export variavles we need to the cluster
         clusterExport(opts_FRK$get("cl"),
                       c("basis","s"),envir=environment())
-        X <- parLapply(opts_FRK$get("cl"),1:length(s), function(i) {
-            samps <- .samps_in_polygon(basis,s,i)
-            colSums(.point_eval_fn(basis@fn,samps))/nrow(samps)
-        })
-        clusterEvalQ(opts_FRK$get("cl"), {gc()})
 
-        # X <- mclapply(1:length(s), function(i) {
-        #     samps <- .samps_in_polygon(basis,s,i)
-        #     colSums(.point_eval_fn(basis@fn,samps))/nrow(samps)
-        # },mc.cores = opts_FRK$get("parallel"))
+        ## Compute averaging over footprints in parallel
+        X <- parLapply(opts_FRK$get("cl"),1:length(s), function(i) {
+            samps <- .samps_in_polygon(basis,s,i)                # sample 1000 times (fixed) uniformly in polygon
+            colSums(.point_eval_fn(basis@fn,samps))/nrow(samps)  # This is the averaging
+        })
+        clusterEvalQ(opts_FRK$get("cl"), {gc()})                 # clear the cluster memory
 
     } else  {
+        ## Same as above but serially
         X <- lapply(1:length(s), function(i) {
             samps <- .samps_in_polygon(basis,s,i)
             colSums(.point_eval_fn(basis@fn,samps))/nrow(samps)
         })
     }
-    X <- Reduce("rBind",X)
-    as(X,"Matrix")
+
+    X <- Reduce("rBind",X)   # join the rows together
+    as(X,"Matrix")           # coerce to Matrix if not already Matrix
+
 })
 
 #' @rdname eval_basis
 #' @aliases eval_basis,Basis-STIDF-method
-setMethod("eval_basis",signature(basis="Basis",s="STIDF"),function(basis,s,output = "matrix"){
-    stopifnot(output %in% c("matrix","list"))
-    space_dim <- dimensions(manifold(basis))
-    .point_eval_fn(basis@fn,cbind(coordinates(s),t=s@data$t)[,1:space_dim,drop=F],output)
+setMethod("eval_basis",signature(basis="Basis",s="STIDF"),
+          function(basis,s){
+    ## Simply evaluate the basis functions at the spatial locations of the data
+    ## (i.e., after projecting the data onto space)
+    ## Note, tis assumes that the the Basis function is on a spatial manifold
+    coords <- coordinates(s)
+    if(!dimensions(basis) == ncol(coords))
+        stop("Basis functions need to be spatial")
+    .point_eval_fn(basis@fn,coords)
 })
 
 #' @rdname eval_basis
 #' @aliases eval_basis,TensorP_Basis-matrix-method
-setMethod("eval_basis",signature(basis="TensorP_Basis",s="matrix"),function(basis,s,output = "matrix"){
-    n1 <- dimensions(manifold(basis@Basis1))
-    S1 <- eval_basis(basis@Basis1,s[,1:n1,drop=FALSE],output)
-    S2 <- eval_basis(basis@Basis2,s[,-(1:n1),drop=FALSE],output)
+setMethod("eval_basis",signature(basis="TensorP_Basis",s="matrix"),
+          function(basis,s){
+    n1 <- dimensions(basis@Basis1) # spatial dimensions
+    S1 <- eval_basis(basis@Basis1,s[,1:n1,drop=FALSE])    # evaluate at spatial locations
+    S2 <- eval_basis(basis@Basis2,s[,-(1:n1),drop=FALSE]) # evaluate at temporal locations
 
-    #XX <- lapply(1:ncol(S1),function(i)  (S1[,i] * S2))
-    ## Order: First space then time
+    ## Order: Construct S matrix over space and time
+    ## This is ordered as first space then time, therefore we take S2[,1]*S1 as our first block
+    ## Then S2[,2]*S1 as our second block etc.
     XX <- lapply(1:ncol(S2),function(i)  (S2[,i] * S1))
-    S <- quickcBind(XX)
+    S <- quickcBind(XX)  # a quick cBind method using sparse matrix construction
     S
 })
 
 
 #' @rdname eval_basis
 #' @aliases eval_basis,TensorP_Basis-STIDF-method
-setMethod("eval_basis",signature(basis="TensorP_Basis",s = "STIDF"),function(basis,s,output = "matrix"){
-    n1 <- dimensions(manifold(basis@Basis1))
-    slocs <- coordinates(s)
-    tlocs <- matrix(s@data$t)
-
-    S1 <- eval_basis(basis@Basis1,slocs[,,drop=FALSE],output)
-    S2 <- eval_basis(basis@Basis2,tlocs[,,drop=FALSE],output)
-
-    XX <- lapply(1:ncol(S2),function(i)  (S2[,i] * S1))
-    S <- quickcBind(XX)
-    S
+setMethod("eval_basis",signature(basis="TensorP_Basis",s = "STIDF"),function(basis,s){
+    if(!("t" %in% names(s@data)))
+        stop("FRK requires a column with a numeric value for time in the STIDF object.
+             This can be, for example, in number of seconds or days from the first data point.")
+    slocs <- coordinates(s)               # spatial coordinates
+    tlocs <- matrix(s$t)                  # temporal coordinates
+    eval_basis(basis,cbind(slocs,tlocs))  # evaluate basis functions over ST locations
 })
 
 
 #' @rdname eval_basis
 #' @aliases eval_basis,TensorP_Basis-STFDF-method
-setMethod("eval_basis",signature(basis="TensorP_Basis",s = "STFDF"),function(basis,s,output = "matrix"){
-    n1 <- dimensions(manifold(basis@Basis1))
-    slocs <- coordinates(s)
-    tlocs <- matrix(s@data$t)
-    nt <- length(s@time)
+setMethod("eval_basis",signature(basis="TensorP_Basis",s = "STFDF"),function(basis,s){
+    if(!("t" %in% names(s@data)))
+        stop("FRK requires a column with a numeric value for time in the STFDF object.
+             This can be, for example, in number of seconds, hors or days from the
+             first data point.")
+    tlocs <- matrix(s$t)  # all time points
+    nt <- length(time(s))  # number of unique time points
 
-    S1 <- eval_basis(basis@Basis1,s[,1],output)
-    S1 <- do.call("rBind",lapply(1:nt,function(x) S1))
-    S2 <- eval_basis(basis@Basis2,tlocs[,,drop=FALSE],output)
+    S1 <- eval_basis(basis@Basis1,s[,1])                # evaluate over space (just take first time point)
+    S1 <- do.call("rBind",lapply(1:nt,function(x) S1))  # now just repeat that for the nt time points
+    S2 <- eval_basis(basis@Basis2,tlocs[,,drop=FALSE])  # evaluate over time (all time points)
+
+    ## As in previous functions we compute S with space running fastest
     XX <- lapply(1:ncol(S2),function(i)  (S2[,i] * S1))
-    S <- quickcBind(XX)
+    S <- quickcBind(XX) # a quick cBind method using sparse matrix construction
     S
 })
 
+######################################################
+########### HELPER FUNCTIONS #########################
+######################################################
 
 #' @rdname local_basis
 #' @export
-radial_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),scale=1,type="Gaussian") {
+radial_basis <- function(manifold=sphere(),loc=matrix(c(1,0),nrow=1),
+                         scale=1,type=c("bisquare","Gaussian","exp","Matern32")) {
     stop("radial_basis is deprecated. Please use local_basis instead")
-
 }
 
 #' @rdname nres
 #' @aliases nres_basis,Basis-method
-setMethod("nres",signature(b="Basis"),function(b){ length(unique(b@df$res))})
+setMethod("nres",signature(b="Basis"), # Returns number of resolutions for standard basis
+          function(b){ length(unique(data.frame(b)$res))})
 
 #' @rdname nres
 #' @aliases nres_basis,Basis-method
-setMethod("nres",signature(b="TensorP_Basis"),function(b){nres(b@Basis1) * nres(b@Basis2)})
+setMethod("nres",signature(b="TensorP_Basis"),  # Returns number of resolutions for TP basis
+          function(b){nres(b@Basis1) * nres(b@Basis2)})
 
 
 #' @rdname nres
 #' @aliases nres_SRE,SRE-method
-setMethod("nres",signature(b="SRE"),function(b){ nres(b@basis)})
+setMethod("nres",signature(b="SRE"),  # Returns number of resolutions of basis in SRE model
+          function(b){ nres(b@basis)})
 
-setMethod("BuildD",signature(G="Basis"),function(G){
+
+#' @export
+#' @rdname Basis_data.frame
+setMethod( "$", "Basis",  # Allows easy access of fields in basis data frame
+           function(x, name ){data.frame(x)[name][,1]} )
+
+#' @export
+#' @rdname Basis_data.frame
+setMethod( "$<-", "Basis", # Allows easy assignment of fields in basis data frame
+           function(x,name,value){
+    df <- data.frame(x)
+    df[name] <- value
+    data.frame(x) <- df
+    x
+    })
+
+#' @rdname Basis_data.frame
+#' @aliases data.frame_Basis,Basis-method
+#' @export
+setMethod( "data.frame<-", "Basis", # Allows easy assignment of data.frame to Basis
+           function(x, value){x@df <- value; x})
+
+#' @rdname Basis_data.frame
+#' @aliases data.frame_Basis,Basis-method
+#' @export
+setMethod( "data.frame<-", "TensorP_Basis", # Allows easy assignment of data.frame to TensorPbasis
+           function(x, value){x@df <- value; x})
+
+#' @rdname Basis_data.frame
+#' @export
+as.data.frame.Basis = function(x,...) # Used to convert basis into its summary data frame
+    x@df
+
+#' @rdname Basis_data.frame
+#' @export
+as.data.frame.TensorP_Basis = function(x,...) # Used to convert basis into its summary data frame
+    x@df
+
+#' @rdname nbasis
+#' @aliases nbasis,Basis_obj-method
+setMethod("nbasis",signature(.Object="Basis_obj"), # Returns number of basis functions for Basis
+          function(.Object) {return(.Object@n)})
+
+
+#' @rdname nbasis
+#' @aliases nbasis,SRE-method
+setMethod("nbasis",signature(.Object="SRE"), # Returns number of basis functions for SRE model
+          function(.Object) {return(nbasis(.Object@basis))})
+
+#' @aliases count_res,Basis-method
+setMethod("count_res",signature="Basis", # Returns count by resolution for Basis
+          function(.Object) {
     res <- NULL # suppress bindings (it's in the data frame)
-    nres <- nres(G)
-    m <- manifold(G)
-    D_basis = lapply(1:nres,function(i)  {
-        x1 <- filter(G@df,res == i)[,1:dimensions(m)] %>% as.matrix()
-        distance(m,x1,x1)
-})})
+    count(data.frame(.Object),res)
+})
 
-setMethod("BuildD",signature(G="TensorP_Basis"),function(G){
-    nres1 <- nres(G@Basis1)
-    nres2 <- nres(G@Basis2)
-    stopifnot(nres2 == 1)
-    D_basis <- list(Basis1 = BuildD(G@Basis1),
-                    Basis2 = BuildD(G@Basis2))
+#' @aliases count_res,SRE-method
+setMethod("count_res",signature="SRE", # Returns count by resolution for SRE model
+          function(.Object) {
+    count_res(.Object@basis)
+})
+
+#' @aliases count_res,TensorP_Basis-method
+setMethod("count_res",signature="TensorP_Basis", # Returns count by resolution for Tensor Basis
+          function(.Object) {
+    res <- NULL # suppress bindings (it's in the data frame)
+    c1 <-  count(data.frame(.Object@Basis1),res) # count spatial by resolution
+    c2 <-  count(data.frame(.Object@Basis2),res) # count temporal by resolution
+
+    ## In the below we define resolutions with the spatial resolution moving fastest
+    ## So for example if we have resolutions 1,2, and 3 for space and 1, and 2 for time,
+    ## then we will have resolutions 1,2,3,4,5,6, where 1,2,3 correspond to space 1,2,3 and
+    ## time 1, and 4,5,6 correspond to space 1,2,3 and time 2
+
+    c_all <- NULL                  # initialise NULL
+    max_res_c1 <- c1$res[1] - 1    # initialise at one less than lowest resolution
+    for( i in 1:nrow(c2)) {        # for each temporal resolution (should be only one)
+        new_res <- (max_res_c1 + 1):(max_res_c1 + nrow(c1)) # range of resolutions
+        temp_c1 <- c1              # spatial resolution count
+        temp_c1$res <- new_res     # but change resolution numbers
+        temp_c1$n <- temp_c1$n * c2$n[i] # we have n basis functions for each time point
+        c_all <- rbind(c_all,temp_c1) # append
+        max_res_c1 <- max(c_all$res)  # update maximum resolution count
+    }
+    c_all
+})
+
+
+######################################################
+###########  FUNCTIONS NOT EXPORTED ##################
+######################################################
+
+## BuilD computes the distance matrices for the basis-function centroids
+setMethod("BuildD",signature(G="Basis"),function(G){
+    res <- NULL        # suppress bindings (it's in the data frame)
+    nres <- nres(G)    # number of resoluations
+    m <- manifold(G)   # basis manifold
+    n <- dimensions(G) # manifld dimensions
+
+    ## Since the first columns of df are ALWAYS the centroid coordinates
+    ## we just take the first n columns when computing the distances
+    D_basis = lapply(1:nres,function(i)  {
+        x1 <- filter(data.frame(G),res == i)[,1:n] %>%
+            as.matrix()
+        distance(m,x1,x1)})
     D_basis
     })
 
-.point_eval_fn <- function(flist,s,output="matrix") {
+setMethod("BuildD",signature(G="TensorP_Basis"),function(G){
+    nres1 <- nres(G@Basis1) # number of spatial resolutions
+    nres2 <- nres(G@Basis2) # number of temporal resolutions
+    stopifnot(nres2 == 1)   # only allow for one temporal dimensions
+    D_basis <- list(Basis1 = BuildD(G@Basis1), # form distance functions for
+                    Basis2 = BuildD(G@Basis2)) # space and time separately
+    D_basis
+    })
 
-    x <- do.call("cbind",sapply(flist,function(f) f(s),simplify=FALSE))
+## Takes a list of cuntions and evaluates each of these functions over
+## the locations s (which here are definitely matrix or numeric)
+.point_eval_fn <- function(flist,s) {
+    x <- do.call("cbind",
+                 sapply(flist,function(f) f(s),simplify=FALSE))
     as(x,"Matrix")
 }
 
+## Uniformly samples inside the polygon for carrying out the approximate integration
 .samps_in_polygon <- function(basis,s,i) {
-    nMC <- 1000
-    if(is(basis@manifold,"plane")) {
+    nMC <- 1000                         # 1000 samples
+    if(is(manifold(basis),"plane")) {   # If we are on the plane then use spsample
         samps <- coordinates(spsample(s[i,],n=nMC,type="random"))
+        ## else sample on the sphere by first drawing a box around the polygon (on the sphere)
+        ## sampling in the box, and then keeping only those samples inside the polygon
     } else if(is(basis@manifold,"sphere")){
 
         ## Find coordinates
@@ -537,27 +746,32 @@ setMethod("BuildD",signature(G="TensorP_Basis"),function(G){
         samps[,1] <- 360*samps[,1] - 180
         samps[,2] <- acos(2*samps[,2] -1) * 360 / (2*pi) - 90
 
-        ## Find which points are in polygon (approx. 70%)
-        pip <- over(SpatialPoints(samps),
+        ## Find which points are in polygon (usually approx. 70%)
+        pip <- over(SpatialPoints(samps),  # pip = points in polygon
                     SpatialPolygons(list(s@polygons[[i]]),1L))
-        samps <- samps[which(pip==1),]
+        samps <- samps[which(pip == 1),]   # keep those samples for which pip == TRUE
 
     }
     samps
 }
 
-.check_bisquare_args <- function(manifold,loc,R) {
-    stopifnot(is.matrix(loc))
-    stopifnot(dimensions(manifold) == ncol(loc))
-    stopifnot(is.numeric(R))
-    stopifnot(R > 0)
+## Basic checks for the basis-function arguments
+.check_basis_function_args <- function(manifold,loc,scale) {
+    if(!is.matrix(loc))
+        stop("Basis functions need to be evaluated using locations inside a matrix")
+    if(!(dimensions(manifold) == ncol(loc)))
+        stop("Incorrect number of columns for the argument loc")
+    if(!is.numeric(scale))
+        stop("The scale parmaeter needs to be numeric")
+    if(!(scale > 0))
+        stop("The scale parameter needs to be greater than zero")
 }
 
 # Gaussian Basis Function
 .GRBF_wrapper <- function(manifold,mu,std) {
-    .check_bisquare_args(manifold,mu,std)
+    .check_basis_function_args(manifold,mu,std)
     function(s) {
-        stopifnot(ncol(s) == dimensions(manifold))
+        stopifnot(ncol(s) == dimensions(manifold)) # Internal checking
         dist_sq <- distance(manifold,s,mu)^2
         exp(-0.5* dist_sq/(std^2) )
     }
@@ -565,9 +779,9 @@ setMethod("BuildD",signature(G="TensorP_Basis"),function(G){
 
 # Bisquare Basis Function
 .bisquare_wrapper <- function(manifold,c,R) {
-    .check_bisquare_args(manifold,c,R)
+    .check_basis_function_args(manifold,c,R)
     function(s) {
-        stopifnot(ncol(s) == dimensions(manifold))
+        stopifnot(ncol(s) == dimensions(manifold)) # Internal checking
         y <- distance(manifold,s,c)
         (1-(y/R)^2)^2 * (y < R)
     }
@@ -575,19 +789,19 @@ setMethod("BuildD",signature(G="TensorP_Basis"),function(G){
 
 # Exponential Basis Function
 .exp_wrapper <- function(manifold,c,tau) {
-    .check_bisquare_args(manifold,c,tau)
+    .check_basis_function_args(manifold,c,tau)
     function(s) {
-        stopifnot(ncol(s) == dimensions(manifold))
+        stopifnot(ncol(s) == dimensions(manifold)) # Internal checking
         y <- distance(manifold,s,c)
         exp(-y/tau)
     }
 }
 
-# Exponential Basis Function
+# Matern32 Basis Function
 .Matern32_wrapper <- function(manifold,c,kappa) {
-    .check_bisquare_args(manifold,c,kappa)
+    .check_basis_function_args(manifold,c,kappa)
     function(s) {
-        stopifnot(ncol(s) == dimensions(manifold))
+        stopifnot(ncol(s) == dimensions(manifold)) # Internal checking
         y <- distance(manifold,s,c)
         (1 + sqrt(3)*y/kappa)*exp(-sqrt(3)*y/kappa)
     }
@@ -597,77 +811,22 @@ setMethod("BuildD",signature(G="TensorP_Basis"),function(G){
 #' @aliases concat,Basis-method
 #' @noRd
 setMethod("concat",signature = "Basis",function(...) {
-    l <- list(...)
+    l <- list(...)           # put arguments into list
     if(length(l) < 2)
         stop("Need more than one basis set to concatenate")
     if(!(length(unique(sapply(sapply(l,manifold),type))) == 1))
         stop("Basis need to be on the same manifold")
-    G <- l[[1]]
+    G <- l[[1]]              # initialise first basis
 
-    for (i in 2:length(l)) {
-        G@fn <- c(G@fn, l[[i]]@fn)
-        G@pars <- c(G@pars, l[[i]]@pars)
-        G@df <- rbind(G@df, l[[i]]@df)
+    ## We are going to use internals (slots) since this is not exported
+    ## This is more direct and safe in this case
+    for (i in 2:length(l)) { # add on the other basis functions
+        G@fn <- c(G@fn, l[[i]]@fn)        # append functions
+        G@pars <- c(G@pars, l[[i]]@pars)  # append parameters
+        G@df <- rbind(G@df, l[[i]]@df)    # append data frame
     }
-    G@n <- length(G@fn)
-    G
+    G@n <- length(G@fn)  # new number of basis functions
+    G                    # return new basis
 })
 
-#' @rdname nbasis
-#' @aliases nbasis,Basis_obj-method
-setMethod("nbasis",signature(.Object="Basis_obj"),function(.Object) {return(.Object@n)})
 
-
-#' @rdname nbasis
-#' @aliases nbasis,SRE-method
-setMethod("nbasis",signature(.Object="SRE"),function(.Object) {return(nbasis(.Object@basis))})
-
-#' @aliases count_res,SRE-method
-setMethod("count_res",signature="SRE",function(.Object) {
-    count_res(.Object@basis)
-})
-
-#' @aliases count_res,TensorP_Basis-method
-setMethod("count_res",signature="TensorP_Basis",function(.Object) {
-    res <- NULL # suppress bindings (it's in the data frame)
-    c1 <-  count(.Object@Basis1@df,res)
-    c2 <-  count(.Object@Basis2@df,res)
-
-    c_all <- NULL
-    max_res_c1 <- c1$res[1] - 1
-    for( i in 1:nrow(c2)) {
-        new_res <- (max_res_c1 + 1):(max_res_c1 + nrow(c1))
-        temp_c1 <- c1
-        temp_c1$res <- new_res
-        temp_c1$n <- temp_c1$n * c2$n[i]
-        c_all <- rbind(c_all,temp_c1)
-        max_res_c1 <- max(c_all$res)
-    }
-    c_all
-})
-
-#' @aliases count_res,Basis-method
-setMethod("count_res",signature="Basis",function(.Object) {
-    res <- NULL # suppress bindings (it's in the data frame)
-    count(.Object@df,res)
-})
-
-## Evaluate basis over BAUs... deprecated?
-.eval_basis.BAUs <- function(basis,BAUs,use_centroid) {
-    if(is(BAUs,"Spatial")) {
-        if(use_centroid) {
-            #S0 <- eval_basis(Sm@basis,as.matrix(BAUs[coordnames(Sm@data[[1]])]@data))
-            S0 <- eval_basis(basis,.polygons_to_points(BAUs))
-        } else {
-            S0 <- eval_basis(basis,BAUs)
-        }
-    } else if(is(BAUs,"STFDF")) {
-        if(use_centroid) {
-            #S0 <- eval_basis(Sm@basis,as.matrix(cbind(coordinates(BAUs),BAUs@data$t)))
-            S0 <- eval_basis(basis,.polygons_to_points(BAUs))
-        } else {
-            stop("Can only use centroid when predicting with spatio-temporal data")
-        }
-    }
-    S0
-}

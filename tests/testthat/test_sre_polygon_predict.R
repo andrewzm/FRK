@@ -6,7 +6,6 @@ test_that("can predict over polygons in plane", {
 
     data(meuse)
     meuse$std <- sqrt(0.05066)
-    meuse$fs <- 1
     coordinates(meuse) = ~x+y # change into an sp object
     data(meuse.grid)
     gridded(meuse.grid) = ~x + y
@@ -31,7 +30,10 @@ test_that("can predict over polygons in plane", {
                             nonconvex_hull=FALSE)
     HexPols_df$fs <- 1
     f <- log(zinc) ~ 1
-    S <- SRE(f,data = list(meuse),basis = G,BAUs = HexPols_df,est_error = FALSE)
+    S <- SRE(f,data = list(meuse),
+             basis = G,
+             BAUs = HexPols_df,
+             est_error = FALSE)
     S <- SRE.fit(S,n_EM = 10,print_lik=F)
     HexPols_df <- SRE.predict(S)
 

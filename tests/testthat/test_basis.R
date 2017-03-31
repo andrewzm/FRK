@@ -80,17 +80,18 @@ test_that("can average basis over polygons in plane", {
         #lines(as.numeric(S2),col='red')
 })
 
-test_that("can get ST basis using time repetition", {
-    G_spatial <-  local_basis(manifold = sphere(),
-                               loc=matrix(runif(20,min=-90,max=90),10,2),
-                               scale=rep(20,10),
-                               type="bisquare")
-    G_space_time <- sp_to_ST_basis(G_spatial,1:10,manifold=STsphere())
-    expect_is(G_space_time,"Basis")
-    expect_is(manifold(G_space_time),"STsphere")
-    expect_equal(nbasis(G_space_time),100)
-
-})
+## Deprecated:
+# test_that("can get ST basis using time repetition", {
+#     G_spatial <-  local_basis(manifold = sphere(),
+#                                loc=matrix(runif(20,min=-90,max=90),10,2),
+#                                scale=rep(20,10),
+#                                type="bisquare")
+#     G_space_time <- sp_to_ST_basis(G_spatial,1:10,manifold=STsphere())
+#     expect_is(G_space_time,"Basis")
+#     expect_is(manifold(G_space_time),"STsphere")
+#     expect_equal(nbasis(G_space_time),100)
+#
+# })
 
 test_that("can get ST basis using tensor product", {
     G_spatial <-  local_basis(manifold = sphere(),
@@ -105,4 +106,16 @@ test_that("can get ST basis using tensor product", {
     expect_is(G_spacetime@Basis2,"Basis")
     expect_equal(nbasis(G_spacetime),30)
 
+})
+
+
+test_that("can manipulate basis function data frame", {
+    G <- local_basis()
+    expect_is(G,"Basis")
+    df <- data.frame(G)
+    expect_is(df,"data.frame")
+    expect_identical(df$res,1)
+    df$res <- 2
+    data.frame(G) <- df
+    expect_identical(G@df$res,2)
 })

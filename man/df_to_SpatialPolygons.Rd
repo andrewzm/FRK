@@ -19,7 +19,7 @@ df_to_SpatialPolygons(df, keys, coords, proj)
 Convert data frame to SpatialPolygons object.
 }
 \details{
-Each row in the data frame \code{df} contains both coordinates and labels (or keys) that identify to which polygon the coordinates belong. This function groups the data frame according to \code{keys} and forms a \code{SpatialPolygons} object from the coordinates in each group. It is important that all rings are closed, that is, that the last row of each group is identical to the first row. Since \code{keys} can be of length greater than one, we identify each polygon with a new key by forming an MD5 hash made out of the respective \code{keys} variables that in themselves are unique (and therefore the hashed key is also unique). For lon-lat coordinates use \code{proj = CRS("+proj=longlat")}.
+Each row in the data frame \code{df} contains both coordinates and labels (or keys) that identify to which polygon the coordinates belong. This function groups the data frame according to \code{keys} and forms a \code{SpatialPolygons} object from the coordinates in each group. It is important that all rings are closed, that is, that the last row of each group is identical to the first row. Since \code{keys} can be of length greater than one, we identify each polygon with a new key by forming an MD5 hash made out of the respective \code{keys} variables that in themselves are unique (and therefore the hashed key is also unique). For lon-lat coordinates use \code{proj = CRS("+proj=longlat +ellps=sphere")}.
 }
 \examples{
 library(sp)
@@ -27,5 +27,5 @@ df <- data.frame(id = c(rep(1,4),rep(2,4)),
                  x = c(0,1,0,0,2,3,2,2),
                  y=c(0,0,1,0,0,1,1,0))
 pols <- df_to_SpatialPolygons(df,"id",c("x","y"),CRS())
-# plot(pols)
+\dontrun{plot(pols)}
 }

@@ -13,19 +13,27 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 \section{Slots}{
 
 \describe{
+\item{\code{f}}{formula used to define the SRE object. All covariates employed need to be specified in the object \code{BAUs}}
+
 \item{\code{data}}{the original data from which the model's parameters are estimated}
 
 \item{\code{basis}}{object of class \code{Basis} used to construct the matrix \eqn{S}}
 
 \item{\code{BAUs}}{object of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame} of \code{STFDF} that contains the Basic Areal Units (BAUs) that are used to both (i) project the data onto a common discretisation if they are point-referenced and (ii) provide a BAU-to-data relationship if the data has a spatial footprint}
 
-\item{\code{f}}{formula used to define the SRE object. All covariates employed need to be specified in the object \code{BAUs}}
+\item{\code{S}}{matrix constructed by evaluating the basis functions at all the data locations (of class \code{Matrix})}
 
-\item{\code{S}}{matrix constructed by evaluating the basis functions at all BAUs affected by the data}
+\item{\code{S0}}{matrix constructed by evaluating the basis functions at all BAUs (of class \code{Matrix})}
 
-\item{\code{Ve}}{measurement-error variance-covariance matrix (typically diagonal)}
+\item{\code{D_basis}}{list of distance-matrices of class \code{Matrix}, one for each basis-function resolution}
 
-\item{\code{Vfs}}{fine-scale variance-covariance matrix (typically diagonal) up to a constant of proportionality estimated in the framework}
+\item{\code{Ve}}{measurement-error variance-covariance matrix (typically diagonal and of class \code{Matrix})}
+
+\item{\code{Vfs}}{fine-scale variance-covariance matrix at the data locations (typically diagonal and of class \code{Matrix}) up to a constant of proportionality estimated in the framework}
+
+\item{\code{Vfs_BAUs}}{fine-scale variance-covariance matrix at the BAU centroids (typically diagonal and of class \code{Matrix}) up to a constant of proportionality estimated in the framework}
+
+\item{\code{Qfs_BAUs}}{fine-scale precision matrix at the BAU centroids (typically diagonal and of class \code{Matrix}) up to a constant of proportionality estimated in the framework}
 
 \item{\code{Z}}{vector of observations (of class \code{Matrix})}
 
@@ -33,17 +41,23 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 
 \item{\code{X}}{matrix of covariates}
 
+\item{\code{K_type}}{type of prior covariance matrix of random effects. Can be "block-exponential" (correlation between effects decays as a function of distance between the basis-function centroids), or "unstructured" (all elements in \code{K} are unknown and need to be estimated)}
+
 \item{\code{mu_eta}}{updated expectation of random effects (estimated)}
 
 \item{\code{S_eta}}{updated covariance matrix of random effects (estimated)}
 
+\item{\code{Q_eta}}{updated precision matrix of random effects (estimated)}
+
 \item{\code{Khat}}{prior covariance matrix of random effects (estimated)}
 
-\item{\code{Khat_inv}}{prior covariance matrix of random effects (estimated)}
+\item{\code{Khat_inv}}{prior precision matrix of random effects (estimated)}
 
-\item{\code{alphahat}}{covariates weights (estimated)}
+\item{\code{alphahat}}{fixed-effect regression coefficients (estimated)}
 
-\item{\code{sigma2fshat}}{fine-scale variation scaler (estimated)}
+\item{\code{sigma2fshat}}{fine-scale variation scaling (estimated)}
+
+\item{\code{fs_model}}{type of fine-scale variation (independent or CAR-based). Currently only "ind" is permitted}
 }}
 
 \keyword{Spatial}

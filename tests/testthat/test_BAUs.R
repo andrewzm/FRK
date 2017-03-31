@@ -7,13 +7,13 @@ test_that("real_line_BAUs",{
     Grid1D_df <- auto_BAUs(manifold = real_line(),
                            cellsize = 1,
                            data=data)
-    expect_is(Grid1D_df,"SpatialPolygonsDataFrame")
+    expect_is(Grid1D_df,"SpatialPixelsDataFrame")
     expect_equal(names(Grid1D_df),c("x","y"))
     expect_equal(mean(diff(Grid1D_df$x)),1)
 
     f <- z ~ 1
-    binned_data1 <- map_data_to_BAUs(data,Grid1D_df,av_var=all.vars(f)[1],average_in_BAU = TRUE)
-    binned_data2 <- map_data_to_BAUs(data,Grid1D_df,av_var=all.vars(f)[1],average_in_BAU = FALSE)
+    binned_data1 <- map_data_to_BAUs(data,Grid1D_df,average_in_BAU = TRUE)
+    binned_data2 <- map_data_to_BAUs(data,Grid1D_df,average_in_BAU = FALSE)
     expect_is(binned_data1,"SpatialPointsDataFrame")
     expect_is(binned_data2,"SpatialPointsDataFrame")
     expect_true(nrow(binned_data1) <= nrow(Grid1D_df))
@@ -24,7 +24,6 @@ test_that("real_line_BAUs",{
     expect_equal(names(C1),c("i_idx","j_idx"))
     expect_equal(length(C1$i_idx),nrow(binned_data1))
     expect_equal(length(C1$j_idx),nrow(binned_data1))
-
 
 })
 
@@ -55,7 +54,7 @@ test_that("plane_BAUs",{
 
 
     f <- z ~ 1
-    binned_data <- map_data_to_BAUs(data,Grid2D,av_var=all.vars(f)[1])
+    binned_data <- map_data_to_BAUs(data,Grid2D)
     expect_is(binned_data,"SpatialPointsDataFrame")
     expect_true(nrow(binned_data) <= nrow(Grid2D))
 
@@ -83,7 +82,7 @@ test_that("sphere_BAUs",{
                              cellsize=c(20,10))
     expect_is(sphere_grid,"SpatialPolygonsDataFrame")
     expect_equal(nrow(sphere_grid@data),324)
-    expect_equal(names(sphere_grid@data),c("lon","lat","id"))
+    expect_equal(names(sphere_grid@data),c("lon","lat"))
     expect_true(grepl("+proj=longlat",proj4string(sphere_grid)))
 
 })
@@ -103,11 +102,11 @@ test_that("SpaceTime_BAUs",{
     coordinates(space1) <- ~x+y
     STobj1 <- STIDF(space1,time1,data=sim_process)
 
-    time_grid <- auto_BAUs(timeline(),
+    time_grid <- auto_BAUs(real_line(),
                            cellsize = 1,
                            d = as.Date(time(STobj1)),
                            tunit="days")
-    expect_is(time_grid,"POSIXt")
+    expect_is(time_grid,"POSIXct")
 
     if(require("INLA")) {
         space_time_grid <- auto_BAUs(STplane(),
@@ -118,6 +117,7 @@ test_that("SpaceTime_BAUs",{
                                      convex= -0.2,
                                      nonconvex_hull = TRUE)
         expect_is(space_time_grid,"STFDF")
+        expect_is(time(space_time_grid),"POSIXct")
     }
 
     space_time_grid <- auto_BAUs(STplane(),
@@ -128,6 +128,7 @@ test_that("SpaceTime_BAUs",{
                                  convex= -0.2,
                                  nonconvex_hull = FALSE)
     expect_is(space_time_grid,"STFDF")
+    expect_is(time(space_time_grid),"POSIXct")
 
     STobj2 <- space_time_grid[1:5,1:3] # mock space-time STFDF data
     STobj2$z <- 1
@@ -135,11 +136,11 @@ test_that("SpaceTime_BAUs",{
     f <- z ~ 1
     binned_data1 <- FRK:::map_data_to_BAUs(STobj1,
                                            space_time_grid,
-                                           av_var=all.vars(f)[1],
                                            average_in_BAU = TRUE)
     binned_data2 <- FRK:::map_data_to_BAUs(STobj1,
                                            space_time_grid,
-                                           av_var=all.vars(f)[1],average_in_BAU = FALSE)
+                                           average_in_BAU = FALSE)
+    expect_true(ncol(binned_data2) >= ncol(binned_data1))
     expect_is(binned_data1,"STIDF")
     expect_is(binned_data2,"STIDF")
 
@@ -151,6 +152,30 @@ test_that("SpaceTime_BAUs",{
     expect_equal(names(C2),c("i_idx","j_idx"))
     expect_equal(length(C1$i_idx),as.numeric(nrow(binned_data1)))
     expect_equal(length(C1$j_idx),as.numeric(nrow(binned_data1)))
+
+    ## Now do the same but with a slightly shifted time
+    STobj3 <- STIDF(space1,time1 + 4000,data=sim_process)
+    STobj3$z <- 1
+
+    f <- z ~ 1
+    binned_data3 <- FRK:::map_data_to_BAUs(STobj3,
+                                           space_time_grid,
+                                           average_in_BAU = TRUE)
+    binned_data4 <- FRK:::map_data_to_BAUs(STobj3,
+                                           space_time_grid,
+                                           average_in_BAU = FALSE)
+    expect_true(ncol(binned_data4) >= ncol(binned_data3))
+    expect_is(binned_data3,"STIDF")
+    expect_is(binned_data4,"STIDF")
+
+    space_time_grid2 <- auto_BAUs(STplane(),
+                                 type="hex",
+                                 cellsize = c(0.1,0.1,1),
+                                 data = STobj3,
+                                 tunit="days",
+                                 convex= -0.2,
+                                 nonconvex_hull = FALSE)
+
 
     ## The below tests are passing in Rstudio but not on R terminal
 

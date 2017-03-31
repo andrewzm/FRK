@@ -35,7 +35,7 @@ test_that("observations with large support cover correct BAUs", {
 
 test_that("observations with large support average covariates correctly", {
 
-    SrDf_updated <- map_data_to_BAUs(SrDf,BAUs,av_var=TRUE)
+    SrDf_updated <- map_data_to_BAUs(SrDf,BAUs)
 
     ## Check that covariates are properly averaged and that overlapping obs. work
     obs1x <- mean(BAUs[["x"]][idx1])

@@ -7,16 +7,16 @@
 \alias{SRE.predict}
 \title{Construct SRE object, fit and predict}
 \usage{
-FRK(f, data, basis = NULL, BAUs = NULL, K_type = "block-exponential",
-  lambda = 0, fs_model = "ind", average_in_BAU = TRUE, est_error = TRUE,
-  n_EM = 100, tol = 0.01, method = "EM", print_lik = TRUE,
-  cross_validate = 1L, ...)
+FRK(f, data, basis = NULL, BAUs = NULL, est_error = TRUE,
+  average_in_BAU = TRUE, fs_model = "ind", vgm_model = NULL,
+  K_type = "block-exponential", n_EM = 100, tol = 0.01, method = "EM",
+  lambda = 0, print_lik = FALSE, ...)
 
-SRE(f, data, basis, BAUs, est_error = FALSE, average_in_BAU = TRUE,
+SRE(f, data, basis, BAUs, est_error = TRUE, average_in_BAU = TRUE,
   fs_model = "ind", vgm_model = NULL, K_type = "block-exponential")
 
-SRE.fit(SRE_model, n_EM = 100L, tol = 0.01, lambda = 0, method = "EM",
-  print_lik = FALSE, cross_validate = 1L)
+SRE.fit(SRE_model, n_EM = 100L, tol = 0.01, method = "EM", lambda = 0,
+  print_lik = FALSE)
 
 SRE.predict(SRE_model, obs_fs = FALSE, pred_polys = NULL,
   pred_time = NULL)
@@ -24,21 +24,21 @@ SRE.predict(SRE_model, obs_fs = FALSE, pred_polys = NULL,
 \arguments{
 \item{f}{\code{R} formula relating the dependent variable (or transformations thereof) to covariates}
 
-\item{data}{list of objects of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame}}
+\item{data}{list of objects of class \code{SpatialPointsDataFrame}, \code{SpatialPolygonsDataFrame}, \code{STIDF}, or  \code{STFDF}. If using space-time objects, the data frame should have another field, \code{t}, containing the time index of the data point}
 
-\item{basis}{object of class \code{Basis}}
+\item{basis}{object of class \code{Basis} (or \code{TensorP_Basis})}
 
-\item{BAUs}{object of class \code{SpatialPolygonsDataFrame}, the data frame which must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality. If the function \code{FRK} is used directly, then BAUs are created automatically but only coordinates can then be used as covariates}
+\item{BAUs}{object of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame}, \code{STIDF}, or \code{STFDF}. The object's data frame must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality. If the function \code{FRK} is used directly, then BAUs are created automatically but only coordinates can then be used as covariates}
 
-\item{K_type}{the parameterisation used for the \code{K} matrix. Currently this can be "unstructured" or "block-exponential"}
-
-\item{lambda}{regularisation parameter (0 by default)}
-
-\item{fs_model}{if "ind" then the fine-scale variation is independent at the BAU level. If "ICAR", then an ICAR model is placed on the BAUs}
+\item{est_error}{flag indicating whether the measurement-error variance should be estimated from variogram techniques. If this is set to 0, then \code{data} must contain a field \code{std}. Measurement-error estimation is not implemented for spatio-temporal datasets}
 
 \item{average_in_BAU}{if \code{TRUE}, then multiple data points falling in the same BAU are averaged; the measurement error of the averaged data point is taken as the average of the individual measurement errors}
 
-\item{est_error}{flag indicating whether the measurement-error variance should be estimated from variogram techniques. If this is set to 0, then \code{data} must contain a field \code{std}. Measurement-error estimation is not implemented for spatio-temporal datasets}
+\item{fs_model}{if "ind" then the fine-scale variation is independent at the BAU level. If "ICAR", then an ICAR model is placed on the BAUs}
+
+\item{vgm_model}{an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm} containing the variogram model to fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified the variogram used is \code{gstat::vgm(1, "Lin", d, 1)} where \code{d} is approximately one third of the maximum distance between any two data points}
+
+\item{K_type}{the parameterisation used for the \code{K} matrix. Currently this can be "unstructured" or "block-exponential" (default)}
 
 \item{n_EM}{maximum number of iterations for the EM algorithm}
 
@@ -46,50 +46,51 @@ SRE.predict(SRE_model, obs_fs = FALSE, pred_polys = NULL,
 
 \item{method}{parameter estimation method to employ. Currently only ``EM'' is supported}
 
+\item{lambda}{ridge-regression regularisation parameter for when \code{K} is unstructured (0 by default). Can be a single number, or a vector (one parameter for each resolution)}
+
 \item{print_lik}{flag indicating whether likelihood should be printed or not on convergence of the estimation algorithm}
 
-\item{cross_validate}{the number \eqn{k} in \eqn{k}-fold cross-validation. If greater than 1, \code{lambda} is ignored and estimated through cross-validation}
+\item{...}{other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling the function \code{FRK}}
 
-\item{...}{other parameters passed on to \code{auto_basis} and \code{auto_BAUs}}
+\item{SRE_model}{object returned from the constructor \code{SRE()} containing all the parameters and information on the SRE model}
 
-\item{vgm_model}{an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm} containing the variogram model to fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified the variogram used is \code{gstat::vgm(1, "Lin", d, 1)} where \code{d} is approximately one third of the maximum distance between any two points}
-
-\item{SRE_model}{object returned from the constructor \code{SRE()}}
-
-\item{obs_fs}{flag indicating whether the fine-scale variation sits in the observation model (systematic error) or in the process model (process fine-scale variation, default)}
+\item{obs_fs}{flag indicating whether the fine-scale variation sits in the observation model (systematic error, Case 1) or in the process model (process fine-scale variation, Case 2, default)}
 
 \item{pred_polys}{object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified}
 
 \item{pred_time}{vector of time indices at which we wish to predict. All time points are used if this option is not specified}
 }
 \description{
-Main constructor of spatial random effects (SRE) object. Please see \code{\link{SRE-class}} for more details on the object's properties and methods.
+The Spatial Random Effects (SRE) model is the central object in FRK. The function \code{FRK} provides a wrapper for the construction and estimation of the SRE object from data, using the functions \code{SRE} (the object constructor) and \code{SRE.fit} (for fitting it to the data). Please see \code{\link{SRE-class}} for more details on the SRE object's properties and methods.
 }
 \details{
-\code{SRE()} is the main function in the package as it constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of Basic Areal Units (BAUs). The function first takes each object in the list \code{data} and maps it to the BAUs -- this entails binning the point-referenced data into BAUs (and averaging within the BAU) if \code{average_in_BAU = TRUE}, and finding which BAUs are influenced by the polygon datasets. Following this, the incidence matrix \code{Cmat} is constructed, which appears in the observation model \eqn{Z = CY + e}, where \eqn{C} is the incidence matrix.
+\code{SRE()} is the main function in the package as it constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of Basic Areal Units (BAUs). The function first takes each object in the list \code{data} and maps it to the BAUs -- this entails binning the point-referenced data into BAUs (and averaging within the BAU) if \code{average_in_BAU = TRUE}, and finding which BAUs are influenced by the polygon datasets. Following this, the incidence matrix \code{Cmat} is constructed, which appears in the observation model \eqn{Z = CY + C\delta + e}, where \eqn{C} is the incidence matrix and \eqn{\delta} is systematic error at the BAU level.
 
-The SRE model is given by \eqn{Y = T\alpha + S\eta + \delta}, where \eqn{X} are the covariates at BAU level, \eqn{\alpha} are the regression coefficients, \eqn{S} are the basis functions evaluated at the BAU level, \eqn{\eta} are the basis function weights, and \eqn{\delta} is the fine scale variation (at the BAU level). The covariance matrix of \eqn{\delta} is diagonal and proportional to the field `fs' in the BAUs (typically set to one). The constant of proportionality is estimated in the EM algorithm. All required matrices (\eqn{S,T} etc.) are computed and returned as part of the object, please see \code{\link{SRE-class}} for more details.
+The SRE model is given by \eqn{Y = T\alpha + S\eta + \xi}, where \eqn{T} are the covariates at BAU level, \eqn{\alpha} are the regression coefficients, \eqn{S} are the basis functions evaluated at the BAU level, \eqn{\eta} are the basis function coefficients, and \eqn{\xi} is the fine scale variation (at the BAU level). The covariance matrix of \eqn{\xi} is diagonal, with its diagonal elements proportional to the field `fs' in the BAUs (typically set to one). The constant of proportionality is estimated in the EM algorithm. All required matrices (\eqn{S,T} etc.) are initialised using sensible defaults and returned as part of the object, please see \code{\link{SRE-class}} for more details.
 
-\code{SRE.fit()} takes an object of class \code{SRE} and estimates all unknown parameters, namely the covariance matrix \eqn{K}, the fine scale variance \eqn{\sigma^2_{\delta}} and the regression parameters \eqn{\alpha}. The only method currently implemented is the Expectation Maximisation (EM) algorithm, which the user configures through \code{n_EM} and \code{tol}. The latter parameter, \code{tol}, is used as in Katzfuss and Cressie to, that is, the log-likelihood (given in Equation (16) in that work) is evaluated at each iteration at the current parameter estimate, and convergence is assumed to have been reached when this quantity stops changing by more than \code{tol}.
+\code{SRE.fit()} takes an object of class \code{SRE} and estimates all unknown parameters, namely the covariance matrix \eqn{K}, the fine scale variance (\eqn{\sigma^2_{\xi}} or \eqn{\sigma^2_{\delta}}, depending on which Case is chosen, see vignette) and the regression parameters \eqn{\alpha}. The only method currently implemented is the Expectation Maximisation (EM) algorithm, which the user configures through \code{n_EM} and \code{tol}. The log-likelihood (given in, Section 2.2 of the vignette) is evaluated at each iteration at the current parameter estimate, and convergence is assumed to have been reached when this quantity stops changing by more than \code{tol}.
 
-The actual computations for the E-step and M-step are relatively straightforward. The E-step contains an inverse of an \eqn{n \times n} matrix, where \code{n} is the number of basis functions which should not exceed 2000. The M-step first updates the matrix \eqn{K}, which only depends on the sufficient statistics of the basis weights \eqn{\eta}. Then, the regression parameter \eqn{\alpha} is updated and a simple optimisation routine (a line search) is used to update the fine-scale variance \eqn{\sigma^2_{\delta}}. If the fine-scale errors and measurement errors are homoscedastic a closed-form solution is available for the update of \eqn{\sigma^2_{fs}}. Irrespectively, since the udpates of \eqn{\alpha} and \eqn{\sigma^2_{\delta}} are dependent, these two updates are iterated until the change in \eqn{\sigma^2_{\delta}} is no more than 0.1\%.
+The actual computations for the E-step and M-step are relatively straightforward. The E-step contains an inverse of an \eqn{r \times r} matrix, where \code{r} is the number of basis functions which should not exceed 2000. The M-step first updates the matrix \eqn{K}, which only depends on the sufficient statistics of the basis weights \eqn{\eta}. Then, the regression parameter \eqn{\alpha} is updated and a simple optimisation routine (a line search) is used to update the fine-scale variance \eqn{\sigma^2_{\delta}} or \eqn{\sigma^2_{\xi}}. If the fine-scale errors and measurement random errors are homoscedastic, then a closed-form solution is available for the update of \eqn{\sigma^2_{\xi}} or \eqn{\sigma^2_{\delta}}. Irrespectively, since the udpates of \eqn{\alpha} and \eqn{\sigma^2_{\cdot}} are dependent, these two updates are iterated until the change in \eqn{\sigma^2_{\cdot}} is no more than 0.1\%.
 
-Once the parameters are fitted, the \code{SRE} object is passed onto the function \code{SRE.predict()} in order to carry out optimal predictions over the same BAUs used to construct the SRE model with \code{SRE()}. The first part of the prediction process is to construct the matrix \eqn{S}. This is made computationally efficient by treating the prediction over polygons as that of the prediction over a combination of BAUs. This will yield valid results only if the BAUs are relatively small. Once the matrix \eqn{S} is found, a standard Gaussian inversion using the estimated parameters is used.
+The function \code{FRK} acts as a wrapper for the functions \code{SRE} and \code{SRE.fit}. An added advantage of using \code{FRK} directly is that it automatically generates BAUs and basis functions automatically based on the data. Hence \code{FRK} can be called using only a list of data objects and an \code{R} formula, although the \code{R} formula can only contain space-time independent variables when BAUs are not supplied.
 
-\code{SRE.predict} returns the BAUs, which are of class \code{SpatialPolygonsDataFrame}, with two added attributes, \code{mu} and \code{var}. These can then be easily plotted using \code{spplot} or \code{ggplot2} (in conjunction with \code{\link{SpatialPolygonsDataFrame_to_df}}) as shown in the package vignettes.
-\code{FRK}  runs \code{SRE}, \code{SRE.fit} and \code{SRE.predict} in successions with suitable defaults. It returns a list with the SRE object and the prediction polygons.
+Once the parameters are fitted, the \code{SRE} object is passed onto the function \code{SRE.predict()} in order to carry out optimal predictions over the same BAUs used to construct the SRE model with \code{SRE()}. The first part of the prediction process is to construct the matrix \eqn{S} over the prediction polygons. This is made computationally efficient by treating the prediction over polygons as that of the prediction over a combination of BAUs. This will yield valid results only if the BAUs are relatively small. Once the matrix \eqn{S} is found, a standard Gaussian inversion using the estimated parameters is used for prediction.
+
+\code{SRE.predict} returns the BAUs, which are of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame}, or \code{STFDF}, with two added attributes, \code{mu} and \code{var}. These can then be easily plotted using \code{spplot} or \code{ggplot2} (possibly in conjunction with \code{\link{SpatialPolygonsDataFrame_to_df}}) as shown in the package vignettes.
 }
 \examples{
 library(sp)
-library(ggplot2)
-library(dplyr)
 
 ### Generate process and data
-sim_process <- data.frame(x = seq(0.005,0.995,by=0.01)) \%>\%
-    mutate(y=0,proc = sin(x*10) + 0.3*rnorm(length(x)))
-sim_data <- sample_n(sim_process,50) \%>\%
-    mutate(z = proc + 0.1*rnorm(length(x)), std = 0.1)
-coordinates(sim_data) = ~x + y# change into an sp object
+n <- 100
+sim_process <- data.frame(x = seq(0.005,0.995,length=n))
+sim_process$y <- 0
+sim_process$proc <- sin(sim_process$x*10) + 0.3*rnorm(n)
+
+sim_data <- sim_process[sample(1:n,50),]
+sim_data$z <- sim_data$proc + 0.1*rnorm(50)
+sim_data$std <- 0.1
+coordinates(sim_data) = ~x + y # change into an sp object
 grid_BAUs <- auto_BAUs(manifold=real_line(),data=sim_data,
                        nonconvex_hull=FALSE,cellsize = c(0.01),type="grid")
 grid_BAUs$fs = 1
@@ -113,17 +114,14 @@ S <- SRE.fit(S,n_EM = 5,tol = 0.01,print_lik=TRUE)
 grid_BAUs <- SRE.predict(S)
 
 ### Plot
-# X <- slot(grid_BAUs,"data") \%>\%
-#      filter(x >= 0 & x <= 1)
-# g1 <- LinePlotTheme() +
-#    geom_line(data=X,aes(x,y=mu)) +
-#    geom_errorbar(data=X,aes(x=x,ymax = mu + 2*sqrt(var), ymin= mu - 2*sqrt(var))) +
-#    geom_point(data = data.frame(sim_data),aes(x=x,y=z),size=3) +
-#    geom_line(data=sim_process,aes(x=x,y=proc),col="red")
-# print(g1)
-}
-\references{
-Katzfuss, M., & Cressie, N. (2011). Spatio-temporal smoothing and EM estimation for massive remote-sensing data sets. Journal of Time Series Analysis, 32(4), 430--446.
-
-Erisman, A. M., & Tinney, W. F. (1975). On computing certain elements of the inverse of a sparse matrix. Communications of the ACM, 18(3), 177--179.
+\dontrun{
+library(ggplot2)
+X <- slot(grid_BAUs,"data")
+X <- subset(X, x >= 0 & x <= 1)
+ g1 <- LinePlotTheme() +
+    geom_line(data=X,aes(x,y=mu)) +
+    geom_errorbar(data=X,aes(x=x,ymax = mu + 2*sqrt(var), ymin= mu - 2*sqrt(var))) +
+    geom_point(data = data.frame(sim_data),aes(x=x,y=z),size=3) +
+    geom_line(data=sim_process,aes(x=x,y=proc),col="red")
+ print(g1)}
 }

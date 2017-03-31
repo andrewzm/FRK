@@ -1,7 +1,7 @@
 Package: FRK
 Type: Package
 Title: Fixed Rank Kriging
-Version: 0.1.1
+Version: 0.1.2
 Date: 2017-03-06
 Authors@R: c(
     person("Andrew", "Zammit-Mangion", , "andrewzm@gmail.com", c("aut", "cre")),
@@ -57,5 +57,5 @@ Additional_repositories: https://andrewzm.github.io/dggrids-repo,
 License: GPL (>= 2.1)
 NeedsCompilation: yes
 LazyData: true
-RoxygenNote: 6.0.0
+RoxygenNote: 6.0.1
 LinkingTo: Rcpp

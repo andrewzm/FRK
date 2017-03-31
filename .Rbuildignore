@@ -9,12 +9,13 @@ bigstudies
 ^inla-mesher-functions
 ^issues
 ^PBSmapping
-^R/rhipe_fns.R$
 .log$
 .bbl$
 .concordance.tex$
 .synctex.gz$
 ^README.md$
+^devel/devel.R$
+^R/rhipe_fns.R$
 ^cran-comments.md$
 ^\.\.pdf$
 ^paper

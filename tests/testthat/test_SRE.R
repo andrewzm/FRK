@@ -42,9 +42,9 @@ test_that("SRE 1D works",{
 
     ### Predict over BAUs using both modes
     grid_BAUs <- SRE.predict(S)
-    expect_is(grid_BAUs,"SpatialPolygonsDataFrame")
+    expect_is(grid_BAUs,"SpatialPixelsDataFrame")
     grid_BAUs <- SRE.predict(S,obs_fs = FALSE)
-    expect_is(grid_BAUs,"SpatialPolygonsDataFrame")
+    expect_is(grid_BAUs,"SpatialPixelsDataFrame")
 
 
     ### summary works?
@@ -162,6 +162,7 @@ test_that("SRE space-time sphere works",{
     space <- sim_data[,c("lon","lat")]
     coordinates(space) = ~lon+lat # change into an sp object
     proj4string(space)=CRS("+proj=longlat +ellps=sphere")
+    sim_data$t <- NULL
     STobj <- STIDF(space,time,data=sim_data)
 
     grid_BAUs <- auto_BAUs(manifold=STsphere(),

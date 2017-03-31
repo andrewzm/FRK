@@ -10,13 +10,21 @@
   \item{lon}{longitude coordinate}
   \item{lat}{latitude coordinate}
   \item{res}{DGGRID resolution (0 -- 6)}
-  \item{centroid}{A 0-1 variable, indicating whether the point describes the centroid of the polygon, or whether it is a boundary point of the polygon}
+  \item{centroid}{A 0-1 variable, indicating whether the point describes the centroid of the polygon,
+  or whether it is a boundary point of the polygon}
 }}
 \usage{
 isea3h
 }
 \description{
-The data used here was obtained from http://webpages.sou.edu/~sahrk/dgg/isea.old/gen/isea3h.html and represent ISEA discrete global grids (DGGRIDs) generated using the \code{DGGRID} software. The original .gen files were converted to a data frame using the function \code{dggrid_gen_to_df}, available with the \code{dggrids} package. Only resolutions 0--6 are supplied with \code{FRK} and note that resolution 0 of ISEA3H is equal to resolution 1 in \code{FRK}. For higher resolutions please install \code{dggrids} from \code{https://github.com/andrewzm/dggrids}.
+The data used here was obtained from
+http://webpages.sou.edu/~sahrk/dgg/isea.old/gen/isea3h.html and represent ISEA
+discrete global grids (DGGRIDs) generated using the \code{DGGRID} software.
+The original .gen files were converted to a data frame using the function \code{dggrid_gen_to_df},
+available with the \code{dggrids} package. Only resolutions 0--6 are supplied with \code{FRK}
+and note that resolution 0 of ISEA3H is equal to resolution 1 in \code{FRK}. For higher
+resolutions please install \code{dggrids} from \code{https://github.com/andrewzm/dggrids}
+using \code{devtools}.
 }
 \references{
 Sahr, K. (2008) Location coding on icosahedral aperture 3 hexagon discrete global grids. Computers, Environment and Urban Systems, 32, 174--187.

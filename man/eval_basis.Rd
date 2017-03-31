@@ -19,36 +19,37 @@
 \alias{eval_basis,TensorP_Basis-STFDF-method}
 \title{Evaluate basis functions}
 \usage{
-eval_basis(basis, s, output = "matrix")
+eval_basis(basis, s)
 
-\S4method{eval_basis}{Basis,matrix}(basis, s, output = "matrix")
+\S4method{eval_basis}{Basis,matrix}(basis, s)
 
-\S4method{eval_basis}{Basis,SpatialPointsDataFrame}(basis, s,
-  output = "matrix")
+\S4method{eval_basis}{Basis,SpatialPointsDataFrame}(basis, s)
 
-\S4method{eval_basis}{Basis,SpatialPolygonsDataFrame}(basis, s,
-  output = "matrix")
+\S4method{eval_basis}{Basis,SpatialPolygonsDataFrame}(basis, s)
 
-\S4method{eval_basis}{Basis,STIDF}(basis, s, output = "matrix")
+\S4method{eval_basis}{Basis,STIDF}(basis, s)
 
-\S4method{eval_basis}{TensorP_Basis,matrix}(basis, s, output = "matrix")
+\S4method{eval_basis}{TensorP_Basis,matrix}(basis, s)
 
-\S4method{eval_basis}{TensorP_Basis,STIDF}(basis, s, output = "matrix")
+\S4method{eval_basis}{TensorP_Basis,STIDF}(basis, s)
 
-\S4method{eval_basis}{TensorP_Basis,STFDF}(basis, s, output = "matrix")
+\S4method{eval_basis}{TensorP_Basis,STFDF}(basis, s)
 }
 \arguments{
 \item{basis}{object of class \code{Basis}}
 
-\item{s}{object of class \code{matrix}, \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame}}
-
-\item{output}{either a "list" or "matrix", depending on desired output format}
+\item{s}{object of class \code{matrix}, \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame} containing the spatial locations/footprints}
 }
 \description{
 Evaluate basis functions at points or average functions over polygons.
 }
 \details{
-This function evaluates the basis functions at isolated points, or averages the basis functions over polygons, for computing the matrix \eqn{S}. The latter operation is carried out using Monte Carlo integration with 1000 samples per polygon.
+This function evaluates the basis functions at isolated points, or averages
+the basis functions over polygons, for computing the matrix \eqn{S}. The latter
+operation is carried out using Monte Carlo integration with 1000 samples per polygon. When
+using space-time basis functions, the object MUST contain a field \code{t} containing a numeric
+representation of the time, for example, containing the number of second, hours, or days since the first
+data point.
 }
 \examples{
 library(sp)

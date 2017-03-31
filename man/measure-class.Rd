@@ -3,13 +3,12 @@
 \docType{class}
 \name{measure-class}
 \alias{measure-class}
-\title{@docType class
- @title measure}
+\title{measure}
 \description{
 Measure class used for defining measures used to compute distances between points in objects constructed with the \code{FRK} package.
 }
 \details{
-An object of class \code{measure} contains a distance function and a variable \code{dim} with the dimensions of the Riemannian manifold over which the distance is computed. By default, distance functions used are those extracted from the package \code{fields}.
+An object of class \code{measure} contains a distance function and a variable \code{dim} with the dimensions of the Riemannian manifold over which the distance is computed.
 }
 \keyword{Manifolds,}
 \keyword{planes}
