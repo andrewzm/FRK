@@ -32,6 +32,6 @@ library(ggplot2)
 library(sp)
 data(meuse)
 coordinates(meuse) = ~x+y # change into an sp object
-G <- auto_basis(manifold = plane(),data=meuse,nres = 2,regular=2,prune=10,type = "Gaussian")
+G <- auto_basis(manifold = plane(),data=meuse,nres = 2,regular=2,prune=0.1,type = "bisquare")
 \dontrun{show_basis(G,ggplot()) + geom_point(data=data.frame(meuse),aes(x,y))}
 }
