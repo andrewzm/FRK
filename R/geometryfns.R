@@ -286,6 +286,9 @@ setMethod("coordnames",signature(x="STIDF"),function(x) {
 #' @param nonconvex_hull flag indicating whether to use \code{INLA} to generate a non-convex hull. Otherwise a convex hull is used
 #' @param convex convex parameter used for smoothing an extended boundary when working on a bounded domain (that is, when the object \code{data} is supplied), see details.
 #' @param tunit temporal unit when requiring space-time BAUs. Can be either "secs", "mins", "hours" or "days".
+#' @param xlims limits of the horizontal axis (overrides automatic selection).
+#' @param ylims limits of the vertical axis (overrides automatic selection).
+#' @param tunit temporal unit when requiring space-time BAUs. Can be either "secs", "mins", "hours" or "days".
 #' @param ... currently unused
 #' @details \code{auto_BAUs} constructs a set of Basic Areal Units (BAUs) used both for data pre-processing and for prediction. As such, the BAUs need to be of sufficienly fine resolution so that inferences are not affected due to binning.
 #'
@@ -326,7 +329,7 @@ setMethod("coordnames",signature(x="STIDF"),function(x) {
 #' @export
 auto_BAUs <- function(manifold, type=NULL,cellsize = NULL,
                       isea3h_res=NULL,data=NULL,nonconvex_hull=TRUE,
-                      convex=-0.05,tunit=NULL,...) {
+                      convex=-0.05,tunit=NULL,xlims=NULL,ylims=NULL,...) {
 
     ## Basic checks and setting of defaults
     if(!(is(data,"Spatial") | is(data,"ST") | is(data,"Date") | is.null(data)))
@@ -400,6 +403,12 @@ auto_BAUs <- function(manifold, type=NULL,cellsize = NULL,
             stop("cellsize needs to be of length equal to dimension of manifold")
     }
 
+    ## Check xlims and ylims
+    if(!is.null(xlims))
+        if(!(length(xlims) == 2) & !is.numeric(xlims)) stop("xlims need to be numeric and  of length 2")
+    if(!is.null(ylims))
+        if(!(length(ylims) == 2) & !is.numeric(ylims)) stop("ylims need to be numeric and  of length 2")
+
     ## Check and set tunit if we are in a space-time setting
     if(grepl("ST",class(manifold)) & is.null(data) & is.null(tunit))
         stop("Need to specify tunit if data is not specified in ST case")
@@ -407,20 +416,24 @@ auto_BAUs <- function(manifold, type=NULL,cellsize = NULL,
         tunit <- .choose_BAU_tunit_from_data(data)
 
     ## Call the internal function with checked arguments
-    auto_BAU(manifold=manifold,type=type,cellsize=cellsize,resl=resl,
-             d=data,nonconvex_hull=nonconvex_hull,convex=convex,tunit=tunit)
+    auto_BAU(manifold=manifold,type=type,cellsize=cellsize,resl=resl,d=data,
+             nonconvex_hull=nonconvex_hull,convex=convex,tunit=tunit,xlims=xlims,ylims=ylims)
 }
 
 ## Automatically generate BAUs on the real line
 setMethod("auto_BAU",signature(manifold="real_line"),
-          function(manifold,type="grid",cellsize = 1,resl=resl,d=NULL,...) {
+          function(manifold,type="grid",cellsize = 1,resl=resl,d=NULL,xlims=NULL,...) {
 
               if(is.null(d))
                   stop("Data must be supplied when generating BAUs on a plane")
 
               crs <- CRS(proj4string(d))     # CRS of data
               coords <- coordinates(d)       # coordinates of data
-              xrange <- range(coords[,1])    # range of coordinates
+
+              if(is.null(xlims))               # if x limits are not specified
+                xrange <- range(coords[,1])    # range of coordinates
+              else xrange <- xlims             # else just allocate
+
               drangex <- diff(xrange)        # range of data
 
               ## Make a SpatialPoints object. Set y = 0 so all points are on
@@ -511,10 +524,10 @@ auto_BAU_time <- function (manifold,type="grid",cellsize = 1,resl=resl,d=NULL,co
     return(tgrid)                          # Return time BAUs
 }
 
-## Automatically generaying BAUs on the plane
+## Automatically generating BAUs on the plane
 setMethod("auto_BAU",signature(manifold="plane"),
           function(manifold,type="grid",cellsize = c(1,1),resl=resl,d=NULL,
-                   nonconvex_hull=TRUE,convex=-0.05,...) {
+                   nonconvex_hull=TRUE,convex=-0.05,xlims=NULL,ylims=NULL,...) {
 
               ## To arrange BAUs in a nonconvex hull we need INLA to find the domain boundary
               if(nonconvex_hull)
@@ -539,8 +552,14 @@ setMethod("auto_BAU",signature(manifold="plane"),
                                            function(i) coordinates(d@polygons[[i]]@Polygons[[1]])))
               }
               coord_names <- coordnames(d) # extract coordinate names
-              xrange <- range(coords[,1])  # x-range of coordinates
-              yrange <- range(coords[,2])  # y-range of coordinates
+
+              if(is.null(xlims))              # if xlims not specified
+                 xrange <- range(coords[,1])  # find x-range of coordinates
+              else xrange <- xlims            # else just allocate
+
+              if(is.null(ylims))             # if ylims not specified
+                yrange <- range(coords[,2])  # y-range of coordinates
+              else yrange = ylims            # else just allocate
 
               ## Increase convex until domain is contiguous and smooth
               ## (i.e., the distance betweeen successive points is small)
@@ -581,13 +600,16 @@ setMethod("auto_BAU",signature(manifold="plane"),
               drangey <- diff(yrange)  # range of y
 
               ## Create x and y grid with 20% buffer and selected cellsizes
-              xgrid <- seq(xrange[1] - drangex*0.2,
-                           xrange[2] + drangex*0.2,
-                           by=cellsize[1])
-              ygrid <- seq(yrange[1] - drangey*0.2,
-                           yrange[2] + drangey*0.2,
-                           by=cellsize[2])
+              ## If the user has specified the limits do not do buffer
+              bufferx <- ifelse(is.null(xlims),0.2,0) # x buffer
+              buffery <- ifelse(is.null(ylims),0.2,0) # y buffer
 
+              xgrid <- seq(xrange[1] - drangex*bufferx,
+                           xrange[2] + drangex*bufferx,
+                           by=cellsize[1])
+              ygrid <- seq(yrange[1] - drangey*buffery,
+                           yrange[2] + drangey*buffery,
+                           by=cellsize[2])
               ## Make a SpatialPoints grid
               xy <- SpatialPoints(expand.grid(x=xgrid,y=ygrid),
                                   proj4string = crs)
@@ -630,8 +652,9 @@ setMethod("auto_BAU",signature(manifold="plane"),
                   # Make sure to include all pixels that contain the data points
                   idx3 <- over(d,xy) # cannot contain NAs by definition of how xy was constructed
 
-                  ## Now take the union of all the indices
-                  xy <- xy[union(union(idx1,idx2),idx3),]
+                  ## Now take the union of all the indices but only if xlims and ylims were not specified
+                  if(is.null(xlims) & is.null(ylims))
+                    xy <- xy[union(union(idx1,idx2),idx3),]
 
                   ## Add UIDs
                   row.names(xy) <- .UIDs(xy)
@@ -650,7 +673,7 @@ setMethod("auto_BAU",signature(manifold="plane"),
 
 ## Constructing BAUs on the surface of the sphere
 setMethod("auto_BAU",signature(manifold="sphere"),
-          function(manifold,type="grid",cellsize = c(1,1),resl=2,d=NULL,...) {
+          function(manifold,type="grid",cellsize = c(1,1),resl=2,d=NULL,xlims=NULL,ylims=NULL,...) {
 
               ## For this function d (the data) may be NULL in which case the whole sphere is covered with BAUs
               if(is.null(d))                                  # set CRS if data not provided
@@ -699,13 +722,20 @@ setMethod("auto_BAU",signature(manifold="sphere"),
                   sphere_BAUs <- SpatialPolygonsDataFrame(isea3h_sp_pol,isea3h_df_info)
 
               }  else if (type == "grid") {
-
                   ## If the user wants a grid
-                  if(!is.null(d)) {
 
-                      ## If there is  data then find its extent
-                      xrange <- range(coords$lon)
-                      yrange <- range(coords$lat)
+                  ## If the user has specified limits assign xmin,xmax,ymin and ymin clamped to
+                  ## the spherical coordinate limits
+                  if(!is.null(xlims) & !is.null(ylims)) {
+                      xmin <- max(xlims[1],-180)
+                      xmax <- min(xlims[2],180)
+                      ymin <- max(ylims[1],-90)
+                      ymax <- min(ylims[2],90)
+
+                  } else if(!is.null(d)) {
+                      ## Else if there is data try to get limits from the data
+                      xrange <- range(coords$lon)  # find x-range of coordinates
+                      yrange <- range(coords$lat)  # y-range of coordinates
 
                       ## And how long/wide it is in a lon/lat sense
                       drangex <- diff(xrange)
@@ -796,7 +826,7 @@ setMethod("auto_BAU",signature(manifold="sphere"),
 ## Constructing BAUs on the surface of the sphere x time
 setMethod("auto_BAU",signature(manifold = c("STmanifold")),
           function(manifold,type="grid",cellsize = c(1,1,1),resl=resl,d=NULL,
-                   nonconvex_hull=TRUE,convex=-0.05,...) {
+                   nonconvex_hull=TRUE,convex=-0.05,xlims=NULL,ylims=NULL,...) {
 
               ## In this function user can opt to just supply a Date object, in which case
               ## the whole surface of the sphere is covered and the temporal part of the BAUs
@@ -834,7 +864,7 @@ setMethod("auto_BAU",signature(manifold = c("STmanifold")),
               ## Construct the spatial BAUs
               spatial_BAUs <- auto_BAU(manifold=spat_manifold,cellsize=cellsize_spat,
                                        resl=resl,type=type,d=space_part,nonconvex_hull=nonconvex_hull,
-                                       convex=convex,...)
+                                       convex=convex,xlims=xlims,ylims=ylims,...)
 
               ## Construct the temporal BAUs
               temporal_BAUs <- auto_BAU(manifold=real_line(), cellsize=cellsize_temp,
@@ -927,8 +957,8 @@ SpatialPolygonsDataFrame_to_df <- function(sp_polys,vars = names(sp_polys)) {
                              coords <- sp_polys@polygons[[i]]@Polygons[[1]]@coords # extract coordinates
                              row.names(coords) <- NULL                             # set row names to NULL
                              coords <- data.frame(coords)                          # convert to data frame
-                             poldf <- cbind(coords,id=polynames[i])                # cbind the coordinates with the ID
-
+                             poldf <- cbind(coords,id=polynames[i],                # cbind the coordinates with the ID
+                                            stringsAsFactors=FALSE)                # ID not factor
 
                              ## remove the rownames from the data frame
                              rownames(poldf) <- NULL
@@ -937,7 +967,7 @@ SpatialPolygonsDataFrame_to_df <- function(sp_polys,vars = names(sp_polys)) {
                              poldf })
 
     ## rbind the data frames for each polygon into one big data frame
-    df_polys <- data.frame(do.call("rbind",list_polys))
+    df_polys <- bind_rows(list_polys)
 
     ## merge other information from the sp_polys with the data frame (merge by polygon ID)
     df_polys$id <- as.character(df_polys$id)
@@ -1647,4 +1677,17 @@ process_isea3h <- function(isea3h,resl) {
     if(is(x,"logical") | is(x,"numeric")) {
         mean(x)
     } else { x[1] }
+}
+
+## Takes a formula including covariates, and returns a formula with only the intercept term
+.formula_no_covars <- function(f) {
+   labs <- all.names(f)                                      # extract all sub-strings in formula
+   dep_var <- all.vars(f)[1]                                 # extract dep. variable
+   idx <- which(labs == dep_var)                             # first char is ~, second is the dep var
+   if(idx > 2)  {                                            # if we have a transformation of dep var
+       LHS <- paste0(paste0(labs[2:idx],collapse = "("),     # concatenate all transfrmations
+                     paste0(rep(")",idx-2,collapse=""),      # and close the brackets
+                            collapse=""))
+   } else { LHS <- dep_var }                                 # otherwise it's just the dep var
+   newf <- formula(paste0(LHS,"~1"))                         # now return formula without covariates
 }

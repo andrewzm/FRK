@@ -183,9 +183,11 @@ setGeneric("data.frame<-", function(x, value) standardGeneric("data.frame<-"))
 #' @param d data, that is, an object of class SpatialPointsDataFrame or SpatialPolygonsDataFrame. Provision of data implies that the domain is bounded (necessary with \code{real_line} and \code{plane} but not necessary with \code{sphere})
 #' @param nonconvex_hull flag indicating whether \code{INLA} should be used to create a non-convex domain boundary
 #' @param convex convex parameter for the \code{INLA} function \code{inla.nonconvex.hull} used for smoothing an extended boundary when working on a finite domain (that is, when the object \code{d} is supplied), see details
+#' @param xlims limits of the horizontal axis (overrides automatic selection).
+#' @param ylims limits of the vertical axis (overrides automatic selection).
 #' @param ... currently unused
 #' @details This generic function is not called directly. Please refer to \code{auto_BAUs} for more details.
-setGeneric("auto_BAU", function(manifold,type,cellsize,resl,d,nonconvex_hull,convex,...) standardGeneric("auto_BAU"))
+setGeneric("auto_BAU", function(manifold,type,cellsize,resl,d,nonconvex_hull,convex,xlims,ylims,...) standardGeneric("auto_BAU"))
 
 #' @title Bin data into BAUs
 #' @description This is an internal function which bins data into BAUs or aggregates across BAUs if the data have a large footprint. If \code{est_error == TRUE}, the observation error is estimated using the variogram (see vignette for details).

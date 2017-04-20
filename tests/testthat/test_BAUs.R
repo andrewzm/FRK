@@ -63,6 +63,21 @@ test_that("plane_BAUs",{
     expect_equal(names(C),c("i_idx","j_idx"))
     expect_equal(length(C$i_idx),nrow(binned_data))
     expect_equal(length(C$j_idx),nrow(binned_data))
+
+    ## Limited 2D grid
+    Grid2D_limited <- auto_BAUs(manifold = plane(),
+                        type="grid",
+                        cellsize = 0.5,
+                        data=data,
+                        nonconvex_hull = FALSE,
+                        xlims=c(-2,2),
+                        ylims=c(-2,2))
+    expect_is(Grid2D_limited,"SpatialPixelsDataFrame")
+    expect_equal(names(Grid2D_limited),c("x","y"))
+    expect_equal(min(Grid2D_limited@data[,1]),-2)
+    expect_equal(max(Grid2D_limited@data[,1]),2)
+    expect_equal(min(Grid2D_limited@data[,2]),-2)
+    expect_equal(max(Grid2D_limited@data[,2]),2)
 })
 
 
@@ -84,6 +99,21 @@ test_that("sphere_BAUs",{
     expect_equal(nrow(sphere_grid@data),324)
     expect_equal(names(sphere_grid@data),c("lon","lat"))
     expect_true(grepl("+proj=longlat",proj4string(sphere_grid)))
+
+    sphere_grid_limited <- auto_BAUs(manifold=sphere(),
+                             type="grid",
+                             data=NULL,
+                             cellsize=c(20,10),
+                             xlims=c(-100,120),
+                             ylims=c(-80,70))
+    expect_is(sphere_grid_limited,"SpatialPolygonsDataFrame")
+    expect_equal(nrow(sphere_grid_limited@data),165)
+    expect_equal(names(sphere_grid_limited@data),c("lon","lat"))
+    expect_true(grepl("+proj=longlat",proj4string(sphere_grid_limited)))
+    expect_equal(min(sphere_grid_limited@data[,1]),-90)
+    expect_equal(max(sphere_grid_limited@data[,1]),110)
+    expect_equal(min(sphere_grid_limited@data[,2]),-75)
+    expect_equal(max(sphere_grid_limited@data[,2]),65)
 
 })
 

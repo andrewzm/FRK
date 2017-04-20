@@ -116,3 +116,17 @@ test_that("distR works", {
   D2 <- as.matrix(dist(x))
   #expect_lt(sum(D1-D2), 1e-12)
 })
+
+test_that("formula no covariates works", {
+    f1 <- y ~ x + 1
+    f2 <- sin(y) ~ log(x) - 1
+    f3 <- sin(cos(y)) ~ d + r
+
+    f1B <- .formula_no_covars(f1)
+    f2B <- .formula_no_covars(f2)
+    f3B <- .formula_no_covars(f3)
+
+    expect_equal(f1B,formula(y~1))
+    expect_equal(f2B,formula(sin(y)~1))
+    expect_equal(f3B,formula(sin(cos(y))~1))
+})

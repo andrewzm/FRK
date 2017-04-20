@@ -14,7 +14,7 @@
 #' @examples
 #' require(Matrix)
 #' cholPermute(sparseMatrix(i=c(1,1,2,2),j=c(1,2,1,2),x=c(0.1,0.2,0.2,1)))
-#' @references Davis T (2011). “SPARSEINV: a MATLAB toolbox for computing the sparse inverse subset using the Takahashi equations.” http://faculty.cse.tamu.edu/davis/suitesparse.html, Online: Last accessed 01 February 2016.
+#' @references Davis T (2011). ``SPARSEINV: a MATLAB toolbox for computing the sparse inverse subset using the Takahashi equations.'' http://faculty.cse.tamu.edu/davis/suitesparse.html, Online: Last accessed 01 February 2016.
 #' Havard Rue and Leonhard Held (2005). Gaussian Markov Random Fields: Theory and Applications. Chapman & Hall/CRC Press, Boca Raton, FL.
 cholPermute <- function(Q,method="amd")  {
   n <- nrow(Q)   # matrix dimension
@@ -138,8 +138,8 @@ cholsolveAQinvAT <- function(A,Lp,P) {
 #' X <- cholPermute(Q)
 #' S_partial = Takahashi_Davis(Q,cholQp = X$Qpermchol,P=X$P)
 #' @references Takahashi, K., Fagan, J., Chin, M.-S., 1973. Formation of a sparse bus impedance matrix and
-#' its application to short circuit study. 8th PICA Conf. Proc.June 4–6, Minneapolis, Minn.
-#' Davis T (2011). “SPARSEINV: a MATLAB toolbox for computing the sparse inverse subset using the Takahashi equations.” http://faculty.cse.tamu.edu/davis/suitesparse.html, Online: Last accessed 01 February 2016.
+#' its application to short circuit study. 8th PICA Conf. Proc.June 4--6, Minneapolis, Minn.
+#' Davis T (2011). ``SPARSEINV: a MATLAB toolbox for computing the sparse inverse subset using the Takahashi equations.'' http://faculty.cse.tamu.edu/davis/suitesparse.html, Online: Last accessed 01 February 2016.
 Takahashi_Davis <- function(Q,return_perm_chol = 0,cholQp = matrix(0,0,0),P=0) {
 
   n <- nrow(Q)  # matrix dimension

@@ -15,6 +15,7 @@ bigstudies
 .synctex.gz$
 ^README.md$
 ^devel/devel.R$
+^devel
 ^R/rhipe_fns.R$
 ^cran-comments.md$
 ^\.\.pdf$

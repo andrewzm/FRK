@@ -5,7 +5,8 @@
 \title{Automatic BAU generation}
 \usage{
 auto_BAUs(manifold, type = NULL, cellsize = NULL, isea3h_res = NULL,
-  data = NULL, nonconvex_hull = TRUE, convex = -0.05, tunit = NULL, ...)
+  data = NULL, nonconvex_hull = TRUE, convex = -0.05, tunit = NULL,
+  xlims = NULL, ylims = NULL, ...)
 }
 \arguments{
 \item{manifold}{object of class \code{manifold}}
@@ -24,7 +25,13 @@ auto_BAUs(manifold, type = NULL, cellsize = NULL, isea3h_res = NULL,
 
 \item{tunit}{temporal unit when requiring space-time BAUs. Can be either "secs", "mins", "hours" or "days".}
 
+\item{xlims}{limits of the horizontal axis (overrides automatic selection).}
+
+\item{ylims}{limits of the vertical axis (overrides automatic selection).}
+
 \item{...}{currently unused}
+
+\item{tunit}{temporal unit when requiring space-time BAUs. Can be either "secs", "mins", "hours" or "days".}
 }
 \description{
 This function calls the generic function \code{auto_BAU} (not exported) after a series of checks and is the easiest way to generate a set of Basic Areal Units (BAUs) on the manifold being used; see details.

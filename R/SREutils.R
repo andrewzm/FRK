@@ -120,14 +120,12 @@ SRE <- function(f,data,basis,BAUs,est_error=TRUE,average_in_BAU = TRUE,
 
             ## Now estimate the measurement error using variogram methods
             this_data <- .est_obs_error(this_data,variogram.formula=f,
-                                       vgm_model = vgm_model)
+                                        vgm_model = vgm_model)
 
             ## Allocate the measurement standard deviation from variogram analysis
             data[[i]]$std <- this_data$std
         }
 
-
-        ## The next step is to allocate all data (both point and polygon referenced) to BAUs. We can either average data points falling in
         ## the same BAU (average_in_BAU == TRUE) or not (average_in_BAU == FALSE)
         print("Binning data ...")
         data_proc <- map_data_to_BAUs(data[[i]],       # data object
@@ -138,6 +136,11 @@ SRE <- function(f,data,basis,BAUs,est_error=TRUE,average_in_BAU = TRUE,
         if(any(is.na(data_proc@data[av_var])))
             stop("NAs found when mapping data to BAUs. Do you have NAs in your data?
                  If not, are you sure all your data are covered by BAUs?")
+
+
+
+
+        ## The next step is to allocate all data (both point and polygon referenced) to BAUs. We can either average data points falling in
 
         ## Extract information from the data using the .extract.from.formula internal function
         L <- .extract.from.formula(f,data=data_proc)
@@ -348,6 +351,7 @@ setMethod("summary",signature(object="SRE"),
     ## If zero fine-scale variation detected just make sure user knows.
     ## This can be symptomatic of poor fitting
     if(SRE_model@sigma2fshat == 0)
+        if(opts_FRK$get("verbose") > 0)
             message("sigma2fs is being estimated to zero.
              This might because of an incorrect binning
              procedure or because too much measurement error
@@ -397,6 +401,7 @@ setMethod("summary",signature(object="SRE"),
 
     D <- Sm@sigma2fshat*Sm@Vfs + Sm@Ve      # total variance of data
     if(isDiagonal(D)) {                     # if this is diagonal
+        D <- Diagonal(x = D@x)              # cast to diagonal matrix
         cholD <- sqrt(D)                    # just compute sqrt
         cholDinvT <- solve(cholD)           # and the inverse is just the reciprocal
     } else {
@@ -406,7 +411,8 @@ setMethod("summary",signature(object="SRE"),
 
     ## Compute log-determinant. This is given by a formula in Section 2.2
     S_Dinv_S <-  crossprod(cholDinvT %*% S)
-    log_det_SigmaZ <- determinant(Kinv + S_Dinv_S,logarithm = TRUE)$modulus +
+    R <- chol(Kinv + S_Dinv_S)
+    log_det_SigmaZ <- logdet(R) +
         determinant(K,logarithm = TRUE)$modulus +
         logdet(cholD)  # this computes the log-determinant of a matrix from its Cholesky factor
 
@@ -414,8 +420,6 @@ setMethod("summary",signature(object="SRE"),
     # Dinv <- chol2inv(chol(D))
     # SigmaZ_inv <- Dinv - Dinv %*% S %*% solve(Kinv + S_Dinv_S) %*% t(S) %*% Dinv
     # SigmaZ_inv2 <- Dinv - tcrossprod(Dinv %*% S %*% solve(R))
-
-    R <- chol(Kinv + S_Dinv_S)
 
     ## Compute efficiently rDinv <- t(resid) %*% Dinv
     rDinv <- crossprod(cholDinvT %*% resid,cholDinvT)
@@ -452,6 +456,7 @@ setMethod("summary",signature(object="SRE"),
 
     D <- sigma2fs*Sm@Vfs + Sm@Ve   # total variance-covariance of Z
     if(isDiagonal(D)) {            # if this is diagonal
+        D <- Diagonal(x=D@x)       # cast to diagonal
         cholD <- sqrt(D)           # then the Cholesky is the sqrt
         cholDinv <- solve(cholD)   # the inverse Cholesky is the inverse-sqrt
         Dinv <- solve(D)           # the inverse is just reciprocal of diagonal elements
@@ -613,6 +618,7 @@ setMethod("summary",signature(object="SRE"),
             }
             D <- sigma2fs_new*Sm@Vfs + Sm@Ve  # total data variance-covariance
             if(isDiagonal(D)) {               # inverse of D (as above)
+                D <- Diagonal(x=D@x)          # cast to Diagonal
                 Dinv <- solve(D)
             } else {
                 Dinv <- chol2inv(chol(D))
@@ -1014,6 +1020,7 @@ setMethod("summary",signature(object="SRE"),
     if(Sm@fs_model == "ind") {
         D <- sigma2fs*Sm@Vfs + Sm@Ve   # compute total variance (data)
         if(isDiagonal(D)) {
+            D <- Diagonal(x=D@x)       # cast to diagonal
             Dchol <- sqrt(D)           # find the inverse of the variance-covariance matrix
             Dinv <- solve(D)           # if Diagonal the Cholesky and inverse are just sqrt and reciprocal
         } else {
@@ -1236,6 +1243,10 @@ setMethod("summary",signature(object="SRE"),
     ## to study variogram points close to the origin)
     cutoff <- sqrt(area * 100 / length(sp_pts_sub))
 
+    ## Remove covariates since we are only interested at behaviour close to iring
+    ## and since the binning into BAUs hasn't (shouldn't have) occurred yet
+    variogram.formula <- .formula_no_covars(variogram.formula)
+
     ## Extract  data values from data object
     L <- .extract.from.formula(variogram.formula,data=sp_pts_sub)
 
@@ -1256,95 +1267,70 @@ setMethod("summary",signature(object="SRE"),
                                  nugget = var(L$y)/2)
 
     ## Try to fit the model.
-    vgm.fit <- suppressWarnings(gstat::fit.variogram(v, model = vgm_model))
 
-    ## Check if the process of fitting generates a warning. If it did then OK == 0
-    ## otherwise OK == 1 (this fits twice but since it's so quick it's not an issue)
-    OK <- tryCatch({vgm.fit <- gstat::fit.variogram(v, model = vgm_model); 1},
-                   warning=function(w) 0)
-
-    ## If the reporte psill is less or equal to zero, or fit.variogram reported a singularity,
-    ## or a Warning was thrown, then retry fitting using a linear model on just the first
+    ## Try fitting using a linear model on just the first two to
     ## four points (cf. Kang and Cressie)
-    if(vgm.fit$psill[1] <= 0 | attributes(vgm.fit)$singular | !OK) {
-        linfit <- lm(gamma~dist,data=v[1:4,])         # fit only first four points
-        vgm.fit$psill[1] <- coefficients(linfit)[1]   # extract psill from intercept
+    OK <- FALSE                                    # init. OK
+    num_points <- 2                                # start with 2 points
+    while(!OK & num_points <= 4) {                 # while NOT OK
+        ## fit only to first 1:num_points points
+        linfit <- lm(gamma~dist,data=v[1:num_points,])
+
+        ## ans. will be returned in vgm.fit$psill later on
+        vgm.fit <- list(singular = 0)
+        vgm.fit$psill <- coefficients(linfit)[1]   # extract psill from intercept
+        if(vgm.fit$psill > 0) OK <- TRUE           # if variance > 0 OK = TRUE
+        num_points <- num_points + 1               # increment num_points
     }
 
-    ## If this still didn't work then try to fit an exponential model
+
+    ## If we have estimated a negative variance, then try to fit a linear variogram
+    ## using more points
     if(vgm.fit$psill[1] <= 0) {
-        vgm_model <-  gstat::vgm(psill = var(L$y)/2,
-                                 model = "Exp",
-                                 range = mean(v$dist),
-                                 nugget = var(L$y)/2)
-        OK <- tryCatch({vgm.fit = gstat::fit.variogram(v, model = vgm_model); OK <- 1},warning=function(w) 0)
-        vgm.fit <- suppressWarnings(gstat::fit.variogram(v, model = vgm_model))
-    }
 
-    if(vgm.fit$psill[1] <= 0 | attributes(vgm.fit)$singular | !OK) {
-        ## Try with Gaussian, maybe process is very smooth or data has a large support
-        vgm_model <-  gstat::vgm(var(L$y)/2, "Gau", mean(v$dist), var(L$y)/2)
-
-        ## Try to fit the model.
         vgm.fit <- suppressWarnings(gstat::fit.variogram(v, model = vgm_model))
 
-        ## Like above, we return OK = 0 if fit is still not good
-        OK <- tryCatch({vgm.fit = gstat::fit.variogram(v, model = vgm_model); OK <- 1},warning=function(w) 0)
-    }
+        ## Check if the process of fitting generates a warning. If it did then OK == 0
+        ## otherwise OK == 1 (this fits twice but since it's so quick it's not an issue)
+        OK <- tryCatch({vgm.fit <- gstat::fit.variogram(v, model = vgm_model); 1},
+                       warning=function(w) 0)
+        ## If the reportef psill is less or equal to zero, or fit.variogram reported a singularity,
+        ## or a Warning was thrown, then retry fitting using an exponential model
+        if(vgm.fit$psill[1] <= 0 | attributes(vgm.fit)$singular | !OK) {
+            vgm_model <-  gstat::vgm(psill = var(L$y)/2,
+                                     model = "Exp",
+                                     range = mean(v$dist),
+                                     nugget = var(L$y)/2)
+            OK <- tryCatch({vgm.fit = gstat::fit.variogram(v, model = vgm_model); OK <- 1},warning=function(w) 0)
+            vgm.fit <- suppressWarnings(gstat::fit.variogram(v, model = vgm_model))
+        }
 
-    ## If we still have problems, then just take the first point of the the empirical semivariogram and
-    ## throw a warning that this estimate is probably not very good
-    if(vgm.fit$psill[1] <= 0 | attributes(vgm.fit)$singular | !OK) {
-        vgm.fit$psill[1] <- v$gamma[1]
-        warning("Estimate of measurement error is probably inaccurate.
+        if(vgm.fit$psill[1] <= 0 | attributes(vgm.fit)$singular | !OK) {
+            ## Try with Gaussian, maybe process is very smooth or data has a large support
+            vgm_model <-  gstat::vgm(var(L$y)/2, "Gau", mean(v$dist), var(L$y)/2)
+
+            ## Try to fit the model.
+            vgm.fit <- suppressWarnings(gstat::fit.variogram(v, model = vgm_model))
+
+            ## Like above, we return OK = 0 if fit is still not good
+            OK <- tryCatch({vgm.fit = gstat::fit.variogram(v, model = vgm_model); OK <- 1},warning=function(w) 0)
+        }
+
+        ## If we still have problems, then just take the first point of the the empirical semivariogram and
+        ## throw a warning that this estimate is probably not very good
+        if(vgm.fit$psill[1] <= 0 | attributes(vgm.fit)$singular | !OK) {
+            vgm.fit$psill[1] <- v$gamma[1]
+            warning("Estimate of measurement error is probably inaccurate.
                  Please consider setting it through the std variable
                 in the data object if known.")
+        }
     }
-
     print(paste0("sigma2e estimate = ",vgm.fit$psill[1]))
 
     ## Return the sqrt of the psill as the measurement error
     sp_pts$std <- sqrt(vgm.fit$psill[1])
     sp_pts
 
-}
-
-## The function below checks the arguments for the function FRK. The code is self-explanatory
-## This is similar, but slightly different to, .check_args1()
-.check_args_wrapper <- function(f,data,basis,BAUs,est_error) {
-    if(!is(f,"formula")) stop("f needs to be a formula.")
-    if(!is(data,"list"))
-        stop("Please supply a list of Spatial objects.")
-    if(!all(sapply(data,function(x) is(x,"Spatial") | is(x,"ST"))))
-        stop("All data list elements need to be of class Spatial or ST.")
-    if(!all(sapply(data,function(x) all.vars(f)[1] %in% names(x@data))))
-        stop("All data list elements to have values for the dependent variable.")
-    if(!est_error & !all(sapply(data,function(x) "std" %in% names(x@data))))
-        stop("If observational error is not going to be estimated,
-             please supply a field 'std' in the data objects.")
-    if(!(is.null(BAUs))) {
-        if(!(is(BAUs,"SpatialPolygonsDataFrame") | is(BAUs,"SpatialPixelsDataFrame") | is(BAUs,"STFDF")))
-            stop("BAUs should be a SpatialPolygonsDataFrame or a STFDF object")
-        if(!all(sapply(data,function(x) identical(proj4string(x), proj4string(BAUs)))))
-            stop("Please ensure all data items and BAUs have the same coordinate reference system")
-        if(!(all(BAUs$fs >= 0)))
-            stop("fine-scale variation basis function needs to be nonnegative everywhere")
-        if(!("fs" %in% names(BAUs@data))) {
-            stop("BAUs should contain a field 'fs' containing a basis
-                 function for fine-scale variation. ")
-        }
-        if(is(BAUs,"STFDF")) if(!(is(BAUs@sp,"SpatialPolygonsDataFrame") | is(BAUs@sp,"SpatialPixelsDataFrame")))
-            stop("The spatial component of the BAUs should be a SpatialPolygonsDataFrame")
-        if(any(sapply(data,function(x) any(names(x@data) %in% names(BAUs@data)))))
-            stop("Please don't have overlapping variable names in data and BAUs. All covariates need to be in the BAUs.")
-        if(!all(all.vars(f)[-1] %in% c(names(BAUs@data),coordnames(BAUs))))
-            stop("All covariates need to be in the SpatialPolygons BAU object.")
-        }
-
-    if(!(is.null(basis))) {
-        if(!(is(basis,"Basis") | is(basis,"TensorP_Basis")))
-            stop("basis needs to be of class Basis  or TensorP_Basis (package FRK)")
-    }
 }
 
 

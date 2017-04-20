@@ -150,3 +150,39 @@ FRK <- function(f,                     # formula (compulsory)
     ## Return fitted SRE model
     S
 }
+
+
+## The function below checks the arguments for the function FRK. The code is self-explanatory
+## This is similar, but slightly different to, .check_args1()
+.check_args_wrapper <- function(f,data,basis,BAUs,est_error) {
+    if(!is(f,"formula")) stop("f needs to be a formula.")
+    if(!is(data,"list"))
+        stop("Please supply a list of Spatial objects.")
+    if(!all(sapply(data,function(x) is(x,"Spatial") | is(x,"ST"))))
+        stop("All data list elements need to be of class Spatial or ST.")
+    if(!all(sapply(data,function(x) all.vars(f)[1] %in% names(x@data))))
+        stop("All data list elements to have values for the dependent variable.")
+    if(!est_error & !all(sapply(data,function(x) "std" %in% names(x@data))))
+        stop("If observational error is not going to be estimated,
+             please supply a field 'std' in the data objects.")
+    if(!(is.null(BAUs))) {
+        if(!(is(BAUs,"SpatialPolygonsDataFrame") | is(BAUs,"SpatialPixelsDataFrame") | is(BAUs,"STFDF")))
+            stop("BAUs should be a SpatialPolygonsDataFrame or a STFDF object")
+        if(!all(sapply(data,function(x) identical(proj4string(x), proj4string(BAUs)))))
+            stop("Please ensure all data items and BAUs have the same coordinate reference system")
+        if(!(all(BAUs$fs >= 0)))
+            stop("fine-scale variation basis function needs to be nonnegative everywhere")
+        if(is(BAUs,"STFDF")) if(!(is(BAUs@sp,"SpatialPolygonsDataFrame") | is(BAUs@sp,"SpatialPixelsDataFrame")))
+            stop("The spatial component of the BAUs should be a SpatialPolygonsDataFrame")
+        if(any(sapply(data,function(x) any(names(x@data) %in% names(BAUs@data)))))
+            stop("Please don't have overlapping variable names in data and BAUs. All covariates need to be in the BAUs.")
+        if(!all(all.vars(f)[-1] %in% c(names(BAUs@data),coordnames(BAUs))))
+            stop("All covariates need to be in the SpatialPolygons BAU object.")
+    }
+
+    if(!(is.null(basis))) {
+        if(!(is(basis,"Basis") | is(basis,"TensorP_Basis")))
+            stop("basis needs to be of class Basis  or TensorP_Basis (package FRK)")
+    }
+}
+
