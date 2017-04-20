@@ -1040,7 +1040,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
                   ## BAU names are sought)
                   if(average_in_BAU)
                       Data_in_BAU <- group_by(data_over_sp,BAU_name) %>%  # group by BAU
-                      summarise_each(funs(.safe_mean(.))) %>%             # apply safe mean to each column BAU
+                      summarise_all(.safe_mean) %>%             # apply safe mean to each column BAU
                       as.data.frame()                                     # convert to data frame
                   else Data_in_BAU <- data_over_sp                        # otherwise don't average
               })                                                          # end timer
