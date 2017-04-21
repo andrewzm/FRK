@@ -288,7 +288,6 @@ setMethod("coordnames",signature(x="STIDF"),function(x) {
 #' @param tunit temporal unit when requiring space-time BAUs. Can be either "secs", "mins", "hours" or "days".
 #' @param xlims limits of the horizontal axis (overrides automatic selection).
 #' @param ylims limits of the vertical axis (overrides automatic selection).
-#' @param tunit temporal unit when requiring space-time BAUs. Can be either "secs", "mins", "hours" or "days".
 #' @param ... currently unused
 #' @details \code{auto_BAUs} constructs a set of Basic Areal Units (BAUs) used both for data pre-processing and for prediction. As such, the BAUs need to be of sufficienly fine resolution so that inferences are not affected due to binning.
 #'

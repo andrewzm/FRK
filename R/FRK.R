@@ -16,6 +16,6 @@
 #' @importFrom digest digest
 #' @importFrom Rcpp cppFunction
 #' @importFrom grDevices chull
-#' @importFrom stats .getXlevels coefficients dist kmeans lm median model.extract model.frame model.matrix na.fail optim runif sd terms var time rnorm
+#' @importFrom stats .getXlevels coefficients dist kmeans lm median model.extract model.frame model.matrix na.fail optim runif sd terms var time rnorm formula
 #' @importFrom utils data
 NULL
