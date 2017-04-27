@@ -20,7 +20,12 @@ To install the most recent (development) version, first please install `INLA` fr
 install_github("andrewzm/FRK",dependencies=TRUE,build_vignettes=TRUE)
 ```
 
-A journel article, currently under preparation, will be uploaded as vignette once submitted. If you wish to see a draft of the paper please contact me on azm@uow.edu.au directly. Thank you.
+A document containing a description, details on the underlying maths and computations, as well as several examples, is available as a vignette. To load this vignette please type
+
+```r
+library(FRK)
+vignette("FRK_intro")
+```
 
 
 Description
