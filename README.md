@@ -5,7 +5,23 @@
 Fixed Rank Kriging
 ================
 
-The package `FRK` is still under development. However, both function interfaces and the underlying modelling approach are now relatively stable. This notice will be removed once a stable version is released.
+Installation 
+------------
+
+The package `FRK` is now at v0.1.2 and available on CRAN! To install, please type
+
+```r
+install.packages("FRK")
+```
+
+To install the most recent (development) version, first please install `INLA` from `http://www.r-inla.org/download`, then please load `devtools` and type
+
+```r
+install_github("andrewzm/FRK",dependencies=TRUE,build_vignettes=TRUE)
+```
+
+A journel article, currently under preparation, will be uploaded as vignette once submitted. If you wish to see a draft of the paper please contact me on azm@uow.edu.au directly. Thank you.
+
 
 Description
 ------------
@@ -29,16 +45,6 @@ Description: Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling 
 
 License: GPL (>= 2)
 
-Installation 
-------------
-
-`FRK` is still under development but stable and ready for use with simple applications. To install, first please install `INLA` from `http://www.r-inla.org/download`, then please load `devtools` and type
-
-```r
-install_github("andrewzm/FRK",dependencies=TRUE,build_vignettes=TRUE)
-```
-
-A journel article, currently under preparation, will be uploaded as vignette once submitted. If you wish to see a draft of the paper please contact me on azm@uow.edu.au directly. Thank you.
 
 Quick start
 ------------
