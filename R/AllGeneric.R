@@ -171,7 +171,24 @@ TensorP_Basis_as_data.frame <- setAs("TensorP_Basis", "data.frame",
 #' @rdname Basis_data.frame
 setGeneric("data.frame<-", function(x, value) standardGeneric("data.frame<-"))
 
-#### NOT EXPORTED ####
+
+#' @title Creates pixels around points
+#' @description Takes a SpatialPointsDataFrame and converts it into SpatialPolygonsDataFrame by constructing a tiny (within machine tolerance) BAU around each SpatialPoint.
+#' @param sp_obj object of class \code{SpatialPointsDataFrame}
+#' @details This function is there to allow users to mimic standard geospatial analysis where BAUs are not used. Since \code{FRK} is build on the concept of a BAU, this function constructs tiny BAUs around the observation and prediction locations which can be subsequently passed on to the functions \code{SRE} and \code{FRK}. With \code{BAUs_from_points}, the user supplies both the data and prediction locations accompanied with covariates.
+#' @export
+#' @examples
+#' library(sp)
+#' opts_FRK$set("parallel",0L)
+#' df <- data.frame(x = rnorm(10),
+#'                  y = rnorm(10))
+#' coordinates(df) <- ~x+y
+#' BAUs <- BAUs_from_points(df)
+setGeneric("BAUs_from_points", function(obj) standardGeneric("BAUs_from_points"))
+
+########################
+#### NOT EXPORTED ######
+########################
 
 #' @title Automatic BAU generation
 #' @noRd

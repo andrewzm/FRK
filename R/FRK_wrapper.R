@@ -167,7 +167,7 @@ FRK <- function(f,                     # formula (compulsory)
              please supply a field 'std' in the data objects.")
     if(!(is.null(BAUs))) {
         if(!(is(BAUs,"SpatialPolygonsDataFrame") | is(BAUs,"SpatialPixelsDataFrame") | is(BAUs,"STFDF")))
-            stop("BAUs should be a SpatialPolygonsDataFrame or a STFDF object")
+            stop("BAUs should be a SpatialPolygonsDataFrame, SpatialPixelsDataFrame, or a STFDF object")
         if(!all(sapply(data,function(x) identical(proj4string(x), proj4string(BAUs)))))
             stop("Please ensure all data items and BAUs have the same coordinate reference system")
         if(!(all(BAUs$fs >= 0)))

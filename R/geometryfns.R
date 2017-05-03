@@ -982,6 +982,51 @@ SpatialPolygonsDataFrame_to_df <- function(sp_polys,vars = names(sp_polys)) {
     df_polys
 }
 
+
+## Create very small square polygon BAUs around SpatialPoints
+setMethod("BAUs_from_points",signature(obj = "SpatialPoints"),
+          function(obj) {
+
+    sp_obj_pols <- NULL                 # Initialise polygons
+    offset <- 10*.Machine$double.eps    # Side size of BAU (very small)
+    cnames <- coordnames(obj)           # coordinate names
+    coords <- coordinates(obj)          # coordinates of SpatialPoints
+
+
+    ## Generate the Bottom Left, Bottom Right, Top Right, and Top Left, corners of the BAUs
+    BL <- data.frame(X1 = coords[,1] - offset, X2 = coords[,2] - offset, id = 1:length(obj))
+    BR <- data.frame(X1 = coords[,1] + offset, X2 = coords[,2] - offset, id = 1:length(obj))
+    TR <- data.frame(X1 = coords[,1] + offset, X2 = coords[,2] + offset, id = 1:length(obj))
+    TL <- data.frame(X1 = coords[,1] - offset, X2 = coords[,2] + offset, id = 1:length(obj))
+
+    ## Interleave them appropriate so they form polygon paths and set names
+    sp_obj_pols <- .interleave(BL,BR,TR,TL)
+    names(sp_obj_pols) <- c(cnames,"id")
+
+    ## Now create polygons from the above paths, and keep same projection
+    sp_obj_pols <- df_to_SpatialPolygons(sp_obj_pols,coords=cnames,keys="id",
+                                         proj = CRS(proj4string(obj)))
+
+    ## We assign the centroid of the BAU to the data object
+    df_data <- as.data.frame(coords)
+
+    ## If data points had other variables, add them aswell
+    if(is(obj,"SpatialPointsDataFrame"))
+        df_data <- cbind(df_data,obj@data)
+
+    ## Ensure the row names are the same and construct the SpatialPolygonsDataFrame BAUs
+    row.names(df_data) <- row.names(sp_obj_pols)
+    sp_obj_pols <- SpatialPolygonsDataFrame(sp_obj_pols,data = df_data)
+})
+
+## Create very small square polygon BAUs around SpatialPoints
+setMethod("BAUs_from_points",signature(obj = "ST"),
+          function(obj) {
+             print("BAUs from points for space-time data not yet implemented. Please contact
+                   the package maintainer.")
+          })
+
+
 ###########################################
 ########## Not exported ###################
 ###########################################
@@ -1689,4 +1734,26 @@ process_isea3h <- function(isea3h,resl) {
                             collapse=""))
    } else { LHS <- dep_var }                                 # otherwise it's just the dep var
    newf <- formula(paste0(LHS,"~1"))                         # now return formula without covariates
+}
+
+## Interleave data frames
+.interleave <- function(...) {
+
+    ## Extract data frames
+    dfs <- list(...)
+
+    ## Basic checks -- all data frames, same names and all same length
+    stopifnot(all(sapply(dfs,function(x) is(x,"data.frame"))))
+    stopifnot(all(sapply(dfs,function(x) names(x) == names(dfs[[1]]))))
+    stopifnot(all(sapply(dfs,function(x) nrow(x) == nrow(dfs[[1]]))))
+
+    ndfs <- length(dfs)   # number of data frames
+    n <- nrow(dfs[[1]])   # number of rows
+
+    stacked <- do.call("rbind",dfs)                       # stack all together
+    idx <- rep(1:n, each = ndfs) + (0:(ndfs-1)) * n       # interleaving indices
+    interleaved <- stacked[idx,]                          # re-order appropriately
+    row.names(interleaved) <- 1:nrow(interleaved)         # reset row names
+    interleaved                                           # return
+
 }

@@ -226,3 +226,19 @@ test_that("SpaceTime_BAUs",{
     expect_equal(attr(space_time_grid@time,"tzone"),attr(STobj1@time,"tzone"))
 })
 
+
+test_that("Point from BAUs works",{
+    library(sp)
+    dat <- data.frame(x = rnorm(100),
+                      y = rnorm(100))
+    coordinates(dat) <- ~x+y
+    BAUs <- BAUs_from_points(dat)
+
+    expect_is(BAUs,"SpatialPolygonsDataFrame")
+    expect_equal(length(BAUs),100)
+
+    dat$z <- rnorm(100)
+    BAUs <- BAUs_from_points(dat)
+    expect_is(BAUs,"SpatialPolygonsDataFrame")
+    expect_equal(length(BAUs),100)
+})
