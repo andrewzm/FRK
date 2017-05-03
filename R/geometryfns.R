@@ -992,6 +992,8 @@ setMethod("BAUs_from_points",signature(obj = "SpatialPoints"),
     cnames <- coordnames(obj)           # coordinate names
     coords <- coordinates(obj)          # coordinates of SpatialPoints
 
+    if(any(duplicated(coords)))
+        stop("Please remove any duplicated data locations from the object before proceeding.")
 
     ## Generate the Bottom Left, Bottom Right, Top Right, and Top Left, corners of the BAUs
     BL <- data.frame(X1 = coords[,1] - offset, X2 = coords[,2] - offset, id = 1:length(obj))
