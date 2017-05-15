@@ -984,6 +984,8 @@ SpatialPolygonsDataFrame_to_df <- function(sp_polys,vars = names(sp_polys)) {
 
 
 ## Create very small square polygon BAUs around SpatialPoints
+#' @rdname BAUs_from_points
+#' @aliases BAUs_from_points,SpatialPoints-method
 setMethod("BAUs_from_points",signature(obj = "SpatialPoints"),
           function(obj) {
 
@@ -1022,6 +1024,8 @@ setMethod("BAUs_from_points",signature(obj = "SpatialPoints"),
 })
 
 ## Create very small square polygon BAUs around SpatialPoints
+#' @rdname BAUs_from_points
+#' @aliases BAUs_from_points,ST-method
 setMethod("BAUs_from_points",signature(obj = "ST"),
           function(obj) {
              print("BAUs from points for space-time data not yet implemented. Please contact

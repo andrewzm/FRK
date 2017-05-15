@@ -814,16 +814,23 @@ setMethod("summary",signature(object="SRE"),
                           if(is(Sm@basis,"TensorP_Basis")) {
                               ## Extract previous estimate from current covariance matrix.
                               ## If zero (e.g., initial matrix is the identity), then pin to 1e-9
-                              par_init <- max(-Sm@D_basis$Basis1[[i]][1,2]/log(Ki[1,2]),1e-9) ## space
+                              ## If only one basis function at this resolution then don't
+                              ## attempt to estimate
+                              par_init <- ifelse(all_res$n[i]>1,
+                                                 max(-Sm@D_basis$Basis1[[i]][1,2]/log(Ki[1,2]),1e-9),
+                                                 1e-9)
 
-                              ## Same as above but for temporal
+
+                              ## Same as above but for temporal (assume we have always more than one temporal basis function)
                               par_init[2] <- max(-Sm@D_basis$Basis2[[1]][1,2]/log(Ki[1,1+count_res(Sm@basis@Basis1)$n[i]]),1e-9) ## time
 
                               ## If we clamped the temporal length scale then set it initially to 1
                               if(par_init[2] == 1e-9) par_init[2] <- 1
                           } else {
                               ## As above but just for space
-                              par_init <- max(-Sm@D_basis[[i]][1,2]/log(Ki[1,2]),1e-9)
+                              par_init <- ifelse(all_res$n[i]>1,
+                                                 max(-Sm@D_basis[[i]][1,2]/log(Ki[1,2]),1e-9),
+                                                 1e-9)
                           }
 
                           ## If we clamped the spatial length scale then set it initially to max(length) / 10
