@@ -7,14 +7,16 @@
 \alias{BAUs_from_points,ST-method}
 \title{Creates pixels around points}
 \usage{
-BAUs_from_points(obj)
+BAUs_from_points(obj, offset)
 
-\S4method{BAUs_from_points}{SpatialPoints}(obj)
+\S4method{BAUs_from_points}{SpatialPoints}(obj, offset = 1e-10)
 
-\S4method{BAUs_from_points}{ST}(obj)
+\S4method{BAUs_from_points}{ST}(obj, offset = 1e-10)
 }
 \arguments{
 \item{obj}{object of class \code{SpatialPointsDataFrame}}
+
+\item{offset}{edge size of the mini-BAU (default 1e-10)}
 }
 \description{
 Takes a SpatialPointsDataFrame and converts it into SpatialPolygonsDataFrame by constructing a tiny (within machine tolerance) BAU around each SpatialPoint.

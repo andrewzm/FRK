@@ -987,10 +987,9 @@ SpatialPolygonsDataFrame_to_df <- function(sp_polys,vars = names(sp_polys)) {
 #' @rdname BAUs_from_points
 #' @aliases BAUs_from_points,SpatialPoints-method
 setMethod("BAUs_from_points",signature(obj = "SpatialPoints"),
-          function(obj) {
+          function(obj, offset = 1e-10) {
 
     sp_obj_pols <- NULL                 # Initialise polygons
-    offset <- 10*.Machine$double.eps    # Side size of BAU (very small)
     cnames <- coordnames(obj)           # coordinate names
     coords <- coordinates(obj)          # coordinates of SpatialPoints
 
@@ -1027,7 +1026,7 @@ setMethod("BAUs_from_points",signature(obj = "SpatialPoints"),
 #' @rdname BAUs_from_points
 #' @aliases BAUs_from_points,ST-method
 setMethod("BAUs_from_points",signature(obj = "ST"),
-          function(obj) {
+          function(obj, offset = 1e-10) {
              print("BAUs from points for space-time data not yet implemented. Please contact
                    the package maintainer.")
           })

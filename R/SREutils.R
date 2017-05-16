@@ -1018,6 +1018,7 @@ setMethod("summary",signature(object="SRE"),
 
     ## Set variables to make code more concise
     S0 <- Sm@S0
+    S0 <- as(S0,"dgCMatrix")   # ensure S0 is classified as sparse
     alpha <- Sm@alphahat
     K <- Sm@Khat
     sigma2fs <- Sm@sigma2fshat
