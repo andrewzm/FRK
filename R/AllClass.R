@@ -15,7 +15,7 @@ setClass("measure",representation(dist="function",dim="integer"),
 #' @description The class \code{manifold} is virtual; other manifold classes inherit from this class.
 #' @details A \code{manifold} object is characterised by a character variable \code{type}, which contains a description of the manifold, and a variable \code{measure} of type \code{measure}. A typical measure is the Euclidean distance.
 #'
-#' \code{FRK} supports five manifolds; the real line (in one dimension), instantiated by using \code{real_line()}; the 2D plane, instantiated by using \code{plane()}; the 2D-sphere surface S2, instantiated by using \code{sphere()}; the R2 space-time manifold, instantiated by using \code{STplane()}, and the S2 space-time manifold, instantiated by using \code{STsphere()}. User-specific manifolds can also be specified, however helper functions that are manifold specific, such as \code{auto_BAUs} and \code{auto_basis} only work with the pre-configured manifolds. Importantly, one can change the distance function used on the manifold to synthesise anisotropy or heterogeneity. See the vignette for one such example.
+#' \code{FRK} supports five manifolds; the real line (in one dimension), instantiated by using \code{real_line()}; the 2D plane, instantiated by using \code{plane()}; the 2D-sphere surface S2, instantiated by using \code{sphere()}; the R2 space-time manifold, instantiated by using \code{STplane()}, and the S2 space-time manifold, instantiated by using \code{STsphere()}. User-specific manifolds can also be specified, however helper functions that are manifold specific, such as \code{auto_BAUs} and \code{auto_basis}, only work with the pre-configured manifolds. Importantly, one can change the distance function used on the manifold to synthesise anisotropy or heterogeneity. See the vignette for one such example.
 #'
 #' @keywords Manifolds, spheres, planes
 setClass("manifold",representation(type="character", measure = "measure","VIRTUAL"))
@@ -54,7 +54,7 @@ setClass("STsphere",representation(radius="numeric"),contains="STmanifold")
 #' @slot fn a list of length \code{n}, with each item the function of a specific basis function
 #' @slot pars a list of parameters where the \eqn{i}-th item in the list contains the parameters of the \eqn{i}-th basis function, \code{fn[[i]]}
 #' @slot df a data frame containing other attributes specific to each basis function (for example the geometric centre of the local basis function)
-#' @details Basis functions are a central component of \code{FRK}, and the package is designed to work with user-defined specifications of these. For convenience, however, several functions are available to aid the user to construct a basis set for a given set of data points. Please see \code{\link{auto_basis}} for more details. The function \code{\link{local_basis}} helps the user construct a set of local basis functions (e.g., bisquare functions) from a collection of locations and scale parameters.
+#' @details Basis functions are a central component of \code{FRK}, and the package is designed to work with user-defined specifications of these. For convenience, however, several functions are available to aid the user to construct a basis set for a given set of data points. Please see \code{\link{auto_basis}} for more details. The function \code{\link{local_basis}} helps the user construct a set of local basis functions (e.g., bisquare functions) from a collection of location and scale parameters.
 #' @keywords Basis functions
 #' @rdname Basis-class
 setClass("Basis_obj", representation(n = "numeric","VIRTUAL"))
@@ -77,9 +77,9 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot S0 matrix constructed by evaluating the basis functions at all BAUs (of class \code{Matrix})
 #' @slot D_basis list of distance-matrices of class \code{Matrix}, one for each basis-function resolution
 #' @slot Ve measurement-error variance-covariance matrix (typically diagonal and of class \code{Matrix})
-#' @slot Vfs fine-scale variance-covariance matrix at the data locations (typically diagonal and of class \code{Matrix}) up to a constant of proportionality estimated in the framework
-#' @slot Vfs_BAUs fine-scale variance-covariance matrix at the BAU centroids (typically diagonal and of class \code{Matrix}) up to a constant of proportionality estimated in the framework
-#' @slot Qfs_BAUs fine-scale precision matrix at the BAU centroids (typically diagonal and of class \code{Matrix}) up to a constant of proportionality estimated in the framework
+#' @slot Vfs fine-scale variance-covariance matrix at the data locations (typically diagonal and of class \code{Matrix}) up to a constant of proportionality estimated using the EM algorithm
+#' @slot Vfs_BAUs fine-scale variance-covariance matrix at the BAU centroids (typically diagonal and of class \code{Matrix}) up to a constant of proportionality estimated using the EM algorithm
+#' @slot Qfs_BAUs fine-scale precision matrix at the BAU centroids (typically diagonal and of class \code{Matrix}) up to a constant of proportionality estimated using the EM algorithm
 #' @slot Z vector of observations (of class \code{Matrix})
 #' @slot Cmat incidence matrix mapping the observations to the BAUs
 #' @slot X matrix of covariates

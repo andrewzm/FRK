@@ -3,12 +3,12 @@
 #' @param manifold object of class \code{manifold}, for example, \code{sphere}
 #' @param loc a matrix of size \code{n} by \code{dimensions(manifold)} indicating centres of basis functions
 #' @param scale vector of length \code{n} containing the scale parameters of the basis functions; see details
-#' @param type either ``bisquare,'' ``Gaussian'', ``exp,'' or ``Matern32''
+#' @param type either ``bisquare'', ``Gaussian'', ``exp'', or ``Matern32''
 #' @details This functions lays out local basis functions in a domain of interest based on pre-specified location and scale parameters. If \code{type} is ``bisquare'', then
 #'\deqn{\phi(u) = \left(1- \left(\frac{\| u \|}{R}\right)^2\right)^2 I(\|u\| < R),}
 #' and \code{scale} is given by \eqn{R}, the range of support of the bisquare function. If \code{type} is ``Gaussian'', then
 #' \deqn{\phi(u) = \exp\left(-\frac{\|u \|^2}{2\sigma^2}\right),}
-#' and \code{scale} is given by \eqn{\sigma}, the standard deviation. If the \code{type} is ``exp'', then
+#' and \code{scale} is given by \eqn{\sigma}, the standard deviation. If \code{type} is ``exp'', then
 #'\deqn{\phi(u) = \exp\left(-\frac{\|u\|}{ \tau}\right),}
 #' and \code{scale} is given by \eqn{\tau}, the e-folding length. If \code{type} is ``Matern32'', then
 #'\deqn{\phi(u) = \left(1 + \frac{\sqrt{3}\|u\|}{\kappa}\right)\exp\left(-\frac{\sqrt{3}\| u \|}{\kappa}\right),}
@@ -66,11 +66,11 @@ local_basis <- function(manifold=sphere(),          # default manifold is sphere
 #' @description Generate automatically a set of local basis functions in the domain, and automatically prune in regions of sparse data.
 #' @param manifold object of class \code{manifold}, for example, \code{sphere} or \code{plane}
 #' @param data object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame} containing the data on which basis-function placement is based, or a list of these; see details
-#' @param regular an integer indicating the number of regularly-placed basis functions at the first resolution. In two dimensions, this dictates the smallest number of basis functions in a row or column at the lowest resolution. If \code{regular=0}, an irregular grid is used, one that is based on the triangulation of the domain with increased mesh density in areas of high data density, see details
+#' @param regular an integer indicating the number of regularly-placed basis functions at the first resolution. In two dimensions, this dictates the smallest number of basis functions in a row or column at the lowest (coarsest) resolution. If \code{regular=0}, an irregular grid is used, one that is based on the triangulation of the domain with increased mesh density in areas of high data density; see details
 #' @param nres the number of basis-function resolutions to use
-#' @param prune a threshold parameter which dictates when a basis function is considered irrelevent or unidentifiable, and thus removed, see details
+#' @param prune a threshold parameter that dictates when a basis function is considered irrelevent or unidentifiable, and thus removed; see details
 #' @param max_basis maximum number of basis functions. This overrides the parameter \code{nres}
-#' @param subsamp the maximum amount of data points to consider when carrying out basis-function placement: these data objects are randomly sampled from the full dataset. Keep this number fairly high (on the order of 10^5) otherwise high resolution basis functions may be spuriously removed
+#' @param subsamp the maximum amount of data points to consider when carrying out basis-function placement: these data objects are randomly sampled from the full dataset. Keep this number fairly high (on the order of 10^5), otherwise high-resolution basis functions may be spuriously removed
 #' @param type the type of basis functions to use; see details
 #' @param isea3h_lo if \code{manifold = sphere()}, this argument dictates which ISEA3H resolution is the lowest one that should be used for the first resolution
 #' @param bndary a \code{matrix} containing points containing the boundary. If \code{regular == 0} this can be used to define a boundary in which irregularly-spaced basis functions are placed
@@ -79,7 +79,7 @@ local_basis <- function(manifold=sphere(),          # default manifold is sphere
 #' @details This function automatically places basis functions within the domain of interest. If the domain is a plane or the real line, then the object \code{data} is used to establish the domain boundary.
 #'
 #'
-#'The argument \code{type} can be either ``Gaussian'' in which case
+#'The argument \code{type} can be either ``Gaussian'', in which case
 #'\deqn{\phi(u) = \exp\left(-\frac{\|u \|^2}{2\sigma^2}\right),}
 #'``bisquare'', in which case
 #'\deqn{\phi(u) = \left(1- \left(\frac{\| u \|}{R}\right)^2\right)^2 I(\|u\| < R),}
@@ -87,15 +87,15 @@ local_basis <- function(manifold=sphere(),          # default manifold is sphere
 #'\deqn{\phi(u) = \exp\left(-\frac{\|u\|}{ \tau}\right),}
 #' or ``Matern32'', in which case
 #'\deqn{\phi(u) = \left(1 + \frac{\sqrt{3}\|u\|}{\kappa}\right)\exp\left(-\frac{\sqrt{3}\| u \|}{\kappa}\right),}
-#' The parameters \eqn{\sigma, R, \tau} and \eqn{\kappa} are \code{scale} arguments.
+#' where the parameters \eqn{\sigma, R, \tau} and \eqn{\kappa} are \code{scale} arguments.
 #'
-#' If the manifold is the real line, the basis functions are placed regularly inside the domain, and the number of basis functions at the lowest resolution is dictated by the integer parameter \code{regular} which has to be greater than zero. On the real line, each subsequent resolution has twice as many basis functions. The scale of the basis function is set based on the minimum distance between the centre locations following placement. The scale is equal to the minimum distance if the type of basis function is Gaussian, exponential or Matern32, and is equal to 1.5 times this value if the function is bisquare.
+#' If the manifold is the real line, the basis functions are placed regularly inside the domain, and the number of basis functions at the lowest resolution is dictated by the integer parameter \code{regular} which has to be greater than zero. On the real line, each subsequent resolution has twice as many basis functions. The scale of the basis function is set based on the minimum distance between the centre locations following placement. The scale is equal to the minimum distance if the type of basis function is Gaussian, exponential, or Matern32, and is equal to 1.5 times this value if the function is bisquare.
 #'
-#' If the manifold is a plane, and \code{regular > 0}, then basis functions are placed regularly within the bounding box of \code{data}, with the smallest number of basis functions in each row or column equal to the value of \code{regular} in the lowest resolution (note, this is just the smallest number of basis functions). Subsequent resolutions have twice the number of basis functions in each row or column. If \code{regular = 0}, then the function \code{INLA::inla.nonconvex.hull} is used to construct a (non-convex) hull around the data. The buffer and smoothness of the hull is determined by the parameter \code{convex}. Once the domain boundary is found,  \code{INLA::inla.mesh.2d} is used to construct a triangular mesh such that the node vertices coincide with data locations, subject to some minimum and maximum triangular side length constraints. The result is a mesh which is dense in regions of high data density and not dense in regions of sparse data. Even in this case, the scale is taken to be a function of the minimum distance between basis function centres, as detailed above. This may be changed in a future revision.
+#' If the manifold is a plane, and \code{regular > 0}, then basis functions are placed regularly within the bounding box of \code{data}, with the smallest number of basis functions in each row or column equal to the value of \code{regular} in the lowest (coarsest) resolution (note, this is just the smallest number of basis functions). Subsequent resolutions have twice the number of basis functions in each row or column. If \code{regular = 0}, then the function \code{INLA::inla.nonconvex.hull} is used to construct a (non-convex) hull around the data. The buffer and smoothness of the hull is determined by the parameter \code{convex}. Once the domain boundary is found,  \code{INLA::inla.mesh.2d} is used to construct a triangular mesh such that the node vertices coincide with data locations, subject to some minimum and maximum triangular-side-length constraints. The result is a mesh that is dense in regions of high data density and not dense in regions of sparse data. Even basis functions are irregularly placed, the scale is taken to be a function of the minimum distance between basis function centres, as detailed above. This may be changed in a future revision of the package.
 #'
-#' If the manifold is the surface of a sphere, then basis functions are placed on the centroids of the discrete global grid (DGG), with the first basis resolution corresponding to the third resolution of the DGG (ISEA3H resolution 2, which yields 92 basis functions globally).  It is not recommended to go above \code{nres == 3} (ISEA3H resolutions 2--4) for the whole sphere, which would yield a total of 1176 basis functions. Up to ISEA3H resolution 6 is available with \code{FRK}; for higher resolutions please install \code{dggrids} from \code{https://github.com/andrewzm/dggrids} using \code{devtools}.
+#' If the manifold is the surface of a sphere, then basis functions are placed on the centroids of the discrete global grid (DGG), with the first basis resolution corresponding to the third resolution of the DGG (ISEA3H resolution 2, which yields 92 basis functions globally).  It is not recommended to go above \code{nres == 3} (ISEA3H resolutions 2--4) for the whole sphere; \code{nres=3} yields a total of 1176 basis functions. Up to ISEA3H resolution 6 is available with \code{FRK}; for higher resolutions; please install \code{dggrids} from \code{https://github.com/andrewzm/dggrids} using \code{devtools}.
 #'
-#' Basis functions that are not influenced by data points may hinder convergence of the EM algorithm when \code{K_type = ``unstructured''}, since the associated hidden states are by and large unidentifiable. We hence provide a means to automatically remove such basis functions through the parameter \code{prune}. The final set only contains basis functions for which the column sums in the associated matrix \eqn{S} (which, recall, is the value/average of the basis functions at/over the data points/polygons) is greater than \code{prune}. If \code{prune == 0}, no basis functions are removed from the original design.
+#' Basis functions that are not influenced by data points may hinder convergence of the EM algorithm when \code{K_type = ``unstructured''}, since the associated hidden states are, by and large, unidentifiable. We hence provide a means to automatically remove such basis functions through the parameter \code{prune}. The final set only contains basis functions for which the column sums in the associated matrix \eqn{S} (which, recall, is the value/average of the basis functions at/over the data points/polygons) is greater than \code{prune}. If \code{prune == 0}, no basis functions are removed from the original design.
 #' @examples
 #' \dontrun{
 #' library(sp)
@@ -551,7 +551,7 @@ setMethod("eval_basis",signature(basis="TensorP_Basis",s = "STIDF"),function(bas
 setMethod("eval_basis",signature(basis="TensorP_Basis",s = "STFDF"),function(basis,s){
     if(!("t" %in% names(s@data)))
         stop("FRK requires a column with a numeric value for time in the STFDF object.
-             This can be, for example, in number of seconds, hors or days from the
+             This can be, for example, in number of seconds, hours or days from the
              first data point.")
     tlocs <- matrix(s$t)  # all time points
     nt <- length(time(s))  # number of unique time points
@@ -569,6 +569,23 @@ setMethod("eval_basis",signature(basis="TensorP_Basis",s = "STFDF"),function(bas
 ######################################################
 ########### HELPER FUNCTIONS #########################
 ######################################################
+
+#' @rdname remove_basis
+#' @aliases remove_basis,Basis-method
+setMethod("remove_basis",signature(Basis="Basis"),function(Basis,rmidx) {
+   ntot <- nbasis(Basis)
+   if(!all(rmidx %in% 1:ntot))
+       stop("Please make sure indices are numeric and within
+            1 and the number of basis functions.")
+
+   Basis_df <- data.frame(Basis)     # extract data frame
+   Basis@fn <- Basis@fn[-rmidx]      # remove functions
+   Basis@pars <- Basis@pars[-rmidx]  # remove parameters
+   Basis@df <- Basis@df[-rmidx,]     # remove rows from data frame
+   Basis@n <- nrow(Basis@df)         # reduce n as appropriate
+   Basis                             # return basis object
+})
+
 
 #' @rdname local_basis
 #' @export

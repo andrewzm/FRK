@@ -4,7 +4,7 @@
 #' @param basis object of class \code{Basis}
 #' @param g object of class \code{gg} (a \code{ggplot} object) over which to overlay the basis functions (optional)
 #' @param ... not in use
-#' @details The function \code{show_basis} adapts its behaviour to the manifold being used. With \code{real_line}, the 1D basis functions are plotted with colour distinguishing between the different resolutions. With \code{plane}, only local basis functions are supported (at present). Each basis function is shown as a circle with diameter equal to the \code{scale} parameter of the function. Linetype distinguishes the resolution. With \code{sphere}, the centres of the basis functions are shown as circles, with larger sizes corresponding to lower (i.e., coarser) resolutions. Space-time basis functions of subclass \code{TensorP_Basis} are be visualised by showing the spatial basis functions and the temporal basis functions in two separate plots.
+#' @details The function \code{show_basis} adapts its behaviour to the manifold being used. With \code{real_line}, the 1D basis functions are plotted with colour distinguishing between the different resolutions. With \code{plane}, only local basis functions are supported (at present). Each basis function is shown as a circle with diameter equal to the \code{scale} parameter of the function. Linetype distinguishes the resolution. With \code{sphere}, the centres of the basis functions are shown as circles, with larger sizes corresponding to lower (i.e., coarser) resolutions. Space-time basis functions of subclass \code{TensorP_Basis} are visualised by showing the spatial basis functions and the temporal basis functions in two separate plots.
 #' @examples
 #' library(ggplot2)
 #' library(sp)
@@ -70,8 +70,8 @@ setGeneric("distance", function(d,x1,x2=NULL) standardGeneric("distance"))
 #' @details This function evaluates the basis functions at isolated points, or averages
 #' the basis functions over polygons, for computing the matrix \eqn{S}. The latter
 #' operation is carried out using Monte Carlo integration with 1000 samples per polygon. When
-#' using space-time basis functions, the object MUST contain a field \code{t} containing a numeric
-#' representation of the time, for example, containing the number of second, hours, or days since the first
+#' using space-time basis functions, the object must contain a field \code{t} containing a numeric
+#' representation of the time, for example, containing the number of seconds, hours, or days since the first
 #' data point.
 #' @examples
 #' library(sp)
@@ -96,7 +96,7 @@ setGeneric("distance", function(d,x1,x2=NULL) standardGeneric("distance"))
 setGeneric("eval_basis", function(basis,s) standardGeneric("eval_basis"))
 
 #' @title Tensor product of basis functions
-#' @description Constructs a new set of basis by finding the tensor product of two sets of basis functions.
+#' @description Constructs a new set of basis functions by finding the tensor product of two sets of basis functions.
 #' @param Basis1 first set of basis functions
 #' @param Basis2 second set of basis functions
 #' @export
@@ -147,10 +147,10 @@ setGeneric("TensorP", function(Basis1,Basis2) standardGeneric("TensorP"))
 setGeneric("nres", function(b) standardGeneric("nres"))
 
 #' @title Basis-function data frame object
-#' @description Tools for retrieving and manipulating the data frame within the Basis objects. Use the assignment \code{data.frame()<-} with care; no checks are made to make sure the data frame conforms with the object. Only use if you know what you're doing
+#' @description Tools for retrieving and manipulating the data frame within the Basis objects. Use the assignment \code{data.frame()<-} with care; no checks are made to make sure the data frame conforms with the object. Only use if you know what you're doing.
 #' @param x the obect of class \code{Basis} we are assigning the new data to or retrieving data from
 #' @param value the new data being assigned to the Basis object
-#' @param name the field name to which values will be retrieved or assigned inside the Basis' data frame
+#' @param name the field name to which values will be retrieved or assigned inside the Basis object's data frame
 #' @param ... unused
 #' @rdname Basis_data.frame
 #' @examples
@@ -176,7 +176,7 @@ setGeneric("data.frame<-", function(x, value) standardGeneric("data.frame<-"))
 #' @description Takes a SpatialPointsDataFrame and converts it into SpatialPolygonsDataFrame by constructing a tiny (within machine tolerance) BAU around each SpatialPoint.
 #' @param obj object of class \code{SpatialPointsDataFrame}
 #' @param offset edge size of the mini-BAU (default 1e-10)
-#' @details This function is there to allow users to mimic standard geospatial analysis where BAUs are not used. Since \code{FRK} is build on the concept of a BAU, this function constructs tiny BAUs around the observation and prediction locations which can be subsequently passed on to the functions \code{SRE} and \code{FRK}. With \code{BAUs_from_points}, the user supplies both the data and prediction locations accompanied with covariates.
+#' @details This function allows users to mimic standard geospatial analysis where BAUs are not used. Since \code{FRK} is built on the concept of a BAU, this function constructs tiny BAUs around the observation and prediction locations that can be subsequently passed on to the functions \code{SRE} and \code{FRK}. With \code{BAUs_from_points}, the user supplies both the data and prediction locations accompanied with covariates.
 #' @export
 #' @examples
 #' library(sp)
@@ -187,6 +187,24 @@ setGeneric("data.frame<-", function(x, value) standardGeneric("data.frame<-"))
 #' BAUs <- BAUs_from_points(df)
 setGeneric("BAUs_from_points", function(obj,offset = 1e-10)
     standardGeneric("BAUs_from_points"))
+
+#' @title Removes basis functions
+#' @description Takes a an object of class \code{Basis} and returns an object of class \code{Basis} with selected basis functions removed.
+#' @param Basis object of class \code{Basis}
+#' @param rmidx indices of basis functions to remove
+#' @export
+#' @examples
+#' library(sp)
+#' df <- data.frame(x = rnorm(10),
+#'                  y = rnorm(10))
+#' coordinates(df) <- ~x+y
+#' G <- auto_basis(plane(),df,nres=1)
+#' data.frame(G) # Print info on basis
+#' G <- remove_basis(G,1:(nbasis(G)-1))
+#' data.frame(G)
+setGeneric("remove_basis", function(Basis,rmidx)
+    standardGeneric("remove_basis"))
+
 
 ########################
 #### NOT EXPORTED ######

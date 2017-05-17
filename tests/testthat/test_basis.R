@@ -119,3 +119,11 @@ test_that("can manipulate basis function data frame", {
     data.frame(G) <- df
     expect_identical(G@df$res,2)
 })
+
+test_that("can remove basis", {
+  G <- local_basis(loc = matrix(c(1,1,2,2),ncol=2),
+                   scale = c(1,2))
+  G2 <- remove_basis(G,1)
+  expect_equal(G@df[2,],G2@df)
+  expect_equal(nbasis(G2),1)
+})
