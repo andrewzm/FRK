@@ -17,7 +17,7 @@ TensorP(Basis1, Basis2)
 \item{Basis2}{second set of basis functions}
 }
 \description{
-Constructs a new set of basis by finding the tensor product of two sets of basis functions.
+Constructs a new set of basis functions by finding the tensor product of two sets of basis functions.
 }
 \examples{
 library(spacetime)

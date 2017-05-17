@@ -18,7 +18,7 @@ radial_basis(manifold = sphere(), loc = matrix(c(1, 0), nrow = 1),
 
 \item{scale}{vector of length \code{n} containing the scale parameters of the basis functions; see details}
 
-\item{type}{either ``bisquare,'' ``Gaussian'', ``exp,'' or ``Matern32''}
+\item{type}{either ``bisquare'', ``Gaussian'', ``exp'', or ``Matern32''}
 }
 \description{
 Construct a set of local basis functions based on pre-specified location and scale parameters.
@@ -28,7 +28,7 @@ This functions lays out local basis functions in a domain of interest based on p
 \deqn{\phi(u) = \left(1- \left(\frac{\| u \|}{R}\right)^2\right)^2 I(\|u\| < R),}
 and \code{scale} is given by \eqn{R}, the range of support of the bisquare function. If \code{type} is ``Gaussian'', then
 \deqn{\phi(u) = \exp\left(-\frac{\|u \|^2}{2\sigma^2}\right),}
-and \code{scale} is given by \eqn{\sigma}, the standard deviation. If the \code{type} is ``exp'', then
+and \code{scale} is given by \eqn{\sigma}, the standard deviation. If \code{type} is ``exp'', then
 \deqn{\phi(u) = \exp\left(-\frac{\|u\|}{ \tau}\right),}
 and \code{scale} is given by \eqn{\tau}, the e-folding length. If \code{type} is ``Matern32'', then
 \deqn{\phi(u) = \left(1 + \frac{\sqrt{3}\|u\|}{\kappa}\right)\exp\left(-\frac{\sqrt{3}\| u \|}{\kappa}\right),}

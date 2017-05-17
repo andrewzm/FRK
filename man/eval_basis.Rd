@@ -47,8 +47,8 @@ Evaluate basis functions at points or average functions over polygons.
 This function evaluates the basis functions at isolated points, or averages
 the basis functions over polygons, for computing the matrix \eqn{S}. The latter
 operation is carried out using Monte Carlo integration with 1000 samples per polygon. When
-using space-time basis functions, the object MUST contain a field \code{t} containing a numeric
-representation of the time, for example, containing the number of second, hours, or days since the first
+using space-time basis functions, the object must contain a field \code{t} containing a numeric
+representation of the time, for example, containing the number of seconds, hours, or days since the first
 data point.
 }
 \examples{

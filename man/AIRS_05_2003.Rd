@@ -20,7 +20,7 @@ AIRS_05_2003
 \description{
 Mid-tropospheric CO2 measurements from the Atmospheric InfraRed Sounder (AIRS).
 The data are measurements between 60 degrees S and 90 degrees N at roughly 1:30 pm local
-time on 1 May through to 15 May 2003.
+time on 1 May through to 15 May 2003. (AIRS does not release data below 60 degrees S.)
 }
 \references{
 Chahine, M. et al. (2006). AIRS: Improving weather forecasting and

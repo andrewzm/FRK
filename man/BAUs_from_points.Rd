@@ -7,7 +7,7 @@
 \alias{BAUs_from_points,ST-method}
 \title{Creates pixels around points}
 \usage{
-BAUs_from_points(obj, offset)
+BAUs_from_points(obj, offset = 1e-10)
 
 \S4method{BAUs_from_points}{SpatialPoints}(obj, offset = 1e-10)
 
@@ -22,7 +22,7 @@ BAUs_from_points(obj, offset)
 Takes a SpatialPointsDataFrame and converts it into SpatialPolygonsDataFrame by constructing a tiny (within machine tolerance) BAU around each SpatialPoint.
 }
 \details{
-This function is there to allow users to mimic standard geospatial analysis where BAUs are not used. Since \code{FRK} is build on the concept of a BAU, this function constructs tiny BAUs around the observation and prediction locations which can be subsequently passed on to the functions \code{SRE} and \code{FRK}. With \code{BAUs_from_points}, the user supplies both the data and prediction locations accompanied with covariates.
+This function allows users to mimic standard geospatial analysis where BAUs are not used. Since \code{FRK} is built on the concept of a BAU, this function constructs tiny BAUs around the observation and prediction locations that can be subsequently passed on to the functions \code{SRE} and \code{FRK}. With \code{BAUs_from_points}, the user supplies both the data and prediction locations accompanied with covariates.
 }
 \examples{
 library(sp)

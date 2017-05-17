@@ -29,11 +29,11 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 
 \item{\code{Ve}}{measurement-error variance-covariance matrix (typically diagonal and of class \code{Matrix})}
 
-\item{\code{Vfs}}{fine-scale variance-covariance matrix at the data locations (typically diagonal and of class \code{Matrix}) up to a constant of proportionality estimated in the framework}
+\item{\code{Vfs}}{fine-scale variance-covariance matrix at the data locations (typically diagonal and of class \code{Matrix}) up to a constant of proportionality estimated using the EM algorithm}
 
-\item{\code{Vfs_BAUs}}{fine-scale variance-covariance matrix at the BAU centroids (typically diagonal and of class \code{Matrix}) up to a constant of proportionality estimated in the framework}
+\item{\code{Vfs_BAUs}}{fine-scale variance-covariance matrix at the BAU centroids (typically diagonal and of class \code{Matrix}) up to a constant of proportionality estimated using the EM algorithm}
 
-\item{\code{Qfs_BAUs}}{fine-scale precision matrix at the BAU centroids (typically diagonal and of class \code{Matrix}) up to a constant of proportionality estimated in the framework}
+\item{\code{Qfs_BAUs}}{fine-scale precision matrix at the BAU centroids (typically diagonal and of class \code{Matrix}) up to a constant of proportionality estimated using the EM algorithm}
 
 \item{\code{Z}}{vector of observations (of class \code{Matrix})}
 

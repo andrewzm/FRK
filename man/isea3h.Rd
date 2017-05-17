@@ -4,7 +4,7 @@
 \name{isea3h}
 \alias{isea3h}
 \title{ISEA Aperture 3 Hexagon (ISEA3H) Discrete Global Grid}
-\format{A data frame with 284208 rows and 5 variables:
+\format{A data frame with 284,208 rows and 5 variables:
 \describe{
   \item{id}{grid identification number within the given resolution}
   \item{lon}{longitude coordinate}
@@ -17,16 +17,16 @@
 isea3h
 }
 \description{
-The data used here was obtained from
+The data used here were obtained from
 http://webpages.sou.edu/~sahrk/dgg/isea.old/gen/isea3h.html and represent ISEA
 discrete global grids (DGGRIDs) generated using the \code{DGGRID} software.
 The original .gen files were converted to a data frame using the function \code{dggrid_gen_to_df},
 available with the \code{dggrids} package. Only resolutions 0--6 are supplied with \code{FRK}
 and note that resolution 0 of ISEA3H is equal to resolution 1 in \code{FRK}. For higher
-resolutions please install \code{dggrids} from \code{https://github.com/andrewzm/dggrids}
+resolutions \code{dggrids} can be installed from \code{https://github.com/andrewzm/dggrids}
 using \code{devtools}.
 }
 \references{
-Sahr, K. (2008) Location coding on icosahedral aperture 3 hexagon discrete global grids. Computers, Environment and Urban Systems, 32, 174--187.
+Sahr, K. (2008). Location coding on icosahedral aperture 3 hexagon discrete global grids. Computers, Environment and Urban Systems, 32, 174--187.
 }
 \keyword{datasets}

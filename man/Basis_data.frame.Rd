@@ -39,12 +39,12 @@ data.frame(x) <- value
 
 \item{value}{the new data being assigned to the Basis object}
 
-\item{name}{the field name to which values will be retrieved or assigned inside the Basis' data frame}
+\item{name}{the field name to which values will be retrieved or assigned inside the Basis object's data frame}
 
 \item{...}{unused}
 }
 \description{
-Tools for retrieving and manipulating the data frame within the Basis objects. Use the assignment \code{data.frame()<-} with care; no checks are made to make sure the data frame conforms with the object. Only use if you know what you're doing
+Tools for retrieving and manipulating the data frame within the Basis objects. Use the assignment \code{data.frame()<-} with care; no checks are made to make sure the data frame conforms with the object. Only use if you know what you're doing.
 }
 \examples{
 G <- local_basis()

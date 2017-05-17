@@ -17,7 +17,7 @@ Object of class \code{ggplot}
 Formats a ggplot object for neat plotting.
 }
 \details{
-\code{LinePlotTheme()} creates \code{ggplot} object with a white background, a relatively large font and grid lines. \code{EmptyTheme()} on the other hand creates a \code{ggplot} object with no axes or legends.
+\code{LinePlotTheme()} creates \code{ggplot} object with a white background, a relatively large font, and grid lines. \code{EmptyTheme()} on the other hand creates a \code{ggplot} object with no axes or legends.
 }
 \examples{
 \dontrun{
