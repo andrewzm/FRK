@@ -305,7 +305,7 @@ auto_basis <- function(manifold = plane(),
                 this_res_scales <-max(diff(xrange),diff(yrange))/2  # set the "base" scale parameter to span most of the range
             } else {
                 diag(D) <- Inf                                      # otherwise set the "base" scale parameter to be based
-                this_res_scales <- apply(D,1,min)*1.5               # on the distance to the nearest centroid
+                this_res_scales <- apply(D,1,min)*1.25              # on the distance to the nearest centroid
             }
 
             ## If we have more than one basis at this resolution (could be 0 because of pruning)
