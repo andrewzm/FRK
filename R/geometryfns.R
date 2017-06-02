@@ -289,7 +289,7 @@ setMethod("coordnames",signature(x="STIDF"),function(x) {
 #' @param xlims limits of the horizontal axis (overrides automatic selection)
 #' @param ylims limits of the vertical axis (overrides automatic selection)
 #' @param ... currently unused
-#' @details \code{auto_BAUs} constructs a set of Basic Areal Units (BAUs) used both for data pre-processing and for prediction. As such, the BAUs need to be of sufficienly high (fine) resolution so that inferences are not affected due to binning.
+#' @details \code{auto_BAUs} constructs a set of Basic Areal Units (BAUs) used both for data pre-processing and for prediction. As such, the BAUs need to be of sufficienly fine resolution so that inferences are not affected due to binning.
 #'
 #' Two types of BAUs are supported by \code{FRK}: ``hex'' (hexagonal) and ``grid'' (rectangular). In order to have a ``grid'' set of BAUs, the user should specify a cellsize of length one, or of length equal to the dimensions of the manifold, that is, of length 1 for \code{real_line} and of length 2 for the surface of a \code{sphere} and \code{plane}. When a ``hex'' set of BAUs is desired, the first element of \code{cellsize} is used to determine the side length by dividing this value by approximately 2. The argument \code{type} is ignored with \code{real_line} and ``hex'' is not available for this manifold.
 #'
@@ -699,7 +699,7 @@ setMethod("auto_BAU",signature(manifold="sphere"),
                   isea3h <- res <- lon <- centroid <- lat <- in_chull <- NULL
 
                   ## Load the discrete global grids at the desired resolution. This can be either
-                  ## from the data in FRK or the dggrids package (depending on how high the resolution is)
+                  ## from the data in FRK or the dggrids package (depending on how fine the resolution is)
                   isea3h <- load_dggrids(res=resl)
 
                   ## Split the ISEA3H across the 180 degree boundary using process_isea3h
@@ -1453,12 +1453,12 @@ load_dggrids <- function (res = 3L){
     if(!is.numeric(res))
         stop("res needs to be an integer or vector of integers")
 
-    ## We ship dggrids at res 6 or less with FRK. Higher resolutions are available with the dggrids package
+    ## We ship dggrids at res 6 or less with FRK. Finer resolutions are available with the dggrids package
     if(all(res <= 6L))  {
         data(isea3h, envir=environment(),package="FRK")  # load ISEA3h from FRK
     } else {
         if(!requireNamespace("dggrids")) {
-            stop("Such high DGGRID resolutions are not
+            stop("Such fine DGGRID resolutions are not
                                        shipped with the package FRK. For this
                                        resolution please download and install the
                                        package dggrids from https://github.com/andrewzm/dggrids")
