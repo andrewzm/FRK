@@ -1,3 +1,18 @@
+# FRK: An R Software package for spatial and spatio-temporal prediction
+# with large datasets.
+# Copyright (c) 2017 University of Wollongong
+# Author: Andrew Zammit-Mangion, azm (at) uow.edu.au
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
 #' @title Construct SRE object, fit and predict
 #' @description The Spatial Random Effects (SRE) model is the central object in FRK. The function \code{FRK} provides a wrapper for the construction and estimation of the SRE object from data, using the functions \code{SRE} (the object constructor) and \code{SRE.fit} (for fitting it to the data). Please see \code{\link{SRE-class}} for more details on the SRE object's properties and methods.
 #' @param f \code{R} formula relating the dependent variable (or transformations thereof) to covariates
