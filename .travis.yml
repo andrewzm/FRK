@@ -1,6 +1,7 @@
 # Sample .travis.yml for R projects
 
 language: r
+group: deprecated-2017Q1
 warnings_are_errors: false
 sudo: required
 cache: packages
