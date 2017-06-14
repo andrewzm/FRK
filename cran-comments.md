@@ -1,3 +1,13 @@
+## v0.1.4
+* Robust basis function placement in 2D
+* Added offset parameter when constucting mini BAUs to avoid
+  underflow
+* Fixed problem of estimating length scale from one data point
+* Clarified copyright and license information in files
+
+## v0.1.3
+* Important added functionality for using package with only point data and point predictions, added on request.
+
 ## v0.1.2
 * Now code is heavily documented and manual has been made more precise
 * Made lik computation more efficient
