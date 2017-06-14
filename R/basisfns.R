@@ -7,7 +7,7 @@
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation; either version 2
 # of the License, or (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -319,8 +319,11 @@ auto_basis <- function(manifold = plane(),
             if(nrow(D) == 1) {                                      # if we only have one basis function
                 this_res_scales <-max(diff(xrange),diff(yrange))/2  # set the "base" scale parameter to span most of the range
             } else {
-                diag(D) <- Inf                                      # otherwise set the "base" scale parameter to be based
-                this_res_scales <- apply(D,1,min)*1.25              # on the distance to the nearest centroid
+                ## otherwise set the "base" scale parameter to be based
+                ## on the distance to the nearest centroid (if not on sphere)
+                diag(D) <- Inf
+                this_res_scales <- apply(D,1,min)*ifelse(is(m,"sphere"),1,1.25)
+
             }
 
             ## If we have more than one basis at this resolution (could be 0 because of pruning)
