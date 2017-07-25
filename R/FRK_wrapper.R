@@ -7,7 +7,7 @@
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation; either version 2
 # of the License, or (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -46,8 +46,8 @@ FRK <- function(f,                     # formula (compulsory)
     ## if there is a measurement error declared in all datasets then
     ## don't estimate it
     if(all(sapply(data,function(x) !is.null(x@data$std)))) {
-        print("std already supplied with data -- not estimating the measurement error.
-              If you wish to estimate measurement error then set the std field to NULL")
+        cat("std already supplied with data -- not estimating the measurement error.
+              If you wish to estimate measurement error then set the std field to NULL\n")
         est_error <- FALSE
     }
 
@@ -65,20 +65,20 @@ FRK <- function(f,                     # formula (compulsory)
     ## Now construct the BAUs around this dataset
     if(is.null(BAUs)) {
 
-        print("Constructing BAUs...")
+        cat("Constructing BAUs...\n")
 
         BAUs <- auto_BAUs(manifold = manifold, # Construct BAUs
                           data = data[[d]],    # Using the dataset with largest extent
                           ...)
         BAUs$fs <- 1                           #Default fine-scale variation at BAU level
     } else {
-        print("Assuming fine-scale variation is homoscedastic")
+        cat("Assuming fine-scale variation is homoscedastic\n")
         if(is.null(BAUs$fs)) BAUs$fs <- 1      # If user supplied BAUs without fs field
                                                # then add on the default and inform user
     }
 
     if(is.null(basis)) {
-        print("Generating basis functions...")
+        cat("Generating basis functions...\n")
         tot_data <- sum(sapply(data,length))         # Total number of data points available
         if(K_type == "unstructured") {               # If unstructured then limit the
             max_sp_basis <- min(tot_data^(0.5),2000) # amount of basis functions to be sqrt
@@ -140,8 +140,8 @@ FRK <- function(f,                     # formula (compulsory)
         G <- basis  # If user has provided basis functions, just use these
     }
 
-    print(paste0("Modelling using ",nbasis(G)," basis functions"))
-    print("Constructing SRE model...")
+    cat("Modelling using",nbasis(G),"basis functions\n")
+    cat("Constructing SRE model...\n")
 
     S <- SRE(f = f,                            # formula
              data = data,                      # list of datasets
@@ -154,7 +154,7 @@ FRK <- function(f,                     # formula (compulsory)
              K_type = K_type)                  # "block-exponential" or "unstructured"
 
     ## After constructing SRE model, fit it
-    print("Fitting SRE model...")
+    cat("Fitting SRE model...\n")
     S <- SRE.fit(SRE_model = S,       # SRE model
                  n_EM = n_EM,         # max. no. of EM iterations
                  tol = tol,           # tolerance at which EM is assumed to have converged

@@ -7,7 +7,7 @@
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation; either version 2
 # of the License, or (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -161,31 +161,9 @@ setGeneric("TensorP", function(Basis1,Basis2) standardGeneric("TensorP"))
 #' @export
 setGeneric("nres", function(b) standardGeneric("nres"))
 
-#' @title Basis-function data frame object
-#' @description Tools for retrieving and manipulating the data frame within the Basis objects. Use the assignment \code{data.frame()<-} with care; no checks are made to make sure the data frame conforms with the object. Only use if you know what you're doing.
-#' @param x the obect of class \code{Basis} we are assigning the new data to or retrieving data from
-#' @param value the new data being assigned to the Basis object
-#' @param name the field name to which values will be retrieved or assigned inside the Basis object's data frame
-#' @param ... unused
-#' @rdname Basis_data.frame
-#' @examples
-#' G <- local_basis()
-#' df <- data.frame(G)
-#' print(df$res)
-#' df$res <- 2
-#' data.frame(G) <- df
-#' @export
-Basis_as_data.frame <- setAs("Basis", "data.frame",
-                             function(from) as.data.frame.Basis(from))
-
-#' @rdname Basis_data.frame
-#' @export
-TensorP_Basis_as_data.frame <- setAs("TensorP_Basis", "data.frame",
-                                     function(from) as.data.frame.TensorP_Basis(from))
 
 #' @rdname Basis_data.frame
 setGeneric("data.frame<-", function(x, value) standardGeneric("data.frame<-"))
-
 
 #' @title Creates pixels around points
 #' @description Takes a SpatialPointsDataFrame and converts it into SpatialPolygonsDataFrame by constructing a tiny (within machine tolerance) BAU around each SpatialPoint.

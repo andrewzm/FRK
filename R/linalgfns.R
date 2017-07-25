@@ -7,7 +7,7 @@
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation; either version 2
 # of the License, or (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -43,7 +43,7 @@ cholPermute <- function(Q,method="amd")  {
   } else {
     ## Try to do the Cholesky decomposition with R (usually this is done just for testing purposes)
     e <-tryCatch({ symchol <- Cholesky(Q)},
-                 error= function(temp) {print("Cholesky failed, coercing to symmetric")},
+                 error= function(temp) {cat("Cholesky failed, coercing to symmetric\n")},
                  finally="Cholesky successful")
 
     ## If an error was returned try to symmetrise it first using forceSymmetric().
@@ -87,7 +87,7 @@ cholsolve <- function(Q,y,perm=F,cholQ = matrix(1,0,0),cholQp = matrix(1,0,0),P=
     if (dim(cholQ)[1] == 0) {                         # and the Cholesky is not already supplied
       e <-tryCatch({L <- t(chol(Q))},                 # try to do the Cholesky decomposition without permuting
                    error= function(temp) {            # possibly after attempting a forceSymmetric
-                       print("Cholesky failed, coercing to symmetric")},
+                       cat("Cholesky failed, coercing to symmetric\n")},
                    finally="Cholesky successful")
       if (class(e) == "character") {
         L <- t(chol(forceSymmetric(Q))) }

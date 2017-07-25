@@ -46,9 +46,10 @@ test_that("SRE 1D works",{
     grid_BAUs <- SRE.predict(S,obs_fs = FALSE)
     expect_is(grid_BAUs,"SpatialPixelsDataFrame")
 
-
-    ### summary works?
+    ### summary/print/show works
     expect_true({summary(S);TRUE})
+    expect_true({print(S);TRUE})
+    expect_true({show(S);TRUE})
 })
 
 test_that("SRE 2D plane works",{

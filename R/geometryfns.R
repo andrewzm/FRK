@@ -7,7 +7,7 @@
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation; either version 2
 # of the License, or (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -104,10 +104,10 @@ sphere <- function(radius=6371) {
 
 ## Constructor for surface of sphere
 setMethod("initialize",signature="sphere",function(.Object,radius=1,measure=gc_dist(R=radius)) {
-    .Object@type <- "sphere"    # set type
-    .Object@measure <- measure  # set measure
-    .Object@radius <- radius    # set radius of sphere
-    callNextMethod(.Object)})   # pass on to virtual manifold method
+    .Object@type <- "surface of sphere"    # set type
+    .Object@measure <- measure             # set measure
+    .Object@radius <- radius               # set radius of sphere
+    callNextMethod(.Object)})              # pass on to virtual manifold method
 
 #' @title Space-time sphere
 #' @description Initialisation of a 2-sphere (S2) with a temporal dimension
@@ -1042,9 +1042,19 @@ setMethod("BAUs_from_points",signature(obj = "SpatialPoints"),
 #' @aliases BAUs_from_points,ST-method
 setMethod("BAUs_from_points",signature(obj = "ST"),
           function(obj, offset = 1e-10) {
-             print("BAUs from points for space-time data not yet implemented. Please contact
-                   the package maintainer.")
+             cat("BAUs from points for space-time data not yet
+                  implemented. Please contact the package maintainer.\n")
           })
+
+## Print/Show manifold
+print.manifold <- function(x,...) {
+    cat("Type of manifold:",type(x),"\n")
+    if(grepl("sphere",type(x)))
+        cat("Radius of sphere:",x@radius,"\n")
+    cat("Dimension of manifold:",dimensions(x),"\n")
+    cat("Distance function:\n",deparse(x@measure@dist),"\n")
+}
+setMethod("show",signature(object="manifold"),function(object) print(object))
 
 
 ###########################################
@@ -1118,7 +1128,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
                   proj4string = CRS(proj4string(data_sp)))         # CRS of original data
 
               ## Report time taken to bin data
-              print(paste0("Binned data in ",timer[3]," seconds"))
+              cat("Binned data in",timer[3],"seconds\n")
 
               ## Return new matched data points
               new_sp_pts

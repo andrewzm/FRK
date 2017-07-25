@@ -7,7 +7,7 @@
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation; either version 2
 # of the License, or (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -112,7 +112,7 @@ SRE <- function(f,data,basis,BAUs,est_error=TRUE,average_in_BAU = TRUE,
 
     ## Normalise basis functions for the prior process to have constant variance. This was seen to pay dividends in
     ## LatticeKrig, however we only do it once initially
-    print("Normalising basis function evaluations at BAU level ...")
+    cat("Normalising basis function evaluations at BAU level ...\n")
     S0 <- eval_basis(basis,.polygons_to_points(BAUs))     # evaluate basis functions over BAU centroids
     xx <- sqrt(rowSums((S0) * S0))                        # Find the standard deviation (assuming unit basis function weight)
     xx <- xx + 1*(xx == 0)                                # In the rare case all basis functions evaluate to zero don't do anything
@@ -142,7 +142,7 @@ SRE <- function(f,data,basis,BAUs,est_error=TRUE,average_in_BAU = TRUE,
         }
 
         ## the same BAU (average_in_BAU == TRUE) or not (average_in_BAU == FALSE)
-        print("Binning data ...")
+        cat("Binning data ...\n")
         data_proc <- map_data_to_BAUs(data[[i]],       # data object
                                       BAUs,            # BAUs
                                       average_in_BAU = average_in_BAU)   # average in BAU?
@@ -289,47 +289,62 @@ SRE.predict <- function(SRE_model,obs_fs=FALSE,pred_polys = NULL,pred_time = NUL
     pred_locs
 }
 
+## Print/Show SRE
+print.SRE <- function(x,...) {
+    print_list <- list(
+        formula =  deparse(x@f),
+        ndatasets = length(x@data),
+        nbasis = x@basis@n,
+        basis_class = class(x@basis)[1],
+        nBAUs = length(x@BAUs),
+        nobs = length(x@Z),
+        mean_obsvar = mean(x@Ve@x),
+        fs_var = x@sigma2fshat,
+        dimC = deparse(dim(x@Cmat)),
+        dimS = deparse(dim(x@S)),
+        ncovars = ncol(x@X))
 
-setMethod("summary",signature(object="SRE"),
-          function(object,...) {
-              cat("SRE Object\n")
-              cat("==========\n")
-              cat("\n")
-              cat(paste0("Formula: ",deparse(object@f)))
-              cat("\n")
-              cat(paste0("Number of datasets: ",length(object@data)))
-              cat("\n")
-              cat(paste0("Number of basis functions: ",object@basis@n))
-              cat("\n")
-              cat(paste0("Class of basis functions: ",class(object@basis)[1]))
-              cat("\n")
-              cat(paste0("Number of BAUs [extract using object@BAUs]: ",length(object@BAUs)))
-              cat("\n")
-              cat(paste0("Number of observations [extract using object@Z]: ",length(object@Z)))
-              cat("\n")
-              cat(paste0("Mean obs. variance at BAU level [extract using object@Ve]: ",mean(object@Ve@x)))
-              cat("\n")
-              cat(paste0("Fine-scale variance proportionality constant [extract using object@sigma2fshat]: ",object@sigma2fshat))
-              cat("\n")
-              cat(paste0("Dimensions of C in Z = C*Y + e [extract using object@Cmat]: ",deparse(dim(object@Cmat))))
-              cat("\n")
-              cat(paste0("Dimensions of S in Y = X*alpha + S*eta + delta [extract using object@S]: ",deparse(dim(object@S))))
-              cat("\n")
-              cat(paste0("Number of covariates: ",ncol(object@X)))
-              cat("\n\n")
-              cat(paste0("Summary of E(eta | Z) [extract using object@mu_eta]: \n"))
-              cat("\n")
-              print(summary(object@mu_eta[,1]))
-              cat("\n\n")
-              cat(paste0("Summary of Var(eta | Z) [extract using object@S_eta]: \n"))
-              print(summary(diag(object@S_eta)))
-              cat("\n\n")
-              cat(paste0("Summary of Var(eta) [extract using object@Khat]: \n"))
-              print(summary(diag(object@Khat)))
-              cat("\n\n")
-              cat(paste0("Regression coefficients [extract using object@alpha]: \n"))
-              cat(deparse(as.vector(object@alphahat)))
-          })
+        cat("Formula:",print_list$formula,"\n")
+        cat("Number of datasets:",print_list$ndatasets,"\n")
+        cat("Number of basis functions:",print_list$nbasis,"\n")
+        cat("Class of basis functions:",print_list$basis_class,"\n")
+        cat("Number of BAUs [extract using object@BAUs]: ",print_list$nBAUs,"\n")
+        cat("Number of observations [extract using object@Z]: ",print_list$nobs,"\n")
+        cat("Mean obs. variance at BAU level [extract using object@Ve]:",print_list$mean_obsvar,"\n")
+        cat("Fine-scale variance proportionality constant [extract using object@sigma2fshat]:",print_list$fs_var,"\n")
+        cat("Dimensions of C in Z = C*Y + e [extract using object@Cmat]: ",print_list$dimC,"\n")
+        cat("Dimensions of S in Y = X*alpha + S*eta + delta [extract using object@S]: ",print_list$dimS,"\n")
+        cat("Number of covariates:",print_list$ncovars,"\n\n")
+}
+setMethod("show",signature(object="SRE"),function(object) print(object))
+
+## Summary SRE
+summary.SRE <- function(object,...) {
+             summ_list <- list(
+              summ_Kdiag = summary(diag(object@Khat)),
+              summ_mueta = summary(object@mu_eta[,1]),
+              summ_vareta = summary(diag(object@S_eta)),
+              reg_coeff = deparse(as.vector(object@alphahat)))
+              class(summ_list) <- "summary.SRE"
+              summ_list
+}
+setMethod("summary",signature(object="SRE"),summary.SRE)
+
+## Print summary of SRE
+print.summary.SRE <- function(x, ...) {
+    cat("Summary of Var(eta) [extract using object@Khat]: \n")
+    print(x$summ_Kdiag)
+    cat("\n")
+    cat("Summary of E(eta | Z) [extract using object@mu_eta]: \n")
+    print(x$summ_mueta)
+    cat("\n")
+    cat("Summary of Var(eta | Z) [extract using object@S_eta]: \n")
+    print(x$summ_vareta)
+    cat("\n")
+    cat("Regression coefficients [extract using object@alpha]:",x$reg_coeff,"\n")
+    cat("For object properties use show().\n")
+    invisible(x)
+}
 
 
 ##################################
@@ -356,7 +371,7 @@ setMethod("summary",signature(object="SRE"),
                 utils::setTxtProgressBar(pb, i)                  # update progress bar
             if(i>1)                                              # If we're not on first iteration
                 if(abs(lk[i] - lk[i-1]) < tol) {                 # Compute change in log-lik
-                    print("Minimum tolerance reached")           # and stop if less than tol
+                    cat("Minimum tolerance reached\n")           # and stop if less than tol
                     break
                 }
     }
@@ -374,7 +389,7 @@ setMethod("summary",signature(object="SRE"),
              field is indeed that smooth, but unlikely).")
 
     ## If we have reached max. iterations, tell the user
-    if(i == n_EM) print("Maximum EM iterations reached")
+    if(i == n_EM) cat("Maximum EM iterations reached\n")
 
     ## If user wants to see the log-lik vs EM iteration plot, plot it
     if(print_lik & !is.na(tol)) {
@@ -1228,7 +1243,7 @@ setMethod("summary",signature(object="SRE"),
 .est_obs_error <- function(sp_pts,variogram.formula,vgm_model = NULL,BAU_width = NULL) {
 
     ## Notify user (even if not verbose == TRUE)
-    print("... Fitting variogram for estimating measurement error")
+    cat("... Fitting variogram for estimating measurement error\n")
 
     ## Basic checks
     if(!is(variogram.formula,"formula"))
@@ -1248,7 +1263,7 @@ setMethod("summary",signature(object="SRE"),
     ## If we have many points (say > 50000) then subsample
     if(length(sp_pts) > 50000) {
         if(opts_FRK$get("verbose") > 0)
-            print("Selecting 50000 data points at random for estimating the measurement error variance")
+            cat("Selecting 50000 data points at random for estimating the measurement error variance\n")
         sp_pts_sub <- sp_pts[sample(1:length(sp_pts),50000),]
     } else sp_pts_sub <- sp_pts
 
@@ -1348,7 +1363,7 @@ setMethod("summary",signature(object="SRE"),
                 in the data object if known.")
         }
     }
-    print(paste0("sigma2e estimate = ",vgm.fit$psill[1]))
+    cat("sigma2e estimate = ",vgm.fit$psill[1],"\n")
 
     ## Return the sqrt of the psill as the measurement error
     sp_pts$std <- sqrt(vgm.fit$psill[1])

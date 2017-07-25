@@ -9,6 +9,17 @@ test_that("dimensions work", {
     expect_equal(dimensions(real_line()), 1L)
     expect_equal(dimensions(STplane()), 3L)
     expect_equal(dimensions(STsphere()), 3L)
+
+    expect_true({print(sphere());TRUE})
+    expect_true({show(sphere());TRUE})
+    expect_true({print(plane());TRUE})
+    expect_true({show(plane());TRUE})
+    expect_true({print(real_line());TRUE})
+    expect_true({show(real_line());TRUE})
+    expect_true({print(STplane());TRUE})
+    expect_true({show(STplane());TRUE})
+    expect_true({print(STplane());TRUE})
+    expect_true({show(STplane());TRUE})
 })
 
 test_that("sphere distance works", {

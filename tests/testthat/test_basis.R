@@ -27,12 +27,19 @@ test_that("basis work with all manifolds", {
     expect_is(G3(s=matrix(0,1,1)),"matrix")
 })
 
+
 mu <- matrix(-90 + 180*runif(100),50,2)
 mu[,1] <- mu[,1]*2
 std <- rep(500,50)
 G_basis <- local_basis(manifold = sphere(),loc = mu,scale=std,type="Gaussian")
 test_that("we can show basis locations on sphere", {
     expect_true({show_basis(G_basis); TRUE})
+})
+
+test_that("summary/print/show works", {
+    expect_true({summary(G_basis);TRUE})
+    expect_true({print(G_basis);TRUE})
+    expect_true({show(G_basis);TRUE})
 })
 
 mu <- matrix(rnorm(10),5,2)
@@ -106,6 +113,9 @@ test_that("can get ST basis using tensor product", {
     expect_is(G_spacetime@Basis2,"Basis")
     expect_equal(nbasis(G_spacetime),30)
 
+   expect_true({summary(G_spacetime);TRUE})
+   expect_true({print(G_spacetime);TRUE})
+   expect_true({show(G_spacetime);TRUE})
 })
 
 

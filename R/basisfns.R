@@ -166,7 +166,7 @@ auto_basis <- function(manifold = plane(),
     ## we need to add resolutions iteratively and stop when exceed the maximum
     ## of basis functions
     if(!is.null(max_basis)) {
-        print("...Automatically choosing number of functions...")
+        cat("...Automatically choosing number of functions...\n")
         tot_basis <- 0                  # start of with 0 basis functions
         tot_data <- length(data)        # number of data points
         nres <- 1                       # start off with one resolution (we have a minimum of one resolution)
@@ -372,7 +372,7 @@ auto_basis <- function(manifold = plane(),
 
         ## Print the number of basis functions at each resolution if verbose
         if(verbose)
-            print(paste0("Number of basis at resolution ",i," = ",nrow(this_res_locs)))
+            cat("Number of basis at resolution",i,"=",nrow(this_res_locs))
 
         ## Now that we actually have the centroids and scales we can construct the basis functions for this
         ## resolution. If all the basis functions have been removed at this resolution don't do anything
@@ -492,7 +492,7 @@ setMethod("eval_basis",signature(basis="Basis",s="SpatialPolygonsDataFrame"),
           function(basis,s){
 
     ## Inform user this might take a while
-    print("Averaging over polygons...")
+    cat("Averaging over polygons...\n")
 
 
     ## If we have a parallel backend use parLapply
@@ -656,15 +656,30 @@ setMethod( "data.frame<-", "Basis", # Allows easy assignment of data.frame to Ba
 setMethod( "data.frame<-", "TensorP_Basis", # Allows easy assignment of data.frame to TensorPbasis
            function(x, value){x@df <- value; x})
 
+#' @title Basis-function data frame object
+#' @description Tools for retrieving and manipulating the data frame within the Basis objects. Use the assignment \code{data.frame()<-} with care; no checks are made to make sure the data frame conforms with the object. Only use if you know what you're doing.
+#' @param x the obect of class \code{Basis} we are assigning the new data to or retrieving data from
+#' @param value the new data being assigned to the Basis object
+#' @param name the field name to which values will be retrieved or assigned inside the Basis object's data frame
+#' @param ... unused
 #' @rdname Basis_data.frame
+#' @examples
+#' G <- local_basis()
+#' df <- data.frame(G)
+#' print(df$res)
+#' df$res <- 2
+#' data.frame(G) <- df
 #' @export
 as.data.frame.Basis = function(x,...) # Used to convert basis into its summary data frame
     x@df
+setAs("Basis", "data.frame", function(from) as.data.frame.Basis(from))
 
 #' @rdname Basis_data.frame
 #' @export
 as.data.frame.TensorP_Basis = function(x,...) # Used to convert basis into its summary data frame
     x@df
+setAs("TensorP_Basis", "data.frame",
+      function(from) as.data.frame.TensorP_Basis(from))
 
 #' @rdname nbasis
 #' @aliases nbasis,Basis_obj-method
@@ -715,6 +730,44 @@ setMethod("count_res",signature="TensorP_Basis", # Returns count by resolution f
     c_all
 })
 
+## Print/Show basis functions
+print.Basis <- function(x,...) {
+    cat("Number of basis functions:",nbasis(x),"\n")
+    cat("Number of resolutions:",nres(x),"\n")
+    cat("Type of manifold:",type(manifold(x)),"\n")
+    cat("Dimension of manifold:",dimensions(manifold(x)),"\n")
+    cat("First basis function:\n",deparse(x@fn[[1]]),"\n")
+}
+setMethod("show",signature(object="Basis"),function(object) print(object))
+
+## Print/Show Tensor product basis functions
+print.TensorP_Basis <- function(x,...) {
+    cat("First set of basis functions\n")
+    cat("----------------------------\n")
+    print(x@Basis1)
+    cat("\n\n")
+    cat("Second set of basis functions\n")
+    cat("-----------------------------\n")
+    print(x@Basis2)
+    cat("\n\nTotal number of basis functions:",nbasis(x))
+}
+setMethod("show",signature(object="TensorP_Basis"),function(object) print(object))
+
+
+## Summary Basis
+summary.Basis <- function(object,...) {
+    summ <- summary(as.data.frame(object))
+    class(summ) <- "summary.Basis"
+    summ
+}
+setMethod("summary",signature(object="Basis"),summary.Basis)
+
+print.summary.Basis <- function(x,...) {
+    cat("Summary of Basis data frame:\n")
+    print(as.table(x))
+    cat("For object properties use show().\n")
+    invisible(x)
+}
 
 ######################################################
 ###########  FUNCTIONS NOT EXPORTED ##################
