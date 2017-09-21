@@ -445,7 +445,7 @@ setMethod("auto_BAU",signature(manifold="real_line"),
               coords <- coordinates(d)       # coordinates of data
 
               if(is.null(xlims))               # if x limits are not specified
-                xrange <- range(coords[,1])    # range of coordinates
+                  xrange <- range(coords[,1])    # range of coordinates
               else xrange <- xlims             # else just allocate
 
               drangex <- diff(xrange)        # range of data
@@ -468,7 +468,7 @@ setMethod("auto_BAU",signature(manifold="real_line"),
               ## Create SpatialPixelsDataFrame
               xy_df <- SpatialPixelsDataFrame(xy,
                                               data.frame(coordinates(xy),
-                                                              row.names = row.names(xy)))
+                                                         row.names = row.names(xy)))
               return(xy_df)
           })
 
@@ -545,10 +545,10 @@ setMethod("auto_BAU",signature(manifold="plane"),
 
               ## To arrange BAUs in a nonconvex hull we need INLA to find the domain boundary
               if(nonconvex_hull)
-               if(!requireNamespace("INLA"))
-                   stop("For creating a non-convex hull INLA needs to be installed. Please install it using
-                        install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\"). Alternatively
-                        please set nonconvex_hull=FALSE to use a simple convex hull.")
+                  if(!requireNamespace("INLA"))
+                      stop("For creating a non-convex hull INLA needs to be installed. Please install it using
+                           install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\"). Alternatively
+                           please set nonconvex_hull=FALSE to use a simple convex hull.")
 
               if(is.null(d))
                   stop("Data must be supplied when generating BAUs on a plane")
@@ -568,11 +568,11 @@ setMethod("auto_BAU",signature(manifold="plane"),
               coord_names <- coordnames(d) # extract coordinate names
 
               if(is.null(xlims))              # if xlims not specified
-                 xrange <- range(coords[,1])  # find x-range of coordinates
+                  xrange <- range(coords[,1])  # find x-range of coordinates
               else xrange <- xlims            # else just allocate
 
               if(is.null(ylims))             # if ylims not specified
-                yrange <- range(coords[,2])  # y-range of coordinates
+                  yrange <- range(coords[,2])  # y-range of coordinates
               else yrange = ylims            # else just allocate
 
               ## Increase convex until domain is contiguous and smooth
@@ -668,7 +668,7 @@ setMethod("auto_BAU",signature(manifold="plane"),
 
                   ## Now take the union of all the indices but only if xlims and ylims were not specified
                   if(is.null(xlims) & is.null(ylims))
-                    xy <- xy[union(union(idx1,idx2),idx3),]
+                      xy <- xy[union(union(idx1,idx2),idx3),]
 
                   ## Add UIDs
                   row.names(xy) <- .UIDs(xy)
@@ -676,9 +676,9 @@ setMethod("auto_BAU",signature(manifold="plane"),
                   ## Finally we can form our SpatialPixelsDataFrame of all the pixels
                   ## we have left
                   xy_df <- SpatialPixelsDataFrame(xy,
-                                                    data.frame(
-                                                        coordinates(xy),
-                                                        row.names = row.names(xy)))
+                                                  data.frame(
+                                                      coordinates(xy),
+                                                      row.names = row.names(xy)))
                   ## Return the pixels
                   return(xy_df)
               }
@@ -699,7 +699,7 @@ setMethod("auto_BAU",signature(manifold="sphere"),
                   ## When modelling on the sphere, the CRS needs to be CRS("+proj=longlat +ellps=sphere")
                   if(!identical(prj,CRS("+proj=longlat +ellps=sphere")))
                       stop("If modelling on the sphere please set the CRS of
-                            the data to CRS('+proj=longlat +ellps=sphere)")
+                           the data to CRS('+proj=longlat +ellps=sphere)")
 
                   ## When modelling on the sphere, the coordnames need to be (lon,lat)
                   if(!"lat" %in% names(coords) & "lon" %in% names(coords))
@@ -818,7 +818,7 @@ setMethod("auto_BAU",signature(manifold="sphere"),
                   ## If we have a wide longitude extent then just filter by latitude
                   if(diff(range(coords$lon)) > 270)
                       sphere_BAUs$in_chull <- ifelse((sphere_BAUs$lat < max(conv_hull_coords[,"lat"])) &
-                                                     (sphere_BAUs$lat > min(conv_hull_coords[,"lat"])),
+                                                         (sphere_BAUs$lat > min(conv_hull_coords[,"lat"])),
                                                      1,NA)
 
                   ## Otherwise filter by convex hull
@@ -834,7 +834,7 @@ setMethod("auto_BAU",signature(manifold="sphere"),
               ## Return the final BAUs
               sphere_BAUs
 
-          })
+              })
 
 
 ## Constructing BAUs on the surface of the sphere x time
@@ -900,7 +900,7 @@ setMethod("auto_BAU",signature(manifold = c("STmanifold")),
               ## Return the ST BAUs
               return(STBAUs)
 
-          })
+              })
 
 #' @title Convert data frame to SpatialPolygons
 #' @description Convert data frame to SpatialPolygons object.
@@ -1004,45 +1004,45 @@ SpatialPolygonsDataFrame_to_df <- function(sp_polys,vars = names(sp_polys)) {
 setMethod("BAUs_from_points",signature(obj = "SpatialPoints"),
           function(obj, offset = 1e-10) {
 
-    sp_obj_pols <- NULL                 # Initialise polygons
-    cnames <- coordnames(obj)           # coordinate names
-    coords <- coordinates(obj)          # coordinates of SpatialPoints
+              sp_obj_pols <- NULL                 # Initialise polygons
+              cnames <- coordnames(obj)           # coordinate names
+              coords <- coordinates(obj)          # coordinates of SpatialPoints
 
-    if(any(duplicated(coords)))
-        stop("Please remove any duplicated data locations from the object before proceeding.")
+              if(any(duplicated(coords)))
+                  stop("Please remove any duplicated data locations from the object before proceeding.")
 
-    ## Generate the Bottom Left, Bottom Right, Top Right, and Top Left, corners of the BAUs
-    BL <- data.frame(X1 = coords[,1] - offset, X2 = coords[,2] - offset, id = 1:length(obj))
-    BR <- data.frame(X1 = coords[,1] + offset, X2 = coords[,2] - offset, id = 1:length(obj))
-    TR <- data.frame(X1 = coords[,1] + offset, X2 = coords[,2] + offset, id = 1:length(obj))
-    TL <- data.frame(X1 = coords[,1] - offset, X2 = coords[,2] + offset, id = 1:length(obj))
+              ## Generate the Bottom Left, Bottom Right, Top Right, and Top Left, corners of the BAUs
+              BL <- data.frame(X1 = coords[,1] - offset, X2 = coords[,2] - offset, id = 1:length(obj))
+              BR <- data.frame(X1 = coords[,1] + offset, X2 = coords[,2] - offset, id = 1:length(obj))
+              TR <- data.frame(X1 = coords[,1] + offset, X2 = coords[,2] + offset, id = 1:length(obj))
+              TL <- data.frame(X1 = coords[,1] - offset, X2 = coords[,2] + offset, id = 1:length(obj))
 
-    ## Interleave them appropriate so they form polygon paths and set names
-    sp_obj_pols <- .interleave(BL,BR,TR,TL)
-    names(sp_obj_pols) <- c(cnames,"id")
+              ## Interleave them appropriate so they form polygon paths and set names
+              sp_obj_pols <- .interleave(BL,BR,TR,TL)
+              names(sp_obj_pols) <- c(cnames,"id")
 
-    ## Now create polygons from the above paths, and keep same projection
-    sp_obj_pols <- df_to_SpatialPolygons(sp_obj_pols,coords=cnames,keys="id",
-                                         proj = CRS(proj4string(obj)))
+              ## Now create polygons from the above paths, and keep same projection
+              sp_obj_pols <- df_to_SpatialPolygons(sp_obj_pols,coords=cnames,keys="id",
+                                                   proj = CRS(proj4string(obj)))
 
-    ## We assign the centroid of the BAU to the data object
-    df_data <- as.data.frame(coords)
+              ## We assign the centroid of the BAU to the data object
+              df_data <- as.data.frame(coords)
 
-    ## If data points had other variables, add them aswell
-    if(is(obj,"SpatialPointsDataFrame"))
-        df_data <- cbind(df_data,obj@data)
+              ## If data points had other variables, add them aswell
+              if(is(obj,"SpatialPointsDataFrame"))
+                  df_data <- cbind(df_data,obj@data)
 
-    ## Ensure the row names are the same and construct the SpatialPolygonsDataFrame BAUs
-    row.names(df_data) <- row.names(sp_obj_pols)
-    sp_obj_pols <- SpatialPolygonsDataFrame(sp_obj_pols,data = df_data)
-})
+              ## Ensure the row names are the same and construct the SpatialPolygonsDataFrame BAUs
+              row.names(df_data) <- row.names(sp_obj_pols)
+              sp_obj_pols <- SpatialPolygonsDataFrame(sp_obj_pols,data = df_data)
+          })
 
 ## Create very small square polygon BAUs around SpatialPoints
 #' @rdname BAUs_from_points
 #' @aliases BAUs_from_points,ST-method
 setMethod("BAUs_from_points",signature(obj = "ST"),
           function(obj, offset = 1e-10) {
-             cat("BAUs from points for space-time data not yet
+              cat("BAUs from points for space-time data not yet
                   implemented. Please contact the package maintainer.\n")
           })
 
@@ -1102,8 +1102,8 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
                       data_sp <- data_sp[-ii,]
                       data_over_sp <- data_over_sp[-ii,]
                       warning("Removing data points that do not fall into any BAUs.
-                                  If you have simulated data, please ensure no simulated data fall on a
-                                  BAU boundary as these classify as not belonging to any BAU.")
+                              If you have simulated data, please ensure no simulated data fall on a
+                              BAU boundary as these classify as not belonging to any BAU.")
                   }
 
                   ## We can have multiple data points falling the same BAU. If we wish to
@@ -1117,7 +1117,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
                       summarise_all(.safe_mean) %>%             # apply safe mean to each column BAU
                       as.data.frame()                                     # convert to data frame
                   else Data_in_BAU <- data_over_sp                        # otherwise don't average
-              })                                                          # end timer
+                  })                                                          # end timer
 
 
               ## We now create a new SpatialPointsDataFrame but this time the data
@@ -1132,7 +1132,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
 
               ## Return new matched data points
               new_sp_pts
-          })
+              })
 
 ## Map the data to the BAUs. This is done after BAU construction
 ## data_sp: data (SpatialPolygons object)
@@ -1150,10 +1150,10 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
               ## Inform user of this
               if(!is(sp_pols,"SpatialPixels"))
                   message("BAUs are Polygons and not Pixels. Currently BAU of identical
-                           area are being assumed when computing the incidence matrix
-                           from observations having a large support.
-                           Handling of different areas will be catered for in a future revision.
-                           Please report this issue to the package maintainer.")
+                          area are being assumed when computing the incidence matrix
+                          from observations having a large support.
+                          Handling of different areas will be catered for in a future revision.
+                          Please report this issue to the package maintainer.")
 
               ## Attach the ID of the data polygon to the data frame
               data_sp$id <- row.names(data_sp)
@@ -1251,9 +1251,9 @@ setMethod("map_data_to_BAUs",signature(data_sp="ST"),
                                           map_data_to_BAUs(data_spatial,
                                                            BAU_spatial,
                                                            average_in_BAU = average_in_BAU)
-                                          } else {
-                                              NULL
-                                          }})
+                                      } else {
+                                          NULL
+                                      }})
 
 
               ## Next we are going to construct our data frame which will be part of the return ST object
@@ -1383,22 +1383,22 @@ setMethod("BuildC",signature(data="STFDF"),
               ## Note that we have not catered for change of support in time. This is
               ## marked for future work
               for(k in seq_along(.time.ST(BAUs))) {
-                 ## Find which time
-                   overlap_time <- which(as.POSIXct(.time.ST(data)) == # Find which data time matches
+                  ## Find which time
+                  overlap_time <- which(as.POSIXct(.time.ST(data)) == # Find which data time matches
                                             (.time.ST(BAUs)[k]))       # the BAU time. This will always
-                                                                       # work because we matched BAUs
+                  # work because we matched BAUs
 
-                   ## If data is covering more than one time point throw error (currently we do not cater)
-                   ## for temporal change of support, and all data is assumed to occupy just one temporal BAU
-                   if(!length(overlap_time) == 1L)
+                  ## If data is covering more than one time point throw error (currently we do not cater)
+                  ## for temporal change of support, and all data is assumed to occupy just one temporal BAU
+                  if(!length(overlap_time) == 1L)
                       stop("Something is wrong in binning polygon data into BAUs.
                            Note that currently we don't support temporal change of support.")
 
-                   t_idx <- as.numeric(BAUs@time[k])            # find the appropriate time index
-                   j_idx <- c(j_idx, (t_idx-1)*nrow(BAUs) + j)  # find the appropriate column indices and append
-                   i_idx <- c(i_idx, count*nrow(data) + i)      # row indices are simply shifted by
-                                                                # the amount of spatial locations in the data
-                   count <- count + 1                           # increment count
+                  t_idx <- as.numeric(BAUs@time[k])            # find the appropriate time index
+                  j_idx <- c(j_idx, (t_idx-1)*nrow(BAUs) + j)  # find the appropriate column indices and append
+                  i_idx <- c(i_idx, count*nrow(data) + i)      # row indices are simply shifted by
+                  # the amount of spatial locations in the data
+                  count <- count + 1                           # increment count
               }
               list(i_idx=i_idx,j_idx=j_idx)                     # return the (i,j) indices of nonzeros
           })
@@ -1411,7 +1411,7 @@ setMethod("BuildC",signature(data="STFDF"),
     } else {                                 # Or in parallel
 
         if(is.null(batch_size))              # if batch size not set, set such that
-                                             # we get equal load balance
+            # we get equal load balance
             batch_size <- ceil(length(sp1) / opts_FRK$get("parallel"))
 
         n1 <- length(sp1) # length of first object
@@ -1445,27 +1445,27 @@ setMethod("BuildC",signature(data="STFDF"),
 
 ## Compute the great circle distance
 dist_sphere <- function (x1, x2 = NULL, R = NULL)
-    {
-            ## If R is null set to radius of Earth
-            if (is.null(R)) R <- 6378.137
+{
+    ## If R is null set to radius of Earth
+    if (is.null(R)) R <- 6378.137
 
-            ## If x2 is NULL set to x1
-            if(is.null(x2)) x2 <- x1
+    ## If x2 is NULL set to x1
+    if(is.null(x2)) x2 <- x1
 
-            ## Convert lon/lat to radians
-            x1 <- x1 * pi/180
-            x2 <- x2 * pi/180
+    ## Convert lon/lat to radians
+    x1 <- x1 * pi/180
+    x2 <- x2 * pi/180
 
-            # Formula from https://en.wikipedia.org/wiki/Great-circle_distance
-            # d = r.acos(n1.n2) where n1 and n2 are the normals to the ellipsoid at the two positions
-            n1 <- cbind(cos(x1[, 2]) * cos(x1[, 1]), cos(x1[, 2]) * sin(x1[, 1]), sin(x1[, 2]))
-            n2 <- cbind(cos(x2[, 2]) * cos(x2[, 1]), cos(x2[, 2]) * sin(x2[, 1]), sin(x2[, 2]))
-            delta <- sigma <- tcrossprod(n1,n2)
+    # Formula from https://en.wikipedia.org/wiki/Great-circle_distance
+    # d = r.acos(n1.n2) where n1 and n2 are the normals to the ellipsoid at the two positions
+    n1 <- cbind(cos(x1[, 2]) * cos(x1[, 1]), cos(x1[, 2]) * sin(x1[, 1]), sin(x1[, 2]))
+    n2 <- cbind(cos(x2[, 2]) * cos(x2[, 1]), cos(x2[, 2]) * sin(x2[, 1]), sin(x2[, 2]))
+    delta <- sigma <- tcrossprod(n1,n2)
 
-            ## Return gcdist
-            return(R * acos(ifelse(abs(delta <- sigma) > 1,  # Clamp to one
-                                   sign(delta <- sigma),
-                                   delta <- sigma)))
+    ## Return gcdist
+    return(R * acos(ifelse(abs(delta <- sigma) > 1,  # Clamp to one
+                           sign(delta <- sigma),
+                           delta <- sigma)))
 
 }
 
@@ -1484,9 +1484,9 @@ load_dggrids <- function (res = 3L){
     } else {
         if(!requireNamespace("dggrids")) {
             stop("Such fine DGGRID resolutions are not
-                                       shipped with the package FRK. For this
-                                       resolution please download and install the
-                                       package dggrids from https://github.com/andrewzm/dggrids")
+                 shipped with the package FRK. For this
+                 resolution please download and install the
+                 package dggrids from https://github.com/andrewzm/dggrids")
         } else {
             data(isea3h,envir=environment(),package = "dggrids") # load ISEA3h from dggrids
         }
@@ -1494,7 +1494,7 @@ load_dggrids <- function (res = 3L){
 
     ## Return the ISEA3h data
     return(isea3h)
-}
+    }
 
 ## Extracts important information from the data based on the formula
 .extract.from.formula <- function (formula, data)
@@ -1590,8 +1590,8 @@ process_isea3h <- function(isea3h,resl) {
     new_polys <- as.data.frame(new_polys)
 
     centroids <- new_polys %>%
-                 group_by(id) %>%
-                 summarise(lon=mean(lon),lat=mean(lat),res=res[1],centroid=1,probpoly=0)
+        group_by(id) %>%
+        summarise(lon=mean(lon),lat=mean(lat),res=res[1],centroid=1,probpoly=0)
     new_polys <- rbind(new_polys,centroids)
 
     new_polys$lon <- new_polys$lon - 360*(new_polys$lon >= 180)
@@ -1654,7 +1654,7 @@ process_isea3h <- function(isea3h,resl) {
     if (is(data,"Spatial")) {
         cellsize                           # if there's no time we're done
     } else {
-       c(cellsize,1)                       # otherwise add a cellsize of 1 time unit
+        c(cellsize,1)                       # otherwise add a cellsize of 1 time unit
     }
 }
 
@@ -1693,7 +1693,7 @@ process_isea3h <- function(isea3h,resl) {
     ## If object is STFDF
     if(is(polys,"STFDF")) {
         if(!("t" %in% names(polys)))
-        as.matrix(cbind(coordinates(polys),polys@data$t)) # return matrix in the form [x,y,t] if t is present
+            as.matrix(cbind(coordinates(polys),polys@data$t)) # return matrix in the form [x,y,t] if t is present
     } else {
         as.matrix(coordinates(polys))                     # return matrix in the form [x,y]
     }
@@ -1740,8 +1740,8 @@ process_isea3h <- function(isea3h,resl) {
 
 ## Takes a spatial object and finds UIDs for it
 .UIDs <- function(x) {
-  n <- length(x)
-  sapply(rnorm(n),function(x) digest::digest(x,algo="crc32"))
+    n <- length(x)
+    sapply(rnorm(n),function(x) digest::digest(x,algo="crc32"))
 }
 
 ## Computes the mean of a vector x if x is numeric or logical, otherwise just returns the first element
@@ -1755,15 +1755,15 @@ process_isea3h <- function(isea3h,resl) {
 
 ## Takes a formula including covariates, and returns a formula with only the intercept term
 .formula_no_covars <- function(f) {
-   labs <- all.names(f)                                      # extract all sub-strings in formula
-   dep_var <- all.vars(f)[1]                                 # extract dep. variable
-   idx <- which(labs == dep_var)                             # first char is ~, second is the dep var
-   if(idx > 2)  {                                            # if we have a transformation of dep var
-       LHS <- paste0(paste0(labs[2:idx],collapse = "("),     # concatenate all transfrmations
-                     paste0(rep(")",idx-2,collapse=""),      # and close the brackets
-                            collapse=""))
-   } else { LHS <- dep_var }                                 # otherwise it's just the dep var
-   newf <- formula(paste0(LHS,"~1"))                         # now return formula without covariates
+    labs <- all.names(f)                                      # extract all sub-strings in formula
+    dep_var <- all.vars(f)[1]                                 # extract dep. variable
+    idx <- which(labs == dep_var)                             # first char is ~, second is the dep var
+    if(idx > 2)  {                                            # if we have a transformation of dep var
+        LHS <- paste0(paste0(labs[2:idx],collapse = "("),     # concatenate all transfrmations
+                      paste0(rep(")",idx-2,collapse=""),      # and close the brackets
+                             collapse=""))
+    } else { LHS <- dep_var }                                 # otherwise it's just the dep var
+    newf <- formula(paste0(LHS,"~1"))                         # now return formula without covariates
 }
 
 ## Interleave data frames

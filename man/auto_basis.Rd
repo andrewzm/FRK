@@ -6,7 +6,9 @@
 \usage{
 auto_basis(manifold = plane(), data, regular = 1, nres = 3, prune = 0,
   max_basis = NULL, subsamp = 10000, type = c("bisquare", "Gaussian",
-  "exp", "Matern32"), isea3h_lo = 2, bndary = NULL, verbose = 0L, ...)
+  "exp", "Matern32"), isea3h_lo = 2, bndary = NULL,
+  scale_aperture = ifelse(is(manifold, "sphere"), 1, 1.25), verbose = 0L,
+  ...)
 }
 \arguments{
 \item{manifold}{object of class \code{manifold}, for example, \code{sphere} or \code{plane}}
@@ -28,6 +30,8 @@ auto_basis(manifold = plane(), data, regular = 1, nres = 3, prune = 0,
 \item{isea3h_lo}{if \code{manifold = sphere()}, this argument dictates which ISEA3H resolution is the coarsest one that should be used for the first resolution}
 
 \item{bndary}{a \code{matrix} containing points containing the boundary. If \code{regular == 0} this can be used to define a boundary in which irregularly-spaced basis functions are placed}
+
+\item{scale_aperture}{the aperture (in the case of the bisquare, but similar interpretation for other basis) width of the basis function is the minimum distance between all the basis function centroids multiplied by \code{scale_aperture}. Typically this ranges between 1 and 1.5 and is defaulted to 1 on the sphere and 1.25 on the other manifolds.}
 
 \item{verbose}{a logical variable indicating whether to output a summary of the basis functions created or not}
 

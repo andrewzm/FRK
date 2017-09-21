@@ -7,7 +7,7 @@
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation; either version 2
 # of the License, or (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -65,21 +65,21 @@ setMethod("show_basis",signature(basis = "Basis"),  # GRBF basis with mean offse
 
               ## If we are on the real line
               if(is(manifold(basis),"real_line")) {
-                 s1min <- min(basis@df$loc1)  - max(basis@df$scale)*3  # suitable minimum of s
-                 s1max <- max(basis@df$loc1)  + max(basis@df$scale)*3  # suitable maximum of s
-                 s <- matrix(seq(s1min,s1max,length=1000))             # create s-axis
-                 for (i in 1:basis@n) {                                # for each basis function
-                     S <- basis@fn[[i]](s)                             # evaluate fuction over s-axis
-                     df <- data.frame(s=as.numeric(s),                 # create data frame with
-                                      y = as.numeric(S),               # basis function
-                                      res=basis@df$res[i])
+                  s1min <- min(basis@df$loc1)  - max(basis@df$scale)*3  # suitable minimum of s
+                  s1max <- max(basis@df$loc1)  + max(basis@df$scale)*3  # suitable maximum of s
+                  s <- matrix(seq(s1min,s1max,length=1000))             # create s-axis
+                  for (i in 1:basis@n) {                                # for each basis function
+                      S <- basis@fn[[i]](s)                             # evaluate fuction over s-axis
+                      df <- data.frame(s=as.numeric(s),                 # create data frame with
+                                       y = as.numeric(S),               # basis function
+                                       res=basis@df$res[i])
 
-                     ## Draw gg object
-                     g <- g + geom_line(data=df,aes(x=s,y=y,col=as.factor(res))) +
-                         labs(colour="res")
-                 }
+                      ## Draw gg object
+                      g <- g + geom_line(data=df,aes(x=s,y=y,col=as.factor(res))) +
+                          labs(colour="res")
+                  }
 
-              ## If we are on the plane
+                  ## If we are on the plane
               } else  if(is(manifold(basis),"plane")) {
 
                   ## can be amended eventually to reflect anisotropy etc.
@@ -90,7 +90,7 @@ setMethod("show_basis",signature(basis = "Basis"),  # GRBF basis with mean offse
                       ## Create a data frame containin the x,y coordinates of a circle
                       ## around the basis function centroid and the function's resolution
                       data.frame(.circleFun(center=as.numeric(basis@df[i,1:2]),
-                                           diameter = basis@df$scale[i]),
+                                            diameter = basis@df$scale[i]),
                                  res=basis@df$res[i],
                                  id = i)})
                   df <- bind_rows(l)              # quick rbind of l
@@ -109,11 +109,11 @@ setMethod("show_basis",signature(basis = "Basis"),  # GRBF basis with mean offse
 
                   ## Draw the circles in lon and lat
                   g <- g + geom_point(data=df,aes(x=lon,y=lat,size=res),shape=1) +
-                           scale_size_continuous(trans="reverse",breaks =1:10)
+                      scale_size_continuous(trans="reverse",breaks =1:10)
 
 
-              ## If we're on the space-time plane do as above but draw the bases at each time point
-              ## Note: This is never used as we always have Tensor Basis in practice (see below)
+                  ## If we're on the space-time plane do as above but draw the bases at each time point
+                  ## Note: This is never used as we always have Tensor Basis in practice (see below)
               } else  if(is(manifold(basis),"STplane")) {
                   df <-basis@df
                   df <- df[rev(rownames(df)),]
@@ -122,8 +122,8 @@ setMethod("show_basis",signature(basis = "Basis"),  # GRBF basis with mean offse
                       scale_size_continuous(trans="reverse",breaks =1:10) +
                       facet_wrap(~loc3)
 
-              ## If we're on the space-time plane draw the bases at each time point
-              ## Note: This is never used as we always have Tensor Basis in practice (see below)
+                  ## If we're on the space-time plane draw the bases at each time point
+                  ## Note: This is never used as we always have Tensor Basis in practice (see below)
               } else  if(is(manifold(basis),"STsphere")) {
                   df <-basis@df
                   df <- df[rev(rownames(df)),]
@@ -133,7 +133,7 @@ setMethod("show_basis",signature(basis = "Basis"),  # GRBF basis with mean offse
                       facet_wrap(~loc3)
 
               }
-               return(g + theme_bw())
+              return(g + theme_bw())
 
           })
 
@@ -141,9 +141,9 @@ setMethod("show_basis",signature(basis = "Basis"),  # GRBF basis with mean offse
 #' @aliases show_basis,TensorP_Basis-method
 setMethod("show_basis",signature(basis = "TensorP_Basis"),
           function(basis,g=ggplot()) {
-           ## For Tensor Basis just plot first the spatial and then the temporal
-           (show_basis(basis@Basis1) + ggtitle("Basis1")) %>% print()
-           (show_basis(basis@Basis2) + ggtitle("Basis2")) %>% print()
+              ## For Tensor Basis just plot first the spatial and then the temporal
+              (show_basis(basis@Basis1) + ggtitle("Basis1")) %>% print()
+              (show_basis(basis@Basis2) + ggtitle("Basis2")) %>% print()
           })
 
 #' @name plotting-themes
@@ -219,7 +219,7 @@ EmptyTheme <- function() {
             CA$long <- CA$long + 360
         }
         CA <- CA %>% filter(abs(long) <= 179.99)                 # If there are still problematic longitudes
-                                                                 # just remove them
+        # just remove them
         worldmap <- rbind(worldmap,CA,CB)                        # add these to the world map
     }
     worldmap <- filter(worldmap,!(group %in% W$group))           # remove the problematic countries
