@@ -19,7 +19,7 @@ GNU General Public License for more details. */
 #include <R.h>
 #include <Rinternals.h>
 
-SEXP FRK_distR_C(SEXP xSEXP, SEXP ySEXP);
+SEXP _FRK_distR_C(SEXP xSEXP, SEXP ySEXP);
 SEXP overhead_cpp(SEXP a, SEXP b);
 
 #endif

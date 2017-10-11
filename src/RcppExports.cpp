@@ -7,7 +7,7 @@ using namespace Rcpp;
 
 // distR_C
 NumericMatrix distR_C(NumericMatrix x, NumericMatrix y);
-RcppExport SEXP FRK_distR_C(SEXP xSEXP, SEXP ySEXP) {
+RcppExport SEXP _FRK_distR_C(SEXP xSEXP, SEXP ySEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;

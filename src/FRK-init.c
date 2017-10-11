@@ -40,7 +40,7 @@ void attribute_visible R_init_FRK(DllInfo *info) {
 
 
   static R_CallMethodDef callMethods[]  = {
-              {"FRK_distR_C", (DL_FUNC) &FRK_distR_C, 2},
+              {"_FRK_distR_C", (DL_FUNC) &_FRK_distR_C, 2},
               {NULL, NULL, 0}
             };
 
