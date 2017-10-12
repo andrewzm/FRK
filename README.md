@@ -27,7 +27,7 @@ library(FRK)
 vignette("FRK_intro")
 ```
 
-A draft paper with more details, currently under review, is available from [here](https://arxiv.org/abs/1705.08105)
+A draft paper with more details, currently under review, is available from [here](https://arxiv.org/abs/1705.08105).
 
 Description
 ------------
