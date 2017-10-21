@@ -1741,7 +1741,7 @@ process_isea3h <- function(isea3h,resl) {
 ## Takes a spatial object and finds UIDs for it
 .UIDs <- function(x) {
     n <- length(x)
-    sapply(rnorm(n),function(x) digest::digest(x,algo="crc32"))
+    sapply(rnorm(n),function(x) digest::digest(x,algo="md5"))
 }
 
 ## Computes the mean of a vector x if x is numeric or logical, otherwise just returns the first element
