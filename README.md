@@ -8,7 +8,7 @@ Fixed Rank Kriging
 Installation 
 ------------
 
-The package `FRK` is now at v0.1.5 and available on CRAN! To install, please type
+The package `FRK` is now at v0.1.6 and available on CRAN! To install, please type
 
 ```r
 install.packages("FRK")
@@ -38,7 +38,7 @@ Type: Package
 
 Title: Fixed Rank Kriging
 
-Version: 0.1.4
+Version: 0.1.6
 
 Date: 2016-06-05
 

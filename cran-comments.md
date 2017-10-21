@@ -1,3 +1,8 @@
+## v0.1.6
+* Added scale_aperture to have control on aperture of basis functions
+* Adde remove_basis to easily remove basis functions
+* Made FRK compatible with Rcpp 0.12.12
+
 ## v0.1.4
 * Robust basis function placement in 2D
 * Added offset parameter when constucting mini BAUs to avoid
