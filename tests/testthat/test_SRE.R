@@ -39,6 +39,7 @@ test_that("SRE 1D works",{
     ### Fit with 5 EM iterations so as not to take too much time
     S <- SRE.fit(S,n_EM = 3,tol = 1e-5,print_lik=FALSE)
     expect_is(S,"SRE")
+    expect_is(info_fit(S),"list")
 
     ### Predict over BAUs using both modes
     grid_BAUs <- SRE.predict(S)

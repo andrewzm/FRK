@@ -41,7 +41,7 @@
 #'
 #'\code{SRE.fit()} takes an object of class \code{SRE} and estimates all unknown parameters, namely the covariance matrix \eqn{K}, the fine scale variance (\eqn{\sigma^2_{\xi}} or \eqn{\sigma^2_{\delta}}, depending on whether Case 1 or Case 2 is chosen; see the vignette) and the regression parameters \eqn{\alpha}. The only method currently implemented is the Expectation Maximisation (EM) algorithm, which the user configures through \code{n_EM} and \code{tol}. The log-likelihood (given in Section 2.2 of the vignette) is evaluated at each iteration at the current parameter estimate, and convergence is assumed to have been reached when this quantity stops changing by more than \code{tol}.
 #'
-#'The actual computations for the E-step and M-step are relatively straightforward. The E-step contains an inverse of an \eqn{r \times r} matrix, where \code{r} is the number of basis functions which should not exceed 2000. The M-step first updates the matrix \eqn{K}, which only depends on the sufficient statistics of the basis-function coefficients \eqn{\eta}. Then, the regression parameter \eqn{\alpha} is updated and a simple optimisation routine (a line search) is used to update the fine-scale variance \eqn{\sigma^2_{\delta}} or \eqn{\sigma^2_{\xi}}. If the fine-scale errors and measurement random errors are homoscedastic, then a closed-form solution is available for the update of \eqn{\sigma^2_{\xi}} or \eqn{\sigma^2_{\delta}}. Irrespectively, since the udpates of \eqn{\alpha}, and \eqn{\sigma^2_{\delta}} or \eqn{\sigma^2_{\xi}}, are dependent, these two updates are iterated until the change in \eqn{\sigma^2_{\cdot}} is no more than 0.1\%.
+#'The actual computations for the E-step and M-step are relatively straightforward. The E-step contains an inverse of an \eqn{r \times r} matrix, where \code{r} is the number of basis functions which should not exceed 2000. The M-step first updates the matrix \eqn{K}, which only depends on the sufficient statistics of the basis-function coefficients \eqn{\eta}. Then, the regression parameter \eqn{\alpha} is updated and a simple optimisation routine (a line search) is used to update the fine-scale variance \eqn{\sigma^2_{\delta}} or \eqn{\sigma^2_{\xi}}. If the fine-scale errors and measurement random errors are homoscedastic, then a closed-form solution is available for the update of \eqn{\sigma^2_{\xi}} or \eqn{\sigma^2_{\delta}}. Irrespectively, since the udpates of \eqn{\alpha}, and \eqn{\sigma^2_{\delta}} or \eqn{\sigma^2_{\xi}}, are dependent, these two updates are iterated until the change in \eqn{\sigma^2_{\cdot}} is no more than 0.1\%. Information on the fitting (convergence etc.) can be extracted using \code{fit_info(SRE_model)}.
 #'
 #'The function \code{FRK} acts as a wrapper for the functions \code{SRE} and \code{SRE.fit}. An added advantage of using \code{FRK} directly is that it automatically generates BAUs and basis functions based on the data. Hence \code{FRK} can be called using only a list of data objects and an \code{R} formula, although the \code{R} formula can only contain space or time as covariates when BAUs are not explicitly supplied with the covariate data.
 #'
@@ -80,6 +80,9 @@
 #'
 #' ### Fit with 5 EM iterations so as not to take too much time
 #' S <- SRE.fit(S,n_EM = 5,tol = 0.01,print_lik=TRUE)
+#'
+#' ### Check fit info
+#'
 #'
 #' ### Predict over BAUs
 #' grid_BAUs <- SRE.predict(S)
@@ -225,6 +228,9 @@ SRE <- function(f,data,basis,BAUs,est_error=TRUE,average_in_BAU = TRUE,
     alphahat_init <- solve(t(X) %*% X) %*% t(X) %*% Z
     sigma2fshat_init <- mean(diag(Ve)) / 4
 
+    ## Information on fitting
+    info_fit = list("SRE not fitted to data yet. Please use SRE.fit()")
+
     ## Construct the SRE object
     new("SRE",
         data=data,
@@ -249,7 +255,8 @@ SRE <- function(f,data,basis,BAUs,est_error=TRUE,average_in_BAU = TRUE,
         Khat_inv = K_inv_init,
         alphahat = alphahat_init,
         sigma2fshat = sigma2fshat_init,
-        fs_model = fs_model)
+        fs_model = fs_model,
+        info_fit = info_fit)
 }
 
 
@@ -330,6 +337,11 @@ summary.SRE <- function(object,...) {
 }
 setMethod("summary",signature(object="SRE"),summary.SRE)
 
+## Set method for retrieving info_fit
+setMethod("info_fit",signature(SRE_model="SRE"),function(SRE_model) {SRE_model@info_fit})
+
+
+
 ## Print summary of SRE
 print.summary.SRE <- function(x, ...) {
     cat("Summary of Var(eta) [extract using object@Khat]: \n")
@@ -356,48 +368,75 @@ print.summary.SRE <- function(x, ...) {
 
     n <- nbasis(SRE_model)  # number of basis functions
     X <- SRE_model@X        # covariates
-    lk <- rep(0,n_EM)       # likelihood
+    info_fit <- list()      # initialise info_fit
 
-    ## If user wishes to show progress show progress bar
-    if(opts_FRK$get("progress"))
-        pb <- utils::txtProgressBar(min = 0, max = n_EM, style = 3)
+    if(method == "EM") {
 
-    ## For each EM iteration step
-    for(i in 1:n_EM) {
-            lk[i] <- .loglik(SRE_model)                          # compute the log-lik
-            SRE_model <- .SRE.Estep(SRE_model)                   # compute E-step
-            SRE_model <- .SRE.Mstep(SRE_model, lambda = lambda)  # compute M-step
-            if(opts_FRK$get("progress"))
-                utils::setTxtProgressBar(pb, i)                  # update progress bar
-            if(i>1)                                              # If we're not on first iteration
-                if(abs(lk[i] - lk[i-1]) < tol) {                 # Compute change in log-lik
-                    cat("Minimum tolerance reached\n")           # and stop if less than tol
-                    break
-                }
-    }
+        info_fit$method <- "EM" # updated info_fit
+        llk <- rep(0,n_EM)       # log-likelihood
 
-    if(opts_FRK$get("progress")) close(pb)           # close progress bar
+        ## If user wishes to show progress show progress bar
+        if(opts_FRK$get("progress"))
+            pb <- utils::txtProgressBar(min = 0, max = n_EM, style = 3)
 
-    ## If zero fine-scale variation detected just make sure user knows.
-    ## This can be symptomatic of poor fitting
-    if(SRE_model@sigma2fshat == 0)
-        if(opts_FRK$get("verbose") > 0)
-            message("sigma2fs is being estimated to zero.
-             This might because of an incorrect binning
-             procedure or because too much measurement error
-             is being assumed (or because the latent
-             field is indeed that smooth, but unlikely).")
+        ## For each EM iteration step
+        for(i in 1:n_EM) {
+                llk[i] <- .loglik(SRE_model)                          # compute the log-lik
+                SRE_model <- .SRE.Estep(SRE_model)                   # compute E-step
+                SRE_model <- .SRE.Mstep(SRE_model, lambda = lambda)  # compute M-step
+                if(opts_FRK$get("progress"))
+                    utils::setTxtProgressBar(pb, i)                  # update progress bar
+                if(i>1)                                              # If we're not on first iteration
+                    if(abs(llk[i] - llk[i-1]) < tol) {                 # Compute change in log-lik
+                        cat("Minimum tolerance reached\n")           # and stop if less than tol
+                        break
+                    }
+        }
 
-    ## If we have reached max. iterations, tell the user
-    if(i == n_EM) cat("Maximum EM iterations reached\n")
+        if(opts_FRK$get("progress")) close(pb)           # close progress bar
+        info_fit$num_iterations <- i                     # update fit info
 
-    ## If user wants to see the log-lik vs EM iteration plot, plot it
-    if(print_lik & !is.na(tol)) {
-        plot(1:i,lk[1:i],
-             ylab="log likelihood",xlab="EM iteration")
+
+        ## If zero fine-scale variation detected just make sure user knows.
+        ## This can be symptomatic of poor fitting
+        if(SRE_model@sigma2fshat == 0) {
+            info_fit$sigma2fshat_equal_0 <- 1
+            if(opts_FRK$get("verbose") > 0)
+                message("sigma2fs is being estimated to zero.
+                 This might because of an incorrect binning
+                 procedure or because too much measurement error
+                 is being assumed (or because the latent
+                 field is indeed that smooth, but unlikely).")
+        } else {
+            info_fit$sigma2fshat_equal_0 <- 0
+        }
+
+        ## If we have reached max. iterations, tell the user
+        if(i == n_EM) {
+            cat("Maximum EM iterations reached\n")
+            info_fit$converged <- 0    # update info_fit
+        } else {
+            info_fit$converged <- 1   # update info_fit
+        }
+
+        ## Plot log-lik vs EM iteration plot
+        info_fit$plot_lik <- list(x = 1:i, llk = llk[1:i],
+                                  ylab = "log likelihood",
+                                  xlab = "EM iteration")
+
+        ## If user wants to see the log-lik vs EM iteration plot, plot it
+        if(print_lik & !is.na(tol)) {
+            plot(1:i, llk[1:i],
+                 ylab = "log likelihood",
+                 xlab = "EM iteration")
+
+        }
+    } else {
+        stop("No other estimation method implemented yet. Please use EM.")
     }
 
     ## Return fitted SRE model
+    SRE_model@info_fit <- info_fit
     SRE_model
 }
 

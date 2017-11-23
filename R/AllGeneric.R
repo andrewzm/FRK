@@ -198,6 +198,11 @@ setGeneric("BAUs_from_points", function(obj,offset = 1e-10)
 setGeneric("remove_basis", function(Basis,rmidx)
     standardGeneric("remove_basis"))
 
+#' @rdname SRE
+#' @export
+setGeneric("info_fit", function(SRE_model)
+    standardGeneric("info_fit"))
+
 
 ########################
 #### NOT EXPORTED ######

@@ -7,7 +7,7 @@
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation; either version 2
 # of the License, or (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -130,4 +130,5 @@ setClass("SRE",representation(data="list",
                               Khat_inv = "Matrix",
                               alphahat = "Matrix",
                               sigma2fshat = "numeric",
-                              fs_model = "character"))
+                              fs_model = "character",
+                              info_fit = "list"))
