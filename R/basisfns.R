@@ -426,11 +426,17 @@ setMethod("TensorP",signature(Basis1="Basis",Basis2="Basis"),function(Basis1,Bas
     ## Change the names of the data frame to what is standard in this package
     names(df) <- c(paste0("loc",1:(n1 + n2)),"res")
 
+    ## Check number of basis functions and throw warning if necessary
+    if((nbasis_tot <- nbasis(Basis1) * nbasis(Basis2)) > 5000)
+      warning("Tensor product has resulted in more than 5000 functions. 
+      Please reduce the number of spatial or temporal basis functions.")
+    
+    
     ## Create new Tensor Basis function from this information
     new("TensorP_Basis",
-        Basis1=Basis1,
-        Basis2=Basis2,
-        n = nbasis(Basis1) * nbasis(Basis2),
+        Basis1 = Basis1,
+        Basis2 = Basis2,
+        n = nbasis_tot,
         df = df)
 })
 

@@ -523,12 +523,13 @@ auto_BAU_time <- function (manifold,type="grid",cellsize = 1,resl=resl,d=NULL,co
     ## From which we can extract a range and the duration
     trange <- range(tpoints) # e.g., 1st January 2017, 4th January 2017
     dranget <- diff(trange)  # e.g., 4 days duration
+    #dt <- as.difftime(cellsize, units = tunit) # time block size
 
     ## The time spacing
     tspacing <- paste(cellsize,tunit)      # e.g., paste(1,"days")
     tgrid <- seq(trunc(trange[1],tunit),   # create grid based on range and spacing by truncating
-                 ceil(trange[2],tunit),    # to this time unit (e.g., "days")
-                 by=tspacing)              # and making the interval equal to tunit
+                 ceil(trange[2]+1,tunit),    # to this time unit (e.g., "days")
+                 by=tspacing)               # and making the interval equal to tunit
     tgrid <- round(tgrid,tunit)            # Finally round to the time unit (probably not needed)
 
     ## Ensure it's POSIXct, which is what FRK uses
@@ -1218,15 +1219,10 @@ setMethod("map_data_to_BAUs",signature(data_sp="ST"),
                                           ## Then mark the beginning of the next time interval as the end of this one
                                           t2 <- time(sp_pols)[i+1]
 
-                                          ## Now form a time range based on this interval, where we have subtracted
-                                          ## one second so there is no overlap (minimum unit is always seconds)
-                                          trange <- paste0(format(t1),"::",format(t2-1))
                                       } else {
 
-                                          ## If we are the last time interval then make sure we capture all the data
-                                          ## by taking the maximum of sp_pols and the data_sp endTimes
-                                          t2 <- max(format(last(sp_pols@endTime)),format(last(data_sp@endTime)+1))
-                                          trange <- paste0(format(t1),"::",t2)
+                                          ## If we are the last time interval then lump all data into this interval
+                                          t2 <- last(data_sp@endTime) + 1
                                       }
 
                                       ## Now we know which data to bin in space, those appearing between t1 and t2
