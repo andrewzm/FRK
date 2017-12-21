@@ -527,10 +527,17 @@ auto_BAU_time <- function (manifold,type="grid",cellsize = 1,resl=resl,d=NULL,co
 
     ## The time spacing
     tspacing <- paste(cellsize,tunit)      # e.g., paste(1,"days")
-    tgrid <- seq(trunc(trange[1],tunit),   # create grid based on range and spacing by truncating
-                 ceil(trange[2]+1,tunit),    # to this time unit (e.g., "days")
-                 by=tspacing)               # and making the interval equal to tunit
-    tgrid <- round(tgrid,tunit)            # Finally round to the time unit (probably not needed)
+    tgrid <- seq(truncPOSIXt(trange[1],tunit), # create grid based on range and spacing by truncating
+                 ceil(trange[2]+1,tunit),      # to this time unit (e.g., "days")
+                 by=tspacing)                  # and making the interval equal to tunit
+
+    ## Finally round to the time unit (probably not needed)
+    tgrid <- suppressWarnings(roundPOSIXt(tgrid, tunit))
+
+    ## NOTE: A suppresswarnings is needed since there seems to be a bug
+    ## in trunc.POSIXt when using units faster than days and more than
+    ## one element as input. This warning has no adverse affects as far
+    ## as I can see.
 
     ## Ensure it's POSIXct, which is what FRK uses
     tgrid <- as.POSIXct(tgrid)

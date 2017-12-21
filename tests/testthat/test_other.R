@@ -102,8 +102,8 @@ test_that("Date sequencing works", {
     tspacing <- paste(1,"year")
     tstart <- as.POSIXct("1990-06-01 10:00:00 AEST")
     tend <- as.POSIXct("1993-06-01 10:00:00 AEST")
-    tgrid <- seq(trunc(tstart,"year"),
-                 trunc(tend,"year"),
+    tgrid <- seq(truncPOSIXt(tstart,"year"),
+                 truncPOSIXt(tend,"year"),
                  by=tspacing)
     expect_is(tgrid,"POSIXct")
     expect_equal(length(tgrid),4L)

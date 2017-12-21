@@ -42,6 +42,15 @@ test_that("SRE 1D works",{
     expect_is(info_fit(S),"list")
 
     ### Predict over BAUs using both modes
+    grid_BAUs <- SRE.predict(S, covariances = TRUE)
+    expect_is(grid_BAUs,"list")
+    expect_equal(grid_BAUs$pred_polys$var, diag(grid_BAUs$Cov))
+    grid_BAUs <- SRE.predict(S,obs_fs = FALSE, covariances = TRUE)
+    expect_is(grid_BAUs,"list")
+    expect_equal(grid_BAUs$pred_polys$var, diag(grid_BAUs$Cov))
+    expect_equal(dim(grid_BAUs$Cov),rep(length(S@BAUs),2))
+
+    ### Check covariances option
     grid_BAUs <- SRE.predict(S)
     expect_is(grid_BAUs,"SpatialPixelsDataFrame")
     grid_BAUs <- SRE.predict(S,obs_fs = FALSE)

@@ -7,7 +7,7 @@
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation; either version 2
 # of the License, or (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -26,7 +26,7 @@
 #' @import spacetime
 #' @import parallel
 #' @import dplyr
-#' @importFrom Hmisc round.POSIXt trunc.POSIXt ceil
+#' @importFrom Hmisc roundPOSIXt truncPOSIXt ceil
 #' @importFrom plyr ddply dlply rbind.fill
 #' @importFrom digest digest
 #' @importFrom Rcpp cppFunction

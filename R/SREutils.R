@@ -34,6 +34,7 @@
 #' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error, Case 1) or in the process model (fine-scale process variation, Case 2, default)
 #' @param pred_polys object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified
 #' @param pred_time vector of time indices at which prediction will be carried out. All time points are used if this option is not specified
+#' @param covariances logical variable indicating whether prediction covariances should be returned or not. If set to \code{TRUE}, a maximum of 4000 prediction locations or polygons are allowed.
 #' @param ... other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling the function \code{FRK}
 #' @details \code{SRE()} is the main function in the package: It constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of Basic Areal Units (BAUs). The function first takes each object in the list \code{data} and maps it to the BAUs -- this entails binning the point-referenced data into the BAUs (and averaging within the BAU) if \code{average_in_BAU = TRUE}, and finding which BAUs are influenced by the polygon datasets. Following this, the incidence matrix \code{Cmat} is constructed, which appears in the observation model \eqn{Z = CY + C\delta + e}, where \eqn{C} is the incidence matrix and \eqn{\delta} is systematic error at the BAU level.
 #'
@@ -275,10 +276,12 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 0.01, method="EM", lambda = 0, 
 
 #' @rdname SRE
 #' @export
-SRE.predict <- function(SRE_model,obs_fs=FALSE,pred_polys = NULL,pred_time = NULL) {
+SRE.predict <- function(SRE_model, obs_fs=FALSE, pred_polys = NULL,
+                        pred_time = NULL, covariances = FALSE) {
 
     ## Check the arguments are OK
-    .check_args3(obs_fs = obs_fs,pred_polys = pred_polys,pred_time = pred_time)
+    .check_args3(obs_fs = obs_fs, pred_polys = pred_polys,
+                 pred_time = pred_time, covariances = covariances)
 
     ## If we are predicting over polygons and require space-time prediction regions
     ## Throw an error as it's not implemented yet
@@ -290,10 +293,21 @@ SRE.predict <- function(SRE_model,obs_fs=FALSE,pred_polys = NULL,pred_time = NUL
     pred_locs <- .SRE.predict(Sm = SRE_model,            # Fitted SRE model
                               obs_fs = obs_fs,           # Case 1 or Case 2?
                               pred_polys = pred_polys,   # Prediction polygons
-                              pred_time = pred_time)     # Prediction time points
+                              pred_time = pred_time,     # Prediction time points
+                              covariances = covariances) # Compute covariances?
 
     ## Return predictions
     pred_locs
+}
+
+#' @rdname SRE
+#' @export
+loglik <- function(SRE_model) {
+    # This is structured this way so that extra models for fs-variation
+    # can be implemented later
+    if(SRE_model@fs_model == "ind")
+        .loglik.ind(SRE_model)
+    else stop("Currently onle independent fine-scale model is implemented")
 }
 
 ## Print/Show SRE
@@ -338,7 +352,10 @@ summary.SRE <- function(object,...) {
 setMethod("summary",signature(object="SRE"),summary.SRE)
 
 ## Set method for retrieving info_fit
-setMethod("info_fit",signature(SRE_model="SRE"),function(SRE_model) {SRE_model@info_fit})
+#' @rdname SRE
+#' @export
+setMethod("info_fit", signature(SRE_model = "SRE"),
+          function(SRE_model) {SRE_model@info_fit})
 
 
 
@@ -357,7 +374,6 @@ print.summary.SRE <- function(x, ...) {
     cat("For object properties use show().\n")
     invisible(x)
 }
-
 
 ##################################
 #### NOT EXPORTED ################
@@ -381,7 +397,7 @@ print.summary.SRE <- function(x, ...) {
 
         ## For each EM iteration step
         for(i in 1:n_EM) {
-                llk[i] <- .loglik(SRE_model)                          # compute the log-lik
+                llk[i] <- loglik(SRE_model)                          # compute the log-lik
                 SRE_model <- .SRE.Estep(SRE_model)                   # compute E-step
                 SRE_model <- .SRE.Mstep(SRE_model, lambda = lambda)  # compute M-step
                 if(opts_FRK$get("progress"))
@@ -447,15 +463,6 @@ print.summary.SRE <- function(x, ...) {
     if(Sm@fs_model == "ind")
          Sm <- .SRE.Estep.ind(Sm)
     else stop("E-step only for independent fs-variation model currently implemented")
-}
-
-## Compute log-likelihood
-.loglik <- function(Sm) {
-    # This is structured this way so that extra models for fs-variation
-    # can be implemented later
-    if(Sm@fs_model == "ind")
-        .loglik.ind(Sm)
-    else stop("Currently onle independent fine-scale model is implemented")
 }
 
 ## Compute log-likelihood for independent fs-variation model
@@ -986,7 +993,8 @@ print.summary.SRE <- function(x, ...) {
 }
 
 ## The following function is the internal prediction function
-.SRE.predict <- function(Sm,obs_fs = FALSE,pred_polys = NULL,pred_time = NULL) {
+.SRE.predict <- function(Sm, obs_fs = FALSE, pred_polys = NULL,
+                         pred_time = NULL, covariances = FALSE) {
 
     ## If the user does not specify time points to predict at when in space-time
     ## Then predict at every time point
@@ -1046,6 +1054,11 @@ print.summary.SRE <- function(x, ...) {
                 predict_BAUs <- FALSE   ## Need to compute full covariance matrix
         }
     }
+
+    ## If we have to compute too many covariances then stop and give error
+    if(covariances & nrow(CP) > 4000)
+        stop("Cannot compute covariances for so many observations. Please reduce
+             to less than 4000")
 
     ## Get the CZ matrix
     CZ <- Sm@Cmat
@@ -1116,7 +1129,7 @@ print.summary.SRE <- function(x, ...) {
 
     ## Case 2 (fs variation in process)
     if(!obs_fs) {
-        if(sigma2fs >0) {   # fine-scale variance not zero
+        if(sigma2fs > 0) {   # fine-scale variance not zero
 
             ## The below equations implement Section 2.3
             LAMBDAinv <- bdiag(Sm@Khat_inv,Q)                # block diagonal precision matrix
@@ -1172,9 +1185,9 @@ print.summary.SRE <- function(x, ...) {
     }
 
 
-    ## Now, if the user hasn't specified prediction polygons, our job is done and we just return the BAUs,
-    ## possibly at selected time points
-    if(predict_BAUs) {
+    ## Now, if the user hasn't specified prediction polygons, and the user does not want covariances,
+    ## our job is done and we just return the BAUs, possibly at selected time points
+    if(predict_BAUs & !covariances) {
         BAUs[["sd"]] <- sqrt(BAUs[["var"]])  # compute the standard error
         if(!is.null(pred_polys)) { # User had specified a specific set of BAUs. Return only these (spatial only for now)
             BAUs <- BAUs[row.names(pred_polys),]
@@ -1188,23 +1201,41 @@ print.summary.SRE <- function(x, ...) {
         ## The linear combination of the mean is easy
         pred_polys[["mu"]] <- as.numeric(CP %*% BAUs[["mu"]])
 
-        ## If we have fs variation in the process layer we need to consider the fine-scale variation (PI = [S I])
-        ## when predicting over the polygons, otherwise we just need the variance over eta
+        ## If we have fs variation in the process layer we need to consider the
+        ## fine-scale variation (PI = [S I]) when predicting over the polygons,
+        ## otherwise we just need the variance over eta
         if(!obs_fs & sigma2fs > 0) CPM <- CP %*% PI else CPM <- CP %*% S0
 
         ## If there is no fine-scale variation then simply find linear combination
-        if(sigma2fs == 0 | obs_fs)  pred_polys[["var"]] <- diag2(CPM %*% Cov, t(CPM)) ## All Cov available
+        if(sigma2fs == 0 | obs_fs)  {
+            pred_polys[["var"]] <- diag2(CPM %*% Cov, t(CPM)) ## All Cov available
+            if(covariances) {
+                L <- t(chol(Cov))
+                Covariances <- tcrossprod(CPM %*% L)
+            }
+        }
 
         ## Otherwise find full covariance matrix (including over fs-variation). This is a last-case resort and
         ## may crash the computer if there are several prediction polygons. However this shouldn't be the case
         ## if these polygons span multiple BAUs
-        else pred_polys[["var"]] <- diag2(CPM, cholsolve(Q=Qx,y=t(CPM),
-                                                  perm = TRUE,cholQp = chol_Qx$Qpermchol,P = chol_Qx$P))
+        else {
+            pred_polys[["var"]] <- diag2(CPM, cholsolve(Q=Qx,y=t(CPM),
+                                                  perm = TRUE,
+                                                  cholQp = chol_Qx$Qpermchol,
+                                                  P = chol_Qx$P))
+            if(covariances) Covariances <- cholsolveAQinvAT(A = CPM,
+                                                            Lp = chol_Qx$Qpermchol,
+                                                            P = chol_Qx$P)
+        }
 
         # Compute standard error
         pred_polys[["sd"]] <- sqrt(pred_polys[["var"]])
 
         ## Return the prediction polygons
+        if(covariances) {
+         pred_polys <- list(pred_polys = pred_polys,
+                            Cov = Covariances)
+        }
         pred_polys
     }
 
@@ -1462,7 +1493,8 @@ print.summary.SRE <- function(x, ...) {
 }
 
 ## Checks arguments for the SRE.predict() function. Code is self-explanatory
-.check_args3 <- function(obs_fs=FALSE,pred_polys = NULL,pred_time = NULL,...) {
+.check_args3 <- function(obs_fs=FALSE, pred_polys = NULL,
+                         pred_time = NULL, covariances = FALSE, ...) {
     if(!(obs_fs %in% 0:1)) stop("obs_fs needs to be logical")
 
     if(is(pred_polys,"Spatial") & !(is(pred_polys,"SpatialPolygons") | is(pred_polys,"SpatialPixels")) )
@@ -1473,6 +1505,7 @@ print.summary.SRE <- function(x, ...) {
             stop("Predictions need to be over BAUs or STFDFs with spatial polygons or pixels")
 
     if(!(is.integer(pred_time) | is.null(pred_time))) stop("pred_time needs to be of class integer")
+    if(!is.logical(covariances)) stop("covariances needs to be TRUE or FALSE")
 }
 
 

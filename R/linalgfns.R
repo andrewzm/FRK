@@ -133,7 +133,7 @@ cholsolve <- function(Q,y,perm=F,cholQ = matrix(1,0,0),cholQp = matrix(1,0,0),P=
 cholsolveAQinvAT <- function(A,Lp,P) {
   ## Solve X = AQ^{-1}t(A) using the permuted Cholesky factor
   W <- t(solve(Lp,t(P)%*%t(A)))
-  return(W %*% t(W))
+  tcrossprod(W)
 }
 
 #' @title Compute the Takahashi equations
