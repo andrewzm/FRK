@@ -203,6 +203,25 @@ setGeneric("remove_basis", function(Basis,rmidx)
 setGeneric("info_fit", function(SRE_model)
     standardGeneric("info_fit"))
 
+#' @title Retrieve estimated regression coefficients
+#' @description Takes a an object of class \code{SRE} and returns a numeric vector with the estimated regression coefficients.
+#' @param object object of class \code{SRE}
+#' @param ... currently unused
+#' @export
+#' @examples
+#' library(sp)
+#' simdata <- SpatialPointsDataFrame(
+#'                coords = matrix(runif(100), 50, 2),
+#'                 data = data.frame(z = rnorm(50)))
+#' BAUs <- BAUs_from_points(SpatialPoints(simdata))
+#' BAUs$fs <- 1
+#' S <- SRE(f = z ~ 1 + coords.x1,
+#'          basis = local_basis(plane()),
+#'          BAUs = BAUs,
+#'          data = list(simdata))
+#' est_reg_coeff <- coef(S)
+setGeneric("coef", function(object)
+  standardGeneric("coef"))
 
 ########################
 #### NOT EXPORTED ######

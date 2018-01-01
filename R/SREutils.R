@@ -32,7 +32,8 @@
 #' @param print_lik flag indicating whether likelihood value should be printed or not after convergence of the EM estimation algorithm
 # #' @param use_centroid flag indicating whether the basis functions are averaged over the BAU, or whether the basis functions are evaluated at the BAUs centroid in order to construct the matrix \eqn{S}. The flag can safely be set when the basis functions are approximately constant over the BAUs in order to reduce computational time
 #' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error, Case 1) or in the process model (fine-scale process variation, Case 2, default)
-#' @param pred_polys object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified
+#' @param newdata object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified
+#' @param pred_polys deprecated. Please use \code{newdata} instead
 #' @param pred_time vector of time indices at which prediction will be carried out. All time points are used if this option is not specified
 #' @param covariances logical variable indicating whether prediction covariances should be returned or not. If set to \code{TRUE}, a maximum of 4000 prediction locations or polygons are allowed.
 #' @param ... other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling the function \code{FRK}
@@ -177,12 +178,12 @@ SRE <- function(f,data,basis,BAUs,est_error=TRUE,average_in_BAU = TRUE,
                                   j=C_idx$j_idx,
                                   x=1,                       # just set to unity for now
                                   dims=c(length(data_proc),  # ensure dimensions of C are good
-                                             length(BAUs)))
+                                         length(BAUs)))
 
         ## Every data should be affected by at least one BAU. If this is not the case throw an error message.
         if(any(rowSums(Cmat[[i]])==0))
             stop("I have found difficulty in associating the data with the BAUs.
-                  If you have point-referenced data
+                 If you have point-referenced data
                  then this could be because you have data outside BAUs. If you have
                  polygon data, then this could be because no BAUs centroids are
                  within the polygons. For polygon data, influence on a BAU is determined from
@@ -276,23 +277,23 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 0.01, method="EM", lambda = 0, 
 
 #' @rdname SRE
 #' @export
-SRE.predict <- function(SRE_model, obs_fs=FALSE, pred_polys = NULL,
+SRE.predict <- function(SRE_model, obs_fs=FALSE, newdata = NULL, pred_polys = NULL,
                         pred_time = NULL, covariances = FALSE) {
 
+    ## Deprecation coercion
+    if(!is.null(pred_polys))
+        newdata <- pred_polys
+
     ## Check the arguments are OK
-    .check_args3(obs_fs = obs_fs, pred_polys = pred_polys,
+    .check_args3(obs_fs = obs_fs, newdata = newdata, pred_polys = pred_polys,
                  pred_time = pred_time, covariances = covariances)
 
-    ## If we are predicting over polygons and require space-time prediction regions
-    ## Throw an error as it's not implemented yet
-    if(!is.null(pred_polys) & is(SRE_model@BAUs,"ST"))
-            stop("Prediciton is currently only possible at BAU level with
-                  spatio-temporal models. Please do not use pred_polys")
+
 
     ## Call internal prediction function
     pred_locs <- .SRE.predict(Sm = SRE_model,            # Fitted SRE model
                               obs_fs = obs_fs,           # Case 1 or Case 2?
-                              pred_polys = pred_polys,   # Prediction polygons
+                              newdata = newdata,   # Prediction polygons
                               pred_time = pred_time,     # Prediction time points
                               covariances = covariances) # Compute covariances?
 
@@ -325,29 +326,29 @@ print.SRE <- function(x,...) {
         dimS = deparse(dim(x@S)),
         ncovars = ncol(x@X))
 
-        cat("Formula:",print_list$formula,"\n")
-        cat("Number of datasets:",print_list$ndatasets,"\n")
-        cat("Number of basis functions:",print_list$nbasis,"\n")
-        cat("Class of basis functions:",print_list$basis_class,"\n")
-        cat("Number of BAUs [extract using object@BAUs]: ",print_list$nBAUs,"\n")
-        cat("Number of observations [extract using object@Z]: ",print_list$nobs,"\n")
-        cat("Mean obs. variance at BAU level [extract using object@Ve]:",print_list$mean_obsvar,"\n")
-        cat("Fine-scale variance proportionality constant [extract using object@sigma2fshat]:",print_list$fs_var,"\n")
-        cat("Dimensions of C in Z = C*Y + e [extract using object@Cmat]: ",print_list$dimC,"\n")
-        cat("Dimensions of S in Y = X*alpha + S*eta + delta [extract using object@S]: ",print_list$dimS,"\n")
-        cat("Number of covariates:",print_list$ncovars,"\n\n")
+    cat("Formula:",print_list$formula,"\n")
+    cat("Number of datasets:",print_list$ndatasets,"\n")
+    cat("Number of basis functions:",print_list$nbasis,"\n")
+    cat("Class of basis functions:",print_list$basis_class,"\n")
+    cat("Number of BAUs [extract using object@BAUs]: ",print_list$nBAUs,"\n")
+    cat("Number of observations [extract using object@Z]: ",print_list$nobs,"\n")
+    cat("Mean obs. variance at BAU level [extract using object@Ve]:",print_list$mean_obsvar,"\n")
+    cat("Fine-scale variance proportionality constant [extract using object@sigma2fshat]:",print_list$fs_var,"\n")
+    cat("Dimensions of C in Z = C*Y + e [extract using object@Cmat]: ",print_list$dimC,"\n")
+    cat("Dimensions of S in Y = X*alpha + S*eta + delta [extract using object@S]: ",print_list$dimS,"\n")
+    cat("Number of covariates:",print_list$ncovars,"\n\n")
 }
 setMethod("show",signature(object="SRE"),function(object) print(object))
 
 ## Summary SRE
 summary.SRE <- function(object,...) {
-             summ_list <- list(
-              summ_Kdiag = summary(diag(object@Khat)),
-              summ_mueta = summary(object@mu_eta[,1]),
-              summ_vareta = summary(diag(object@S_eta)),
-              reg_coeff = deparse(as.vector(object@alphahat)))
-              class(summ_list) <- "summary.SRE"
-              summ_list
+    summ_list <- list(
+        summ_Kdiag = summary(diag(object@Khat)),
+        summ_mueta = summary(object@mu_eta[,1]),
+        summ_vareta = summary(diag(object@S_eta)),
+        reg_coeff = deparse(as.vector(object@alphahat)))
+    class(summ_list) <- "summary.SRE"
+    summ_list
 }
 setMethod("summary",signature(object="SRE"),summary.SRE)
 
@@ -357,7 +358,16 @@ setMethod("summary",signature(object="SRE"),summary.SRE)
 setMethod("info_fit", signature(SRE_model = "SRE"),
           function(SRE_model) {SRE_model@info_fit})
 
-
+setMethod("coef",signature(object = "SRE"),function(object,...) {
+    coeff <- as.numeric(object@alphahat)
+    varnames <- all.vars(S@f)[-1]
+    nms <- "Intercept"
+    if(length(varnames) > 0) {
+        nms <- c(nms, varnames)
+    }
+    names(coeff) <- nms
+    coeff
+})
 
 ## Print summary of SRE
 print.summary.SRE <- function(x, ...) {
@@ -397,16 +407,16 @@ print.summary.SRE <- function(x, ...) {
 
         ## For each EM iteration step
         for(i in 1:n_EM) {
-                llk[i] <- loglik(SRE_model)                          # compute the log-lik
-                SRE_model <- .SRE.Estep(SRE_model)                   # compute E-step
-                SRE_model <- .SRE.Mstep(SRE_model, lambda = lambda)  # compute M-step
-                if(opts_FRK$get("progress"))
-                    utils::setTxtProgressBar(pb, i)                  # update progress bar
-                if(i>1)                                              # If we're not on first iteration
-                    if(abs(llk[i] - llk[i-1]) < tol) {                 # Compute change in log-lik
-                        cat("Minimum tolerance reached\n")           # and stop if less than tol
-                        break
-                    }
+            llk[i] <- loglik(SRE_model)                          # compute the log-lik
+            SRE_model <- .SRE.Estep(SRE_model)                   # compute E-step
+            SRE_model <- .SRE.Mstep(SRE_model, lambda = lambda)  # compute M-step
+            if(opts_FRK$get("progress"))
+                utils::setTxtProgressBar(pb, i)                  # update progress bar
+            if(i>1)                                              # If we're not on first iteration
+                if(abs(llk[i] - llk[i-1]) < tol) {                 # Compute change in log-lik
+                    cat("Minimum tolerance reached\n")           # and stop if less than tol
+                    break
+                }
         }
 
         if(opts_FRK$get("progress")) close(pb)           # close progress bar
@@ -419,10 +429,10 @@ print.summary.SRE <- function(x, ...) {
             info_fit$sigma2fshat_equal_0 <- 1
             if(opts_FRK$get("verbose") > 0)
                 message("sigma2fs is being estimated to zero.
-                 This might because of an incorrect binning
-                 procedure or because too much measurement error
-                 is being assumed (or because the latent
-                 field is indeed that smooth, but unlikely).")
+                        This might because of an incorrect binning
+                        procedure or because too much measurement error
+                        is being assumed (or because the latent
+                        field is indeed that smooth, but unlikely).")
         } else {
             info_fit$sigma2fshat_equal_0 <- 0
         }
@@ -454,14 +464,14 @@ print.summary.SRE <- function(x, ...) {
     ## Return fitted SRE model
     SRE_model@info_fit <- info_fit
     SRE_model
-}
+    }
 
 ## E-Step
 .SRE.Estep <- function(Sm) {
     # This is structured this way so that extra models for fs-variation
     # can be implemented later
     if(Sm@fs_model == "ind")
-         Sm <- .SRE.Estep.ind(Sm)
+        Sm <- .SRE.Estep.ind(Sm)
     else stop("E-step only for independent fs-variation model currently implemented")
 }
 
@@ -689,8 +699,8 @@ print.summary.SRE <- function(x, ...) {
             } else {
                 ## Otherwise find the root of the equation with the sought initial conditions
                 sigma2fs_new <- stats::uniroot(f = J,
-                                        interval = c(sigma2fs/amp_factor,
-                                                     sigma2fs*amp_factor))$root
+                                               interval = c(sigma2fs/amp_factor,
+                                                            sigma2fs*amp_factor))$root
             }
             D <- sigma2fs_new*Sm@Vfs + Sm@Ve  # total data variance-covariance
             if(isDiagonal(D)) {               # inverse of D (as above)
@@ -755,10 +765,10 @@ print.summary.SRE <- function(x, ...) {
         ## (iii) temporal length scale by resolution
         all_res <- count_res(Sm)               # number of resolutions
         eta2 <- lapply(1:nrow(all_res),function(i) {
-                       ## find which indices correspond to these basis functions
-                       idx <- which(data.frame(Sm@basis)$res == i)
-                       S_eta[idx,idx] +
-                           tcrossprod(mu_eta[idx])
+            ## find which indices correspond to these basis functions
+            idx <- which(data.frame(Sm@basis)$res == i)
+            S_eta[idx,idx] +
+                tcrossprod(mu_eta[idx])
         })
 
         ## (i) Find the precision associated with each resolution
@@ -992,8 +1002,7 @@ print.summary.SRE <- function(x, ...) {
     K
 }
 
-## The following function is the internal prediction function
-.SRE.predict <- function(Sm, obs_fs = FALSE, pred_polys = NULL,
+.SRE.predict <- function(Sm, obs_fs = FALSE, newdata = NULL,
                          pred_time = NULL, covariances = FALSE) {
 
     ## If the user does not specify time points to predict at when in space-time
@@ -1009,51 +1018,32 @@ print.summary.SRE <- function(x, ...) {
 
     ## If the user has not specified polygons over which to predict, then CP is
     ## just the diagonal matrix and we predict over all the BAUs
-    if(is.null(pred_polys)) {
+    if(is.null(newdata)) {
         CP <- Diagonal(length(BAUs))
     } else {
-        ## The user has maybe specified a subset of (could be all) the BAUs over which to predict.
-        ## The following checks whether pred_polys is a subset of the BAUs through the row names
-        pred_polys_are_BAUs <- all(row.names(pred_polys) %in% row.names(BAUs))
+        ## The user has specified arbitrary polygons
+        ## Based on these polygons construct the C matrix
+        newdata2 <- map_data_to_BAUs(newdata, BAUs,
+                                     average_in_BAU = FALSE,
+                                     est_error = FALSE)
+        C_idx <- BuildC(newdata2, BAUs)
+        CP <- sparseMatrix(i=C_idx$i_idx,
+                           j=C_idx$j_idx,
+                           x=1,
+                           dims=c(length(newdata),
+                                  length(BAUs)))
 
-        ## If the user has specified a subset of BAUs
-        if(pred_polys_are_BAUs) {
-           ## See which BAUs the user has specified
-           BAUs_idx <- match(row.names(pred_polys), row.names(BAUs))
+        ## As in SRE(), make sure the polgons are averages (not sums)
+        CP <- CP / rowSums(CP)
 
-           ## Construct an incidence matrix that picks out these BAUs
-           CP <-  sparseMatrix(i=1:length(pred_polys),
-                              j=BAUs_idx,
-                              x=1,
-                              dims=c(length(pred_polys),
-                                     length(BAUs)))
-
-        } else {
-            ## The user has specified arbitrary polygons
-            ## First try to coerce what the user supplied to Polygons (not pixels etc.)
-            ## Recall that for now only Spatial pred_polys are allowed so the following is
-            ## always valid
-            pred_polys <- as(pred_polys,"SpatialPolygonsDataFrame")
-
-            ## Based on these polygons construct the C matrix
-            C_idx <- BuildC(pred_polys,BAUs)
-            CP <- sparseMatrix(i=C_idx$i_idx,
-                               j=C_idx$j_idx,
-                               x=1,
-                               dims=c(length(pred_polys),
-                                      length(BAUs)))
-
-            ## As in SRE(), make sure the polgons are averages (not sums)
-            CP <- CP / rowSums(CP)
-
-            ## If even one polygon encompasses more than one BAU, then we need to
-            ## predict over linear combinations of BAUs, and hence need to
-            ## compute the full covariance matrix. Note this by setting
-            ## predict_BAUs <- FALSE
-            if(!all(table(C_idx$i_idx) == 1))
-                predict_BAUs <- FALSE   ## Need to compute full covariance matrix
-        }
+        ## If even one polygon encompasses more than one BAU, then we need to
+        ## predict over linear combinations of BAUs, and hence need to
+        ## compute the full covariance matrix. Note this by setting
+        ## predict_BAUs <- FALSE
+        if(!all(table(C_idx$i_idx) == 1))
+            predict_BAUs <- FALSE   ## Need to compute full covariance matrix
     }
+
 
     ## If we have to compute too many covariances then stop and give error
     if(covariances & nrow(CP) > 4000)
@@ -1065,7 +1055,8 @@ print.summary.SRE <- function(x, ...) {
 
     ## If the user has specified which polygons he want we can remove the ones we don't need
     ## We only need those BAUs that are influenced by observations and prediction locations
-    if(!is.null(pred_polys)) {
+    ## For ST use all BAUs as it gets complicated
+    if(is(newdata,"Spatial")) {
 
         ## The needed BAUs are the nonzero column indices of CZ and CP
         needed_BAUs <- union(as(CP,"dgTMatrix")@j+1,
@@ -1135,25 +1126,23 @@ print.summary.SRE <- function(x, ...) {
             LAMBDAinv <- bdiag(Sm@Khat_inv,Q)                # block diagonal precision matrix
             PI <- cBind(S0, .symDiagonal(n=length(BAUs)))    # PI = [S I]
             tC_Ve_C <- t(CZ) %*% solve(Sm@Ve) %*% CZ +       # summary matrix
-                       0*.symDiagonal(ncol(CZ))              # Ensure zeros on diagonal
+                0*.symDiagonal(ncol(CZ))              # Ensure zeros on diagonal
             Qx <- t(PI) %*% tC_Ve_C %*% PI + LAMBDAinv       # conditional precision matrix
             chol_Qx <- cholPermute(as(Qx,"dgCMatrix"))       # permute and do Cholesky
             ybar <- t(PI) %*%t(CZ) %*% solve(Sm@Ve) %*%      # Qx = ybar, see vignette
-                    (Sm@Z - CZ %*% X %*% alpha)
+                (Sm@Z - CZ %*% X %*% alpha)
             x_mean <- cholsolve(Qx,ybar,perm=TRUE,           # solve Qx = ybar using permutations
                                 cholQp = chol_Qx$Qpermchol, P = chol_Qx$P)
 
             if(predict_BAUs) {
-                ## If we are predicting at BAUs then we only need a few covariance elements.
-                ## Find these elements
+                ## If we are predicting at BAUs then we only need a few covariance elements
+                ## to compute the marginal variances. Find these elements
                 Cov <- Takahashi_Davis(Qx,cholQp = chol_Qx$Qpermchol,P = chol_Qx$P)
 
                 ## Compute the variance and std over the BAUs in batches
                 BAUs[["var"]] <- .batch_compute_var(S0,Cov,fs_in_process = TRUE)
             } else {
                 ## Do not compute covariance now, do it later
-                #  Cov <- cholsolve(Qx,Diagonal(nrow(Qx)),perm=TRUE,
-                #                   cholQp = chol_Qx$Qpermchol, P = chol_Qx$P) # FULL
             }
 
 
@@ -1168,14 +1157,16 @@ print.summary.SRE <- function(x, ...) {
             BAUs[["var"]] <- .batch_compute_var(S0,Cov,fs_in_process = FALSE)
         }
 
-        ## The conditional mean is simply given by fitted random effects + fitted fixed effects
+        ## For both cases of sigma2fs,
+        ## the conditional mean is simply given by fitted random effects + fitted fixed effects
         BAUs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
 
     }
 
     ## Case 1 (fs variation in measurement equation)
     if(obs_fs) {
-        ## All predictions and prediction uncertainties comes from our prediction of and uncertainty over eta
+        ## All predictions and prediction uncertainties comes from our
+        ## prediction of and uncertainty over eta
         x_mean <- Sm@mu_eta   # conditional mean
         Cov <- Sm@S_eta       # conditional covariance
 
@@ -1189,56 +1180,57 @@ print.summary.SRE <- function(x, ...) {
     ## our job is done and we just return the BAUs, possibly at selected time points
     if(predict_BAUs & !covariances) {
         BAUs[["sd"]] <- sqrt(BAUs[["var"]])  # compute the standard error
-        if(!is.null(pred_polys)) { # User had specified a specific set of BAUs. Return only these (spatial only for now)
-            BAUs <- BAUs[row.names(pred_polys),]
+        if(is(newdata, "Spatial")) {
+            # User had specified a specific set of BAUs. Return only these (spatial only for now)
+            BAUs <- BAUs[row.names(newdata),]
         }
-        if(!is.null(pred_time)) BAUs <- BAUs[,pred_time]  # return only specified time points
+        if(!is.null(pred_time))
+            BAUs <- BAUs[,pred_time]  # return only specified time points
         BAUs
 
     } else {
         ## Otherwise we need to find the mean and variance of linear combinations of these BAUs
 
         ## The linear combination of the mean is easy
-        pred_polys[["mu"]] <- as.numeric(CP %*% BAUs[["mu"]])
+        newdata[["mu"]] <- as.numeric(CP %*% BAUs[["mu"]])
 
         ## If we have fs variation in the process layer we need to consider the
         ## fine-scale variation (PI = [S I]) when predicting over the polygons,
         ## otherwise we just need the variance over eta
-        if(!obs_fs & sigma2fs > 0) CPM <- CP %*% PI else CPM <- CP %*% S0
 
         ## If there is no fine-scale variation then simply find linear combination
-        if(sigma2fs == 0 | obs_fs)  {
-            pred_polys[["var"]] <- diag2(CPM %*% Cov, t(CPM)) ## All Cov available
+        if(obs_fs | sigma2fs == 0 )    {
+            CPM <- CP %*% S0
+            newdata[["var"]] <- diag2(CPM %*% Cov, t(CPM)) ## All Cov available
             if(covariances) {
                 L <- t(chol(Cov))
                 Covariances <- tcrossprod(CPM %*% L)
             }
-        }
-
-        ## Otherwise find full covariance matrix (including over fs-variation). This is a last-case resort and
-        ## may crash the computer if there are several prediction polygons. However this shouldn't be the case
-        ## if these polygons span multiple BAUs
-        else {
-            pred_polys[["var"]] <- diag2(CPM, cholsolve(Q=Qx,y=t(CPM),
-                                                  perm = TRUE,
-                                                  cholQp = chol_Qx$Qpermchol,
-                                                  P = chol_Qx$P))
+        } else {
+            ## Otherwise find full covariance matrix (including over fs-variation).
+            ## This is a last-case resort and
+            ## may crash the computer if there are several prediction polygons.
+            ## However this shouldn't be the case if these polygons span multiple BAUs
+            CPM <- CP %*% PI
+            newdata[["var"]] <- diag2(CPM, cholsolve(Q=Qx,y=t(CPM),
+                                                     perm = TRUE,
+                                                     cholQp = chol_Qx$Qpermchol,
+                                                     P = chol_Qx$P))
             if(covariances) Covariances <- cholsolveAQinvAT(A = CPM,
                                                             Lp = chol_Qx$Qpermchol,
                                                             P = chol_Qx$P)
         }
 
         # Compute standard error
-        pred_polys[["sd"]] <- sqrt(pred_polys[["var"]])
+        newdata[["sd"]] <- sqrt(newdata[["var"]])
 
         ## Return the prediction polygons
         if(covariances) {
-         pred_polys <- list(pred_polys = pred_polys,
+            newdata <- list(newdata = newdata,
                             Cov = Covariances)
         }
-        pred_polys
+        newdata
     }
-
 }
 
 ## The function below is used to facilitate the computation of multiple marginal variances
@@ -1275,11 +1267,11 @@ print.summary.SRE <- function(x, ...) {
                                       rowSums((S0[idx,] %*% Cov[1:r,1:r]) * S0[idx,]) +  # eta contribution
                                           diag(Cov)[-(1:r)][idx] +                       # fs contribution
                                           2*rowSums(Cov[r+idx,1:r] * S0[idx,])           # cross.cov between eta
-                                                                                         # and fs variation
+                                      # and fs variation
                                   } else {
                                       rowSums((S0[idx,] %*% Cov) * S0[idx,])             # just eta contribution
                                   }
-                                  })
+                              })
         clusterEvalQ(opts_FRK$get("cl"), {gc()})   # clear memory of cluster
         temp <- do.call(c,var_list)                # concatenate results
     } else {
@@ -1296,7 +1288,7 @@ print.summary.SRE <- function(x, ...) {
                     2*rowSums(Cov[(r+idx),1:r] * S0[idx,])                      # cross-cov between eta
             else                                                                # and fs variation
                 temp[idx] <- rowSums((S0[idx,] %*% Cov) * S0[idx,])             # otherwise we just have the eta
-                                                                                # contribution
+            # contribution
 
         }
     }
@@ -1429,17 +1421,17 @@ print.summary.SRE <- function(x, ...) {
         if(vgm.fit$psill[1] <= 0 | attributes(vgm.fit)$singular | !OK) {
             vgm.fit$psill[1] <- v$gamma[1]
             warning("Estimate of measurement error is probably inaccurate.
-                 Please consider setting it through the std variable
-                in the data object if known.")
+                    Please consider setting it through the std variable
+                    in the data object if known.")
         }
-    }
+        }
     cat("sigma2e estimate = ",vgm.fit$psill[1],"\n")
 
     ## Return the sqrt of the psill as the measurement error
     sp_pts$std <- sqrt(vgm.fit$psill[1])
     sp_pts
 
-}
+        }
 
 
 ## Checks arguments for the SRE() function. Code is self-explanatory
@@ -1456,7 +1448,7 @@ print.summary.SRE <- function(x, ...) {
 
 
     if(!all(all.vars(f)[-1] %in% c(names(BAUs@data),coordnames(BAUs))))
-            stop("All covariates need to be in the SpatialPolygons BAU object")
+        stop("All covariates need to be in the SpatialPolygons BAU object")
     if(any(sapply(data,function(x) any(names(x@data) %in% names(BAUs@data)))))
         stop("Please don't have overlapping variable names in data and BAUs. All covariates need to be in the BAUs")
     if(!all(sapply(data,function(x) all.vars(f)[1] %in% names(x@data))))
@@ -1467,7 +1459,7 @@ print.summary.SRE <- function(x, ...) {
         stop("basis needs to be of class Basis  or TensorP_Basis (package FRK)")
     if(!("fs" %in% names(BAUs@data))) {
         stop("BAUs should contain a field 'fs' containing a basis
-                function for fine-scale variation. Do BAUs$fs <- 1 if you don't know what this is.")
+             function for fine-scale variation. Do BAUs$fs <- 1 if you don't know what this is.")
     }
     if(!(all(BAUs$fs >= 0)))
         stop("fine-scale variation basis function needs to be nonnegative everywhere")
@@ -1477,7 +1469,7 @@ print.summary.SRE <- function(x, ...) {
     if(!est_error & !all(sapply(data,function(x) "std" %in% names(x@data))))
         stop("If observational error is not going to be estimated,
              please supply a field 'std' in the data objects")
-}
+    }
 
 
 ## Checks arguments for the SRE.fit() function. Code is self-explanatory
@@ -1493,19 +1485,286 @@ print.summary.SRE <- function(x, ...) {
 }
 
 ## Checks arguments for the SRE.predict() function. Code is self-explanatory
-.check_args3 <- function(obs_fs=FALSE, pred_polys = NULL,
+.check_args3 <- function(obs_fs=FALSE, newdata = NULL, pred_polys = NULL,
                          pred_time = NULL, covariances = FALSE, ...) {
     if(!(obs_fs %in% 0:1)) stop("obs_fs needs to be logical")
 
-    if(is(pred_polys,"Spatial") & !(is(pred_polys,"SpatialPolygons") | is(pred_polys,"SpatialPixels")) )
-        stop("Predictions need to be over BAUs or spatial polygons or pixels")
+    if(!(is(newdata,"Spatial") | (is(newdata,"ST")) | is.null(newdata)))
+        stop("Predictions need to be over Spatial or ST objects")
 
-    if(is(pred_polys,"ST") & !(is(pred_polys,"STFDF")))
-        if(!(is(pred_polys@sp,"SpatialPolygons") | is(pred_polys@sp,"SpatialPixels")))
-            stop("Predictions need to be over BAUs or STFDFs with spatial polygons or pixels")
+    if(!is.null(newdata) & !is.null(pred_time))
+        stop("Only one of newdata and pred_time can be not NULL")
+
+    if(!is.null(pred_polys))
+        warning("pred_polys is deprecated. Please use newdata instead")
 
     if(!(is.integer(pred_time) | is.null(pred_time))) stop("pred_time needs to be of class integer")
     if(!is.logical(covariances)) stop("covariances needs to be TRUE or FALSE")
 }
 
 
+
+## The following function is the internal prediction function
+.SRE.predict.deprecated <- function(Sm, obs_fs = FALSE, pred_polys = NULL,
+                                    pred_time = NULL, covariances = FALSE) {
+
+    ## If the user does not specify time points to predict at when in space-time
+    ## Then predict at every time point
+    if(is.null(pred_time) & is(Sm@BAUs,"ST"))
+        pred_time <- 1:length(time(Sm@BAUs))
+
+    ## We start by assuming that we will predict at BAUs
+    predict_BAUs <- TRUE
+
+    ## Get BAUs from the SRE model
+    BAUs <- Sm@BAUs
+
+    ## If the user has not specified polygons over which to predict, then CP is
+    ## just the diagonal matrix and we predict over all the BAUs
+    if(is.null(pred_polys) & is.null(pred_time)) {
+        CP <- Diagonal(length(BAUs))
+    }
+    if (!is.null(pred_polys)) {
+        ## The user has maybe specified a subset of (could be all) the BAUs over which to predict.
+        ## The following checks whether pred_polys is a subset of the BAUs through the row names
+        pred_polys_are_BAUs <- all(row.names(pred_polys) %in% row.names(BAUs))
+
+        ## If the user has specified a subset of BAUs
+        if(pred_polys_are_BAUs) {
+            ## See which BAUs the user has specified
+            BAUs_idx <- match(row.names(pred_polys), row.names(BAUs))
+
+            ## Construct an incidence matrix that picks out these BAUs
+            CP <-  sparseMatrix(i = 1:length(pred_polys),
+                                j = BAUs_idx,
+                                x = 1,
+                                dims = c(length(pred_polys),
+                                         length(BAUs)))
+
+        } else {
+            ## The user has specified arbitrary polygons
+            ## First try to coerce what the user supplied to Polygons (not pixels etc.)
+            ## Recall that for now only Spatial pred_polys are allowed so the following is
+            ## always valid
+            pred_polys <- as(pred_polys,"SpatialPolygonsDataFrame")
+
+            ## Based on these polygons construct the C matrix
+            C_idx <- BuildC(pred_polys,BAUs)
+            CP <- sparseMatrix(i=C_idx$i_idx,
+                               j=C_idx$j_idx,
+                               x=1,
+                               dims=c(length(pred_polys),
+                                      length(BAUs)))
+
+            ## As in SRE(), make sure the polgons are averages (not sums)
+            CP <- CP / rowSums(CP)
+
+            ## If even one polygon encompasses more than one BAU, then we need to
+            ## predict over linear combinations of BAUs, and hence need to
+            ## compute the full covariance matrix. Note this by setting
+            ## predict_BAUs <- FALSE
+            if(!all(table(C_idx$i_idx) == 1))
+                predict_BAUs <- FALSE   ## Need to compute full covariance matrix
+        }
+    }
+
+    if(!is.null(pred_time)) {
+        nspace <- dim(BAUs)[1]
+        ntime <- length(pred_time)
+        t1 <- ((pred_time[1] - 1)*nspace + 1)
+        t2 <- (pred_time[ntime] *nspace)
+        CP <- sparseMatrix(i = 1:(t2 - t1 + 1), j = t1:t2, x = 1,
+                           dims = c((t2 -t1 + 1), length(BAUs)))
+        pred_polys <- BAUs[,pred_time]
+    }
+
+    ## If we have to compute too many covariances then stop and give error
+    if(covariances & nrow(CP) > 4000)
+        stop("Cannot compute covariances for so many observations. Please reduce
+             to less than 4000")
+
+    ## Get the CZ matrix
+    CZ <- Sm@Cmat
+
+    ## If the user has specified which polygons he want we can remove the ones we don't need
+    ## We only need those BAUs that are influenced by observations and prediction locations
+    ## For space-time use all the BAUs
+    if(!is.null(pred_polys)) {
+
+        ## The needed BAUs are the nonzero column indices of CZ and CP
+        if(!is.null(pred_time)) {
+            needed_BAUs <- 1:length(BAUs)
+        } else {
+            needed_BAUs <- union(as(CP,"dgTMatrix")@j+1,
+                                 as(CZ,"dgTMatrix")@j+1)
+            ## Filter the BAUs and the matrices
+            BAUs <- BAUs[needed_BAUs,]
+            CP <- CP[,needed_BAUs]
+            CZ <- CZ[,needed_BAUs]
+            Sm@S0 <- Sm@S0[needed_BAUs,]
+        }
+    }
+
+    # Deprecated:
+    # if(is(BAUs,"ST")){
+    #     needed_BAUs <- BAUs[,pred_time]$n
+    #     BAUs <- BAUs[,pred_time]
+    #     CP <- CP[,needed_BAUs]
+    #     CZ <- CZ[,needed_BAUs]
+    # }
+
+    ## Retrieve the dependent variable name
+    depname <- all.vars(Sm@f)[1]
+
+    ## Set the dependent variable in BAUs to something just so that .extract.from.formula doesn't
+    ## throw an error.. we will NULL it shortly after
+    BAUs[[depname]] <- 0.1
+
+    ## Extract covariates from BAUs
+    L <- .extract.from.formula(Sm@f,data=BAUs)
+    X = as(L$X,"Matrix")
+    BAUs[[depname]] <- NULL
+
+    ## Set variables to make code more concise
+    S0 <- Sm@S0
+    S0 <- as(S0,"dgCMatrix")   # ensure S0 is classified as sparse
+    alpha <- Sm@alphahat
+    K <- Sm@Khat
+    sigma2fs <- Sm@sigma2fshat
+    mu_eta <- Sm@mu_eta
+    S_eta <- Sm@S_eta
+
+    if(Sm@fs_model == "ind") {
+        D <- sigma2fs*Sm@Vfs + Sm@Ve   # compute total variance (data)
+        if(isDiagonal(D)) {
+            D <- Diagonal(x=D@x)       # cast to diagonal
+            Dchol <- sqrt(D)           # find the inverse of the variance-covariance matrix
+            Dinv <- solve(D)           # if Diagonal the Cholesky and inverse are just sqrt and reciprocal
+        } else {
+            Dchol <- chol(D)           # otherwise they need to be computed in full
+            Dinv <- chol2inv(Dchol)
+        }
+        sig2_Vfs_pred <- Diagonal(x=sigma2fs*BAUs$fs)   # fine-scale variation including estimated factor
+        Q <- solve(sig2_Vfs_pred)                       # precision of fine-scale variation
+    } else  {
+        stop("Prediction for other models not yet implemented")
+    }
+
+    ## The prediction equations
+    ## If !obs_fs, then we are in Case 2 (default). We have to cater for when the
+    ## fine-scale variance is zero or non-zero
+
+    ## Case 2 (fs variation in process)
+    if(!obs_fs) {
+        if(sigma2fs > 0) {   # fine-scale variance not zero
+
+            browser()
+            ## The below equations implement Section 2.3
+            LAMBDAinv <- bdiag(Sm@Khat_inv,Q)                # block diagonal precision matrix
+            PI <- cBind(S0, .symDiagonal(n=length(BAUs)))    # PI = [S I]
+            tC_Ve_C <- t(CZ) %*% solve(Sm@Ve) %*% CZ +       # summary matrix
+                0*.symDiagonal(ncol(CZ))              # Ensure zeros on diagonal
+            Qx <- t(PI) %*% tC_Ve_C %*% PI + LAMBDAinv       # conditional precision matrix
+            chol_Qx <- cholPermute(as(Qx,"dgCMatrix"))       # permute and do Cholesky
+            ybar <- t(PI) %*%t(CZ) %*% solve(Sm@Ve) %*%      # Qx = ybar, see vignette
+                (Sm@Z - CZ %*% X %*% alpha)
+            x_mean <- cholsolve(Qx,ybar,perm=TRUE,           # solve Qx = ybar using permutations
+                                cholQp = chol_Qx$Qpermchol, P = chol_Qx$P)
+
+            if(predict_BAUs) {
+                ## If we are predicting at BAUs then we only need a few covariance elements.
+                ## Find these elements
+                Cov <- Takahashi_Davis(Qx,cholQp = chol_Qx$Qpermchol,P = chol_Qx$P)
+
+                ## Compute the variance and std over the BAUs in batches
+                BAUs[["var"]] <- .batch_compute_var(S0,Cov,fs_in_process = TRUE)
+            } else {
+                ## Do not compute covariance now, do it later
+                #  Cov <- cholsolve(Qx,Diagonal(nrow(Qx)),perm=TRUE,
+                #                   cholQp = chol_Qx$Qpermchol, P = chol_Qx$P) # FULL
+            }
+
+
+        } else {
+            ## If sigma2fs = 0 then the prediction is much simpler and all our
+            ## predictions / uncertainty come from the random effects
+            PI <- S0
+            x_mean <- Sm@mu_eta  # conditional mean of eta
+            Cov <- Sm@S_eta      # conditional covariance of eta
+
+            ## Compute variances, this time indicating there is no fs variation in process
+            BAUs[["var"]] <- .batch_compute_var(S0,Cov,fs_in_process = FALSE)
+        }
+
+        ## The conditional mean is simply given by fitted random effects + fitted fixed effects
+        BAUs[["mu"]] <- as.numeric(X %*% alpha + PI %*% x_mean)
+
+    }
+
+    ## Case 1 (fs variation in measurement equation)
+    if(obs_fs) {
+        ## All predictions and prediction uncertainties comes from our prediction of and uncertainty over eta
+        x_mean <- Sm@mu_eta   # conditional mean
+        Cov <- Sm@S_eta       # conditional covariance
+
+        ## Compute variances, this time indicating there is no fs variation in process
+        BAUs[["mu"]] <- as.numeric(X %*% alpha) + as.numeric(S0 %*% x_mean)
+        BAUs[["var"]] <- .batch_compute_var(S0,Cov,fs_in_process = FALSE)
+    }
+
+
+    ## Now, if the user hasn't specified prediction polygons, and the user does not want covariances,
+    ## our job is done and we just return the BAUs, possibly at selected time points
+    if(predict_BAUs & !covariances) {
+        BAUs[["sd"]] <- sqrt(BAUs[["var"]])  # compute the standard error
+        if(!is.null(pred_polys)) { # User had specified a specific set of BAUs. Return only these (spatial only for now)
+            BAUs <- BAUs[row.names(pred_polys),]
+        }
+        if(!is.null(pred_time)) BAUs <- BAUs[,pred_time]  # return only specified time points
+        BAUs
+
+    } else {
+        ## Otherwise we need to find the mean and variance of linear combinations of these BAUs
+
+        ## The linear combination of the mean is easy
+        pred_polys[["mu"]] <- as.numeric(CP %*% BAUs[["mu"]])
+
+        ## If we have fs variation in the process layer we need to consider the
+        ## fine-scale variation (PI = [S I]) when predicting over the polygons,
+        ## otherwise we just need the variance over eta
+        if(!obs_fs & sigma2fs > 0) CPM <- CP %*% PI else CPM <- CP %*% S0
+
+        ## If there is no fine-scale variation then simply find linear combination
+        if(sigma2fs == 0 | obs_fs)  {
+            pred_polys[["var"]] <- diag2(CPM %*% Cov, t(CPM)) ## All Cov available
+            if(covariances) {
+                L <- t(chol(Cov))
+                Covariances <- tcrossprod(CPM %*% L)
+            }
+        }
+
+        ## Otherwise find full covariance matrix (including over fs-variation). This is a last-case resort and
+        ## may crash the computer if there are several prediction polygons. However this shouldn't be the case
+        ## if these polygons span multiple BAUs
+        else {
+            pred_polys[["var"]] <- diag2(CPM, cholsolve(Q=Qx,y=t(CPM),
+                                                        perm = TRUE,
+                                                        cholQp = chol_Qx$Qpermchol,
+                                                        P = chol_Qx$P))
+            if(covariances) Covariances <- cholsolveAQinvAT(A = CPM,
+                                                            Lp = chol_Qx$Qpermchol,
+                                                            P = chol_Qx$P)
+        }
+
+        # Compute standard error
+        pred_polys[["sd"]] <- sqrt(pred_polys[["var"]])
+
+        ## Return the prediction polygons
+        if(covariances) {
+            pred_polys <- list(pred_polys = pred_polys,
+                               Cov = Covariances)
+        }
+        pred_polys
+    }
+
+}

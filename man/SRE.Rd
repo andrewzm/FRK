@@ -24,7 +24,7 @@ SRE(f, data, basis, BAUs, est_error = TRUE, average_in_BAU = TRUE,
 SRE.fit(SRE_model, n_EM = 100L, tol = 0.01, method = "EM", lambda = 0,
   print_lik = FALSE)
 
-SRE.predict(SRE_model, obs_fs = FALSE, pred_polys = NULL,
+SRE.predict(SRE_model, obs_fs = FALSE, newdata = NULL, pred_polys = NULL,
   pred_time = NULL, covariances = FALSE)
 
 loglik(SRE_model)
@@ -66,7 +66,9 @@ loglik(SRE_model)
 
 \item{obs_fs}{flag indicating whether the fine-scale variation sits in the observation model (systematic error, Case 1) or in the process model (fine-scale process variation, Case 2, default)}
 
-\item{pred_polys}{object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified}
+\item{newdata}{object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified}
+
+\item{pred_polys}{deprecated. Please use \code{newdata} instead}
 
 \item{pred_time}{vector of time indices at which prediction will be carried out. All time points are used if this option is not specified}
 
