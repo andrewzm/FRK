@@ -1,3 +1,0 @@
-LIBRARY FRK.dll
-EXPORTS
- R_init_FRK

@@ -1165,6 +1165,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
 
               ## Attach the ID of the data polygon to the data frame
               data_sp$id <- row.names(data_sp)
+              data_sp$id <- as.character(data_sp$id)
 
               ## Assume the BAUs are so small that it is sufficient to see whether the
               ## BAU centroid falls in the data polygon. To do this we first make
@@ -1181,10 +1182,12 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
               BAUs_aux_data <- .parallel_over(data_sp,BAU_as_points,fn=.safe_mean)
 
               ## Now include the ID in the table so we merge by it later
-              BAUs_aux_data$id <- row.names(BAUs_aux_data)
+              BAUs_aux_data$id <- as.character(row.names(BAUs_aux_data))
 
               ## Do the merging
-              updated_df <- left_join(data_sp@data,BAUs_aux_data,by="id")
+              updated_df <- left_join(data_sp@data,
+                                      BAUs_aux_data,
+                                      by="id")
 
               ## Make sure the rownames are OK
               row.names(updated_df) <- data_sp$id

@@ -1,3 +1,8 @@
+## v0.1.7
++ Made compatible with new update of Hmisc
++ Added support for change of support spatio-temporal prediction
++ Changed from pred_locs to newdata in arguments to SRE.predict
+
 ## v0.1.6
 * Added scale_aperture to have control on aperture of basis functions
 * Adde remove_basis to easily remove basis functions
