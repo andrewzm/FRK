@@ -359,7 +359,8 @@ setMethod("info_fit", signature(SRE_model = "SRE"),
           function(SRE_model) {SRE_model@info_fit})
 
 # Retrieve coefficients of SRE model
-#' @aliases coef,SRE-method
+#' @rdname coef
+#' @aliases coef, SRE-method
 setMethod("coef",signature(object = "SRE"),function(object,...) {
     coeff <- as.numeric(object@alphahat)
     varnames <- all.vars(object@f)[-1]
