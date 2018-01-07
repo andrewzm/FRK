@@ -1196,6 +1196,21 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
               data_sp
           })
 
+## Map the data to the BAUs. This is done after BAU construction
+## data_sp: data (SpatialPixels object)
+## sp_pols: BAUs (SpatialPolygonsDataFrame or SpatialPixelsDataFrame)
+## average_in_BAU: flag indicating whether we want to average data/standard errors in BAUs
+#' @aliases map_data_to_BAUs,Spatial-method
+setMethod("map_data_to_BAUs",signature(data_sp="SpatialPixels"),
+          function(data_sp,sp_pols,average_in_BAU = TRUE) {
+              if(is(data_sp, "SpatialPixels")) {
+                  data_sp <- as(data_sp, "SpatialPolygons")
+              } else {
+                  data_sp <- as(data_sp, "SpatialPolygonsDataFrame")
+              }
+              map_data_to_BAUs(data_sp, sp_pols, average_in_BAU = average_in_BAU)
+          })
+
 ## Returns either a STIDF with the data at the BAU centroids (if data_sp is STIDF)
 ## Or else an STFDF with the original data shifted to the BAU time points and with BAU
 ## features averaged over the ST data polygons

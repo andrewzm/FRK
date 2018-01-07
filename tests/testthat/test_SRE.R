@@ -2,6 +2,7 @@ test_that("SRE 1D works",{
 
     library(dplyr)
     library(sp)
+    library(Matrix)
     ### Generate process and data
     sim_process <- data.frame(x = seq(0.005,0.995,by=0.01)) %>%
         mutate(y=0,proc = sin(x*10) + 0.3*rnorm(length(x)))
@@ -45,7 +46,7 @@ test_that("SRE 1D works",{
     grid_BAUs <- SRE.predict(S, covariances = TRUE)
     expect_is(grid_BAUs,"list")
     expect_equal(grid_BAUs$newdata$var, diag(grid_BAUs$Cov))
-    grid_BAUs <- SRE.predict(S,obs_fs = FALSE, covariances = TRUE)
+    grid_BAUs <- SRE.predict(S, obs_fs = FALSE, covariances = TRUE)
     expect_is(grid_BAUs,"list")
     expect_equal(grid_BAUs$newdata$var, diag(grid_BAUs$Cov))
     expect_equal(dim(grid_BAUs$Cov),rep(length(S@BAUs),2))
@@ -55,6 +56,7 @@ test_that("SRE 1D works",{
     expect_is(grid_BAUs,"SpatialPixelsDataFrame")
     grid_BAUs <- SRE.predict(S,obs_fs = FALSE)
     expect_is(grid_BAUs,"SpatialPixelsDataFrame")
+    print(coef(S))
 
     ### Check alphahat
     alphahat <- coef(S)

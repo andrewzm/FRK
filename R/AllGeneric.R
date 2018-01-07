@@ -221,7 +221,7 @@ setGeneric("info_fit", function(SRE_model)
 #'          data = list(simdata))
 #' est_reg_coeff <- coef(S)
 setGeneric("coef", function(object)
-  standardGeneric("coef"))
+    standardGeneric("coef"))
 
 ########################
 #### NOT EXPORTED ######
