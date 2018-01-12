@@ -8,7 +8,7 @@ Fixed Rank Kriging
 Installation 
 ------------
 
-The package `FRK` is now at v0.1.6 and available on CRAN! To install, please type
+The package `FRK` is now at v0.1.8 and available on CRAN! To install, please type
 
 ```r
 install.packages("FRK")
@@ -17,19 +17,17 @@ install.packages("FRK")
 To install the most recent (development) version, first please install `INLA` from `http://www.r-inla.org/download`, then please load `devtools` and type
 
 ```r
-install_github("andrewzm/FRK",dependencies=TRUE,build_vignettes=TRUE)
+install_github("andrewzm/FRK", dependencies = TRUE, build_vignettes = TRUE)
 ```
 
 A document containing a description, details on the underlying maths and computations, as well as several examples, is available as a vignette. To load this vignette please type
 
 ```r
-library(FRK)
+library("FRK")
 vignette("FRK_intro")
 ```
 
 A draft paper with more details, currently under review, is available from [here](https://arxiv.org/abs/1705.08105).
-
-[](include:https://raw.githubusercontent.com/andrewzm/FRK/master/DESCRIPTION)
 
 Description
 ------------
@@ -88,9 +86,9 @@ ggplot(xy) + geom_tile(aes(x,y,fill=se)) +
 
 ```    
 
-![alt tag](https://www.dropbox.com/s/vq21ycwbhukx8uj/FRK_ex_data.png?dl=0)
-![alt tag](https://www.dropbox.com/s/galrk0ekf5ksyp6/FRK_ex_mu.png?dl=0)
-![alt tag](https://www.dropbox.com/s/2x5yt1z0vlffm2y/FRK_ex_se.png?dl=0)
+![data](https://www.dropbox.com/s/vq21ycwbhukx8uj/FRK_ex_data.png?raw=true "Data")
+![mu](https://www.dropbox.com/s/galrk0ekf5ksyp6/FRK_ex_mu.png?raw=true "mu")
+![se](https://www.dropbox.com/s/2x5yt1z0vlffm2y/FRK_ex_se.png?raw=true "se")
 
 [//]: # (Currently `FRK` is not installing on OSX with `build_vignettes=TRUE` as it fails to find `texi2dvi`. Set `build_vignettes=FALSE` to ensure installation. Then download the `.Rnw` file in the `vignettes` folder and compile the pdf file separately in `RStudio` with `knitr`. )
 
