@@ -91,7 +91,9 @@ ggplot(xy) + geom_tile(aes(x,y,fill=se)) +
 ![alt tag](https://www.dropbox.com/s/galrk0ekf5ksyp6/FRK_ex_mu.png?dl=0)
 ![alt tag](https://www.dropbox.com/s/2x5yt1z0vlffm2y/FRK_ex_se.png?dl=0)
 
-[//]: # ( > ggsave(gdata,file="~/Dropbox/Public/FRK/FRK_ex_data.png",width=7,height=5) > ggsave(gmu,file="~/Dropbox/Public/FRK/FRK_ex_mu.png",width=7,height=5) > ggsave(gse,file="~/Dropbox/Public/FRK/FRK_ex_se.png",width=7,height=5) )
+[//]: # (ggsave(gdata,file="~/Dropbox/Public/FRK/FRK_ex_data.png",width=7,height=5))
+[//]: # (ggsave(gmu,file="~/Dropbox/Public/FRK/FRK_ex_mu.png",width=7,height=5))
+[//]: # (ggsave(gse,file="~/Dropbox/Public/FRK/FRK_ex_se.png",width=7,height=5))
 
 
 [//]: # (Currently `FRK` is not installing on OSX with `build_vignettes=TRUE` as it fails to find `texi2dvi`. Set `build_vignettes=FALSE` to ensure installation. Then download the `.Rnw` file in the `vignettes` folder and compile the pdf file separately in `RStudio` with `knitr`. )
