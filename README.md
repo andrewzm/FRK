@@ -40,16 +40,15 @@ Type: Package
 
 Title: Fixed Rank Kriging
 
-Version: 0.1.6
+Version: 0.1.8
 
-Date: 2016-06-05
+Date: 2018-01-12
 
 Author: Andrew Zammit-Mangion
 
 Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
 
-Description: Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling and prediction with large datasets. The approach, discussed in Cressie and Johannesson (2008), decomposes the field, and hence the covariance function, using a fixed set of *n* basis functions, where *n* is typically much smaller than the number of data points (or polygons) *m*. The method naturally allows for non-stationary, anisotropic covariance functions and the use of observations with varying support (with known error variance). The projected field is a
-    key building block of the Spatial Random Effects (SRE) model, on which this package is based. The package FRK provides helper functions to model, fit, and predict using an SRE with relative ease. Reference: Cressie, N., & Johannesson, G. (2008). Fixed rank kriging for very large spatial data sets. Journal of the Royal Statistical Society: Series B, 70, 209-226.
+Description: Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling and prediction with large datasets. The approach, discussed in Cressie and Johannesson (2008), decomposes the field, and hence the covariance function, using a fixed set of *n* basis functions, where *n* is typically much smaller than the number of data points (or polygons) *m*. The method naturally allows for non-stationary, anisotropic covariance functions and the use of observations with varying support (with known error variance). The projected field is a key building block of the Spatial Random Effects (SRE) model, on which this package is based. The package FRK provides helper functions to model, fit, and predict using an SRE with relative ease. Reference: Cressie, N., & Johannesson, G. (2008). Fixed rank kriging for very large spatial data sets. Journal of the Royal Statistical Society: Series B, 70, 209-226.
 
 License: GPL (>= 2)
 
@@ -88,9 +87,9 @@ ggplot(xy) + geom_tile(aes(x,y,fill=se)) +
              scale_fill_distiller(palette="Spectral") + theme_bw() + coord_fixed()
 ```    
 
-![alt tag](https://dl.dropboxusercontent.com/u/3028804/FRK/FRK_ex_data.png)
-![alt tag](https://dl.dropboxusercontent.com/u/3028804/FRK/FRK_ex_mu.png)
-![alt tag](https://dl.dropboxusercontent.com/u/3028804/FRK/FRK_ex_se.png)
+![alt tag](https://www.dropbox.com/s/vq21ycwbhukx8uj/FRK_ex_data.png?dl=0)
+![alt tag](https://www.dropbox.com/s/galrk0ekf5ksyp6/FRK_ex_mu.png?dl=0)
+![alt tag](https://www.dropbox.com/s/2x5yt1z0vlffm2y/FRK_ex_se.png?dl=0)
 
 [//]: # ( > ggsave(gdata,file="~/Dropbox/Public/FRK/FRK_ex_data.png",width=7,height=5) > ggsave(gmu,file="~/Dropbox/Public/FRK/FRK_ex_mu.png",width=7,height=5) > ggsave(gse,file="~/Dropbox/Public/FRK/FRK_ex_se.png",width=7,height=5) )
 
