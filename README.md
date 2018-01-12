@@ -29,7 +29,7 @@ vignette("FRK_intro")
 
 A draft paper with more details, currently under review, is available from [here](https://arxiv.org/abs/1705.08105).
 
-[](include:DESCRIPTION)
+[](include:https://raw.githubusercontent.com/andrewzm/FRK/master/DESCRIPTION)
 
 Description
 ------------
