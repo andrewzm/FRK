@@ -7,12 +7,12 @@
 SpatialPolygonsDataFrame_to_df(sp_polys, vars = names(sp_polys))
 }
 \arguments{
-\item{sp_polys}{object of class \code{SpatialPolygonsDataFrame}}
+\item{sp_polys}{object of class \code{SpatialPolygonsDataFrame} or \code{SpatialPixelsDataFrame}}
 
 \item{vars}{variables to put into data frame (by default all of them)}
 }
 \description{
-Convert \code{SpatialPolygonsDataFrame} object to data frame.
+Convert \code{SpatialPolygonsDataFrame} or \code{SpatialPixelsDataFrame} object to data frame.
 }
 \details{
 This function is mainly used for plotting \code{SpatialPolygonsDataFrame} objects with \code{ggplot} rather than \code{spplot}. The coordinates of each polygon are extracted and concatenated into one long data frame. The attributes of each polygon are then attached to this data frame as variables that vary by polygon \code{id} (the rownames of the object).

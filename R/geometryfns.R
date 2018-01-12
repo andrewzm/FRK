@@ -951,8 +951,8 @@ df_to_SpatialPolygons <- function(df,keys,coords,proj) {
 }
 
 #' @title SpatialPolygonsDataFrame to df
-#' @description Convert \code{SpatialPolygonsDataFrame} object to data frame.
-#' @param sp_polys object of class \code{SpatialPolygonsDataFrame}
+#' @description Convert \code{SpatialPolygonsDataFrame} or \code{SpatialPixelsDataFrame} object to data frame.
+#' @param sp_polys object of class \code{SpatialPolygonsDataFrame} or \code{SpatialPixelsDataFrame}
 #' @param vars variables to put into data frame (by default all of them)
 #' @details This function is mainly used for plotting \code{SpatialPolygonsDataFrame} objects with \code{ggplot} rather than \code{spplot}. The coordinates of each polygon are extracted and concatenated into one long data frame. The attributes of each polygon are then attached to this data frame as variables that vary by polygon \code{id} (the rownames of the object).
 #' @export
@@ -967,7 +967,15 @@ df_to_SpatialPolygons <- function(df,keys,coords,proj) {
 #' polsdf <- SpatialPolygonsDataFrame(pols,data.frame(p = c(1,2),row.names=row.names(pols)))
 #' df2 <- SpatialPolygonsDataFrame_to_df(polsdf)
 #' \dontrun{ggplot(df2,aes(x=x,y=y,group=id)) + geom_polygon()}
-SpatialPolygonsDataFrame_to_df <- function(sp_polys,vars = names(sp_polys)) {
+SpatialPolygonsDataFrame_to_df <- function(sp_polys, vars = names(sp_polys)) {
+
+    if(!(is(sp_polys,"SpatialPolygonsDataFrame") |
+         is(sp_polys,"SpatialPixelsDataFrame")))
+        stop("sp_polys needs to be of class SpatialPolygonsDataFrame
+                 or SpatialPixelsDataFrame")
+
+    if(is(sp_polys,"SpatialPixelsDataFrame"))
+        sp_polys <- as(sp_polys, "SpatialPolygonsDataFrame")
 
     ## The names of the polygons is the same
     polynames <- as.character(row.names(sp_polys))
