@@ -938,7 +938,8 @@ df_to_SpatialPolygons <- function(df,keys,coords,proj) {
     ## dfun takes a data frame with coordinates for 1 polygon, and makes one POLYGON object from it
     ## with a UID from the polygon key
     dfun <- function(d) {
-        Polygons(list(Polygon(d[coords])),digest::digest(d[keys]))
+        Polygons(list(Polygon(d[coords])),
+                 as.character(d[keys]))
     }
 
     ## Now apply dfun to all polygons in data frame
