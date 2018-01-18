@@ -26,6 +26,7 @@
 #' @import spacetime
 #' @import parallel
 #' @import dplyr
+#' @import sparseinv
 #' @importFrom Hmisc roundPOSIXt truncPOSIXt ceil
 #' @importFrom plyr ddply dlply rbind.fill
 #' @importFrom digest digest
