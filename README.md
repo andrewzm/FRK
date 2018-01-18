@@ -8,7 +8,7 @@ Fixed Rank Kriging
 Installation 
 ------------
 
-The package `FRK` is now at v0.1.6 and available on CRAN! To install, please type
+The package `FRK` is now at v0.1.8 and available on CRAN! To install, please type
 
 ```r
 install.packages("FRK")
@@ -17,13 +17,13 @@ install.packages("FRK")
 To install the most recent (development) version, first please install `INLA` from `http://www.r-inla.org/download`, then please load `devtools` and type
 
 ```r
-install_github("andrewzm/FRK",dependencies=TRUE,build_vignettes=TRUE)
+install_github("andrewzm/FRK", dependencies = TRUE, build_vignettes = TRUE)
 ```
 
 A document containing a description, details on the underlying maths and computations, as well as several examples, is available as a vignette. To load this vignette please type
 
 ```r
-library(FRK)
+library("FRK")
 vignette("FRK_intro")
 ```
 
@@ -38,16 +38,15 @@ Type: Package
 
 Title: Fixed Rank Kriging
 
-Version: 0.1.6
+Version: 0.1.8
 
-Date: 2016-06-05
+Date: 2018-01-12
 
 Author: Andrew Zammit-Mangion
 
 Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
 
-Description: Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling and prediction with large datasets. The approach, discussed in Cressie and Johannesson (2008), decomposes the field, and hence the covariance function, using a fixed set of *n* basis functions, where *n* is typically much smaller than the number of data points (or polygons) *m*. The method naturally allows for non-stationary, anisotropic covariance functions and the use of observations with varying support (with known error variance). The projected field is a
-    key building block of the Spatial Random Effects (SRE) model, on which this package is based. The package FRK provides helper functions to model, fit, and predict using an SRE with relative ease. Reference: Cressie, N., & Johannesson, G. (2008). Fixed rank kriging for very large spatial data sets. Journal of the Royal Statistical Society: Series B, 70, 209-226.
+Description: Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling and prediction with large datasets. The approach, discussed in Cressie and Johannesson (2008), decomposes the field, and hence the covariance function, using a fixed set of *n* basis functions, where *n* is typically much smaller than the number of data points (or polygons) *m*. The method naturally allows for non-stationary, anisotropic covariance functions and the use of observations with varying support (with known error variance). The projected field is a key building block of the Spatial Random Effects (SRE) model, on which this package is based. The package FRK provides helper functions to model, fit, and predict using an SRE with relative ease. Reference: Cressie, N., & Johannesson, G. (2008). Fixed rank kriging for very large spatial data sets. Journal of the Royal Statistical Society: Series B, 70, 209-226.
 
 License: GPL (>= 2)
 
@@ -84,14 +83,12 @@ ggplot(xy) + geom_raster(aes(x,y,fill=mu)) +
 ggplot(xy) + geom_tile(aes(x,y,fill=se)) + 
              geom_point(data=zdf,aes(x,y),pch=46) +
              scale_fill_distiller(palette="Spectral") + theme_bw() + coord_fixed()
+
 ```    
 
-![alt tag](https://dl.dropboxusercontent.com/u/3028804/FRK/FRK_ex_data.png)
-![alt tag](https://dl.dropboxusercontent.com/u/3028804/FRK/FRK_ex_mu.png)
-![alt tag](https://dl.dropboxusercontent.com/u/3028804/FRK/FRK_ex_se.png)
-
-[//]: # ( > ggsave(gdata,file="~/Dropbox/Public/FRK/FRK_ex_data.png",width=7,height=5) > ggsave(gmu,file="~/Dropbox/Public/FRK/FRK_ex_mu.png",width=7,height=5) > ggsave(gse,file="~/Dropbox/Public/FRK/FRK_ex_se.png",width=7,height=5) )
-
+![data](https://www.dropbox.com/s/vq21ycwbhukx8uj/FRK_ex_data.png?raw=true "Data")
+![mu](https://www.dropbox.com/s/galrk0ekf5ksyp6/FRK_ex_mu.png?raw=true "mu")
+![se](https://www.dropbox.com/s/2x5yt1z0vlffm2y/FRK_ex_se.png?raw=true "se")
 
 [//]: # (Currently `FRK` is not installing on OSX with `build_vignettes=TRUE` as it fails to find `texi2dvi`. Set `build_vignettes=FALSE` to ensure installation. Then download the `.Rnw` file in the `vignettes` folder and compile the pdf file separately in `RStudio` with `knitr`. )
 
