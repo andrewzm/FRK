@@ -34,6 +34,7 @@ install:
 - Rscript -e 'install.packages("splancs", repos = "http://cran.rstudio.com")'
 - Rscript -e 'install.packages("mapproj", repos = "http://cran.rstudio.com")'
 - Rscript -e 'install.packages("rgeos", repos = "http://cran.rstudio.com")'
+- Rscript -e 'install.packages("sparseinv", repos = "http://cran.rstudio.com")'
 - Rscript -e 'install.packages("gstat", repos = "http://cran.rstudio.com")'
 - Rscript -e 'install.packages("Hmisc", repos = "http://cran.rstudio.com")'
 - Rscript -e 'install.packages("testthat", repos = "http://cran.rstudio.com")'
