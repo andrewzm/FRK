@@ -300,7 +300,7 @@ setMethod("coordnames",signature(x="STIDF"),function(x) {
 #' @param data object of class \code{SpatialPointsDataFrame}, \code{SpatialPolygonsDataFrame},  \code{STIDF}, or \code{STFDF}. Provision of \code{data} implies that the domain is bounded, and is thus necessary when the manifold is a \code{real_line, plane}, or \code{STplane}, but is not necessary when the manifold is the surface of a \code{sphere}
 #' @param nonconvex_hull flag indicating whether to use \code{INLA} to generate a non-convex hull. Otherwise a convex hull is used
 #' @param convex convex parameter used for smoothing an extended boundary when working on a bounded domain (that is, when the object \code{data} is supplied); see details
-#' @param tunit temporal unit when requiring space-time BAUs. Can be either "secs", "mins", "hours" or "days"
+#' @param tunit temporal unit when requiring space-time BAUs. Can be "secs", "mins", "hours", etc.
 #' @param xlims limits of the horizontal axis (overrides automatic selection)
 #' @param ylims limits of the vertical axis (overrides automatic selection)
 #' @param ... currently unused
@@ -1109,10 +1109,19 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
 
                   ## The following over returns a data frame equal in number of rows to data_sp
                   ## with the BAU info at the data location
-                  data_over_sp <- .parallel_over(data_sp,sp_pols)
-
+                  ## If BAUs are SpatialPoints then do it manually
+                  if(is(sp_pols, "SpatialPoints")) {
+                      crds <- coordnames(data_sp)
+                      df1 <- as.data.frame(data_sp)
+                      df2 <- sp_pols@data
+                      data_over_sp <- left_join(df1, df2,
+                                       by = crds)
+                  } else {
+                  data_over_sp <- .parallel_over(data_sp, sp_pols)
                   ## We now cbind the original data with data_over_sp
                   data_over_sp <- cbind(data_df,data_over_sp)
+                  }
+
 
                   if(any(is.na(data_over_sp$BAU_name))) {  # data points at 180 boundary or outside BAUs -- remove
                       ii <- which(is.na((data_over_sp$BAU_name)))
@@ -1436,6 +1445,8 @@ setMethod("BuildC",signature(data="STFDF"),
 ## Does the over function in parallel
 .parallel_over <- function(sp1,sp2,fn=NULL,batch_size = NULL) {
 
+
+
     if(!(opts_FRK$get("parallel") > 1)) {    # Either do serially
         over(sp1,sp2,fn=fn)
     } else {                                 # Or in parallel
@@ -1717,7 +1728,7 @@ process_isea3h <- function(isea3h,resl) {
 .polygons_to_points <- function(polys) {
 
     ## Basic check
-    if(!(is(polys,"STFDF") |  is(polys,"SpatialPixels")| is(polys,"SpatialPolygons")))
+    if(!(is(polys,"STFDF") |  is(polys,"SpatialPixels")| is(polys,"SpatialPoints") | is(polys,"SpatialPolygons")))
         stop("polys needs to be of class STFDF, SpatialPixels, or SpatialPolygons")
 
     ## If object is STFDF
