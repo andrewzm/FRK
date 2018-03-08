@@ -1452,10 +1452,10 @@ print.summary.SRE <- function(x, ...) {
     if(is(BAUs,"STFDF")) if(!(is(BAUs@sp,"SpatialPointsDataFrame") | is(BAUs@sp,"SpatialPolygonsDataFrame") | is(BAUs@sp,"SpatialPixelsDataFrame")))
         stop("The spatial component of the BAUs should be a SpatialPolygonsDataFrame or SpatialPixelsDataFrame")
 
-    if(is(BAUs,"SpatialPointsDataFrame"))
-        stop("Implementation with Point BAUs is currently in progress")
-    if(is(BAUs,"STFDF")) if(is(BAUs@sp,"SpatialPointsDataFrame"))
-        stop("Implementation with Point BAUs is currently in progress")
+    # if(is(BAUs,"SpatialPointsDataFrame"))
+    #     stop("Implementation with Point BAUs is currently in progress")
+    # if(is(BAUs,"STFDF")) if(is(BAUs@sp,"SpatialPointsDataFrame"))
+    #     stop("Implementation with Point BAUs is currently in progress")
 
 
     if(!all(all.vars(f)[-1] %in% c(names(BAUs@data),coordnames(BAUs))))

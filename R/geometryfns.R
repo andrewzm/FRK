@@ -1109,19 +1109,24 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
 
                   ## The following over returns a data frame equal in number of rows to data_sp
                   ## with the BAU info at the data location
-                  ## If BAUs are SpatialPoints then do it manually
-                  if(is(sp_pols, "SpatialPoints")) {
-                      crds <- coordnames(data_sp)
-                      df1 <- as.data.frame(data_sp)
-                      df2 <- sp_pols@data
-                      data_over_sp <- left_join(df1, df2,
-                                       by = crds)
-                  } else {
+
+                  # ## If BAUs are SpatialPoints then do it manually
+                  # if(is(sp_pols, "SpatialPoints")) {
+                  #     crds <- coordnames(data_sp)
+                  #     df1 <- as.data.frame(data_sp)
+                  #     df2 <- sp_pols@data
+                  #     data_over_sp <- left_join(df1, df2,
+                  #                      by = crds)
+                  # } else {
+                  # data_over_sp <- .parallel_over(data_sp, sp_pols)
+                  # ## We now cbind the original data with data_over_sp
+                  # data_over_sp <- cbind(data_df,data_over_sp)
+                  # }
+
                   data_over_sp <- .parallel_over(data_sp, sp_pols)
+
                   ## We now cbind the original data with data_over_sp
                   data_over_sp <- cbind(data_df,data_over_sp)
-                  }
-
 
                   if(any(is.na(data_over_sp$BAU_name))) {  # data points at 180 boundary or outside BAUs -- remove
                       ii <- which(is.na((data_over_sp$BAU_name)))
