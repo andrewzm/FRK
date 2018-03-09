@@ -1,4 +1,5 @@
 context("other")
+
 test_that("opts",{
     expect_is(opts_FRK$get,"function")
     expect_is(opts_FRK$set,"function")
@@ -99,6 +100,7 @@ test_that("Plotting works", {
 })
 
 test_that("Date sequencing works", {
+    library("Hmisc")
     tspacing <- paste(1,"year")
     tstart <- as.POSIXct("1990-06-01 10:00:00 AEST")
     tend <- as.POSIXct("1993-06-01 10:00:00 AEST")
