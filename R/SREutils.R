@@ -32,8 +32,8 @@
 #' @param lambda ridge-regression regularisation parameter for when \code{K} is unstructured (0 by default). Can be a single number, or a vector (one parameter for each resolution)
 #' @param print_lik flag indicating whether likelihood value should be printed or not after convergence of the EM estimation algorithm
 # #' @param use_centroid flag indicating whether the basis functions are averaged over the BAU, or whether the basis functions are evaluated at the BAUs centroid in order to construct the matrix \eqn{S}. The flag can safely be set when the basis functions are approximately constant over the BAUs in order to reduce computational time
-#' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error, Case 1) or in the process model (fine-scale process variation, Case 2, default)
 #' @param newdata object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified
+#' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error, Case 1) or in the process model (fine-scale process variation, Case 2, default)
 #' @param pred_polys deprecated. Please use \code{newdata} instead
 #' @param pred_time vector of time indices at which prediction will be carried out. All time points are used if this option is not specified
 #' @param covariances logical variable indicating whether prediction covariances should be returned or not. If set to \code{TRUE}, a maximum of 4000 prediction locations or polygons are allowed.
@@ -48,9 +48,9 @@
 #'
 #'The function \code{FRK} acts as a wrapper for the functions \code{SRE} and \code{SRE.fit}. An added advantage of using \code{FRK} directly is that it automatically generates BAUs and basis functions based on the data. Hence \code{FRK} can be called using only a list of data objects and an \code{R} formula, although the \code{R} formula can only contain space or time as covariates when BAUs are not explicitly supplied with the covariate data.
 #'
-#'Once the parameters are fitted, the \code{SRE} object is passed onto the function \code{SRE.predict()} in order to carry out optimal predictions over the same BAUs used to construct the SRE model with \code{SRE()}. The first part of the prediction process is to construct the matrix \eqn{S} over the prediction polygons. This is made computationally efficient by treating the prediction over polygons as that of the prediction over a combination of BAUs. This will yield valid results only if the BAUs are relatively small. Once the matrix \eqn{S} is found, a standard Gaussian inversion (through conditioning) using the estimated parameters is used for prediction.
+#'Once the parameters are fitted, the \code{SRE} object is passed onto the function \code{predict()} in order to carry out optimal predictions over the same BAUs used to construct the SRE model with \code{SRE()}. The first part of the prediction process is to construct the matrix \eqn{S} over the prediction polygons. This is made computationally efficient by treating the prediction over polygons as that of the prediction over a combination of BAUs. This will yield valid results only if the BAUs are relatively small. Once the matrix \eqn{S} is found, a standard Gaussian inversion (through conditioning) using the estimated parameters is used for prediction.
 #'
-#'\code{SRE.predict} returns the BAUs, which are of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame}, or \code{STFDF}, with two added attributes, \code{mu} and \code{var}. These can then be easily plotted using \code{spplot} or \code{ggplot2} (possibly in conjunction with \code{\link{SpatialPolygonsDataFrame_to_df}}) as shown in the package vignettes.
+#'\code{predict} returns the BAUs, which are of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame}, or \code{STFDF}, with two added attributes, \code{mu} and \code{var}. These can then be easily plotted using \code{spplot} or \code{ggplot2} (possibly in conjunction with \code{\link{SpatialPolygonsDataFrame_to_df}}) as shown in the package vignettes.
 #' @export
 #' @examples
 #' library(sp)
@@ -88,7 +88,7 @@
 #'
 #'
 #' ### Predict over BAUs
-#' grid_BAUs <- SRE.predict(S)
+#' grid_BAUs <- predict(S)
 #'
 #' ### Plot
 #' \dontrun{
@@ -278,11 +278,22 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 0.01, method="EM", lambda = 0, 
 }
 
 
+#' @export
+SRE.predict <- function(SRE_model, obs_fs = FALSE, newdata = NULL, pred_polys = NULL,
+                        pred_time = NULL, covariances = FALSE) {
+    warning("SRE.predict is deprecated. Please use predict.")
+    predict(SRE_model, obs_fs = obs_fs, newdata = newdata,
+            pred_polys = pred_polys, pred_time = pred_time,
+            covariances = covariances)
+
+}
+
 #' @rdname SRE
 #' @export
-SRE.predict <- function(SRE_model, obs_fs=FALSE, newdata = NULL, pred_polys = NULL,
-                        pred_time = NULL, covariances = FALSE) {
+setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = FALSE, pred_polys = NULL,
+                                              pred_time = NULL, covariances = FALSE) {
 
+    SRE_model <- object
     ## Deprecation coercion
     if(!is.null(pred_polys))
         newdata <- pred_polys
@@ -302,7 +313,7 @@ SRE.predict <- function(SRE_model, obs_fs=FALSE, newdata = NULL, pred_polys = NU
 
     ## Return predictions
     pred_locs
-}
+})
 
 #' @rdname SRE
 #' @export
@@ -1495,7 +1506,7 @@ print.summary.SRE <- function(x, ...) {
     if(!(all(lambda >= 0))) stop("lambda needs to be greater or equal to zero")
 }
 
-## Checks arguments for the SRE.predict() function. Code is self-explanatory
+## Checks arguments for the predict() function. Code is self-explanatory
 .check_args3 <- function(obs_fs=FALSE, newdata = NULL, pred_polys = NULL,
                          pred_time = NULL, covariances = FALSE, ...) {
     if(!(obs_fs %in% 0:1)) stop("obs_fs needs to be logical")

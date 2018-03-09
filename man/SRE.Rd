@@ -6,7 +6,7 @@
 \alias{FRK}
 \alias{SRE}
 \alias{SRE.fit}
-\alias{SRE.predict}
+\alias{predict,SRE-method}
 \alias{loglik}
 \alias{info_fit,SRE-method}
 \title{Construct SRE object, fit and predict}
@@ -19,13 +19,14 @@ FRK(f, data, basis = NULL, BAUs = NULL, est_error = TRUE,
   lambda = 0, print_lik = FALSE, ...)
 
 SRE(f, data, basis, BAUs, est_error = TRUE, average_in_BAU = TRUE,
-  fs_model = "ind", vgm_model = NULL, K_type = "block-exponential")
+  fs_model = "ind", vgm_model = NULL, K_type = "block-exponential",
+  normalise_basis = TRUE)
 
 SRE.fit(SRE_model, n_EM = 100L, tol = 0.01, method = "EM", lambda = 0,
   print_lik = FALSE)
 
-SRE.predict(SRE_model, obs_fs = FALSE, newdata = NULL, pred_polys = NULL,
-  pred_time = NULL, covariances = FALSE)
+\S4method{predict}{SRE}(object, newdata = NULL, obs_fs = FALSE,
+  pred_polys = NULL, pred_time = NULL, covariances = FALSE)
 
 loglik(SRE_model)
 
@@ -64,9 +65,11 @@ loglik(SRE_model)
 
 \item{...}{other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling the function \code{FRK}}
 
-\item{obs_fs}{flag indicating whether the fine-scale variation sits in the observation model (systematic error, Case 1) or in the process model (fine-scale process variation, Case 2, default)}
+\item{normalise_basis}{flag indicating whether to normalise the basis functions so that they reproduce a stochastic process with approximately constant variance spatially}
 
 \item{newdata}{object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified}
+
+\item{obs_fs}{flag indicating whether the fine-scale variation sits in the observation model (systematic error, Case 1) or in the process model (fine-scale process variation, Case 2, default)}
 
 \item{pred_polys}{deprecated. Please use \code{newdata} instead}
 
@@ -88,9 +91,9 @@ The actual computations for the E-step and M-step are relatively straightforward
 
 The function \code{FRK} acts as a wrapper for the functions \code{SRE} and \code{SRE.fit}. An added advantage of using \code{FRK} directly is that it automatically generates BAUs and basis functions based on the data. Hence \code{FRK} can be called using only a list of data objects and an \code{R} formula, although the \code{R} formula can only contain space or time as covariates when BAUs are not explicitly supplied with the covariate data.
 
-Once the parameters are fitted, the \code{SRE} object is passed onto the function \code{SRE.predict()} in order to carry out optimal predictions over the same BAUs used to construct the SRE model with \code{SRE()}. The first part of the prediction process is to construct the matrix \eqn{S} over the prediction polygons. This is made computationally efficient by treating the prediction over polygons as that of the prediction over a combination of BAUs. This will yield valid results only if the BAUs are relatively small. Once the matrix \eqn{S} is found, a standard Gaussian inversion (through conditioning) using the estimated parameters is used for prediction.
+Once the parameters are fitted, the \code{SRE} object is passed onto the function \code{predict()} in order to carry out optimal predictions over the same BAUs used to construct the SRE model with \code{SRE()}. The first part of the prediction process is to construct the matrix \eqn{S} over the prediction polygons. This is made computationally efficient by treating the prediction over polygons as that of the prediction over a combination of BAUs. This will yield valid results only if the BAUs are relatively small. Once the matrix \eqn{S} is found, a standard Gaussian inversion (through conditioning) using the estimated parameters is used for prediction.
 
-\code{SRE.predict} returns the BAUs, which are of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame}, or \code{STFDF}, with two added attributes, \code{mu} and \code{var}. These can then be easily plotted using \code{spplot} or \code{ggplot2} (possibly in conjunction with \code{\link{SpatialPolygonsDataFrame_to_df}}) as shown in the package vignettes.
+\code{predict} returns the BAUs, which are of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame}, or \code{STFDF}, with two added attributes, \code{mu} and \code{var}. These can then be easily plotted using \code{spplot} or \code{ggplot2} (possibly in conjunction with \code{\link{SpatialPolygonsDataFrame_to_df}}) as shown in the package vignettes.
 }
 \examples{
 library(sp)
@@ -128,7 +131,7 @@ S <- SRE.fit(S,n_EM = 5,tol = 0.01,print_lik=TRUE)
 
 
 ### Predict over BAUs
-grid_BAUs <- SRE.predict(S)
+grid_BAUs <- predict(S)
 
 ### Plot
 \dontrun{

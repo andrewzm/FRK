@@ -23,7 +23,7 @@ auto_BAUs(manifold, type = NULL, cellsize = NULL, isea3h_res = NULL,
 
 \item{convex}{convex parameter used for smoothing an extended boundary when working on a bounded domain (that is, when the object \code{data} is supplied); see details}
 
-\item{tunit}{temporal unit when requiring space-time BAUs. Can be either "secs", "mins", "hours" or "days"}
+\item{tunit}{temporal unit when requiring space-time BAUs. Can be "secs", "mins", "hours", etc.}
 
 \item{xlims}{limits of the horizontal axis (overrides automatic selection)}
 

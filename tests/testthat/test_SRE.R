@@ -43,18 +43,18 @@ test_that("SRE 1D works",{
     expect_is(info_fit(S),"list")
 
     ### Predict over BAUs using both modes
-    grid_BAUs <- SRE.predict(S, covariances = TRUE)
+    grid_BAUs <- predict(S, covariances = TRUE)
     expect_is(grid_BAUs,"list")
     expect_equal(grid_BAUs$newdata$var, diag(grid_BAUs$Cov))
-    grid_BAUs <- SRE.predict(S, obs_fs = FALSE, covariances = TRUE)
+    grid_BAUs <- predict(S, obs_fs = FALSE, covariances = TRUE)
     expect_is(grid_BAUs,"list")
     expect_equal(grid_BAUs$newdata$var, diag(grid_BAUs$Cov))
     expect_equal(dim(grid_BAUs$Cov),rep(length(S@BAUs),2))
 
     ### Check covariances option
-    grid_BAUs <- SRE.predict(S)
+    grid_BAUs <- predict(S)
     expect_is(grid_BAUs,"SpatialPixelsDataFrame")
-    grid_BAUs <- SRE.predict(S,obs_fs = FALSE)
+    grid_BAUs <- predict(S,obs_fs = FALSE)
     expect_is(grid_BAUs,"SpatialPixelsDataFrame")
     print(coef(S))
 
@@ -109,9 +109,9 @@ test_that("SRE 2D plane works",{
     expect_is(S,"SRE")
 
     ### Predict over BAUs
-    grid_BAUs <- SRE.predict(S)
+    grid_BAUs <- predict(S)
     expect_is(grid_BAUs,"SpatialPixelsDataFrame")
-    grid_BAUs <- SRE.predict(S,obs_fs = FALSE)
+    grid_BAUs <- predict(S,obs_fs = FALSE)
     expect_is(grid_BAUs,"SpatialPixelsDataFrame")
 
     ### summary works?
@@ -156,9 +156,9 @@ test_that("SRE sphere works",{
     expect_is(S,"SRE")
 
     ### Predict over BAUs
-    grid_BAUs <- SRE.predict(S)
+    grid_BAUs <- predict(S)
     expect_is(grid_BAUs,"SpatialPolygonsDataFrame")
-    grid_BAUs <- SRE.predict(S,obs_fs = FALSE)
+    grid_BAUs <- predict(S,obs_fs = FALSE)
     expect_is(grid_BAUs,"SpatialPolygonsDataFrame")
 
     ### summary works?
@@ -214,9 +214,9 @@ test_that("SRE space-time sphere works",{
     expect_is(S,"SRE")
 
     ### Predict over BAUs
-    grid_BAUs <- SRE.predict(S)
+    grid_BAUs <- predict(S)
     expect_is(grid_BAUs,"STFDF")
-    grid_BAUs <- SRE.predict(S,obs_fs = FALSE)
+    grid_BAUs <- predict(S,obs_fs = FALSE)
     expect_is(grid_BAUs,"STFDF")
 
     ### summary works?

@@ -114,7 +114,7 @@ test_that("distR works", {
   y <- matrix(rnorm(20),10,2)
   D1 <- distR(x,x)
   D2 <- as.matrix(dist(x))
-  #expect_lt(sum(D1-D2), 1e-12)
+  expect_lt(sum(D1-D2), 1e-12)
 })
 
 test_that("formula no covariates works", {

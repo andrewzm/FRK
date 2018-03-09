@@ -1,0 +1,2 @@
+FRK-meuse FRK-meuse.R Application of FRK to the meuse dataset. This demo replicates the example given in Section 3.2 of the paper on FRK published in JSS.
+FRK-meuse-BAUs-as-points FRK-meuse-BAUs-as-points.R Application of FRK to the meuse dataset when treating BAUs as points. This demo replicates the example given in Section 3.2 of the paper on FRK published in JSS.

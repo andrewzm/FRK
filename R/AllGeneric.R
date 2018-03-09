@@ -223,6 +223,11 @@ setGeneric("info_fit", function(SRE_model)
 setGeneric("coef", function(object)
     standardGeneric("coef"))
 
+#' @export
+setGeneric("predict", function(object, ...)
+    standardGeneric("predict"))
+
+
 ########################
 #### NOT EXPORTED ######
 ########################
