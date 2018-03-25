@@ -47,11 +47,8 @@ rhwrapper <- function(Ntot = 20, N = 10,type="data.frame",f_expr,...) {
 
     browser()
 
-    if(type=="Matrix") {
-        Y <- do.call("rBind",lapply(mapreduce1,function(x) unserialize(x[[2]])))
-     } else {
-        Y <- do.call("rbind",lapply(mapreduce1,function(x) unserialize(x[[2]])))
-     }
+     Y <- do.call("rbind",lapply(mapreduce1,function(x) unserialize(x[[2]])))
+
 
     Y
 }

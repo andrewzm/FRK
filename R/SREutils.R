@@ -13,6 +13,7 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
+#' @name SRE
 #' @title Construct SRE object, fit and predict
 #' @description The Spatial Random Effects (SRE) model is the central object in FRK. The function \code{FRK} provides a wrapper for the construction and estimation of the SRE object from data, using the functions \code{SRE} (the object constructor) and \code{SRE.fit} (for fitting it to the data). Please see \code{\link{SRE-class}} for more details on the SRE object's properties and methods.
 #' @param f \code{R} formula relating the dependent variable (or transformations thereof) to covariates
@@ -51,6 +52,8 @@
 #'Once the parameters are fitted, the \code{SRE} object is passed onto the function \code{predict()} in order to carry out optimal predictions over the same BAUs used to construct the SRE model with \code{SRE()}. The first part of the prediction process is to construct the matrix \eqn{S} over the prediction polygons. This is made computationally efficient by treating the prediction over polygons as that of the prediction over a combination of BAUs. This will yield valid results only if the BAUs are relatively small. Once the matrix \eqn{S} is found, a standard Gaussian inversion (through conditioning) using the estimated parameters is used for prediction.
 #'
 #'\code{predict} returns the BAUs, which are of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame}, or \code{STFDF}, with two added attributes, \code{mu} and \code{var}. These can then be easily plotted using \code{spplot} or \code{ggplot2} (possibly in conjunction with \code{\link{SpatialPolygonsDataFrame_to_df}}) as shown in the package vignettes.
+#' @seealso \code{\link{SRE-class}} for details on the SRE object internals, \code{\link{auto_basis}} for automatically constructing basis functions, and \code{\link{auto_BAUs}} for automatically constructing BAUs. See also the paper \url{https://arxiv.org/abs/1705.08105} for details on code operation.
+#' @keywords spatial
 #' @export
 #' @examples
 #' library(sp)
@@ -212,10 +215,10 @@ SRE <- function(f,data,basis,BAUs,est_error = TRUE,average_in_BAU = TRUE,
     } else stop("No other fs-model implemented yet")
 
     ## Now concatenate the matrices obtained from all the observations together
-    S <- do.call("rBind",S)
-    X <- do.call("rBind",X)
-    Cmat <- do.call("rBind",Cmat)
-    Z <- do.call("rBind",Z)
+    S <- do.call("rbind",S)
+    X <- do.call("rbind",X)
+    Cmat <- do.call("rbind",Cmat)
+    Z <- do.call("rbind",Z)
     Ve <- do.call("bdiag",Ve)
     Vfs <- do.call("bdiag",Vfs)
 
@@ -1141,7 +1144,7 @@ print.summary.SRE <- function(x, ...) {
 
             ## The below equations implement Section 2.3
             LAMBDAinv <- bdiag(Sm@Khat_inv,Q)                # block diagonal precision matrix
-            PI <- cBind(S0, .symDiagonal(n=length(BAUs)))    # PI = [S I]
+            PI <- cbind(S0, .symDiagonal(n=length(BAUs)))    # PI = [S I]
             tC_Ve_C <- t(CZ) %*% solve(Sm@Ve) %*% CZ +       # summary matrix
                 0*.symDiagonal(ncol(CZ))              # Ensure zeros on diagonal
             Qx <- t(PI) %*% tC_Ve_C %*% PI + LAMBDAinv       # conditional precision matrix
@@ -1682,7 +1685,7 @@ print.summary.SRE <- function(x, ...) {
 
             ## The below equations implement Section 2.3
             LAMBDAinv <- bdiag(Sm@Khat_inv,Q)                # block diagonal precision matrix
-            PI <- cBind(S0, .symDiagonal(n=length(BAUs)))    # PI = [S I]
+            PI <- cbind(S0, .symDiagonal(n=length(BAUs)))    # PI = [S I]
             tC_Ve_C <- t(CZ) %*% solve(Sm@Ve) %*% CZ +       # summary matrix
                 0*.symDiagonal(ncol(CZ))              # Ensure zeros on diagonal
             Qx <- t(PI) %*% tC_Ve_C %*% PI + LAMBDAinv       # conditional precision matrix

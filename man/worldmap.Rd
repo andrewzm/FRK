@@ -18,7 +18,7 @@ worldmap
 }
 \description{
 This world map was extracted from the package \code{maps} v.3.0.1 by
-running \code{map_data("world")}. To reduce the data size, only every third point of
+running \code{ggplot2::map_data("world")}. To reduce the data size, only every third point of
 this data frame is contained in \code{worldmap}.
 }
 \references{

@@ -20,6 +20,7 @@
 #' @param g object of class \code{gg} (a \code{ggplot} object) over which to overlay the basis functions (optional)
 #' @param ... not in use
 #' @details The function \code{show_basis} adapts its behaviour to the manifold being used. With \code{real_line}, the 1D basis functions are plotted with colour distinguishing between the different resolutions. With \code{plane}, only local basis functions are supported (at present). Each basis function is shown as a circle with diameter equal to the \code{scale} parameter of the function. Linetype distinguishes the resolution. With \code{sphere}, the centres of the basis functions are shown as circles, with larger sizes corresponding to coarser resolutions. Space-time basis functions of subclass \code{TensorP_Basis} are visualised by showing the spatial basis functions and the temporal basis functions in two separate plots.
+#' @seealso  \code{\link{auto_basis}} for automatically constructing basis functions.
 #' @examples
 #' library(ggplot2)
 #' library(sp)
@@ -39,12 +40,14 @@ setGeneric("show_basis", function(basis,...) standardGeneric("show_basis"))
 #'                    scale=0.2,
 #'                    type="bisquare")
 #' manifold(G)
+#' @seealso \code{\link{real_line}}, \code{\link{plane}}, \code{\link{sphere}}, \code{\link{STplane}} and \code{\link{STsphere}} for constructing manifolds.
 #' @export
 setGeneric("manifold", function(.Object) standardGeneric("manifold"))
 
 #' @title Number of basis functions
 #' @description Retrieve the number of basis functions from \code{Basis} or \code{SRE} object.
 #' @param .Object object of class \code{Basis} or \code{SRE}
+#' @seealso \code{\link{auto_basis}} for automatically constructing basis functions.
 #' @examples
 #' library(sp)
 #' data(meuse)
@@ -61,6 +64,7 @@ setGeneric("nbasis", function(.Object) standardGeneric("nbasis"))
 #' @title Type of manifold
 #' @description Retrieve slot \code{type} from object
 #' @param .Object object of class \code{Basis} or \code{manifold}
+#' @seealso \code{\link{real_line}}, \code{\link{plane}}, \code{\link{sphere}}, \code{\link{STplane}} and \code{\link{STsphere}} for constructing manifolds.
 #' @examples
 #' S <- sphere()
 #' print(type(S))
@@ -75,6 +79,7 @@ setGeneric("type", function(.Object) standardGeneric("type"))
 #' @examples
 #' distance(sphere(),matrix(0,1,2),matrix(10,1,2))
 #' distance(plane(),matrix(0,1,2),matrix(10,1,2))
+#' @seealso \code{\link{real_line}}, \code{\link{plane}}, \code{\link{sphere}}, \code{\link{STplane}} and \code{\link{STsphere}} for constructing manifolds, and \code{\link{distances}} for the type of distances available.
 #' @export
 setGeneric("distance", function(d,x1,x2=NULL) standardGeneric("distance"))
 
@@ -88,6 +93,7 @@ setGeneric("distance", function(d,x1,x2=NULL) standardGeneric("distance"))
 #' using space-time basis functions, the object must contain a field \code{t} containing a numeric
 #' representation of the time, for example, containing the number of seconds, hours, or days since the first
 #' data point.
+#' @seealso \code{\link{auto_basis}} for automatically constructing basis functions.
 #' @examples
 #' library(sp)
 #'
@@ -115,6 +121,7 @@ setGeneric("eval_basis", function(basis,s) standardGeneric("eval_basis"))
 #' @param Basis1 first set of basis functions
 #' @param Basis2 second set of basis functions
 #' @export
+#' @seealso \code{\link{auto_basis}} for automatically constructing basis functions and \code{\link{show_basis}} for visualising basis functions.
 #' @examples
 #' library(spacetime)
 #' library(sp)
@@ -158,6 +165,7 @@ setGeneric("TensorP", function(Basis1,Basis2) standardGeneric("TensorP"))
 #'                 type = "bisquare",
 #'                 subsamp = 20000)
 #' nres(G)
+#' @seealso \code{\link{auto_basis}} for automatically constructing basis functions and \code{\link{show_basis}} for visualising basis functions.
 #' @export
 setGeneric("nres", function(b) standardGeneric("nres"))
 
@@ -170,6 +178,7 @@ setGeneric("data.frame<-", function(x, value) standardGeneric("data.frame<-"))
 #' @param obj object of class \code{SpatialPointsDataFrame}
 #' @param offset edge size of the mini-BAU (default 1e-10)
 #' @details This function allows users to mimic standard geospatial analysis where BAUs are not used. Since \code{FRK} is built on the concept of a BAU, this function constructs tiny BAUs around the observation and prediction locations that can be subsequently passed on to the functions \code{SRE} and \code{FRK}. With \code{BAUs_from_points}, the user supplies both the data and prediction locations accompanied with covariates.
+#' @seealso \code{\link{auto_BAUs}} for automatically constructing generic BAUs.
 #' @export
 #' @examples
 #' library(sp)
@@ -186,6 +195,7 @@ setGeneric("BAUs_from_points", function(obj,offset = 1e-10)
 #' @param Basis object of class \code{Basis}
 #' @param rmidx indices of basis functions to remove
 #' @export
+#' @seealso \code{\link{auto_basis}} for automatically constructing basis functions and \code{\link{show_basis}} for visualising basis functions.
 #' @examples
 #' library(sp)
 #' df <- data.frame(x = rnorm(10),
@@ -198,7 +208,7 @@ setGeneric("BAUs_from_points", function(obj,offset = 1e-10)
 setGeneric("remove_basis", function(Basis,rmidx)
     standardGeneric("remove_basis"))
 
-#' @rdname SRE
+#' @aliases SRE
 #' @export
 setGeneric("info_fit", function(SRE_model)
     standardGeneric("info_fit"))
@@ -208,6 +218,7 @@ setGeneric("info_fit", function(SRE_model)
 #' @param object object of class \code{SRE}
 #' @param ... currently unused
 #' @export
+#' @seealso \code{\link{SRE}} for more information on how to construct and fit an SRE model.
 #' @examples
 #' library(sp)
 #' simdata <- SpatialPointsDataFrame(

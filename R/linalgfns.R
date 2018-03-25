@@ -35,20 +35,20 @@ logdet <- function (L)
     return(2 * sum(log(diagL)))
 }
 
-## quickBinds on columns
-quickcBind <- function(L) {
-  quickBind(L,"c")
+## quickbinds on columns
+quickcbind <- function(L) {
+  quickbind(L,"c")
 }
 
-## quickBinds on rows
-quickrBind <- function(L) {
-  quickBind(L,"r")
+## quickbinds on rows
+quickrbind <- function(L) {
+  quickbind(L,"r")
 }
 
 ## Performs a quick binding of sparse matrices by extract the indices and rearranging. This code was adapted fro
 ## http://stackoverflow.com/questions/8843700/creating-sparse-matrix-from-a-list-of-sparse-vectors
 ## This function should probably be implemented in C at some point
-quickBind <- function(L,rc = "c") {
+quickbind <- function(L, rc = "c") {
 
   ## L list a list of sparseMatrices
   nzCount<-lapply(L, function(x) length(as(x,"dgTMatrix")@x));    # number off non-zeros in each matrix

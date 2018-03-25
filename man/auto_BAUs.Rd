@@ -73,3 +73,6 @@ coordinates(meuse) = ~x+y # change into an sp object
     \dontrun{plot(HexPols_df)}
 }
 }
+\seealso{
+\code{\link{auto_basis}} for automatically constructing basis functions.
+}

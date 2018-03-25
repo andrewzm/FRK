@@ -13,6 +13,58 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
+#' @title Generic basis-function constructor
+#' @description This function is meant to be used for manual construction of arbitrary basis functions. For
+#' 'local' basis functions, please use the function \code{\link{local_basis}} instead.
+#' @param manifold object of class \code{manifold}, for example, \code{sphere}
+#' @param n number of basis functions (should be an integer)
+#' @param fn a list of functions, one for each basis function. Each function should be encapsulated within an environment
+#' in which the manifold and any other parameters required to evaluate the function are defined. The
+#' function itself takes a single input \code{s} which can be of class \code{numeric}, \code{matrix}, or \code{Matrix},
+#' and returns a vector which contains the basis function evaluations at \code{s}.
+#' @param pars A list containing a list of parameters for each function. For local basis functions these would correspond
+#' to location and scale parameters.
+#' @param df A data frame containing one row per basis function, typically for providing informative summaries.
+#' @details This constructor checks that all the parameters are valid before constructing the basis functions
+#' using \code{new}. The requirement that every function is encapsulated is tedious, but necessary for
+#' FRK to work with a large range of basis functions in the future. Please see the example below which exemplifies
+#' the process of constructing linear basis functions from scratch using this function.
+#' @seealso \code{\link{auto_basis}} for constructing basis functions automatically, \code{\link{local_basis}} for
+#' constructing `local' basis functions, and \code{\link{show_basis}} for visualising basis functions.
+#' @examples
+#' ## Construct two linear basis functions on [0, 1]
+#' manifold <- real_line()
+#' n <- 2
+#' lin_basis_fn <- function(manifold, grad, intercept) {
+#'    function(s) grad*s + intercept
+#' }
+#' pars <- list(list(grad = 1, intercept = 0),
+#'              list(grad = -1, intercept = 1))
+#' fn <- list(lin_basis_fn(manifold, 1, 0),
+#'            lin_basis_fn(manifold, -1, 1))
+#' df <- data.frame(n = 1:2, grad = c(1, -1), m = c(1, -1))
+#' G <- Basis(manifold = manifold, n = n, fn = fn, pars = pars, df = df)
+#' \dontrun{
+#' eval_basis(G, s = matrix(seq(0,1, by = 0.1), 11, 1))}
+#' @export
+Basis <- function(manifold, n, fn, pars, df) {
+    if(!is(manifold, "manifold")) stop("manifold needs to be of class manifold")
+    if(!is.numeric(n)) stop("n needs to be of class numeric")
+    if(ceiling(n) <= 0) stop("n needs to be greated than 0")
+    if(!is.list(fn)) stop("fn needs to be a list")
+    if(!is.list(pars)) stop("pars needs to be a list")
+    if(!is.data.frame(df)) stop("df needs to be a data frame")
+    if(!(length(fn) == n)) stop("fn needs to have n items")
+    if(!(length(pars) == n)) stop("pars needs to have n items")
+    if(!(nrow(df) == n)) stop("df needs to have n rows")
+    if(!all(sapply(fn, function(f) "manifold" %in% ls(envir = environment(f)))))
+        stop("manifold needs to be in the environment of every function")
+    if(!all(sapply(fn, function(f) names(formals(f)) == "s")))
+        stop("all functions need to take s as input argument")
+
+    new("Basis", manifold = manifold,  n = n, fn = fn, pars = pars, df = df)
+}
+
 #' @title Construct a set of local basis functions
 #' @description Construct a set of local basis functions based on pre-specified location and scale parameters.
 #' @param manifold object of class \code{manifold}, for example, \code{sphere}
@@ -28,6 +80,7 @@
 #' and \code{scale} is given by \eqn{\tau}, the e-folding length. If \code{type} is ``Matern32'', then
 #'\deqn{\phi(u) = \left(1 + \frac{\sqrt{3}\|u\|}{\kappa}\right)\exp\left(-\frac{\sqrt{3}\| u \|}{\kappa}\right),}
 #' and \code{scale} is given by \eqn{\kappa}, the function's scale.
+#' @seealso \code{\link{auto_basis}} for constructing basis functions automatically, and \code{\link{show_basis}} for visualising basis functions.
 #' @examples
 #' library(ggplot2)
 #' G <-  local_basis(manifold = real_line(),
@@ -73,7 +126,7 @@ local_basis <- function(manifold=sphere(),          # default manifold is sphere
     df <- data.frame(loc,scale,res=1)
 
     ## Create new basis function, using the manifold, n, functions, parameters list, and data frame.
-    this_basis <- new("Basis", manifold=manifold,  n=n, fn=fn, pars=pars, df=df)
+    this_basis <- Basis(manifold = manifold,  n = n, fn = fn, pars = pars, df = df)
     return(this_basis)
 }
 
@@ -428,10 +481,10 @@ setMethod("TensorP",signature(Basis1="Basis",Basis2="Basis"),function(Basis1,Bas
 
     ## Check number of basis functions and throw warning if necessary
     if((nbasis_tot <- nbasis(Basis1) * nbasis(Basis2)) > 5000)
-      warning("Tensor product has resulted in more than 5000 functions. 
+      warning("Tensor product has resulted in more than 5000 functions.
       Please reduce the number of spatial or temporal basis functions.")
-    
-    
+
+
     ## Create new Tensor Basis function from this information
     new("TensorP_Basis",
         Basis1 = Basis1,
@@ -480,8 +533,8 @@ setMethod("eval_basis",signature(basis="Basis",s="matrix"),
                                           })
               }
 
-              ## Finally concatenate all the bits together using rBind
-              do.call(rBind,pnt_eval_list)
+              ## Finally concatenate all the bits together using rbind
+              do.call(rbind,pnt_eval_list)
           })
 
 #' @rdname eval_basis
@@ -526,7 +579,7 @@ setMethod("eval_basis",signature(basis="Basis",s="SpatialPolygonsDataFrame"),
                   })
               }
 
-              X <- Reduce("rBind",X)   # join the rows together
+              X <- Reduce("rbind",X)   # join the rows together
               as(X,"Matrix")           # coerce to Matrix if not already Matrix
 
           })
@@ -556,7 +609,7 @@ setMethod("eval_basis",signature(basis="TensorP_Basis",s="matrix"),
               ## This is ordered as first space then time, therefore we take S2[,1]*S1 as our first block
               ## Then S2[,2]*S1 as our second block etc.
               XX <- lapply(1:ncol(S2),function(i)  (S2[,i] * S1))
-              S <- quickcBind(XX)  # a quick cBind method using sparse matrix construction
+              S <- quickcbind(XX)  # a quick cbind method using sparse matrix construction
               S
           })
 
@@ -584,12 +637,12 @@ setMethod("eval_basis",signature(basis="TensorP_Basis",s = "STFDF"),function(bas
     nt <- length(time(s))  # number of unique time points
 
     S1 <- eval_basis(basis@Basis1,s[,1])                # evaluate over space (just take first time point)
-    S1 <- do.call("rBind",lapply(1:nt,function(x) S1))  # now just repeat that for the nt time points
+    S1 <- do.call("rbind",lapply(1:nt,function(x) S1))  # now just repeat that for the nt time points
     S2 <- eval_basis(basis@Basis2,tlocs[,,drop=FALSE])  # evaluate over time (all time points)
 
     ## As in previous functions we compute S with space running fastest
     XX <- lapply(1:ncol(S2),function(i)  (S2[,i] * S1))
-    S <- quickcBind(XX) # a quick cBind method using sparse matrix construction
+    S <- quickcbind(XX) # a quick cbind method using sparse matrix construction
     S
 })
 

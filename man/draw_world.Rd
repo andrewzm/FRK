@@ -23,3 +23,6 @@ This function uses \code{ggplot2::map_data} in order to create a world map. Sinc
 library(ggplot2)
 draw_world(g = ggplot())}
 }
+\seealso{
+the help file for the dataset \code{\link{worldmap}}
+}

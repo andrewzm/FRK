@@ -28,3 +28,6 @@ data.frame(G) # Print info on basis
 G <- remove_basis(G,1:(nbasis(G)-1))
 data.frame(G)
 }
+\seealso{
+\code{\link{auto_basis}} for automatically constructing basis functions and \code{\link{show_basis}} for visualising basis functions.
+}

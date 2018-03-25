@@ -21,7 +21,7 @@
 #'
 #' @description Measure class used for defining measures used to compute distances between points in objects constructed with the \code{FRK} package.
 #' @details An object of class \code{measure} contains a distance function and a variable \code{dim} with the dimensions of the Riemannian manifold over which the distance is computed.
-#' @keywords Manifolds, spheres, planes
+#' @seealso \code{\link{distance}} for computing a distance and \code{\link{distances}} for a list of implemented distance functions.
 setClass("measure",representation(dist="function",dim="integer"),
          prototype(dist=dist,dim=2L))
 
@@ -31,8 +31,7 @@ setClass("measure",representation(dist="function",dim="integer"),
 #' @details A \code{manifold} object is characterised by a character variable \code{type}, which contains a description of the manifold, and a variable \code{measure} of type \code{measure}. A typical measure is the Euclidean distance.
 #'
 #' \code{FRK} supports five manifolds; the real line (in one dimension), instantiated by using \code{real_line()}; the 2D plane, instantiated by using \code{plane()}; the 2D-sphere surface S2, instantiated by using \code{sphere()}; the R2 space-time manifold, instantiated by using \code{STplane()}, and the S2 space-time manifold, instantiated by using \code{STsphere()}. User-specific manifolds can also be specified, however helper functions that are manifold specific, such as \code{auto_BAUs} and \code{auto_basis}, only work with the pre-configured manifolds. Importantly, one can change the distance function used on the manifold to synthesise anisotropy or heterogeneity. See the vignette for one such example.
-#'
-#' @keywords Manifolds, spheres, planes
+#' @seealso \code{\link{real_line}}, \code{\link{plane}}, \code{\link{sphere}}, \code{\link{STplane}} and \code{\link{STsphere}} for constructing manifolds.
 setClass("manifold",representation(type="character", measure = "measure","VIRTUAL"))
 
 #' @rdname manifold-class
@@ -70,7 +69,7 @@ setClass("STsphere",representation(radius="numeric"),contains="STmanifold")
 #' @slot pars a list of parameters where the \eqn{i}-th item in the list contains the parameters of the \eqn{i}-th basis function, \code{fn[[i]]}
 #' @slot df a data frame containing other attributes specific to each basis function (for example the geometric centre of the local basis function)
 #' @details Basis functions are a central component of \code{FRK}, and the package is designed to work with user-defined specifications of these. For convenience, however, several functions are available to aid the user to construct a basis set for a given set of data points. Please see \code{\link{auto_basis}} for more details. The function \code{\link{local_basis}} helps the user construct a set of local basis functions (e.g., bisquare functions) from a collection of location and scale parameters.
-#' @keywords Basis functions
+#' @seealso \code{\link{auto_basis}} for automatically constructing basis functions and \code{\link{show_basis}} for visualising basis functions.
 #' @rdname Basis-class
 setClass("Basis_obj", representation(n = "numeric","VIRTUAL"))
 
@@ -107,7 +106,8 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot alphahat fixed-effect regression coefficients (estimated)
 #' @slot sigma2fshat fine-scale variation scaling (estimated)
 #' @slot fs_model type of fine-scale variation (independent or CAR-based). Currently only "ind" is permitted
-#' @keywords Spatial random effects, fixed rank kriging
+#' @seealso \code{\link{SRE}} for details on how to construct and fit SRE models.
+#' @keywords spatial
 setClass("SRE",representation(data="list",
                               basis="Basis_obj",
                               BAUs="ANY",     # should be SpatialPolygonsDataFrame, SpatialPixelsDataFrame or STFDF

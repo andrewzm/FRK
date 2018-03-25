@@ -10,6 +10,6 @@ Measure class used for defining measures used to compute distances between point
 \details{
 An object of class \code{measure} contains a distance function and a variable \code{dim} with the dimensions of the Riemannian manifold over which the distance is computed.
 }
-\keyword{Manifolds,}
-\keyword{planes}
-\keyword{spheres,}
+\seealso{
+\code{\link{distance}} for computing a distance and \code{\link{distances}} for a list of implemented distance functions.
+}

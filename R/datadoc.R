@@ -7,7 +7,7 @@
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation; either version 2
 # of the License, or (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -78,7 +78,7 @@
 
 #' @title World map
 #' @description This world map was extracted from the package \code{maps} v.3.0.1 by
-#' running \code{map_data("world")}. To reduce the data size, only every third point of
+#' running \code{ggplot2::map_data("world")}. To reduce the data size, only every third point of
 #' this data frame is contained in \code{worldmap}.
 #' @format A data frame with 33971 rows and 6 variables:
 #' \describe{

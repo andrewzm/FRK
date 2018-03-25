@@ -32,3 +32,6 @@ df <- data.frame(x = rnorm(10),
 coordinates(df) <- ~x+y
 BAUs <- BAUs_from_points(df)
 }
+\seealso{
+\code{\link{auto_BAUs}} for automatically constructing generic BAUs.
+}

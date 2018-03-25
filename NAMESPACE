@@ -3,6 +3,7 @@
 S3method(as.data.frame,Basis)
 S3method(as.data.frame,TensorP_Basis)
 export(BAUs_from_points)
+export(Basis)
 export(EmptyTheme)
 export(Euclid_dist)
 export(FRK)

@@ -42,3 +42,6 @@ G <-  local_basis(manifold = real_line(),
                    type="bisquare")
 \dontrun{show_basis(G)}
 }
+\seealso{
+\code{\link{auto_basis}} for constructing basis functions automatically, and \code{\link{show_basis}} for visualising basis functions.
+}

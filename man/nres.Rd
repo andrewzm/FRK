@@ -41,3 +41,6 @@ G <- auto_basis(manifold = sphere(),data=d,
                 subsamp = 20000)
 nres(G)
 }
+\seealso{
+\code{\link{auto_basis}} for automatically constructing basis functions and \code{\link{show_basis}} for visualising basis functions.
+}

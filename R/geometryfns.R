@@ -309,6 +309,7 @@ setMethod("coordnames",signature(x="STIDF"),function(x) {
 #' Two types of BAUs are supported by \code{FRK}: ``hex'' (hexagonal) and ``grid'' (rectangular). In order to have a ``grid'' set of BAUs, the user should specify a cellsize of length one, or of length equal to the dimensions of the manifold, that is, of length 1 for \code{real_line} and of length 2 for the surface of a \code{sphere} and \code{plane}. When a ``hex'' set of BAUs is desired, the first element of \code{cellsize} is used to determine the side length by dividing this value by approximately 2. The argument \code{type} is ignored with \code{real_line} and ``hex'' is not available for this manifold.
 #'
 #'   If the object \code{data} is provided, then automatic domain selection may be carried out by employing the \code{INLA} function \code{inla.nonconvex.hull}, which finds a (non-convex) hull surrounding the data points (or centroids of the data polygons). This domain is extended and smoothed using the parameter \code{convex}. The parameter \code{convex} should be negative, and a larger absolute value for \code{convex} results in a larger domain with smoother boundaries (note that \code{INLA} was not available on CRAN at the time of writing).
+#' @seealso \code{\link{auto_basis}} for automatically constructing basis functions.
 #' @examples
 #' ## First a 1D example
 #' library(sp)

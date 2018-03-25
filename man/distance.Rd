@@ -27,3 +27,6 @@ Compute distance using object of class \code{measure} or \code{manifold}.
 distance(sphere(),matrix(0,1,2),matrix(10,1,2))
 distance(plane(),matrix(0,1,2),matrix(10,1,2))
 }
+\seealso{
+\code{\link{real_line}}, \code{\link{plane}}, \code{\link{sphere}}, \code{\link{STplane}} and \code{\link{STsphere}} for constructing manifolds, and \code{\link{distances}} for the type of distances available.
+}

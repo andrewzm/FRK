@@ -20,3 +20,6 @@ Retrieve slot \code{type} from object
 S <- sphere()
 print(type(S))
 }
+\seealso{
+\code{\link{real_line}}, \code{\link{plane}}, \code{\link{sphere}}, \code{\link{STplane}} and \code{\link{STsphere}} for constructing manifolds.
+}

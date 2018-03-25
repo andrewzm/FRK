@@ -30,3 +30,6 @@ G <- auto_basis(manifold = plane(),
                 type = "Gaussian")
 print(nbasis(G))
 }
+\seealso{
+\code{\link{auto_basis}} for automatically constructing basis functions.
+}

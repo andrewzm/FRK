@@ -25,4 +25,3 @@ X <- data.frame(x=runif(100),y = runif(100), z = runif(100))
 LinePlotTheme() + geom_point(data=X,aes(x,y,colour=z))
 EmptyTheme() + geom_point(data=X,aes(x,y,colour=z))}
 }
-\keyword{ggplot}

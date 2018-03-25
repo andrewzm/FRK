@@ -33,3 +33,6 @@ S <- SRE(f = z ~ 1 + coords.x1,
          data = list(simdata))
 est_reg_coeff <- coef(S)
 }
+\seealso{
+\code{\link{SRE}} for more information on how to construct and fit an SRE model.
+}

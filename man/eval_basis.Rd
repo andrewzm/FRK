@@ -71,3 +71,6 @@ G <- auto_basis(manifold = sphere(),data=d,
 ### Now evaluate basis functions at origin
 S <- eval_basis(G,matrix(c(0,0),1,2))
 }
+\seealso{
+\code{\link{auto_basis}} for automatically constructing basis functions.
+}

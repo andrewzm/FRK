@@ -43,3 +43,6 @@ G <- TensorP(G_spatial,G_temporal)
 # show_basis(G_spatial)
 # show_basis(G_temporal)
 }
+\seealso{
+\code{\link{auto_basis}} for automatically constructing basis functions and \code{\link{show_basis}} for visualising basis functions.
+}

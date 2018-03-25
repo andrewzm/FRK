@@ -26,3 +26,6 @@ G <-  local_basis(manifold = plane(),
                    type="bisquare")
 manifold(G)
 }
+\seealso{
+\code{\link{real_line}}, \code{\link{plane}}, \code{\link{sphere}}, \code{\link{STplane}} and \code{\link{STsphere}} for constructing manifolds.
+}
