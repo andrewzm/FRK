@@ -208,8 +208,13 @@ setGeneric("BAUs_from_points", function(obj,offset = 1e-10)
 setGeneric("remove_basis", function(Basis,rmidx)
     standardGeneric("remove_basis"))
 
-#' @aliases SRE
+#' @title Retrieve fit information for SRE model
+#' @description Takes a an object of class \code{SRE} and returns a list containing all the relevant information on parameter estimation
+#' @param SRE_model object of class \code{SRE}
 #' @export
+#' @seealso See \code{\link{SRE}} for more information on the SRE model and available fitting methods.
+#' @examples
+#' # See example in the help file for SRE
 setGeneric("info_fit", function(SRE_model)
     standardGeneric("info_fit"))
 

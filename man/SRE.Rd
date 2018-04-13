@@ -5,9 +5,9 @@
 \alias{FRK}
 \alias{SRE}
 \alias{SRE.fit}
+\alias{SRE.predict}
 \alias{predict,SRE-method}
 \alias{loglik}
-\alias{info_fit,SRE-method}
 \title{Construct SRE object, fit and predict}
 \usage{
 FRK(f, data, basis = NULL, BAUs = NULL, est_error = TRUE,
@@ -22,12 +22,13 @@ SRE(f, data, basis, BAUs, est_error = TRUE, average_in_BAU = TRUE,
 SRE.fit(SRE_model, n_EM = 100L, tol = 0.01, method = "EM", lambda = 0,
   print_lik = FALSE)
 
+SRE.predict(SRE_model, obs_fs = FALSE, newdata = NULL, pred_polys = NULL,
+  pred_time = NULL, covariances = FALSE)
+
 \S4method{predict}{SRE}(object, newdata = NULL, obs_fs = FALSE,
   pred_polys = NULL, pred_time = NULL, covariances = FALSE)
 
 loglik(SRE_model)
-
-\S4method{info_fit}{SRE}(SRE_model)
 }
 \arguments{
 \item{f}{\code{R} formula relating the dependent variable (or transformations thereof) to covariates}
@@ -64,15 +65,17 @@ loglik(SRE_model)
 
 \item{SRE_model}{object returned from the constructor \code{SRE()} containing all the parameters and information on the SRE model}
 
-\item{newdata}{object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified}
-
 \item{obs_fs}{flag indicating whether the fine-scale variation sits in the observation model (systematic error, Case 1) or in the process model (fine-scale process variation, Case 2, default)}
+
+\item{newdata}{object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified}
 
 \item{pred_polys}{deprecated. Please use \code{newdata} instead}
 
 \item{pred_time}{vector of time indices at which prediction will be carried out. All time points are used if this option is not specified}
 
 \item{covariances}{logical variable indicating whether prediction covariances should be returned or not. If set to \code{TRUE}, a maximum of 4000 prediction locations or polygons are allowed.}
+
+\item{object}{object of class \code{SRE}}
 }
 \description{
 The Spatial Random Effects (SRE) model is the central object in FRK. The function \code{FRK} provides a wrapper for the construction and estimation of the SRE object from data, using the functions \code{SRE} (the object constructor) and \code{SRE.fit} (for fitting it to the data). Please see \code{\link{SRE-class}} for more details on the SRE object's properties and methods.

@@ -324,23 +324,22 @@ setMethod("coordnames",signature(x="STIDF"),function(x) {
 #' ## Now a 2D example
 #' data(meuse)
 #' coordinates(meuse) = ~x+y # change into an sp object
-#'  if(require(INLA)) {
-#'     ## Grid BAUs
-#'     GridPols_df <- auto_BAUs(manifold = plane(),
-#'                              cellsize = 200,
-#'                              type = "grid",
-#'                              data = meuse,
-#'                              convex=-0.05)
-#'     \dontrun{plot(GridPols_df)}
 #'
-#'     ## Hex BAUs
-#'     HexPols_df <- auto_BAUs(manifold = plane(),
-#'                             cellsize = 200,
-#'                             type = "hex",
-#'                             data = meuse,
-#'                             convex=-0.05)
-#'     \dontrun{plot(HexPols_df)}
-#' }
+#' ## Grid BAUs
+#' GridPols_df <- auto_BAUs(manifold = plane(),
+#'                          cellsize = 200,
+#'                          type = "grid",
+#'                          data = meuse,
+#'                          nonconvex_hull = 0)
+#' \dontrun{plot(GridPols_df)}
+#'
+#' ## Hex BAUs
+#' HexPols_df <- auto_BAUs(manifold = plane(),
+#'                         cellsize = 200,
+#'                         type = "hex",
+#'                         data = meuse,
+#'                         nonconvex_hull = 0)
+#' \dontrun{plot(HexPols_df)}
 #' @export
 auto_BAUs <- function(manifold, type=NULL,cellsize = NULL,
                       isea3h_res=NULL,data=NULL,nonconvex_hull=TRUE,

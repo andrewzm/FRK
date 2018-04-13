@@ -106,6 +106,7 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot alphahat fixed-effect regression coefficients (estimated)
 #' @slot sigma2fshat fine-scale variation scaling (estimated)
 #' @slot fs_model type of fine-scale variation (independent or CAR-based). Currently only "ind" is permitted
+#' @slot info_fit information on fitting (convergence etc.)
 #' @seealso \code{\link{SRE}} for details on how to construct and fit SRE models.
 #' @keywords spatial
 setClass("SRE",representation(data="list",

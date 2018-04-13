@@ -33,6 +33,7 @@
 #' @param lambda ridge-regression regularisation parameter for when \code{K} is unstructured (0 by default). Can be a single number, or a vector (one parameter for each resolution)
 #' @param print_lik flag indicating whether likelihood value should be printed or not after convergence of the EM estimation algorithm
 # #' @param use_centroid flag indicating whether the basis functions are averaged over the BAU, or whether the basis functions are evaluated at the BAUs centroid in order to construct the matrix \eqn{S}. The flag can safely be set when the basis functions are approximately constant over the BAUs in order to reduce computational time
+#' @param object object of class \code{SRE}
 #' @param newdata object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified
 #' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error, Case 1) or in the process model (fine-scale process variation, Case 2, default)
 #' @param pred_polys deprecated. Please use \code{newdata} instead
@@ -280,7 +281,7 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 0.01, method="EM", lambda = 0, 
 
 }
 
-
+#' @rdname SRE
 #' @export
 SRE.predict <- function(SRE_model, obs_fs = FALSE, newdata = NULL, pred_polys = NULL,
                         pred_time = NULL, covariances = FALSE) {
@@ -370,8 +371,8 @@ summary.SRE <- function(object,...) {
 setMethod("summary",signature(object="SRE"),summary.SRE)
 
 ## Set method for retrieving info_fit
-#' @rdname SRE
-#' @export
+#' @rdname info_fit
+#' @aliases info_fit,SRE-method
 setMethod("info_fit", signature(SRE_model = "SRE"),
           function(SRE_model) {SRE_model@info_fit})
 
