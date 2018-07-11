@@ -1,8 +1,8 @@
 Package: FRK
 Type: Package
 Title: Fixed Rank Kriging
-Version: 0.2.1
-Date: 2018-04-12
+Version: 0.2.2
+Date: 2018-07-11
 Authors@R: c(
     person("Andrew", "Zammit-Mangion", , "andrewzm@gmail.com", c("aut", "cre")))
 Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
@@ -49,7 +49,7 @@ Imports:
     stats,
     utils
 Additional_repositories: https://andrewzm.github.io/dggrids-repo, 
-                         http://www.math.ntnu.no/inla/R/stable
+                         https://inla.r-inla-download.org/R/stable
 License: GPL (>= 2)
 NeedsCompilation: yes
 LazyData: true
