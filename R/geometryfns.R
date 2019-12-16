@@ -1229,11 +1229,13 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
 #' @aliases map_data_to_BAUs,Spatial-method
 setMethod("map_data_to_BAUs",signature(data_sp="SpatialPixels"),
           function(data_sp,sp_pols,average_in_BAU = TRUE) {
+              coordlabels <- coordnames(data_sp)
               if(is(data_sp, "SpatialPixels")) {
                   data_sp <- as(data_sp, "SpatialPolygons")
               } else {
                   data_sp <- as(data_sp, "SpatialPolygonsDataFrame")
               }
+              coordnames(data_sp) <- coordlabels
               map_data_to_BAUs(data_sp, sp_pols, average_in_BAU = average_in_BAU)
           })
 
@@ -1306,7 +1308,6 @@ setMethod("map_data_to_BAUs",signature(data_sp="ST"),
               ## Initialise
               time <- time_single <- sp <- n <- NULL
 
-
               ## For each BAU time point
               for(i in seq_along(sp_pols@time)) {
 
@@ -1325,7 +1326,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="ST"),
                       if(is.null(time)) time <- this_time else time <- c(time,this_time)
                       if(is.null(time_single)) time_single <- this_time[1] else time_single <- c(time_single,this_time[1])
 
-                      ##F Finally this ensures the labels are from non-null field which could be first or last
+                      ### Finally this ensures the labels are from non-null field which could be first or last
                       coordlabels <- coordnames(sp_fields[[i]])
                   }
               }

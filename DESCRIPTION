@@ -1,7 +1,7 @@
 Package: FRK
 Type: Package
 Title: Fixed Rank Kriging
-Version: 0.2.2
+Version: 0.2.3
 Date: 2018-07-11
 Authors@R: c(
     person("Andrew", "Zammit-Mangion", , "andrewzm@gmail.com", c("aut", "cre")))

@@ -206,23 +206,6 @@ test_that("SpaceTime_BAUs",{
                                  convex= -0.2,
                                  nonconvex_hull = FALSE)
 
-
-    ## The below tests are passing in Rstudio but not on R terminal
-
-    # binned_data3 <- map_data_to_BAUs(STobj2,space_time_grid,av_var=all.vars(f)[1],average_in_BAU = TRUE)
-    # binned_data4 <- map_data_to_BAUs(STobj2,space_time_grid,av_var=all.vars(f)[1],average_in_BAU = FALSE)
-    # expect_is(binned_data3,"STFDF")
-    # expect_is(binned_data4,"STFDF")
-
-    # C3 <- BuildC(binned_data3,space_time_grid)
-    # C4 <- BuildC(binned_data4,space_time_grid)
-    # expect_is(C3,"list")
-    # expect_is(C4,"list")
-    # expect_equal(names(C3),c("i_idx","j_idx"))
-    # expect_equal(names(C4),c("i_idx","j_idx"))
-    # expect_equal(length(C3$i_idx),as.numeric(length(binned_data3)))
-    # expect_equal(length(C4$j_idx),as.numeric(length(binned_data4)))
-
     expect_equal(attr(space_time_grid@time,"tzone"),attr(STobj1@time,"tzone"))
 })
 
