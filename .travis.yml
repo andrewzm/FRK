@@ -15,6 +15,8 @@ env:
 #    - NOT_CRAN=true
 #before_install: echo "options(repos = c(CRAN='http://cran.rstudio.com'))" > ~/.Rprofile
 
+before_install:
+  - sudo apt-get -y install libudunits2-dev
 
 notifications:
   email:
