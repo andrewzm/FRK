@@ -29,8 +29,6 @@
     match.arg(K_type)
   }
   
-  
-  
   ## Check that a valid response-link combination has been chosen
   if (!missing(response) & !missing(link)) {
     

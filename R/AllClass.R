@@ -84,9 +84,9 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @details The spatial random effects (SRE) model is the model employed in Fixed Rank Kriging, and the \code{SRE} object contains all information required for estimation and prediction from spatial data. Object slots contain both other objects (for example, an object of class \code{Basis}) and matrices derived from these objects (for example, the matrix \eqn{S}) in order to facilitate computations.
 #'
 #' @slot f formula used to define the SRE object. All covariates employed need to be specified in the object \code{BAUs}
-#'@slot data the original data from which the model's parameters are estimated
-#'@slot basis object of class \code{Basis} used to construct the matrix \eqn{S}
-#'@slot BAUs object of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame} of \code{STFDF} that contains the Basic Areal Units (BAUs) that are used to both (i) project the data onto a common discretisation if they are point-referenced and (ii) provide a BAU-to-data relationship if the data has a spatial footprint
+#' @slot data the original data from which the model's parameters are estimated
+#' @slot basis object of class \code{Basis} used to construct the matrix \eqn{S}
+#' @slot BAUs object of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame} of \code{STFDF} that contains the Basic Areal Units (BAUs) that are used to both (i) project the data onto a common discretisation if they are point-referenced and (ii) provide a BAU-to-data relationship if the data has a spatial footprint
 #' @slot S matrix constructed by evaluating the basis functions at all the data locations (of class \code{Matrix})
 #' @slot S0 matrix constructed by evaluating the basis functions at all BAUs (of class \code{Matrix})
 #' @slot D_basis list of distance-matrices of class \code{Matrix}, one for each basis-function resolution
@@ -107,6 +107,10 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot sigma2fshat fine-scale variation scaling (estimated)
 #' @slot fs_model type of fine-scale variation (independent or CAR-based). Currently only "ind" is permitted
 #' @slot info_fit information on fitting (convergence etc.)
+### SLOTS ADDED FOR FRKTMB
+#' @slot response the assumed distribution of the response variable
+#' @slot link the desired link function
+#' @slot taper A positve numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "covariance"} and \code{TMB} is used to fir the data)
 #' @seealso \code{\link{SRE}} for details on how to construct and fit SRE models.
 #' @keywords spatial
 setClass("SRE",representation(data="list",
@@ -132,4 +136,7 @@ setClass("SRE",representation(data="list",
                               alphahat = "Matrix",
                               sigma2fshat = "numeric",
                               fs_model = "character",
-                              info_fit = "list"))
+                              info_fit = "list", 
+                              response = "character", 
+                              link = "character", 
+                              taper = "numeric"))
