@@ -28,6 +28,7 @@
 #' This function also makes the slots \code{K_type}, \code{response}, and \code{link} lower case.
 #' @seealso \code{\link{FRKTMB_pred}}
 #' @export
+#' @useDynLib FRK
 FRKTMB_fit <- function(M) {
   
   ## Strings that must be lower-case
@@ -58,7 +59,7 @@ FRKTMB_fit <- function(M) {
   obj <- MakeADFun(data = data_params_init$data,
                    parameters = data_params_init$parameters,
                    random = c("eta", "xi_O"),
-                   DLL = "FRKTMB")
+                   DLL = "FRK")
   
   
   # ------ Fitting and Parameter Estimates/Random Effect Predictions ------
