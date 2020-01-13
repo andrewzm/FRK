@@ -277,7 +277,7 @@ SRE.fit <- function(SRE_model,n_EM = 100L, tol = 0.01, method="EM", lambda = 0, 
     .check_args2(n_EM = n_EM,tol = tol,method = method,print_lik = print_lik)
 
     ## Call internal fitting function with checked arguments
-    .SRE.fit(SRE_model = SRE_model, n_EM = n_EM, tol = tol, method = "EM", lambda = lambda, print_lik=print_lik)
+    .SRE.fit(SRE_model = SRE_model, n_EM = n_EM, tol = tol, method = method, lambda = lambda, print_lik=print_lik)
 
 }
 
@@ -478,8 +478,11 @@ print.summary.SRE <- function(x, ...) {
                  xlab = "EM iteration")
 
         }
-    } else {
-        stop("No other estimation method implemented yet. Please use EM.")
+    } else if (method == "TMB") {
+        SRE_model <- FRKTMB_fit(SRE_model)
+    }
+    else {
+        stop("No other estimation method implemented yet. Please use EM or TMB.")
     }
 
     ## Return fitted SRE model
@@ -1504,7 +1507,7 @@ print.summary.SRE <- function(x, ...) {
     if(!(n_EM <- round(n_EM)) > 0) stop("n_EM needs to be greater than 0")
     if(!is.numeric(tol)) stop("tol needs to be a number greater than zero")
     if(!(tol > 0)) stop("tol needs to be a number greater than zero")
-    if(!(method == "EM")) stop("Currently only the EM algorithm is implemented for parameter estimation")
+    if(!(method %in% c("EM", "TMB"))) stop("Currently only the EM algorithm or TMB are implemented for parameter estimation")
     if(!(is.logical(print_lik))) stop("print_lik needs to be a logical quantity")
     if(!(is.numeric(lambda))) stop("lambda needs to be a number")
     if(!(all(lambda >= 0))) stop("lambda needs to be greater or equal to zero")

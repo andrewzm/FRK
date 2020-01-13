@@ -41,7 +41,7 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 
 \item{\code{X}}{matrix of covariates}
 
-\item{\code{K_type}}{type of prior covariance matrix of random effects. Can be "block-exponential" (correlation between effects decays as a function of distance between the basis-function centroids), or "unstructured" (all elements in \code{K} are unknown and need to be estimated)}
+\item{\code{K_type}}{type of prior covariance matrix of random effects. Can be "block-exponential" (correlation between effects decays as a function of distance between the basis-function centroids), "unstructured" (all elements in \code{K} are unknown and need to be estimated), or "precision" (a sparse precision matrix is used).}
 
 \item{\code{mu_eta}}{updated expectation of random effects (estimated)}
 
@@ -60,6 +60,12 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 \item{\code{fs_model}}{type of fine-scale variation (independent or CAR-based). Currently only "ind" is permitted}
 
 \item{\code{info_fit}}{information on fitting (convergence etc.)}
+
+\item{\code{response}}{the assumed distribution of the response variable}
+
+\item{\code{link}}{the desired link function}
+
+\item{\code{taper}}{A positve numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "covariance"} and \code{TMB} is used to fir the data)}
 }}
 
 \seealso{

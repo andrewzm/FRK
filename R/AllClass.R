@@ -97,7 +97,7 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot Z vector of observations (of class \code{Matrix})
 #' @slot Cmat incidence matrix mapping the observations to the BAUs
 #' @slot X matrix of covariates
-#' @slot K_type type of prior covariance matrix of random effects. Can be "block-exponential" (correlation between effects decays as a function of distance between the basis-function centroids), or "unstructured" (all elements in \code{K} are unknown and need to be estimated)
+#' @slot K_type type of prior covariance matrix of random effects. Can be "block-exponential" (correlation between effects decays as a function of distance between the basis-function centroids), "unstructured" (all elements in \code{K} are unknown and need to be estimated), or "precision" (a sparse precision matrix is used).
 #' @slot mu_eta updated expectation of random effects (estimated)
 #' @slot S_eta updated covariance matrix of random effects (estimated)
 #' @slot Q_eta updated precision matrix of random effects (estimated)
@@ -139,4 +139,8 @@ setClass("SRE",representation(data="list",
                               info_fit = "list", 
                               response = "character", 
                               link = "character", 
-                              taper = "numeric"))
+                              taper = "numeric", 
+                              ### temporary slots for testing: ask andrew what he wants to do
+                              estimates = "list", 
+                              Q = "dsCMatrix", 
+                              log_likelihodd = "numeric"))
