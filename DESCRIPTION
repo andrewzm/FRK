@@ -1,10 +1,11 @@
 Package: FRK
 Type: Package
 Title: Fixed Rank Kriging
-Version: 0.2.3
+Version: 0.3.0
 Date: 2018-07-11
 Authors@R: c(
-    person("Andrew", "Zammit-Mangion", , "andrewzm@gmail.com", c("aut", "cre")))
+    person("Andrew", "Zammit-Mangion", , "andrewzm@gmail.com", c("aut", "cre")),
+    person("Matthew", "Sainsbury-Dale", , "msdale@uow.edu.au", c("aut")))
 Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
 VignetteBuilder: knitr
 Description: Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling
@@ -16,12 +17,11 @@ Description: Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling
     and the use of observations with varying support (with known error variance). The 
     projected field is a key building block of the Spatial Random Effects (SRE) model, 
     on which this package is based. The package FRK provides helper functions to model, 
-    fit, and predict using an SRE with relative ease.
+    fit, and predict using an SRE model with relative ease. FRK may be used for
+    both Gaussian and non-Gaussian data.
 BugReports: http://github.com/andrewzm/FRK/issues
 Depends:
     R (>= 3.2.0),
-    TMB, 
-    RcppEigen
 Suggests:
     covr,
     dggrids,
@@ -49,6 +49,8 @@ Imports:
     spacetime,
     sparseinv,
     stats,
+    TMB, 
+    RcppEigen,
     utils
 Additional_repositories: https://andrewzm.github.io/dggrids-repo, 
                          https://inla.r-inla-download.org/R/stable
