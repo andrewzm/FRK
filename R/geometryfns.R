@@ -1522,7 +1522,7 @@ load_dggrids <- function (res = 3L){
     isea3h <- NA # suppress binding warning
 
     ## Basic check
-    if(!is.numeric(res))
+    if(!is.numeric(res) | !is.integer(res))
         stop("res needs to be an integer or vector of integers")
 
     ## We ship dggrids at res 6 or less with FRK. Finer resolutions are available with the dggrids package
