@@ -18,5 +18,3 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-
-

@@ -106,10 +106,12 @@
 #'     geom_line(data=sim_process,aes(x=x,y=proc),col="red")
 #'  print(g1)}
 SRE <- function(f,data,basis,BAUs,est_error = TRUE,average_in_BAU = TRUE,
-                fs_model = "ind",vgm_model = NULL, K_type = "block-exponential", normalise_basis = TRUE) {
+                fs_model = "ind",vgm_model = NULL, K_type = "block-exponential", normalise_basis = TRUE, 
+                response = "gaussian", link = "identity", taper = 8) {
 
     ## Check that the arguments are OK
-    .check_args1(f=f,data=data,basis=basis,BAUs=BAUs,est_error=est_error)
+    .check_args1(f=f,data=data,basis=basis,BAUs=BAUs,est_error=est_error, 
+                 response=response, link = link)
 
     ## Extract the dependent variable from the formula
     av_var <- all.vars(f)[1]
@@ -1459,7 +1461,11 @@ print.summary.SRE <- function(x, ...) {
 
 
 ## Checks arguments for the SRE() function. Code is self-explanatory
-.check_args1 <- function(f,data,basis,BAUs,est_error) {
+.check_args1 <- function(f,data,basis,BAUs,est_error, 
+                         K_type = c("block-exponential", "precision", "unstructured"), 
+                         response = c("gaussian", "poisson", "bernoulli", "gamma",
+                                      "inverse-gaussian", "negative-binomial", "binomial"), 
+                         link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared")) {
     if(!is(f,"formula")) stop("f needs to be a formula.")
     if(!is(data,"list"))
         stop("Please supply a list of Spatial objects.")
@@ -1474,7 +1480,6 @@ print.summary.SRE <- function(x, ...) {
     #     stop("Implementation with Point BAUs is currently in progress")
     # if(is(BAUs,"STFDF")) if(is(BAUs@sp,"SpatialPointsDataFrame"))
     #     stop("Implementation with Point BAUs is currently in progress")
-
 
     if(!all(all.vars(f)[-1] %in% c(names(BAUs@data),coordnames(BAUs))))
         stop("All covariates need to be in the SpatialPolygons BAU object")
@@ -1498,11 +1503,34 @@ print.summary.SRE <- function(x, ...) {
     if(!est_error & !all(sapply(data,function(x) "std" %in% names(x@data))))
         stop("If observational error is not going to be estimated,
              please supply a field 'std' in the data objects")
+    
+    #### TMB section
+    if (!missing(K_type)) match.arg(K_type)
+    
+    ## Check that a valid response-link combination has been chosen
+    if (!missing(response) & !missing(link)) {
+        
+        match.arg(response)
+        match.arg(link)
+        
+        if (response == "gaussian" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "square-root")) ||
+            response == "poisson" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "square-root")) ||
+            response == "gamma" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "square-root")) ||
+            response == "inverse-gaussian" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "square-root")) ||
+            response == "negative-binomial" & !(link %in% c("log", "square-root", "logit", "probit", "cloglog")) ||
+            response == "binomial" & !(link %in% c("logit", "probit", "cloglog")) ||
+            response == "bernoulli" & !(link %in% c("logit", "probit", "cloglog"))) {
+            stop("Invalid response-link combination selected")
+        }
+        
     }
+    
+    
+}
 
 
 ## Checks arguments for the SRE.fit() function. Code is self-explanatory
-.check_args2 <- function(n_EM = 100L, tol = 0.01, lambda = 0, method="EM", print_lik=FALSE,...) {
+.check_args2 <- function(n_EM = 100L, tol = 0.01, lambda = 0, method, print_lik = FALSE,...) {
     if(!is.numeric(n_EM)) stop("n_EM needs to be an integer")
     if(!(n_EM <- round(n_EM)) > 0) stop("n_EM needs to be greater than 0")
     if(!is.numeric(tol)) stop("tol needs to be a number greater than zero")
