@@ -30,84 +30,84 @@
 #' @export
 #' @useDynLib FRK
 FRKTMB_fit <- function(M) {
-  
+
   ## Strings that must be lower-case
   M@K_type    <- tolower(M@K_type)
   M@response  <- tolower(M@response)
   M@link      <- tolower(M@link)
-  
+
   ## Check arguments are valid
   .check_arg_FRKTMB(K_type = M@K_type,
                     response = M@response,
                     link = M@link,
                     taper = M@taper,
                     k_Z = M@data$k)
-  
-  
+
+
   # ------ Data preparation ------
-  
+
   data_params_init <- .TMB_prep(M = M,
                                 K_type = M@K_type,
                                 response = M@response,
                                 link = M@link,
                                 taper = M@taper,
                                 k_Z = M@data$k_Z)
-  
-  
+
+
   # ------- Model Compilation -------
-  
+
   obj <- MakeADFun(data = data_params_init$data,
                    parameters = data_params_init$parameters,
                    random = c("eta", "xi_O"),
                    DLL = "FRK")
-  
-  
+
+
   # ------ Fitting and Parameter Estimates/Random Effect Predictions ------
-  
+
   ## Fit the model
   fit <- nlminb(obj$par, obj$fn, obj$gr)
-  
+
   ## Log-likeihood
   log_likelihood <- -obj$fn() # could also use - fit$objective
-  
+
   ## Extract parameter and random effect estimates
   par <- obj$env$last.par
   estimates <- split(par, names(par)) # convert to named list object
-  
-  
+
+
   # ------ Joint precision/covariance matrix of random effects ------
-  
+
   ## The precision matrix provided by sdreport() is the joint precision matrix
   ## of the fixed parameters AND the random effects.
   ## However, we only want the block corresponding to the random effects.
   ## Note, that the ordering of the precision matrix follows the original
   ## order supplied to TMB i.e. unique(names(obj$env$par)).
-  
+
   report <- sdreport(obj, getJointPrecision = TRUE, skip.delta.method = TRUE)
-  
+
   ## Joint precision matrix of fixed AND random effects
   Q <- report$jointPrecision
-  
+
   # ## For cases in which the dispersion parameter does not change, remove it from Q.
   # if (response %in% c("gaussian", "poisson", "bernoulli", "binomial", "negative-binomial")) {
   #   idx <- which(rownames(Q) == "logphi")
   #   Q <- Q[-idx, -idx]
   # }
-  
+
   ## The parameters and fixed effects should not be included as random variables,
   ## so we remove them from the precision matrix BEFORE inverting.
   m <- length(M@Z)
   r <- M@basis@n
   npar <- nrow(Q) - (r + m) # number of parameters/fixed effects
   Q    <- Q[-(1:npar), -(1:npar)]
-  
-  
+
+
   ## Update the slots of M
-  
+
   M@estimates <- estimates           # estimates of fixed effects, parameters, and random effects (as a named list)
   M@Q <- Q                           # precision matrix of all random effects
   M@log_likelihood <- log_likelihood # log-likelihood evaluated at optimal estimates
-  
+
   return(M)
 }
 
@@ -137,49 +137,49 @@ FRKTMB_fit <- function(M) {
                        link = c("log", "identity", "logit", "probit", "cloglog", "reciprocal", "reciprocal-squared"),
                        taper,
                        k_Z) {
-  
+
   if(is.null(k_Z)){
     k_Z <- -2 # some arbitrary number to keep TMB happy
   }
-  
+
   nres        <- max(M@basis@df$res)      # Number of resolutions
   r           <- M@basis@n                # Number of basis functions in total.
   N           <- nrow(M@S0)               # Number of BAUs
-  
+
   Z   <- as.vector(M@Z)
   m   <- length(Z)        # Number of data points AFTER BINNING
   X   <- as.matrix(M@X)
   S   <- as(M@S, "sparseMatrix")
-  
+
   ## Common to all
   data    <- list(Z = Z, X = X, S = S,
                   ri = as.vector(table(M@basis@df$res)), # Size of each "block": number of basis functions for each resolution
                   sigma2e  = M@Ve[1, 1],
                   response = response, link = link,
                   k_Z = k_Z)
-  
+
   ## Data which depend on K_type
   if (K_type == "block-exponential") {
-    
+
     TaperValues  <- .cov_tap(M@D_basis, taper = taper)
     data$D       <- Matrix::bdiag(M@D_basis)
     data$alpha   <- TaperValues$alpha
     data$nnz_tap <- TaperValues$nnz_tap
-    
+
   } else if (K_type == "precision") {
-    
+
     temp <- .sparse_Q_block_diag(M@basis@df, kappa = 0, rho = 1)
     R <- as(temp$Q, "dgTMatrix")
     data$row_indices = R@i
     data$col_indices = R@j
     data$x = R@x
     data$nnz = temp$nnz
-    
+
   }
-  
+
   ## Parameter and random effect initialisations.
   g <- .link_fn(link)
-  
+
   ## Create altered data to avoids the problems of applying g() to Z.
   Z0 <- Z
   if (response == "gaussian" & link %in% c("log", "square-root")) {
@@ -197,7 +197,7 @@ FRKTMB_fit <- function(M) {
   } else if (response == "bernoulli" & link %in% c("logit", "probit", "cloglog")) {
     Z0 <- Z + 0.05 * (Z == 0) - 0.05 * (Z == 1)
   }
-  
+
   ## Transformed data
   if (response == "binomial" & link %in% c("logit", "probit", "cloglog")) {
     p0   <- Z0 / k_Z
@@ -210,32 +210,32 @@ FRKTMB_fit <- function(M) {
   } else {
     Z0_t <- g(Z0)
   }
-  
+
   ## Parameter and random effect initialisations.
   parameters <- list()
   parameters$beta         <- coef(lm(Z0_t ~ 1))
   parameters$logsigma2xi  <- log(var(Z0_t))
   parameters$logphi       <- log(data$sigma2e)
-  
+
   if (K_type == "block-exponential") {
     parameters$logsigma2        <- log(exp(parameters$logsigma2xi) * (0.1)^(0:(nres - 1)))
     parameters$logtau           <- log((1 / 3)^(1:nres))
-    
+
     ## Tapered prior covariance matrix (required for eta initialisation)
     KInit <- .K_tap_matrix(M@D_basis,
                            alpha = data$alpha,
                            sigma2 =  exp(parameters$logsigma2),
                            tau = exp(parameters$logtau))
-    
+
   } else if (K_type == "precision") {
     parameters$logrho           <- log(exp(parameters$logsigma2xi) * (0.1)^(0:(nres - 1)))
     parameters$logkappa         <- log((1 / 3)^(1:nres))
-    
+
     ## Prior covariance matrix (required for eta initialisation)
     KInit <- solve(as(R, "sparseMatrix") + Matrix::sparseMatrix(i = 1:r, j = 1:r, x = 0.5))
-    
+
   }
-  
+
   ## Initialise the random effects
   ## THIS SOLVE IS OF AN rxr MATRIX: FOR NRES = 4, THIS WILL TAKE A LONG TIME.
   ## FOR AN INITIALISATION, IT WOULD BE NICE TO FIND SOMETHING THAT DOESN'T INVOLVE
@@ -243,8 +243,8 @@ FRKTMB_fit <- function(M) {
   temp            <- data$sigma2e+exp(parameters$logsigma2xi)
   parameters$eta  <- as.vector((1 / temp) * solve(Matrix::t(S) %*% S / temp + solve(KInit) ) %*% (Matrix::t(S)  %*% (Z0_t - X %*% parameters$beta)))
   parameters$xi_O <- as.vector((exp(parameters$logsigma2xi) / temp) * (Z0_t - X %*% parameters$beta - S %*% parameters$eta))
-  
-  
+
+
   return(list(data = data, parameters = parameters))
 }
 
@@ -273,22 +273,22 @@ FRKTMB_fit <- function(M) {
 #' }
 #' @seealso \code{\link{.K_matrix}}
 .cov_tap <- function(D_matrices, taper = 8){
-  
+
   ri <- sapply(D_matrices, nrow) # No. of basis functions at each res
   nres <- length(ri)
-  
+
   ## Minimum distance between neighbouring basis functions.
   ## (add a large number to the diagonal, which would otherwise be 0)
   minDist <- vector()
   for(i in 1:nres) minDist[i] <- min(D_matrices[[i]] + 10^5 * diag(ri[i]))
-  
+
   ## Taper parameters
   alpha   <- taper * minDist
-  
+
   ## Number of non-zeros in tapered covariance matrix
   nnz_tap <- 0
   for (i in 1:nres) nnz_tap <- nnz_tap + sum(D_matrices[[i]] < alpha[i])
-  
+
   return(list("alpha" = alpha, "nnz_tap" = nnz_tap))
 }
 
@@ -307,26 +307,26 @@ FRKTMB_fit <- function(M) {
 #' @return The block-diagonal (class \code{dgCmatrix}) prior covariance matrix, K.
 #' @seealso \code{\link{dist_matrices}}
 .K_matrix <- function(D_matrices, sigma2, tau){
-  
+
   exp_cov_function <- function(dist_matrix, sigma2, tau) {
     sigma2 * exp(- dist_matrix / tau)
   }
-  
+
   if (class(D_matrices) == "list") {
-    
+
     ## Construct the individual blocks of the K-matrix
     K_matrices <- mapply(exp_cov_function,
                          dist_matrix = D_matrices,
                          sigma2 = sigma2, tau = tau,
                          SIMPLIFY = FALSE)
-    
+
     ## Construct the full K-matrix
     K <- Matrix::bdiag(K_matrices)
-    
+
   } else {
     K <- exp_cov_function(D_matrices, sigma2 = sigma2, tau  = tau)
   }
-  
+
   return(K)
 }
 
@@ -346,19 +346,19 @@ FRKTMB_fit <- function(M) {
 #' @param alpha The taper parameters (which vary based on resolution).
 #' @return A taper matrix, which is block-diagonal and of class \code{dgCmatrix}.
 .K_alpha_matrix <- function(D_matrices, alpha){
-  
+
   spherical_taper <- function(matrix, alpha) {
     apply(matrix, c(1,2), function(h){(1 + h / (2 * alpha)) * (max(1 - h / alpha, 0))^2})
   }
-  
+
   if (class(D_matrices) == "list") {
     K_alpha <- mapply(spherical_taper, matrix = D_matrices, alpha = alpha, SIMPLIFY = FALSE)
   } else {
     K_alpha <- spherical_taper(matrix = D_matrices, alpha = alpha)
   }
-  
+
   K_alpha <- Matrix::bdiag(K_alpha)
-  
+
   return(K_alpha)
 }
 
@@ -373,12 +373,12 @@ FRKTMB_fit <- function(M) {
 #' @return The \emph{tapered} prior covariance matrix, which is
 #' block-diagonal and of class \code{dgCmatrix}.
 .K_tap_matrix <- function(D_matrices, alpha, sigma2, tau){
-  
+
   K <- .K_matrix(D_matrices, sigma2, tau)
   K_alpha <- .K_alpha_matrix(D_matrices, alpha)
-  
+
   K_tap <- K * K_alpha
-  
+
   return(K_tap)
 }
 
@@ -435,40 +435,40 @@ FRKTMB_fit <- function(M) {
 #' equal to 1 if basis functions i and j are neighbours, and 0 otherwise.
 #' Diagonal elements indicate number of neighbours for that basis function.
 .neighbour_matrix <- function(df, loc1 = "loc1", loc2 = "loc2") {
-  
+
   ## difference in x-coordinate
   diff_x <- outer(df[, loc1], df[, loc1], "-")
   abs_diff_x <- abs(diff_x)
-  
+
   ## difference in y-coordinate
   diff_y <- outer(df[, loc2], df[, loc2], "-")
   abs_diff_y <- abs(diff_y)
-  
+
   ## Minimum x and y distances
   x_min <- sort(unique(abs_diff_x[1, ]))[2]
   y_min <- sort(unique(abs_diff_y[1, ]))[2]
-  
+
   ## 1. Find the "vertical" neighbours
   ## Two conditions which must be met for basis functions to be neighours
   condition1 <- .equal_within_tol(abs_diff_y, y_min)
   condition2 <- .equal_within_tol(diff_x, 0)
   vertical_neighbours <- condition1 & condition2
-  
+
   ## 2. Find the "horizontal" neighbours
   ## Two conditions which must be met for basis functions to be neighours
   condition1 <- .equal_within_tol(abs_diff_x, x_min)
   condition2 <- .equal_within_tol(diff_y, 0)
   horizontal_neighbours <- condition1 & condition2
-  
+
   ## Full neighbour matrix (with zeros along the diagonal)
   A <- vertical_neighbours + horizontal_neighbours
-  
+
   ## number of neighbours for each basis function
   nn <- rowSums(A)
-  
+
   ## Add the number of neighbours to the diagonal
   diag(A) <- nn
-  
+
   return(A)
 }
 
@@ -489,12 +489,12 @@ FRKTMB_fit <- function(M) {
 #' @return A sparse precision matrix of class \code{dgCMatrix}.
 #' @seealso \code{\link{.neighbour_matrix}}, \code{\link{.sparse_Q_block_diag}}
 .sparse_Q <- function(A, kappa, rho) {
-  
+
   Q <- -A
   diag(Q) <- diag(A) + kappa
   Q <- rho * Q
   Q <- as(Q, "sparseMatrix")
-  
+
   return(Q)
 }
 
@@ -510,11 +510,11 @@ FRKTMB_fit <- function(M) {
 #' @return A list containing the sparse block-diagonal precision matrix (Q) of class "dgCMatrix", and the number of non-zero elements (nnz) at each resolution.
 #' @seealso \code{\link{.sparse_Q}}, \code{\link{.neighbour_matrix}}
 .sparse_Q_block_diag <- function(df, kappa, rho) {
-  
+
   nres <- max(df$res)
   if (length(kappa) == 1) kappa <- rep(kappa, nres)
   if (length(rho) == 1) rho <- rep(rho, nres)
-  
+
   ## Construct the blocks
   Q_matrices  <- list()
   nnz <- c()
@@ -525,9 +525,9 @@ FRKTMB_fit <- function(M) {
                                  rho = rho[i])
     nnz[i] <- Matrix::nnzero(Q_matrices[[i]])
   }
-  
+
   ## Block diagonal
   Q <- Matrix::bdiag(Q_matrices)
-  
+
   return(list(Q = Q, nnz = nnz))
 }

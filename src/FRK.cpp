@@ -1,5 +1,6 @@
 #include <TMB.hpp>
 #include <cmath>
+#include "FRK-init.h"
 
 template<class Type>
 Type objective_function<Type>::operator() ()
