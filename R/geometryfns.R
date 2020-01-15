@@ -220,7 +220,9 @@ distR <- function (x1, x2 = NULL)  {
         stop("x1 and x2 have to have same number of columns")
 
     ## Compute the distance in C (distR_C is a wrapper)
-    distR_C(x1,x2)
+    ## distR_C(x1,x2)  ## Currently not used due to conflict with compiling TMB
+    sqdisps <- lapply(1:ncol(x1), function(i) outer(x1[,i], x2[,i], FUN = '-')^2)
+    sqrt(Reduce("+", sqdisps))
 }
 
 ## Retrieve the border points
