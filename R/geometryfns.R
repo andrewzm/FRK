@@ -364,7 +364,7 @@ auto_BAUs <- function(manifold, type=NULL,cellsize = NULL,
     if(!is.null(isea3h_res)) {
 
         ## Check it's valid
-        if(!is.numeric(isea3h_res) | is.integer(isea3h_res))
+        if(!(is.numeric(isea3h_res) | is.integer(isea3h_res)))
             stop("isea3h_res needs to be of type 'numeric' or 'integer'")
         if(!on_sphere)
             stop("The problem is not on the surface of sphere. Please set isea3h_res to NULL")
@@ -1522,7 +1522,7 @@ load_dggrids <- function (res = 3L){
     isea3h <- NA # suppress binding warning
 
     ## Basic check
-    if(!is.numeric(res) | !is.integer(res))
+    if(!(is.numeric(res) | is.integer(res)))
         stop("res needs to be an integer or vector of integers")
 
     ## We ship dggrids at res 6 or less with FRK. Finer resolutions are available with the dggrids package
