@@ -220,11 +220,7 @@ distR <- function (x1, x2 = NULL)  {
         stop("x1 and x2 have to have same number of columns")
 
     ## Compute the distance in C (distR_C is a wrapper)
-    ## distR_C(x1,x2)  ## Currently not used due to conflict with compiling TMB
-
-    sqdisps <- lapply(1:ncol(x1), function(i) outer(x1[,i], x2[,i], FUN = '-')^2)
-    sqrt(Reduce("+", sqdisps))
-    
+    distR_C(x1,x2)
 }
 
 ## Retrieve the border points
@@ -368,7 +364,7 @@ auto_BAUs <- function(manifold, type=NULL,cellsize = NULL,
     if(!is.null(isea3h_res)) {
 
         ## Check it's valid
-        if(!is.numeric(isea3h_res) | is.integer(isea3h_res))
+        if(!(is.numeric(isea3h_res) | is.integer(isea3h_res)))
             stop("isea3h_res needs to be of type 'numeric' or 'integer'")
         if(!on_sphere)
             stop("The problem is not on the surface of sphere. Please set isea3h_res to NULL")
@@ -1526,7 +1522,7 @@ load_dggrids <- function (res = 3L){
     isea3h <- NA # suppress binding warning
 
     ## Basic check
-    if(!is.numeric(res) | !is.integer(res))
+    if(!(is.numeric(res) | is.integer(res)))
         stop("res needs to be an integer or vector of integers")
 
     ## We ship dggrids at res 6 or less with FRK. Finer resolutions are available with the dggrids package
@@ -1838,3 +1834,4 @@ process_isea3h <- function(isea3h,resl) {
     interleaved                                           # return
 
 }
+>>>>>>> e93aac0... Added gitattributes and fixed dggrids
