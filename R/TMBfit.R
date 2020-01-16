@@ -103,9 +103,16 @@ FRKTMB_fit <- function(M) {
 
 
   ## Update the slots of M
-
-  M@estimates <- estimates           # estimates of fixed effects, parameters, and random effects (as a named list)
-  M@Q <- Q                           # precision matrix of all random effects
+  ## NOTE: I had to convert to sparseMatrix as the SRE slot required value 
+  M@sigma2fshat <- unname(exp(estimates$logsigma2xi))
+  M@alphahat <- as(estimates$beta, "sparseMatrix")
+  M@mu_eta <- as(estimates$eta, "sparseMatrix")
+  M@mu_xi_O <- as(estimates$xi_O, "sparseMatrix")
+  M@Q_eta_xi <- Q                   
+  
+  ## Not sure if we need to provide kappa and rho (the parameters of the prior precision matrix)?
+  ## Also not sure if we need to provide phi (the dispersion paramter), as it is not used beyond this point.
+  ## The log-likelihood should be obtained from loglik() function.
   M@log_likelihood <- log_likelihood # log-likelihood evaluated at optimal estimates
 
   return(M)

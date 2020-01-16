@@ -111,7 +111,7 @@ SRE <- function(f,data,basis,BAUs,est_error = TRUE,average_in_BAU = TRUE,
 
     ## Check that the arguments are OK
     .check_args1(f=f,data=data,basis=basis,BAUs=BAUs,est_error=est_error, 
-                 response=response, link = link)
+                 response=response, link = link, taper = taper)
 
     ## Extract the dependent variable from the formula
     av_var <- all.vars(f)[1]
@@ -242,6 +242,10 @@ SRE <- function(f,data,basis,BAUs,est_error = TRUE,average_in_BAU = TRUE,
     ## Information on fitting
     info_fit = list("SRE not fitted to data yet. Please use SRE.fit()")
 
+    ## Initial values for TMB slots (possibly come back to this and provide the actual initial values computed in .TMB_prep())
+    mu_xi_init <- Matrix(0, nrow = nrow(M@S))
+    Q_eta_xi_init <- Matrix(0, nrow = nrow(M@S) + nbasis(M), ncol = nrow(M@S) + nbasis(M))
+    
     ## Construct the SRE object
     new("SRE",
         data=data,
@@ -267,7 +271,13 @@ SRE <- function(f,data,basis,BAUs,est_error = TRUE,average_in_BAU = TRUE,
         alphahat = alphahat_init,
         sigma2fshat = sigma2fshat_init,
         fs_model = fs_model,
-        info_fit = info_fit)
+        info_fit = info_fit, 
+        #### TMB SLOTS
+        response = response, 
+        link = link, 
+        taper = taper, 
+        mu_xi = mu_xi_init, 
+        Q_eta_xi = Q_eta_xi_init)
 }
 
 
@@ -308,8 +318,6 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     .check_args3(obs_fs = obs_fs, newdata = newdata, pred_polys = pred_polys,
                  pred_time = pred_time, covariances = covariances)
 
-
-
     ## Call internal prediction function
     pred_locs <- .SRE.predict(Sm = SRE_model,            # Fitted SRE model
                               obs_fs = obs_fs,           # Case 1 or Case 2?
@@ -326,9 +334,13 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
 loglik <- function(SRE_model) {
     # This is structured this way so that extra models for fs-variation
     # can be implemented later
-    if(SRE_model@fs_model == "ind")
-        .loglik.ind(SRE_model)
-    else stop("Currently onle independent fine-scale model is implemented")
+    if (length(SRE_model@log_likelihood) != 0) {
+        return(SRE_model@log_likelihood)
+    } else if (SRE_model@fs_model == "ind") {
+        return(.loglik.ind(SRE_model))
+    } else {
+        stop("Currently onle independent fine-scale model is implemented")
+    }
 }
 
 ## Print/Show SRE
@@ -1465,7 +1477,8 @@ print.summary.SRE <- function(x, ...) {
                          K_type = c("block-exponential", "precision", "unstructured"), 
                          response = c("gaussian", "poisson", "bernoulli", "gamma",
                                       "inverse-gaussian", "negative-binomial", "binomial"), 
-                         link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared")) {
+                         link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"), 
+                         taper = 8) {
     if(!is(f,"formula")) stop("f needs to be a formula.")
     if(!is(data,"list"))
         stop("Please supply a list of Spatial objects.")
@@ -1522,7 +1535,10 @@ print.summary.SRE <- function(x, ...) {
             response == "bernoulli" & !(link %in% c("logit", "probit", "cloglog"))) {
             stop("Invalid response-link combination selected")
         }
-        
+    }
+    
+    if (!is.numeric(taper) | taper <= 0){
+        stop("taper must be positive.")
     }
     
     

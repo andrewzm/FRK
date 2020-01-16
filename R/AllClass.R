@@ -98,7 +98,7 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot Cmat incidence matrix mapping the observations to the BAUs
 #' @slot X matrix of covariates
 #' @slot K_type type of prior covariance matrix of random effects. Can be "block-exponential" (correlation between effects decays as a function of distance between the basis-function centroids), "unstructured" (all elements in \code{K} are unknown and need to be estimated), or "precision" (a sparse precision matrix is used).
-#' @slot mu_eta updated expectation of random effects (estimated)
+#' @slot mu_eta updated expectation of the basis function random effects (estimated)
 #' @slot S_eta updated covariance matrix of random effects (estimated)
 #' @slot Q_eta updated precision matrix of random effects (estimated)
 #' @slot Khat prior covariance matrix of random effects (estimated)
@@ -110,7 +110,10 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 ### SLOTS ADDED FOR FRKTMB
 #' @slot response the assumed distribution of the response variable
 #' @slot link the desired link function
-#' @slot taper A positve numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "covariance"} and \code{TMB} is used to fir the data)
+#' @slot taper a positve numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "covariance"} and \code{TMB} is used to fir the data)
+#' @slot mu_xi_O updated expectation of the fine-scale random effects at observed BAUs (estimated)
+#' @slot Q_eta_xi updated joint precision matrix of the basis function random effects and observed fine-scale random effects (estimated)
+#' @slot log_likelihood the log likelihood of the fitted model
 #' @seealso \code{\link{SRE}} for details on how to construct and fit SRE models.
 #' @keywords spatial
 setClass("SRE",representation(data="list",
@@ -137,10 +140,10 @@ setClass("SRE",representation(data="list",
                               sigma2fshat = "numeric",
                               fs_model = "character",
                               info_fit = "list", 
+                              #### TMB slots
                               response = "character", 
                               link = "character", 
                               taper = "numeric", 
-                              ### temporary slots for testing: ask andrew what he wants to do
-                              estimates = "list", 
-                              Q = "dsCMatrix", 
-                              log_likelihodd = "numeric"))
+                              mu_xi_O = "Matrix",
+                              Q_eta_xi = "dsCMatrix",
+                              log_likelihood = "numeric"))
