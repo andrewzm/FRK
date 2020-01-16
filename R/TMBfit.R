@@ -29,20 +29,12 @@
 #' @seealso \code{\link{FRKTMB_pred}}
 #' @export
 #' @useDynLib FRK
-FRKTMB_fit <- function(M) {
+.FRKTMB_fit <- function(M) {
 
   ## Strings that must be lower-case
   M@K_type    <- tolower(M@K_type)
   M@response  <- tolower(M@response)
   M@link      <- tolower(M@link)
-
-  ## Check arguments are valid
-  .check_arg_FRKTMB(K_type = M@K_type,
-                    response = M@response,
-                    link = M@link,
-                    taper = M@taper,
-                    k_Z = M@data$k)
-
 
   # ------ Data preparation ------
 

@@ -111,7 +111,7 @@ SRE <- function(f,data,basis,BAUs,est_error = TRUE,average_in_BAU = TRUE,
 
     ## Check that the arguments are OK
     .check_args1(f=f,data=data,basis=basis,BAUs=BAUs,est_error=est_error, 
-                 response=response, link = link, taper = taper)
+                 response=response, link = link, taper = taper, K_type = K_type, k_Z = data$k)
 
     ## Extract the dependent variable from the formula
     av_var <- all.vars(f)[1]
@@ -242,9 +242,11 @@ SRE <- function(f,data,basis,BAUs,est_error = TRUE,average_in_BAU = TRUE,
     ## Information on fitting
     info_fit = list("SRE not fitted to data yet. Please use SRE.fit()")
 
-    ## Initial values for TMB slots (possibly come back to this and provide the actual initial values computed in .TMB_prep())
-    mu_xi_init <- Matrix(0, nrow = nrow(M@S))
-    Q_eta_xi_init <- Matrix(0, nrow = nrow(M@S) + nbasis(M), ncol = nrow(M@S) + nbasis(M))
+    ## Initial values for TMB slots 
+    ## (dummy values provided only)
+    ## (possibly come back to this and provide the actual initial values computed in .TMB_prep())
+    mu_xi_init <- Matrix(0, nrow = 1)
+    Q_eta_xi_init <- Matrix(0, nrow = 1, 1)
     
     ## Construct the SRE object
     new("SRE",
@@ -276,7 +278,7 @@ SRE <- function(f,data,basis,BAUs,est_error = TRUE,average_in_BAU = TRUE,
         response = response, 
         link = link, 
         taper = taper, 
-        mu_xi = mu_xi_init, 
+        mu_xi_O = mu_xi_init, 
         Q_eta_xi = Q_eta_xi_init)
 }
 
@@ -316,7 +318,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
 
     ## Check the arguments are OK
     .check_args3(obs_fs = obs_fs, newdata = newdata, pred_polys = pred_polys,
-                 pred_time = pred_time, covariances = covariances)
+                 pred_time = pred_time, covariances = covariances, response = object@response)
 
     ## Call internal prediction function
     pred_locs <- .SRE.predict(Sm = SRE_model,            # Fitted SRE model
@@ -493,7 +495,7 @@ print.summary.SRE <- function(x, ...) {
 
         }
     } else if (method == "TMB") {
-        SRE_model <- FRKTMB_fit(SRE_model)
+        SRE_model <- .FRKTMB_fit(SRE_model)
     }
     else {
         stop("No other estimation method implemented yet. Please use EM or TMB.")
@@ -1478,7 +1480,8 @@ print.summary.SRE <- function(x, ...) {
                          response = c("gaussian", "poisson", "bernoulli", "gamma",
                                       "inverse-gaussian", "negative-binomial", "binomial"), 
                          link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"), 
-                         taper = 8) {
+                         taper = 8, 
+                         k_Z) {
     if(!is(f,"formula")) stop("f needs to be a formula.")
     if(!is(data,"list"))
         stop("Please supply a list of Spatial objects.")
@@ -1541,12 +1544,23 @@ print.summary.SRE <- function(x, ...) {
         stop("taper must be positive.")
     }
     
+    ## Check k_Z
+    if (response %in% c("binomial", "negative-binomial")) {
+        k-Z <- data$k
+        if (is.null(k_Z)) {
+            stop("For binomial or negative-binomial data, the known constant parameter k must be provided for each observation.")
+        } else if (!is.numeric(k_Z) | any(k_Z <= 0) | any(k_Z != round (k_Z))) {
+            stop("The known constant parameter k must contain only positive integers.")
+        }
+        
+    }
+    
     
 }
 
 
 ## Checks arguments for the SRE.fit() function. Code is self-explanatory
-.check_args2 <- function(n_EM = 100L, tol = 0.01, lambda = 0, method, print_lik = FALSE,...) {
+.check_args2 <- function(n_EM = 100L, tol = 0.01, lambda = 0, method, print_lik = FALSE, ...) {
     if(!is.numeric(n_EM)) stop("n_EM needs to be an integer")
     if(!(n_EM <- round(n_EM)) > 0) stop("n_EM needs to be greater than 0")
     if(!is.numeric(tol)) stop("tol needs to be a number greater than zero")
@@ -1559,7 +1573,7 @@ print.summary.SRE <- function(x, ...) {
 
 ## Checks arguments for the predict() function. Code is self-explanatory
 .check_args3 <- function(obs_fs=FALSE, newdata = NULL, pred_polys = NULL,
-                         pred_time = NULL, covariances = FALSE, ...) {
+                         pred_time = NULL, covariances = FALSE, k_BAU, response, ...) {
     if(!(obs_fs %in% 0:1)) stop("obs_fs needs to be logical")
 
     if(!(is(newdata,"Spatial") | (is(newdata,"ST")) | is.null(newdata)))
@@ -1573,6 +1587,21 @@ print.summary.SRE <- function(x, ...) {
 
     if(!(is.integer(pred_time) | is.null(pred_time))) stop("pred_time needs to be of class integer")
     if(!is.logical(covariances)) stop("covariances needs to be TRUE or FALSE")
+    
+    
+    ## Check k_BAU
+    if (!missing(response) & response %in% c("binomial", "negative-binomial")) {
+        
+        if (is.null(k_BAU)){
+            stop("For binomial or negative-binomial response, the known constant parameter k must be provided for each BAU.")
+        } else if (!is.numeric(k_BAU) | any(k_BAU <= 0) | any(k_BAU != round (k_BAU))) {
+            stop("The known constant parameter k must contain only positive integers.")
+        } else if (length(k_BAU) != nrow(M@S0)) {
+            stop("length(k) not equal to the number of BAUs." )
+        }    
+            
+    }
+    
 }
 
 

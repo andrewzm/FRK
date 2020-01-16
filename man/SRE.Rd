@@ -37,7 +37,10 @@ SRE(
   fs_model = "ind",
   vgm_model = NULL,
   K_type = "block-exponential",
-  normalise_basis = TRUE
+  normalise_basis = TRUE,
+  response = "gaussian",
+  link = "identity",
+  taper = 8
 )
 
 SRE.fit(
