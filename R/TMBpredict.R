@@ -11,7 +11,7 @@
 #' Note that for all link functions other than the log-link, the predictions and prediction uncertainty contained in \code{xy} are computed using the Monte Carlo samples contained in \code{MC}.
 #' When a log-link function is used the expectation and variance of the conditional mean \eqn{\mu} may be computed exactly.
 #' @export
-FRKTMB_pred <- function(M, estimates, Q) {
+.FRKTMB_pred <- function(M, estimates, Q) {
   
   # ---- Argument checks ----
   

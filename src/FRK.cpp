@@ -67,12 +67,10 @@ Type objective_function<Type>::operator() ()
     }
     start += nnz[i];
   }
-  REPORT(coefficients);
 
   // Convert triplet list of non-zero entries to a true SparseMatrix.
   SpMat Q(r, r);
   Q.setFromTriplets(tripletList.begin(), tripletList.end());
-  REPORT(Q);
 
 
   // -------- 2. log-determinant of Q, and the 'u' vector -------- //
@@ -91,10 +89,6 @@ Type objective_function<Type>::operator() ()
   vector<Type> u(r);
   u   = (M.transpose()) * (eta.matrix());
 
-  REPORT(M);
-  REPORT(det_term_eta);
-  REPORT(u);
-
 
   // -------- 3. Construct ln[eta|Q] and ln[xi|sigma2xi].  -------- //
 
@@ -105,8 +99,8 @@ Type objective_function<Type>::operator() ()
 
   // ln[eta|K] and ln[xi|sigma2xi]:
   // (These quantities are invariant to the link function/response distribution)
-  Type ld_eta =  det_term_eta - 0.5 * quadform_eta;
-  Type ld_xi  =  - 0.5 * m * log(sigma2xi) - 0.5 * quadform_xi;
+  Type ld_eta =  -0.5 * r * log(2 * M_PI) + det_term_eta - 0.5 * quadform_eta;
+  Type ld_xi  =  -0.5 * m * log(2 * M_PI) - 0.5 * m * log(sigma2xi) - 0.5 * quadform_xi;
 
 
   // -------- 4. Construct ln[Z|Y_O]  -------- //
@@ -118,7 +112,6 @@ Type objective_function<Type>::operator() ()
 
   vector<Type> mu_O(m);
   vector<Type> p_O(m);
-
 
   if (link == "identity") {
     mu_O = Y_O;
@@ -157,10 +150,7 @@ Type objective_function<Type>::operator() ()
   } else if (response == "negative-binomial" && link == "square-root") {
     mu_O *= k_Z;
   }
-
-  REPORT(p_O);
-  REPORT(mu_O);
-
+  
   // 4.3. Create the canonical parameter lambda,
   //      a function of the conditional mean mu_O.
   //      Also create vectors containing a(phi), b(lambda), and c(Z, phi).
@@ -180,13 +170,18 @@ Type objective_function<Type>::operator() ()
     lambda  =   log(mu_O);
     blambda =   exp(lambda);
     aphi    =   1;
-    cZphi   =   0;
+    // Only need c(Z, phi) here to provide exact density function to the user
+    // cZphi   =   -lfactorial(Z);           
+    for (int i = 0; i < m; i++) {
+      cZphi[i] = -lfactorial(Z[i]);
+    }
+    // cZphi   = 0;
   } else if (response == "bernoulli") {
     phi     =   1;
     lambda  =   log((mu_O + 1e-10) / (1 - mu_O + 1e-10));
     blambda =   log(1 + exp(lambda));
     aphi    =   1;
-    cZphi   =   0;
+    cZphi   =   0;    // c(Z, phi) is indeed equal to zero for bernoulli 
   } else if (response == "gamma") {
     lambda  =   1 / mu_O;
     blambda =   log(lambda);
@@ -202,13 +197,23 @@ Type objective_function<Type>::operator() ()
     lambda  = log(mu_O / (mu_O + k_Z));
     blambda = -k_Z * log(1 - exp(lambda));
     aphi    = 1;
-    cZphi   = 0;
+    // Only need c(Z, phi) here to provide exact density function to the user
+    // cZphi   = lfactorial(Z + k_Z - 1) - lfactorial(Z) - lfactorial(k_Z - 1);  
+    for (int i = 0; i < m; i++) {
+      cZphi[i] = lfactorial(Z[i] + k_Z[i] - 1) - lfactorial(Z[i]) - lfactorial(k_Z[i] - 1);
+    }
+    // cZphi   = 0;
   } else if (response == "binomial") {
     phi     = 1;
     lambda  = log((mu_O + 1e-10) / (k_Z - mu_O + 1e-10));
     blambda = k_Z * log(1 + exp(lambda));
     aphi    = 1;
-    cZphi   = 0;
+    // Only need c(Z, phi) here to provide exact density function to the user
+    // cZphi   = lfactorial(k_Z) - lfactorial(Z) - lfactorial(k_Z - Z);     
+    for (int i = 0; i < m; i++) {
+      cZphi[i] = lfactorial(k_Z[i]) - lfactorial(Z[i]) - lfactorial(k_Z[i] - Z[i]);  
+    }
+    // cZphi   = 0;
   } else {
     error("Unknown response distribution");
   }
@@ -227,8 +232,3 @@ Type objective_function<Type>::operator() ()
 
   return nld;
 }
-
-// complementary log-log (this code didn't work for some reason)
-// else if (link == "cloglog") {
-//   mu_O = 1 - exp(-1 * exp(Y_O));
-// }
