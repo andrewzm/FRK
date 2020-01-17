@@ -38,8 +38,10 @@ GNU General Public License for more details. */
 extern "C" {
 
    const static R_CallMethodDef callMethods[]  = {
-     /*Currently not using C code for distances
-     /*{"_FRK_distR_C", (DL_FUNC) &_FRK_distR_C, 2},*/
+     /*Currently not using C code for distances*/
+     #if 0
+        {"_FRK_distR_C", (DL_FUNC) &_FRK_distR_C, 2},
+     #endif
      TMB_CALLDEFS,
      {NULL, NULL, 0}
    };
