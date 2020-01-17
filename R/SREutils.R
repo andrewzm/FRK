@@ -327,6 +327,14 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                               pred_time = pred_time,     # Prediction time points
                               covariances = covariances) # Compute covariances?
 
+    ## obs_fs == TRUE => remove rnorm() from smooth process in MC simulations
+    ## pred_polys dw
+    ## Only allow newdata = NULL for now
+    ## pred_time dw
+    ## n_MC should be added as an option and only if method="TMB" 
+    ## type "link" or "response" or "mean" only if TMB
+    
+    
     ## Return predictions
     pred_locs
 })
@@ -1087,7 +1095,7 @@ print.summary.SRE <- function(x, ...) {
 
     ## If we have to compute too many covariances then stop and give error
     if(covariances & nrow(CP) > 4000)
-        stop("Cannot compute covariances for so many observations. Please reduce
+        stop("Cannot compute covariances for so many prediction locations. Please reduce
              to less than 4000")
 
     ## Get the CZ matrix
@@ -1601,6 +1609,8 @@ print.summary.SRE <- function(x, ...) {
         }    
             
     }
+    
+    
     
 }
 
