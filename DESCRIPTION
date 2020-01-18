@@ -34,9 +34,7 @@ Suggests:
     spdep,
     splancs,
     testthat,
-    verification, 
-    TMB, 
-    RcppEigen
+    verification
 Imports:
     digest,
     dplyr,
@@ -46,11 +44,13 @@ Imports:
     Matrix,
     methods,
     plyr,
-    Rcpp (>= 0.12.12),
+    Rcpp (>= 0.12.12),, 
+    RcppEigen,
     sp,
     spacetime,
     sparseinv,
     stats,
+    TMB, 
     utils
 Additional_repositories: https://andrewzm.github.io/dggrids-repo, 
                          https://inla.r-inla-download.org/R/stable
