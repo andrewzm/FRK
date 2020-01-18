@@ -109,6 +109,11 @@ SRE <- function(f,data,basis,BAUs,est_error = TRUE,average_in_BAU = TRUE,
                 fs_model = "ind",vgm_model = NULL, K_type = "block-exponential", normalise_basis = TRUE, 
                 response = "gaussian", link = "identity", taper = 8) {
 
+    ## Strings that must be lower-case
+    response  <- tolower(response)
+    link      <- tolower(link)
+    K_type      <- tolower(K_type)
+    
     ## Check that the arguments are OK
     .check_args1(f=f,data=data,basis=basis,BAUs=BAUs,est_error=est_error, 
                  response=response, link = link, taper = taper, K_type = K_type, k_Z = data$k)
@@ -309,28 +314,46 @@ SRE.predict <- function(SRE_model, obs_fs = FALSE, newdata = NULL, pred_polys = 
 #' @rdname SRE
 #' @export
 setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = FALSE, pred_polys = NULL,
-                                              pred_time = NULL, covariances = FALSE) {
+                                              pred_time = NULL, covariances = FALSE, 
+                                              n_MC = 1600, seed = NULL, method = "EM") {
 
     SRE_model <- object
     ## Deprecation coercion
     if(!is.null(pred_polys))
         newdata <- pred_polys
 
+    
+    ## NOT SURE IF THIS IS NECESSARY NOW
+    # if(length(M@BAUs$k) == 1){
+    #     M@BAUs$k <- rep(M@BAUs$k, nrow(M@S0))
+    #     warning("Single number k provided for all BAUs: assuming k is invariant over the whole spatial domain.")
+    # }
+    
     ## Check the arguments are OK
     .check_args3(obs_fs = obs_fs, newdata = newdata, pred_polys = pred_polys,
-                 pred_time = pred_time, covariances = covariances, response = object@response)
+                 pred_time = pred_time, covariances = covariances, 
+                 response = SRE_model@response, k_BAU = M@BAUs$k)
+
+    
 
     ## Call internal prediction function
-    pred_locs <- .SRE.predict(Sm = SRE_model,            # Fitted SRE model
-                              obs_fs = obs_fs,           # Case 1 or Case 2?
-                              newdata = newdata,   # Prediction polygons
-                              pred_time = pred_time,     # Prediction time points
-                              covariances = covariances) # Compute covariances?
+    if (method == "EM") {
+        pred_locs <- .SRE.predict(Sm = SRE_model,            # Fitted SRE model
+                                  obs_fs = obs_fs,           # Case 1 or Case 2?
+                                  newdata = newdata,         # Prediction polygons
+                                  pred_time = pred_time,     # Prediction time points
+                                  covariances = covariances) # Compute covariances?
+        
+    } else if (method == "TMB") {
+        pred_locs <- .FRKTMB_pred(M = SRE_model,    # Fitted SRE model
+                                  n_MC = n_MC,      # Number of MC simulations
+                                  seed = seed, 
+                                  obs_fs = obs_fs)  
+    } 
 
-    ## obs_fs == TRUE => remove rnorm() from smooth process in MC simulations
     ## pred_polys dw
-    ## Only allow newdata = NULL for now
     ## pred_time dw
+    ## Only allow newdata = NULL for now
     ## n_MC should be added as an option and only if method="TMB" 
     ## type "link" or "response" or "mean" only if TMB
     
@@ -1609,7 +1632,6 @@ print.summary.SRE <- function(x, ...) {
         }    
             
     }
-    
     
     
 }

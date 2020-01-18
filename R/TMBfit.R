@@ -26,15 +26,9 @@
 #'   \item{log_likelihood}{The log-likelihood evaluated at the optimal estimates.}
 #' }
 #' This function also makes the slots \code{K_type}, \code{response}, and \code{link} lower case.
-#' @seealso \code{\link{FRKTMB_pred}}
-#' @export
+#' @seealso \code{\link{.FRKTMB_pred}}
 #' @useDynLib FRK
 .FRKTMB_fit <- function(M) {
-
-  ## Strings that must be lower-case
-  M@K_type    <- tolower(M@K_type)
-  M@response  <- tolower(M@response)
-  M@link      <- tolower(M@link)
 
   # ------ Data preparation ------
 
@@ -95,11 +89,17 @@
 
 
   ## Update the slots of M
-  ## NOTE: I had to convert to sparseMatrix as the SRE slot required value 
+  ## NOTE: I had to convert to sparseMatrix as the SRE slot required value Matrix
+  
+  # M@alphahat <- as(estimates$beta, "sparseMatrix")
+  # M@mu_eta <- as(estimates$eta, "sparseMatrix")
+  # M@mu_xi_O <- as(estimates$xi_O, "sparseMatrix")
+  
+  M@alphahat <- as(estimates$beta, "Matrix")
+  M@mu_eta   <- as(estimates$eta, "Matrix")
+  M@mu_xi_O  <- as(estimates$xi_O, "Matrix")
+  
   M@sigma2fshat <- unname(exp(estimates$logsigma2xi))
-  M@alphahat <- as(estimates$beta, "sparseMatrix")
-  M@mu_eta <- as(estimates$eta, "sparseMatrix")
-  M@mu_xi_O <- as(estimates$xi_O, "sparseMatrix")
   M@Q_eta_xi <- Q                   
   
   ## Not sure if we need to provide kappa and rho (the parameters of the prior precision matrix)?

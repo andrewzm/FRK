@@ -1,6 +1,6 @@
 #' Prediction stage of non-Gaussian FRK.
 #'
-#'
+#' 
 #' @inheritParams .Y_pred
 #' @inheritParams .MC_sampler
 #' @return A list object containing:
@@ -10,30 +10,13 @@
 #' }
 #' Note that for all link functions other than the log-link, the predictions and prediction uncertainty contained in \code{xy} are computed using the Monte Carlo samples contained in \code{MC}.
 #' When a log-link function is used the expectation and variance of the conditional mean \eqn{\mu} may be computed exactly.
-.FRKTMB_pred <- function(M, estimates, Q) {
-  
-  # ---- Argument checks ----
-  
-  if(length(M@BAUs$k) == 1){
-    M@BAUs$k <- rep(M@BAUs$k, nrow(M@S0))
-    warning("Single number k provided for all BAUs: assuming k is invariant over the whole spatial domain.")
-  }
-  
-  ## Strings that must be lower-case
-  M@response  <- tolower(M@response)
-  M@link      <- tolower(M@link)
-  
-  ## Check arguments are valid
-  .check_arg_FRKTMB(response = M@response,
-                    link = M@link,
-                    k_BAU = M@BAUs$k)
-  
+.FRKTMB_pred <- function(M, n_MC, seed, obs_fs = FALSE) {
   
   # ------ Latent process (Y) Prediction and Uncertainty ------
   
   ## Compute posterior expectation and variance of Y at each prediction location.
   ## This does NOT depend on the response of Z.
-  temp   <- .Y_pred(M = M, Q = Q, estimates = estimates)
+  temp   <- .Y_pred(M = M)
   
   p_Y     <- temp$EYgivenZ    # Prediction of Y given the data
   MSPE_Y  <- temp$varYgivenZ  # Conditonal variance of Y given Z
@@ -42,12 +25,9 @@
   # ------ Conditional mean (mu) prediction and uncertainty ------
   
   ## Compute Monte Carlo samples of conditional mean at each location
-  MC <- .MC_sampler(n_MC = 1600,
-                    estimates = estimates,
-                    Q = Q,
-                    M = M,
-                    link = M@link,
-                    response = M@response,
+  MC <- .MC_sampler(M = M, 
+                    n_MC = n_MC,
+                    seed = seed,
                     k_BAU = M@BAUs$k)
   
   
@@ -67,10 +47,10 @@
   ## If a log-link function is used, then expectations and variance
   ## of the conditional mean may be evaluated analytically.
   ## Otherwise, use the Monte Carlo simulations for prediction.
-  if (link == "log" & response != "negative-binomial") {
+  if (M@link == "log" & M@response != "negative-binomial") {
     xy$p_mu         <- exp(p_Y + MSPE_Y / 2)
     xy$RMSPE_mu     <- sqrt((exp(MSPE_Y) - 1) * exp(2 * p_Y + MSPE_Y))
-  } else if (link == "log" & response == "negative-binomial") {
+  } else if (M@link == "log" & M@response == "negative-binomial") {
     xy$p_mu         <- k_BAU * exp(p_Y + MSPE_Y / 2)
     xy$RMSPE_mu     <- k_BAU * sqrt((exp(MSPE_Y) - 1) * exp(2 * p_Y + MSPE_Y))
   } else {
@@ -78,8 +58,8 @@
     xy$RMSPE_mu     <- sqrt(.rowVars(MC$mu_samples))
   }
   
-  ## For some combinations the probability of success parameter was also computed:
-  if (response %in% c("binomial", "negative-binomial") & link %in% c("logit", "probit", "cloglog")) {
+  ## For some response and link combinations, the probability of success parameter was also computed:
+  if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
     xy$p_pi     <- rowMeans(MC$p_samples)
     xy$RMSPE_pi <- sqrt(.rowVars(MC$p_samples))
   }
@@ -115,8 +95,14 @@
 #'   \item{EYgivenZ}{A vector of the posterior expectation of Y at every BAU.}
 #'   \item{varYgivenZ}{A vector of the posterior variance of Y at every BAU.}
 #' }
-.Y_pred <- function(M, Q, estimates){
+.Y_pred <- function(M){
   
+  Q  <- M@Q_eta_xi
+  S0 <- M@S0
+  S  <- M@S
+  obsidx <- apply(M@Cmat, 1, function(x) which(x == 1))
+  r  <- ncol(S0)
+  m  <- length(obsidx)
   
   # ---- Sparse-inverse-subset of Q (acting as a proxy for the true covariance matrix) ----
   
@@ -128,13 +114,7 @@
   Sigma <- sparseinv::Takahashi_Davis(Q = Q,
                                       cholQp = Q_L$Qpermchol,
                                       P = Q_L$P)
-  
-  S0 <- M@S0
-  S <- M@S
-  obsidx <- apply(M@Cmat, 1, function(x) which(x == 1))
-  r <- ncol(S0)
-  m <- length(obsidx)
-  
+
   Sigma_eta   <- Sigma[1:r, 1:r]
   Sigma_xi    <- Sigma[(r + 1):(r + m), (r + 1):(r + m)]
   
@@ -144,10 +124,10 @@
   # ----- Prediction: Posterior mean of Y at each BAU ------
   
   ## large- and medium-scale variation terms
-  mY           <-  as.vector(estimates$beta + S0 %*% estimates$eta)
+  mY           <-  as.vector(as.numeric(M@alphahat) + S0 %*% as.numeric(M@mu_eta))
   
   ## Add posterior estimate of xi_O at observed BAUs
-  mY[obsidx]   <-  mY[obsidx] + estimates$xi_O
+  mY[obsidx]   <-  mY[obsidx] + as.numeric(M@mu_xi_O)
   
   
   # ----- Uncertainty: Posterior variance of Y at each BAU ------
@@ -161,7 +141,7 @@
   vY <- as.vector( (S0 %*% Sigma_eta * S0) %*% rep(1, r) )
   
   ## UNOBSERVED locations: simply add the estimate of sigma2xi to this quantity:
-  vY[-obsidx] <- vY[-obsidx] + exp(estimates$logsigma2xi)
+  vY[-obsidx] <- vY[-obsidx] + M@sigma2fshat
   
   ## OBSERVED location: add both var(xi_O|Z) and cov(xi_O, eta | Z)
   covar       <- (S * Matrix::t(Cov_eta_xi)) %*% rep(1, r)        # Covariance terms
@@ -188,9 +168,6 @@
 #'
 #' @inheritParams .inv_link_fn
 #' @param M An object of class \code{SRE}.
-#' @param estimates A list object containing the estimates of parameters and
-#' fixed-effects, and predictions of the random effects.
-#' @param Q Joint \emph{precision} matrix of the random effects \eqn{(\eta', \xi_O')'}.
 #' @param n_MC A postive integer indicating the number of MC samples at each location.
 #' @param k_BAU An integer vector of length N (the number of BAUs). Relevant only to the binomial and negative-binomial cases.
 #' @param response A string indicating the assumed distribution of the response variable.
@@ -209,8 +186,9 @@
 #'   n_MC samples of the probability of success parameter p at the ith BAU.}
 #' }
 
-.MC_sampler <- function(M, estimates, Q, n_MC = 1600, link, response, k_BAU, seed = NULL){
+.MC_sampler <- function(M, n_MC = 1600, seed = NULL, k_BAU, obs_fs = FALSE){
   
+  Q   <- M@Q_eta_xi
   S0  <- M@S0
   S   <- M@S
   N   <- nrow(S0)
@@ -220,28 +198,21 @@
   
   # ---- Generate samples from (eta, xi_O) ----
   
-  ## Note that this must be done jointly, as eta and xi_O are correlated.
+  ## Must generate samples jointly, as eta and xi_O are correlated.
   
   ## Construct the mean vector of (eta, xi_O).
   ## Also make an (r+m) x n_MC matrix whose columns are the mean vector of (eta, xi_O).
-  mu_eta_xi_O         <- c(estimates$eta, estimates$xi)
-  mu_eta_xi_O_Matrix  <- matrix(rep(mu_eta_xi_O, times = n_MC),
-                                ncol = n_MC)
+  mu_eta_xi_O         <- c(as.numeric(M@mu_eta), as.numeric(M@mu_xi_O))
+  mu_eta_xi_O_Matrix  <- matrix(rep(mu_eta_xi_O, times = n_MC), ncol = n_MC)
   
   ## Generate (r+m) x n_MC samples from Gau(0, 1) distribution
   set.seed(seed)
   z <- matrix(rnorm((r + m) * n_MC), nrow = r + m, ncol = n_MC)
   
-  # eta_O using precision matrix Q
-  ## Compute the Cholesky factor of the Precision matrix Q of (eta, xi_O)
-  # invSigma_L  <- sparseinv:::cholPermute(Q = Q)
-  # L           <- invSigma_L$P %*% invSigma_L$Qpermchol # Cholesky factor of Q
-  ## Use eta_xi_O = L^{-T} z + mu to generate samples from (eta, xi_O)
-  # eta_xi_O    <- solve(Matrix::t(L), z) + mu_eta_xi_O_Matrix
-  
-  ## Compute the Cholesky factor of the Precision matrix Q of (eta, xi_O)
-  ## Use eta_xi_O = L^{-T} z + mu = U^{-1} z + mu to generate samples from (eta, xi_O)
-  ## Note that U = L', i.e. the transpose of the lower cholesky factor, so that Q = U'U.
+  ## Compute the Cholesky factor of  Q (the joint precision matrix of (eta', xi_O')').
+  ## Then, to generate samples from (eta, xi_O), 
+  ## use eta_xi_O = L^{-T} z + mu = U^{-1} z + mu, 
+  ## where U upper cholesky factor of Q, so that Q = U'U.
   U           <- Matrix::chol(Q)
   eta_xi_O    <- as.matrix(Matrix::solve(U, z) + mu_eta_xi_O_Matrix)
   
@@ -249,10 +220,9 @@
   eta     <- eta_xi_O[1:r, ]
   xi_O    <- eta_xi_O[(r + 1):(r + m), ]
   
-  ## We now have two matrices, eta and xi_O;
-  ## row i of eta corresponds to an MC sample of eta_i,
-  ## row i of xi_O corresponds to an MC sample of the fine-scale
-  ## effect at the ith observed location.
+  ## We now have two matrices, eta and xi_O:
+  ## row i of eta corresponds to n_MC MC samples of eta_i,
+  ## row i of xi_O corresponds to n_MC MC samples of the fine-scale variation at the ith observed location.
   
   
   # ---- Generate samples from xi_U ----
@@ -262,20 +232,21 @@
   ## All we have to do is make an (N-m) x n_MC matrix of draws from the
   ## Gaussian distribution with mean zero and variance equal to the fine-scale variance.
   
-  sigma2_xi  <- sqrt(exp(estimates$logsigma2xi))
-  xi_U        <- matrix(rnorm((N - m) * n_MC, mean=0, sd = sigma2_xi),
-                        nrow = N - m,
-                        ncol = n_MC)
-  
-  
+  if (obs_fs == FALSE) {
+    xi_U <- matrix(rnorm((N - m) * n_MC, mean = 0, sd = sqrt(M@sigma2fshat)),
+                         nrow = N - m, ncol = n_MC)
+  } else if (obs_fs == TRUE) {
+    xi_U <- 0
+  }
+
   # ---- Construct samples from latent process Y ----
   
   ## Observed Samples
-  Y_O <- as.matrix(estimates$beta + S %*% eta + xi_O)
+  Y_O <- as.matrix(as.numeric(M@alphahat) + S %*% eta + xi_O)
   
   ## Unobserved Samples
   SU      <- S0[-obsidx, ] # Unobserved random effect 'design' matrix
-  Y_U     <- as.matrix(estimates$beta + SU %*% eta + xi_U)
+  Y_U     <- as.matrix(as.numeric(M@alphahat) + SU %*% eta + xi_U)
   
   ## Combine samples
   Y_samples <- rbind(Y_O, Y_U)
@@ -290,6 +261,7 @@
   ## Y_samples is an N x n_MC matrix, whereby the ith row of the matrix
   ## correpsponds to n_MC samples of the latent Y process at the ith BAU.
   
+  
   # ---- Apply inverse-link function to the samples ----
   
   ## For families with a known constant parameter (binomial, negative-binomial),
@@ -297,15 +269,15 @@
   ## Then, we map p to the conditional mean mu via psi_mu().
   ## For all other families, psi() maps Y directly to mu.
   
-  psi     <- .inv_link_fn(link)   # link function (either to p or directly to mu)
+  psi     <- .inv_link_fn(M@link)   # link function (either to p or directly to mu)
   
-  if (response == "binomial" & link %in% c("logit", "probit", "cloglog")) {
+  if (M@response == "binomial" & M@link %in% c("logit", "probit", "cloglog")) {
     p_samples <- psi(Y_samples)
     mu_samples <- k_BAU * p_samples
-  } else if (response == "negative-binomial" & link %in% c("logit", "probit", "cloglog")) {
+  } else if (M@response == "negative-binomial" & M@link %in% c("logit", "probit", "cloglog")) {
     p_samples <- psi(Y_samples)
     mu_samples <- k_BAU * (1 / p_samples - 1)
-  } else if (response == "negative-binomial" & link %in% c("log", "square-root")) {
+  } else if (M@response == "negative-binomial" & M@link %in% c("log", "square-root")) {
     mu_samples <- k_BAU * psi(Y_samples)
   } else {
     mu_samples <- psi(Y_samples)
