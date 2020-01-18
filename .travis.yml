@@ -44,10 +44,15 @@ install:
 - Rscript -e 'install.packages("RcppEigen", repos = "http://cran.rstudio.com")'
 - Rscript -e 'install.packages("spdep", repos = "http://cran.rstudio.com")'
 - Rscript -e 'install.packages("verification", repos = "http://cran.rstudio.com")'
+- Rscript -e 'install.packages("covr", repos = "http://cran.rstudio.com")'
+- Rscript -e 'install.packages("lintr", repos = "http://cran.rstudio.com")'
+
+
+
 - Rscript -e 'devtools::install_github("andrewzm/dggrids")'
 - Rscript -e 'devtools::install_github("andrewzm/inla")'
-- Rscript -e 'devtools::install_github("jimhester/covr")'
-- Rscript -e 'devtools::install_github("jimhester/lintr")'
+# - Rscript -e 'devtools::install_github("jimhester/covr")'
+# - Rscript -e 'devtools::install_github("jimhester/lintr")'
 # - Rscript -e "install.packages('INLA', repos='http://www.math.ntnu.no/inla/R/stable')"
 # - Rscript -e "if (!require('covr')) install.packages('covr',repos='http://cran.us.r-project.org')"
 # - Rscript -e "if (!require('knitr')) install.packages('knitr',repos='http://cran.us.r-project.org')"
