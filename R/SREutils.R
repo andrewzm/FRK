@@ -29,7 +29,7 @@
 #' @param SRE_model object returned from the constructor \code{SRE()} containing all the parameters and information on the SRE model
 #' @param n_EM maximum number of iterations for the EM algorithm
 #' @param tol convergence tolerance for the EM algorithm
-#' @param method parameter estimation method to employ. Currently only ``EM'' is supported
+#' @param method parameter estimation method to employ. Currently only ``EM'' and ``TMB'' is supported
 #' @param lambda ridge-regression regularisation parameter for when \code{K} is unstructured (0 by default). Can be a single number, or a vector (one parameter for each resolution)
 #' @param print_lik flag indicating whether likelihood value should be printed or not after convergence of the EM estimation algorithm
 # #' @param use_centroid flag indicating whether the basis functions are averaged over the BAU, or whether the basis functions are evaluated at the BAUs centroid in order to construct the matrix \eqn{S}. The flag can safely be set when the basis functions are approximately constant over the BAUs in order to reduce computational time
@@ -1591,7 +1591,7 @@ print.summary.SRE <- function(x, ...) {
 
 
 ## Checks arguments for the SRE.fit() function. Code is self-explanatory
-.check_args2 <- function(n_EM = 100L, tol = 0.01, lambda = 0, method, print_lik = FALSE, ...) {
+.check_args2 <- function(n_EM = 100L, tol = 0.01, lambda = 0, method = "EM", print_lik = FALSE, ...) {
     if(!is.numeric(n_EM)) stop("n_EM needs to be an integer")
     if(!(n_EM <- round(n_EM)) > 0) stop("n_EM needs to be greater than 0")
     if(!is.numeric(tol)) stop("tol needs to be a number greater than zero")
@@ -1621,7 +1621,8 @@ print.summary.SRE <- function(x, ...) {
     
     
     ## Check k_BAU
-    if (!missing(response) & response %in% c("binomial", "negative-binomial")) {
+    if (!missing(response))
+        if(response %in% c("binomial", "negative-binomial")) {
         
         if (is.null(k_BAU)){
             stop("For binomial or negative-binomial response, the known constant parameter k must be provided for each BAU.")
