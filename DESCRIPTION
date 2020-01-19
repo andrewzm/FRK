@@ -44,7 +44,7 @@ Imports:
     Matrix,
     methods,
     plyr,
-    Rcpp (>= 0.12.12),, 
+    Rcpp (>= 0.12.12), 
     RcppEigen,
     sp,
     spacetime,
