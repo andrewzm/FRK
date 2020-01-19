@@ -4,19 +4,9 @@
 \alias{auto_BAUs}
 \title{Automatic BAU generation}
 \usage{
-auto_BAUs(
-  manifold,
-  type = NULL,
-  cellsize = NULL,
-  isea3h_res = NULL,
-  data = NULL,
-  nonconvex_hull = TRUE,
-  convex = -0.05,
-  tunit = NULL,
-  xlims = NULL,
-  ylims = NULL,
-  ...
-)
+auto_BAUs(manifold, type = NULL, cellsize = NULL, isea3h_res = NULL,
+  data = NULL, nonconvex_hull = TRUE, convex = -0.05, tunit = NULL,
+  xlims = NULL, ylims = NULL, ...)
 }
 \arguments{
 \item{manifold}{object of class \code{manifold}}

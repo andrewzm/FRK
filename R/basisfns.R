@@ -185,7 +185,7 @@ local_basis <- function(manifold=sphere(),          # default manifold is sphere
 #'                 subsamp = 20000)
 #'
 #' ### Plot
-#' \dontrun{show_basis(G,draw_world())}
+#' show_basis(G,draw_world())
 #' }
 #' @export
 auto_basis <- function(manifold = plane(),

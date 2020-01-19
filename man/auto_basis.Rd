@@ -4,21 +4,11 @@
 \alias{auto_basis}
 \title{Automatic basis-function placement}
 \usage{
-auto_basis(
-  manifold = plane(),
-  data,
-  regular = 1,
-  nres = 3,
-  prune = 0,
-  max_basis = NULL,
-  subsamp = 10000,
-  type = c("bisquare", "Gaussian", "exp", "Matern32"),
-  isea3h_lo = 2,
-  bndary = NULL,
-  scale_aperture = ifelse(is(manifold, "sphere"), 1, 1.25),
-  verbose = 0L,
-  ...
-)
+auto_basis(manifold = plane(), data, regular = 1, nres = 3,
+  prune = 0, max_basis = NULL, subsamp = 10000,
+  type = c("bisquare", "Gaussian", "exp", "Matern32"), isea3h_lo = 2,
+  bndary = NULL, scale_aperture = ifelse(is(manifold, "sphere"), 1,
+  1.25), verbose = 0L, ...)
 }
 \arguments{
 \item{manifold}{object of class \code{manifold}, for example, \code{sphere} or \code{plane}}
@@ -92,6 +82,6 @@ G <- auto_basis(manifold = sphere(),data=d,
                 subsamp = 20000)
 
 ### Plot
-\dontrun{show_basis(G,draw_world())}
+show_basis(G,draw_world())
 }
 }

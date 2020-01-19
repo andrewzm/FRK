@@ -5,19 +5,11 @@
 \alias{radial_basis}
 \title{Construct a set of local basis functions}
 \usage{
-local_basis(
-  manifold = sphere(),
-  loc = matrix(c(1, 0), nrow = 1),
-  scale = 1,
-  type = c("bisquare", "Gaussian", "exp", "Matern32")
-)
+local_basis(manifold = sphere(), loc = matrix(c(1, 0), nrow = 1),
+  scale = 1, type = c("bisquare", "Gaussian", "exp", "Matern32"))
 
-radial_basis(
-  manifold = sphere(),
-  loc = matrix(c(1, 0), nrow = 1),
-  scale = 1,
-  type = c("bisquare", "Gaussian", "exp", "Matern32")
-)
+radial_basis(manifold = sphere(), loc = matrix(c(1, 0), nrow = 1),
+  scale = 1, type = c("bisquare", "Gaussian", "exp", "Matern32"))
 }
 \arguments{
 \item{manifold}{object of class \code{manifold}, for example, \code{sphere}}
