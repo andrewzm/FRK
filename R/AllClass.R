@@ -114,6 +114,7 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot mu_xi_O updated expectation of the fine-scale random effects at observed BAUs (estimated)
 #' @slot Q_eta_xi updated joint precision matrix of the basis function random effects and observed fine-scale random effects (estimated)
 #' @slot log_likelihood the log likelihood of the fitted model
+#' @slot method the fitting procedure used to fit the SRE model
 #' @seealso \code{\link{SRE}} for details on how to construct and fit SRE models.
 #' @keywords spatial
 setClass("SRE",representation(data="list",
@@ -146,4 +147,5 @@ setClass("SRE",representation(data="list",
                               taper = "numeric", 
                               mu_xi_O = "Matrix",
                               Q_eta_xi = "dsCMatrix",
-                              log_likelihood = "numeric"))
+                              log_likelihood = "numeric", 
+                              method = "character"))

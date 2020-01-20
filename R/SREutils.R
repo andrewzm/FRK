@@ -290,10 +290,11 @@ SRE <- function(f,data,basis,BAUs,est_error = TRUE,average_in_BAU = TRUE,
 
 #' @rdname SRE
 #' @export
-SRE.fit <- function(SRE_model,n_EM = 100L, tol = 0.01, method="EM", lambda = 0, print_lik=FALSE) {
+SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method="EM", lambda = 0, print_lik=FALSE) {
 
     ## Check the arguments are OK
-    .check_args2(n_EM = n_EM,tol = tol,method = method,print_lik = print_lik)
+    .check_args2(n_EM = n_EM, tol = tol, method = method, print_lik = print_lik, 
+                 SRE_model = SRE_model) # need SRE_model to test method with response, link, and K_type
 
     ## Call internal fitting function with checked arguments
     .SRE.fit(SRE_model = SRE_model, n_EM = n_EM, tol = tol, method = method, lambda = lambda, print_lik=print_lik)
@@ -315,7 +316,7 @@ SRE.predict <- function(SRE_model, obs_fs = FALSE, newdata = NULL, pred_polys = 
 #' @export
 setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = FALSE, pred_polys = NULL,
                                               pred_time = NULL, covariances = FALSE, 
-                                              n_MC = 1600, seed = NULL, method = "EM") {
+                                              n_MC = 1600, seed = NULL) {
 
     SRE_model <- object
     ## Deprecation coercion
@@ -334,20 +335,18 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                  pred_time = pred_time, covariances = covariances, 
                  response = SRE_model@response, k_BAU = M@BAUs$k)
 
-    
-
     ## Call internal prediction function
-    if (method == "EM") {
+    if (SRE_model@method == "EM") {
         pred_locs <- .SRE.predict(Sm = SRE_model,            # Fitted SRE model
                                   obs_fs = obs_fs,           # Case 1 or Case 2?
                                   newdata = newdata,         # Prediction polygons
                                   pred_time = pred_time,     # Prediction time points
                                   covariances = covariances) # Compute covariances?
         
-    } else if (method == "TMB") {
+    } else if (SRE_model@method == "TMB") {
         pred_locs <- .FRKTMB_pred(M = SRE_model,    # Fitted SRE model
                                   n_MC = n_MC,      # Number of MC simulations
-                                  seed = seed, 
+                                  seed = seed,      # seed for reproducibility (MC simulations)
                                   obs_fs = obs_fs)  
     } 
 
@@ -355,7 +354,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     ## pred_time dw
     ## Only allow newdata = NULL for now
     ## n_MC should be added as an option and only if method="TMB" 
-    ## type "link" or "response" or "mean" only if TMB
+    ## type "link" or "response" or "mean" only if TMB. IDEA: perhaps we can also offer an option for type = "all".
     
     
     ## Return predictions
@@ -534,6 +533,7 @@ print.summary.SRE <- function(x, ...) {
 
     ## Return fitted SRE model
     SRE_model@info_fit <- info_fit
+    SRE_model@method <- method
     SRE_model
     }
 
@@ -1591,15 +1591,19 @@ print.summary.SRE <- function(x, ...) {
 
 
 ## Checks arguments for the SRE.fit() function. Code is self-explanatory
-.check_args2 <- function(n_EM = 100L, tol = 0.01, lambda = 0, method = "EM", print_lik = FALSE, ...) {
+.check_args2 <- function(n_EM = 100L, tol = 0.01, lambda = 0, method = "EM", print_lik = FALSE, SRE_model, ...) {
     if(!is.numeric(n_EM)) stop("n_EM needs to be an integer")
     if(!(n_EM <- round(n_EM)) > 0) stop("n_EM needs to be greater than 0")
     if(!is.numeric(tol)) stop("tol needs to be a number greater than zero")
     if(!(tol > 0)) stop("tol needs to be a number greater than zero")
-    if(!(method %in% c("EM", "TMB"))) stop("Currently only the EM algorithm or TMB are implemented for parameter estimation")
     if(!(is.logical(print_lik))) stop("print_lik needs to be a logical quantity")
     if(!(is.numeric(lambda))) stop("lambda needs to be a number")
     if(!(all(lambda >= 0))) stop("lambda needs to be greater or equal to zero")
+    
+    if(!(method %in% c("EM", "TMB"))) stop("Currently only the EM algorithm or TMB are implemented for parameter estimation.")
+    if(method == "EM" & !(SRE_model@response == "gaussian")) stop("The EM algorithm is only available for response = 'gaussian'. Please use method = 'TMB' for all other assumed response distributions.")
+    if(method == "EM" & !(SRE_model@link == "identity")) stop("The EM algorithm is only available for link = 'identity'. Please use method = 'TMB' for all other link functions.")
+    if(method == "EM" & SRE_model@K_type == "precision") stop("The precision matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
 }
 
 ## Checks arguments for the predict() function. Code is self-explanatory
