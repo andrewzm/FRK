@@ -89,12 +89,7 @@
 
 
   ## Update the slots of M
-  ## NOTE: I had to convert to sparseMatrix as the SRE slot required value Matrix
-  
-  # M@alphahat <- as(estimates$beta, "sparseMatrix")
-  # M@mu_eta <- as(estimates$eta, "sparseMatrix")
-  # M@mu_xi_O <- as(estimates$xi_O, "sparseMatrix")
-  
+  ## NOTE: I had to convert to Matrix as the SRE slot required value Matrix
   M@alphahat <- as(estimates$beta, "Matrix")
   M@mu_eta   <- as(estimates$eta, "Matrix")
   M@mu_xi_O  <- as(estimates$xi_O, "Matrix")
@@ -106,7 +101,24 @@
   ## Also not sure if we need to provide phi (the dispersion paramter), as it is not used beyond this point.
   ## The log-likelihood should be obtained from loglik() function.
   M@log_likelihood <- log_likelihood # log-likelihood evaluated at optimal estimates
-
+  
+  ## Compute prior precision or covariance matrix based on whether we used the precision or covariance model formulation
+  if (M@K_type == "precision") {
+    M@Khat_inv <- .sparse_Q_block_diag(df = M@basis@df, 
+                                       kappa = exp(estimates$logkappa), 
+                                       rho = exp(estimates$logrho))$Q
+    M@Khat <- Matrix()
+    
+  } else if (M@K_type == "block-exponential") {
+    M@Khat <- .K_tap_matrix(M@D_basis,
+                            alpha = data_params_init$data$alpha,
+                            sigma2 =  exp(estimates$logsigma2),
+                            tau = exp(estimates$logtau))
+    M@Khat_inv <- Matrix()
+    
+  }
+  
+  
   return(M)
 }
 
@@ -505,7 +517,7 @@
 #' using \code{sparse_Q}.
 #'
 #' @inheritParams .sparse_Q
-#' @inheritParams .neighbour_matrix
+#' @param df A dataframe containing the spatial coordinates (named "loc1" and "loc2") and a blocking column (named "res").
 #' @return A list containing the sparse block-diagonal precision matrix (Q) of class "dgCMatrix", and the number of non-zero elements (nnz) at each resolution.
 #' @seealso \code{\link{.sparse_Q}}, \code{\link{.neighbour_matrix}}
 .sparse_Q_block_diag <- function(df, kappa, rho) {

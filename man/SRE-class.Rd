@@ -72,6 +72,8 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 \item{\code{Q_eta_xi}}{updated joint precision matrix of the basis function random effects and observed fine-scale random effects (estimated)}
 
 \item{\code{log_likelihood}}{the log likelihood of the fitted model}
+
+\item{\code{method}}{the fitting procedure used to fit the SRE model}
 }}
 
 \seealso{

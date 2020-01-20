@@ -4,8 +4,7 @@
 \alias{draw_world}
 \title{Draw a map of the world with country boundaries.}
 \usage{
-draw_world(g = ggplot() + theme_bw() + xlab("") + ylab(""),
-  inc_border = TRUE)
+draw_world(g = ggplot() + theme_bw() + xlab("") + ylab(""), inc_border = TRUE)
 }
 \arguments{
 \item{g}{initial ggplot object}
