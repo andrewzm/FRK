@@ -1601,9 +1601,13 @@ print.summary.SRE <- function(x, ...) {
     if(!(all(lambda >= 0))) stop("lambda needs to be greater or equal to zero")
     
     if(!(method %in% c("EM", "TMB"))) stop("Currently only the EM algorithm or TMB are implemented for parameter estimation.")
-    if(method == "EM" & !(SRE_model@response == "gaussian")) stop("The EM algorithm is only available for response = 'gaussian'. Please use method = 'TMB' for all other assumed response distributions.")
-    if(method == "EM" & !(SRE_model@link == "identity")) stop("The EM algorithm is only available for link = 'identity'. Please use method = 'TMB' for all other link functions.")
-    if(method == "EM" & SRE_model@K_type == "precision") stop("The precision matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
+    
+    if(!missing(SRE_model)) {
+        if(method == "EM" & !(SRE_model@response == "gaussian")) stop("The EM algorithm is only available for response = 'gaussian'. Please use method = 'TMB' for all other assumed response distributions.")
+        if(method == "EM" & !(SRE_model@link == "identity")) stop("The EM algorithm is only available for link = 'identity'. Please use method = 'TMB' for all other link functions.")
+        if(method == "EM" & SRE_model@K_type == "precision") stop("The precision matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
+    }
+    
 }
 
 ## Checks arguments for the predict() function. Code is self-explanatory
