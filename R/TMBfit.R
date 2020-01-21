@@ -95,7 +95,8 @@
   M@mu_xi_O  <- as(estimates$xi_O, "Matrix")
   
   M@sigma2fshat <- unname(exp(estimates$logsigma2xi))
-  M@Q_eta_xi <- Q                   
+  M@Q_eta_xi <- Q          
+  M@phi <- unname(exp(estimates$logphi))
   
   ## Not sure if we need to provide kappa and rho (the parameters of the prior precision matrix)?
   ## Also not sure if we need to provide phi (the dispersion paramter), as it is not used beyond this point.
@@ -165,10 +166,11 @@
   ## Common to all
   data    <- list(Z = Z, X = X, S = S,
                   ri = as.vector(table(M@basis@df$res)), # Size of each "block": number of basis functions for each resolution
-                  sigma2e  = M@Ve[1, 1],
-                  response = response, link = link,
+                  sigma2e = M@Ve[1, 1], 
+                  response = response, 
+                  link = link,
                   k_Z = k_Z)
-
+  
   ## Data which depend on K_type
   if (K_type == "block-exponential") {
 
@@ -226,7 +228,13 @@
   parameters <- list()
   parameters$beta         <- coef(lm(Z0_t ~ 1))
   parameters$logsigma2xi  <- log(var(Z0_t))
-  parameters$logphi       <- log(data$sigma2e)
+  
+  ## Dispersion parameter depends on response
+  if (M@response %in% c("poisson", "bernoulli", "binomial", "negative-binomial")) {
+    parameters$logphi <- log(1)
+  } else {
+    parameters$logphi <- log(data$sigma2e)
+  }
 
   if (K_type == "block-exponential") {
     parameters$logsigma2        <- log(exp(parameters$logsigma2xi) * (0.1)^(0:(nres - 1)))
