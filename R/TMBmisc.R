@@ -69,3 +69,14 @@
   
   return(psi)
 }
+
+
+#' Variance by rows.
+#'
+#' Computes the row-wise variance of a matrix.
+#'
+#' @param X An array like object (with a dim-attribute).
+#' @return A vector containing the row-wise variances of the matrix \code{X}.
+.rowVars <- function(X, ...) {
+  rowSums((X - rowMeans(X, ...))^2, ...)/(dim(X)[2] - 1)
+}

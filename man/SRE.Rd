@@ -69,7 +69,9 @@ SRE.predict(
   pred_time = NULL,
   covariances = FALSE,
   n_MC = 1600,
-  seed = NULL
+  seed = NULL,
+  type = "mean",
+  k = NULL
 )
 
 loglik(SRE_model)

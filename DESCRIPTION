@@ -49,6 +49,7 @@ Imports:
     sp,
     spacetime,
     sparseinv,
+    statmod,
     stats,
     TMB, 
     utils

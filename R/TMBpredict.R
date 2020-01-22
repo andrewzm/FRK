@@ -1,6 +1,5 @@
 #' Prediction stage of non-Gaussian FRK.
 #'
-#' 
 #' @inheritParams .Y_pred
 #' @inheritParams .MC_sampler
 #' @return A list object containing:
@@ -13,11 +12,27 @@
 .FRKTMB_pred <- function(M, n_MC, seed, obs_fs = FALSE, type = "mean") {
   
   
+  #### Extract the covariate design matrix, X 
+  
+  ## Retrieve the dependent variable name
+  depname <- all.vars(M@f)[1]
+  
+  ## Set the dependent variable in BAUs to something just so that .extract.from.formula doesn't
+  ## throw an error.. we will NULL it shortly after
+  M@BAUs[[depname]] <- 0.1
+  
+  ## Extract covariates from BAUs
+  L <- .extract.from.formula(M@f, data = M@BAUs)
+  X <- as(L$X,"Matrix")
+  M@BAUs[[depname]] <- NULL
+  
+  rm(depname, L)
+  
   # ------ Latent process (Y) prediction and Uncertainty ------
   
   ## Compute posterior expectation and variance of Y at each prediction location.
   ## This does NOT depend on the response of Z.
-  temp   <- .Y_pred(M = M)
+  temp   <- .Y_pred(M = M, X = X)
   
   p_Y     <- temp$EYgivenZ    # Prediction of Y given the data
   MSPE_Y  <- temp$varYgivenZ  # Conditonal variance of Y given Z
@@ -27,34 +42,34 @@
   
   ## Compute Monte Carlo samples of conditional mean at each location
   MC <- .MC_sampler(M = M, 
+                    X = X,
+                    type = type,
+                    obs_fs = obs_fs,
                     n_MC = n_MC,
-                    seed = seed,
-                    k_BAU = M@BAUs$k, 
-                    type = type)
+                    seed = seed)
 
   
   # ------ Create Prediction Dataframe ------
   
   ## This dataframe contains x and y, the spatial locations. 
   ## It also contains the predictions, the RMSPE, and 5 quantiles for the specified quantities of interest. 
-  
-  ## Dataframe containing spatial location, predictions, and uncertainty.
+
   xy <- as.data.frame(coordinates(M@BAUs)) # xy coordinates of every BAU
   rownames(xy) <- NULL
   
   ## Latent Y-process
-  if (type %in% c("link", "all")) {
+  if ("link" %in% type) {
     xy$p_Y     <- p_Y          # Prediction
     xy$RMSPE_Y <- sqrt(MSPE_Y) # Uncertainty
     
     ## Compute the quantiles
     temp <- t(apply(MC$Y_samples, 1, quantile, c(0.05, 0.25, 0.5, 0.75, 0.95)))
-    colnames(temp) <- c("Y_quantile_0.05", "Y_quantile_0.25", "Y_quantile_0.50", "Y_quantile_0.75", "Y_quantile_0.95")
+    colnames(temp) <- c("Y_percentile_05", "Y_percentile_25", "Y_percentile_50", "Y_percentile_75", "Y_percentile_95")
     xy <- cbind(xy, temp)
   }
 
   ## Conditional mean of the data, mu
-  if (type %in% c("mean", "all")) {
+  if ("mean" %in% type) {
     ## If a log-link function is used, then expectations and variance
     ## of the conditional mean may be evaluated analytically.
     ## Otherwise, use the Monte Carlo simulations for prediction.
@@ -62,8 +77,8 @@
       xy$p_mu         <- exp(p_Y + MSPE_Y / 2)
       xy$RMSPE_mu     <- sqrt((exp(MSPE_Y) - 1) * exp(2 * p_Y + MSPE_Y))
     } else if (M@link == "log" & M@response == "negative-binomial") {
-      xy$p_mu         <- k_BAU * exp(p_Y + MSPE_Y / 2)
-      xy$RMSPE_mu     <- k_BAU * sqrt((exp(MSPE_Y) - 1) * exp(2 * p_Y + MSPE_Y))
+      xy$p_mu         <- M@BAUs$k * exp(p_Y + MSPE_Y / 2)
+      xy$RMSPE_mu     <- M@BAUs$k * sqrt((exp(MSPE_Y) - 1) * exp(2 * p_Y + MSPE_Y))
     } else {
       xy$p_mu         <- rowMeans(MC$mu_samples)
       xy$RMSPE_mu     <- sqrt(.rowVars(MC$mu_samples))
@@ -71,22 +86,23 @@
     
     ## Compute the quantiles
     temp <- t(apply(MC$mu_samples, 1, quantile, c(0.05, 0.25, 0.5, 0.75, 0.95)))
-    colnames(temp) <- c("mu_quantile_0.05", "mu_quantile_0.25", "mu_quantile_0.50", "mu_quantile_0.75", "mu_quantile_0.95")
+    colnames(temp) <- c("mu_percentile_05", "mu_percentile_25", "mu_percentile_50", "mu_percentile_75", "mu_percentile_95")
     xy <- cbind(xy, temp)
-  }
-  
-  ## For some response and link combinations, the probability of success parameter was also computed
-  ## (and is not equal to the conditonal mean, as is the case for the Bernoulli distribution)
-  if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
-    xy$p_pi     <- rowMeans(MC$p_samples)
-    xy$RMSPE_pi <- sqrt(.rowVars(MC$p_samples))
     
-    ## IDEA: people may be interested in the probability of success parameter for negative-binomial with log-link.
-    ## In this case, we can estimate it using the mean and the known formula for the mean in terms of the probability of success. 
+    ## For some response and link combinations, the probability of success parameter was also computed
+    ## (and is not equal to the conditonal mean, as is the case for the Bernoulli distribution)
+    if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
+      xy$p_pi     <- rowMeans(MC$p_samples)
+      xy$RMSPE_pi <- sqrt(.rowVars(MC$p_samples))
+    } else if (M@response == "negative-binomial" & M@link == "log") {
+      ## IDEA: people may be interested in the probability of success parameter for negative-binomial with log-link.
+      ## In this case, we can estimate it using the mean and the known formula for the mean in terms of the probability of success. 
+    }
+    
   }
   
   ## Response variable, Z
-  if (type %in% c("response", "all")){
+  if ("response" %in% type){
     
     ## Compute predictions and variance
     xy$p_Z_analytic <- xy$p_mu
@@ -95,15 +111,14 @@
     
     ## Compute the quantiles
     temp <- t(apply(MC$Z_samples, 1, quantile, c(0.05, 0.25, 0.5, 0.75, 0.95)))
-    colnames(temp) <- c("Z_quantile_0.05", "Z_quantile_0.25", "Z_quantile_0.50", "Z_quantile_0.75", "Z_quantile_0.95")
+    colnames(temp) <- c("Z_percentile_05", "Z_percentile_25", "Z_percentile_50", "Z_percentile_75", "Z_percentile_95")
     xy <- cbind(xy, temp)
   }
 
 
   # ---- Return output ----
 
-  out <- list(xy = xy,
-              MC = MC)
+  out <- list(xy = xy, MC = MC)
   
   ## change "xy" name to newdata
   
@@ -125,15 +140,14 @@
 #' in practice we compute the sparse-inverse-subset of the joint precision matrix,
 #' \emph{not} the true joint covariance matrix.
 #'
-#' @param Q The joint precision matrix of the random effects \eqn{(\eta', \xi_O')'}.
-#' @param estimates A list object containing the estimates of parameters and fixed-effects, and predictions of the random effects.
 #' @param M An object of class SRE.
+#' @param X The design matrix of the covariates at the BAU level (often simply an Nx1 column vector of 1's) 
 #' @return A list object containing:
 #' \describe{
 #'   \item{EYgivenZ}{A vector of the posterior expectation of Y at every BAU.}
 #'   \item{varYgivenZ}{A vector of the posterior variance of Y at every BAU.}
 #' }
-.Y_pred <- function(M){
+.Y_pred <- function(M, X){
   
   Q  <- M@Q_eta_xi
   S0 <- M@S0
@@ -161,11 +175,12 @@
   
   # ----- Prediction: Posterior mean of Y at each BAU ------
   
+  
   ## large- and medium-scale variation terms
-  mY           <-  as.vector(as.numeric(M@alphahat) + S0 %*% as.numeric(M@mu_eta))
+  mY <-  as.vector(X %*% M@alphahat + S0 %*% M@mu_eta)
   
   ## Add posterior estimate of xi_O at observed BAUs
-  mY[obsidx]   <-  mY[obsidx] + as.numeric(M@mu_xi_O)
+  mY[obsidx]   <-  mY[obsidx] + as.vector(M@mu_xi_O)
   
   
   # ----- Uncertainty: Posterior variance of Y at each BAU ------
@@ -198,34 +213,42 @@
 #' Monte Carlo sampling of the conditional mean of the data (a function of the
 #' latent process Y).
 #'
-#' Computes a Monte Carlo sample of Y, the conditional mean of the data
-#' \eqn{\mu = \psi(Y)} (which is a function of Y), and, for response-link
+#' Computes a Monte Carlo sample of \eqn{Y}, the conditional mean of the data
+#' \eqn{\mu = \psi(Y)} (which is a deterministic function of Y), the response variable \eqn{Z}, and, for response-link
 #' combinations to which it is applicable, the probability of success parameter
-#' p. It does so for every BAU location.
+#' p. It does so for every BAU location. 
+#' 
+#' For negative-binomial and binomial data, the \code{BAUs} slot of the \code{SRE} object must contain a field \code{k}, which is the known constant parameter for each BAU.
+#' For negative-binomial data, the ith element of \code{k} indicates the number of failures until the experiment is stopped at the ith BAU.
+#' For binomial data, the ith element of \code{k} indicates the number of trials at the ith BAU.
 #'
 #'
-#' @inheritParams .inv_link_fn
 #' @param M An object of class \code{SRE}.
+#' @param X The design matrix of the covariates at the BAU level (often simply an Nx1 column vector of 1's).
+#' @param type A character string (possibly vector) indicating the quantities which are the focus of inference.
+#' If \code{"link"} is in \code{type}, the latent \eqn{Y} process samples are provided. 
+#' If \code{"mean"} is in \code{type}, the conditonal mean \eqn{\mu} samples are provided (and the probability parameter if applicable).
+#' If \code{"response"} is in \code{type}, the response variable \eqn{Z} samples are provided. 
+#' For example, if \code{type = c("link", "response")}, then MC samples of the latent \eqn{Y} process and the response variable are provided.
 #' @param n_MC A postive integer indicating the number of MC samples at each location.
-#' @param k_BAU An integer vector of length N (the number of BAUs). Relevant only to the binomial and negative-binomial cases.
-#' @param response A string indicating the assumed distribution of the response variable.
-#' @param type A character string indicating the quantity that is the focus of inference. If type == "link", only Y_samples is computed.
-#' For negative-binomial data, the ith element of \code{k_BAU} indicates the number of failures until the experiment is stopped at the ith BAU.
-#' For binomial data, the ith element of \code{k_BAU} indicates the number of trials for the ith BAU.
-#' @return A list containing:
-#' 1. The Monte Carlo expectation of \eqn{\mu = \psi(Y)} at each BAU location.\cr
-#' 2. The Monte Carlo variance of \eqn{\mu = \psi(Y)} at each BAU location.\cr
-#' 3. The full Monte Carlo samples.
+#' @param obs_fs Logical indicating whether the fine-scale variation is included in the latent Y process. 
+#' If \code{obs_fs == FALSE} (the default), then the fine-scale variation term \eqn{\xi} is included in the latent \eqn{Y} process. 
+#' If \code{obs_fs == TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean, \eqn{mu}. 
+#' @param seed A seed for reproducibility.
+#' @return A list containing Monte Carlo samples of various quantites of interest. 
+#' The list elements are (N x n_MC) matrices, whereby the ith row of each matrix corresponds to
+#' n_MC samples of the given quantity at the ith BAU. The available quantities are:
 #' \describe{
-#'   \item{Y_samples}{An (N x n_MC) matrix, whereby the ith row of the matrix correpsponds to
-#'   n_MC samples of the latent Y process at the ith BAU.}
-#'   \item{mu_samples}{An (N x n_MC) matrix, whereby the ith row of the matrix correpsponds to
-#'   n_MC samples of the conditional mean of the data at the ith BAU.}
-#'   \item{p_samples}{An (N x n_MC) matrix, whereby the ith row of the matrix correpsponds to
-#'   n_MC samples of the probability of success parameter p at the ith BAU.}
+#'   \item{Y_samples}{Samples of the latent, Gaussian scale Y process.}
+#'   \item{mu_samples}{Samples of the conditional mean of the data.}
+#'   \item{Z_samples}{Samples of the response variable.}
+#'   \item{p_samples}{Samples of the probability of success parameter at the ith BAU.}
 #' }
-.MC_sampler <- function(M, n_MC = 1600, seed = NULL, k_BAU, obs_fs = FALSE, type = "mean"){
+.MC_sampler <- function(M, X, type = "mean", n_MC = 1600, obs_fs = FALSE, seed = NULL){
   
+  MC <- list() # object we will return 
+  
+  k_BAU <- M@BAUs$k
   Q   <- M@Q_eta_xi
   S0  <- M@S0
   S   <- M@S
@@ -233,6 +256,7 @@
   obsidx <- apply(M@Cmat, 1, function(x) which(x == 1))
   m   <- length(obsidx)
   r   <- ncol(S0)
+  
   
   # ---- Generate samples from (eta, xi_O) ----
   
@@ -269,118 +293,128 @@
   ## all other random effects in the model.
   ## All we have to do is make an (N-m) x n_MC matrix of draws from the
   ## Gaussian distribution with mean zero and variance equal to the fine-scale variance.
-  
-  if (obs_fs == FALSE) {
-    xi_U <- matrix(rnorm((N - m) * n_MC, mean = 0, sd = sqrt(M@sigma2fshat)),
-                         nrow = N - m, ncol = n_MC)
-  } else if (obs_fs == TRUE) {
-    xi_U <- 0
-  }
+  xi_U <- matrix(rnorm((N - m) * n_MC, mean = 0, sd = sqrt(M@sigma2fshat)), 
+                 nrow = N - m, ncol = n_MC)
 
+  
   # ---- Construct samples from latent process Y ----
   
+  ## We break the latent process down as: Y = Y_smooth + xi, 
+  ## so that we may separate the fine-scale variation. 
+  
+  ## Split the covariate design matrix based on observed and unobserved samples
+  X_O <- X[obsidx, ]
+  X_U <- X[-obsidx, ]
+  
   ## Observed Samples
-  Y_O <- as.matrix(as.numeric(M@alphahat) + S %*% eta + xi_O)
+  Y_smooth_O <- X_O %*% M@alphahat + S %*% eta
   
   ## Unobserved Samples
-  SU      <- S0[-obsidx, ] # Unobserved random effect 'design' matrix
-  Y_U     <- as.matrix(as.numeric(M@alphahat) + SU %*% eta + xi_U)
+  S_U          <- S0[-obsidx, ] # Unobserved random effect 'design' matrix
+  Y_smooth_U  <- X_U %*% M@alphahat + S_U %*% eta
   
   ## Combine samples
-  Y_samples <- rbind(Y_O, Y_U)
+  Y_smooth_samples  <- rbind(Y_smooth_O, Y_smooth_U)
+  xi_samples        <- rbind(xi_O, xi_U) 
   
   ## Use permutation matrix to get the correct (original) ordering
-  unobsidx        <- (1:N)[-obsidx]       # Unobserved BAUs indices
-  ids             <- c(obsidx, unobsidx)  # All indices (observed and unobserved)
-  P               <- Matrix::sparseMatrix(i = 1:N, j = 1:N, x = 1)[ids, ]
-  Y_samples       <- as.matrix(Matrix::t(P) %*% Y_samples)
+  unobsidx         <- (1:N)[-obsidx]       # Unobserved BAUs indices
+  ids              <- c(obsidx, unobsidx)  # All indices (observed and unobserved)
+  P                <- Matrix::sparseMatrix(i = 1:N, j = 1:N, x = 1)[ids, ]
+  Y_smooth_samples <- Matrix::t(P) %*% Y_smooth_samples 
+  xi_samples       <- Matrix::t(P) %*% xi_samples
   
+  ## Construct the samples from the latent process Y 
+  Y_samples <- Y_smooth_samples + xi_samples
   
-  ## Y_samples is an N x n_MC matrix, whereby the ith row of the matrix
-  ## correpsponds to n_MC samples of the latent Y process at the ith BAU.
+  ## Convert to matrix objects
+  Y_samples        <- as.matrix(Y_samples)
+  Y_smooth_samples <- as.matrix(Y_smooth_samples)
+
+
+  ## Outputted Y value depend on obs_fs
+  if ("link" %in% type) {
+    if (obs_fs == FALSE) MC$Y_samples <- Y_samples
+    if (obs_fs == TRUE)  MC$Y_samples <- Y_smooth_samples
+  }
   
-  MC <- list(Y_samples = as.matrix(Y_samples))
+  ## If Y is the ONLY quantity of interest, exit the function.
+  if (length(type) == 1) return(MC) 
+  
   
   # ---- Apply inverse-link function to the samples to obtain conditional mean ----
   
+  ## Past this point we must have xi in the Y process (the model breaks down otherwise).
+  ## In the case of type == "all", we simply export Y_smooth_samples as the samples of Y.
+
   ## For families with a known constant parameter (binomial, negative-binomial),
   ## psi() maps the Gaussian scale Y process to the probability parameter p.
   ## Then, we map p to the conditional mean mu via psi_mu().
   ## For all other families, psi() maps Y directly to mu.
   
-  if (type != "link") { # for all cases other than type == "link", we need the conditonal mean samples.
-    
-    psi     <- .inv_link_fn(M@link)   # link function (either to p or directly to mu)
-    
-    if (M@response == "binomial" & M@link %in% c("logit", "probit", "cloglog")) {
-      p_samples <- psi(Y_samples)
-      mu_samples <- k_BAU * p_samples
-    } else if (M@response == "negative-binomial" & M@link %in% c("logit", "probit", "cloglog")) {
-      p_samples <- psi(Y_samples)
-      mu_samples <- k_BAU * (1 / p_samples - 1)
-    } else if (M@response == "negative-binomial" & M@link %in% c("log", "square-root")) {
-      mu_samples <- k_BAU * psi(Y_samples)
-    } else {
-      mu_samples <- psi(Y_samples)
-    }
-    
-    ## Output the mean samples
-    MC$mu_samples <- as.matrix(mu_samples)
-    
-    ## If probability parameter p was computed, also output.
-    if (exists("p_samples")) MC$p_samples <- as.matrix(p_samples)
-    
+  ## Note that for all cases other than type == "link", we need to compute the conditonal mean samples.
+  
+  psi     <- .inv_link_fn(M@link)   # link function (either to p or directly to mu)
+  
+  #browser()
+  ## FIX: I don't like how psi links to the mean or the prob parameter
+  ## It would be better to always link to the mean, and for distributions that require it we can construct the probability parameter from the mean.
+  if (M@response == "binomial" & M@link %in% c("logit", "probit", "cloglog")) {
+    p_samples <- psi(Y_samples)
+    mu_samples <- k_BAU * p_samples
+  } else if (M@response == "negative-binomial" & M@link %in% c("logit", "probit", "cloglog")) {
+    p_samples <- psi(Y_samples)
+    mu_samples <- k_BAU * (1 / p_samples - 1)
+  } else if (M@response == "negative-binomial" & M@link %in% c("log", "square-root")) {
+    mu_samples <- k_BAU * psi(Y_samples)
+  } else {
+    mu_samples <- psi(Y_samples)
   }
+
+  ## Output the mean samples if requested.
+  ## If probability parameter p was computed, also output.
+  if ("mean" %in% type) {
+    MC$mu_samples <- mu_samples
+    if (exists("p_samples")) MC$p_samples <- p_samples
+  }
+  
+  ## If the response is not a quanitity of interest, exit the function
+  if (!("response" %in% type)) return(MC)
+ 
   
   # ---- Sample the response variable, Z ----
   
-  if (type %in% c("response", "all")){
-    
-    if (M@response == "poisson") {
-      MC$Z_samples <- rpois(n = N * n_MC, lambda = c(t(MC$mu_samples)))
-    } else if (M@response == "gaussian") {
-      sigma_e <- sqrt(M@Ve[1, 1]) # measurement error variance
-      MC$Z_samples <- rnorm(n = N * n_MC, mean = c(t(MC$mu_samples)), sd = sigma_e)
-    } else if (M@response == "bernoulli") {
-      MC$Z_samples <- rbinom(n = N * n_MC, size = 1, prob = c(t(MC$mu_samples)))
-    } else if (M@response == "gamma") {
-      theta <- 1 / c(t(MC$mu_samples)) # canonical parameter
-      alpha <- 1/M@phi                 # shape parameter
-      beta  <- theta * alpha           # rate parameter (1/scale)
-      MC$Z_samples <- rgamma(n = N * n_MC, shape = alpha, rate = beta)
-    } else if (M@response == "inverse-gaussian") {
-      MC$Z_samples <- statmod::rinvgauss(n = N * n_MC, mean = c(t(MC$mu_samples)), dispersion = M@phi)
-    } else if (M@response == "negative-binomial") {
-      k_BAU_vec <- rep(k_BAU, each = n_MC)
-      theta <- log(c(t(MC$mu_samples)) / (k_BAU_vec + c(t(MC$mu_samples))))
-      p <- 1 - exp(theta)
-      MC$Z_samples <- rnbinom(n = N * n_MC, size = k_BAU_vec, prob = p)
-    } else if (M@response == "binomial") {
-      k_BAU_vec <- rep(k_BAU, each = n_MC)
-      theta <- log((c(t(MC$mu_samples))/k_BAU_vec) / (1 - (c(t(MC$mu_samples))/k_BAU_vec)))
-      p <- 1 / (1 + exp(-theta))
-      MC$Z_samples <- rbinom(n = N * n_MC, size = k_BAU_vec, prob = p)
-    }
-    
-    ## Convert from a long vector to an N * n_MC matrix
-    MC$Z_samples <- matrix(MC$Z_samples, ncol = n_MC, byrow = TRUE)
-  
+  if (M@response == "poisson") {
+    Z_samples <- rpois(n = N * n_MC, lambda = c(t(mu_samples)))
+  } else if (M@response == "gaussian") {
+    sigma_e <- sqrt(M@Ve[1, 1]) # measurement error variance
+    Z_samples <- rnorm(n = N * n_MC, mean = c(t(mu_samples)), sd = sigma_e)
+  } else if (M@response == "bernoulli") {
+    Z_samples <- rbinom(n = N * n_MC, size = 1, prob = c(t(mu_samples)))
+  } else if (M@response == "gamma") {
+    theta <- 1 / c(t(mu_samples)) # canonical parameter
+    alpha <- 1/M@phi                 # shape parameter
+    beta  <- theta * alpha           # rate parameter (1/scale)
+    Z_samples <- rgamma(n = N * n_MC, shape = alpha, rate = beta)
+  } else if (M@response == "inverse-gaussian") {
+    Z_samples <- statmod::rinvgauss(n = N * n_MC, mean = c(t(mu_samples)), dispersion = M@phi)
+  } else if (M@response == "negative-binomial") {
+    k_BAU_vec <- rep(k_BAU, each = n_MC)
+    theta <- log(c(t(mu_samples)) / (k_BAU_vec + c(t(mu_samples))))
+    p <- 1 - exp(theta)
+    Z_samples <- rnbinom(n = N * n_MC, size = k_BAU_vec, prob = p)
+  } else if (M@response == "binomial") {
+    k_BAU_vec <- rep(k_BAU, each = n_MC)
+    theta <- log((c(t(mu_samples))/k_BAU_vec) / (1 - (c(t(mu_samples))/k_BAU_vec)))
+    p <- 1 / (1 + exp(-theta))
+    Z_samples <- rbinom(n = N * n_MC, size = k_BAU_vec, prob = p)
   }
   
-  # ---- Return ----
+  ## Convert from a long vector to an N * n_MC matrix
+  Z_samples <- matrix(Z_samples, ncol = n_MC, byrow = TRUE)
   
-  ## Return a list containing the Monte Carlo samples of Y, mu, and Z (and possibly pi).
+  ## Add Z_samples to list object
+  MC$Z_samples <- Z_samples
+  
   return(MC)
-}
-
-
-#' Variance by rows.
-#'
-#' Computes the row-wise variance of a matrix.
-#'
-#' @param X An array like object (with a dim-attribute).
-#' @return A vector containing the row-wise variances of the matrix \code{X}.
-
-.rowVars <- function(X, ...) {
-  rowSums((X - rowMeans(X, ...))^2, ...)/(dim(X)[2] - 1)
 }

@@ -105,18 +105,18 @@
 #'     geom_point(data = data.frame(sim_data),aes(x=x,y=z),size=3) +
 #'     geom_line(data=sim_process,aes(x=x,y=proc),col="red")
 #'  print(g1)}
-SRE <- function(f,data,basis,BAUs,est_error = TRUE,average_in_BAU = TRUE,
-                fs_model = "ind",vgm_model = NULL, K_type = "block-exponential", normalise_basis = TRUE, 
+SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
+                fs_model = "ind", vgm_model = NULL, K_type = "block-exponential", normalise_basis = TRUE, 
                 response = "gaussian", link = "identity", taper = 8) {
 
     ## Strings that must be lower-case
     response  <- tolower(response)
     link      <- tolower(link)
-    K_type      <- tolower(K_type)
+    K_type    <- tolower(K_type)
     
     ## Check that the arguments are OK
     .check_args1(f=f,data=data,basis=basis,BAUs=BAUs,est_error=est_error, 
-                 response=response, link = link, taper = taper, K_type = K_type, k_Z = data$k)
+                 response = response, link = link, taper = taper, K_type = K_type, k_Z = data$k)
 
     ## Extract the dependent variable from the formula
     av_var <- all.vars(f)[1]
@@ -316,24 +316,17 @@ SRE.predict <- function(SRE_model, obs_fs = FALSE, newdata = NULL, pred_polys = 
 #' @export
 setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = FALSE, pred_polys = NULL,
                                               pred_time = NULL, covariances = FALSE, 
-                                              n_MC = 1600, seed = NULL, type = "mean") {
+                                              n_MC = 1600, seed = NULL, type = "mean", k = NULL) {
 
     SRE_model <- object
     ## Deprecation coercion
     if(!is.null(pred_polys))
         newdata <- pred_polys
 
-    
-    ## NOT SURE IF THIS IS NECESSARY NOW
-    # if(length(M@BAUs$k) == 1){
-    #     M@BAUs$k <- rep(M@BAUs$k, nrow(M@S0))
-    #     warning("Single number k provided for all BAUs: assuming k is invariant over the whole spatial domain.")
-    # }
-    
     ## Check the arguments are OK
     .check_args3(obs_fs = obs_fs, newdata = newdata, pred_polys = pred_polys,
                  pred_time = pred_time, covariances = covariances, 
-                 response = SRE_model@response, k_BAU = M@BAUs$k, SRE_model = SRE_model, type = type)
+                 response = SRE_model@response, SRE_model = SRE_model, type = type)
 
     ## Call internal prediction function
     if (SRE_model@method == "EM") {
@@ -344,6 +337,23 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                                   covariances = covariances) # Compute covariances?
         
     } else if (SRE_model@method == "TMB") {
+        
+        ## check k (I've put it here because I need to update the SRE_model object)
+        ## Perhaps instead I can use the <<- operator within .check_args3 to check k and update SRE_model within the parent environment
+        if (SRE_model@response %in% c("binomial", "negative-binomial")) {
+            if(length(k) == 1){
+                SRE_model@BAUs$k <- k
+                warning("Single number k provided for all BAUs: assuming k is invariant over the whole spatial domain.")
+            } else if (is.null(k)) {
+                SRE_model@BAUs$k <- 1
+                warning("k not provided for prediction: assuming k is equa to 1 for all BAUs.")
+            } else if (!is.numeric(k) | any(k <= 0) | any(k != round (k))) {
+                stop("The known constant parameter k must contain only positive integers.")
+            } else if (length(k) != nrow(SRE_Model@S0)) {
+                stop("length(k) must equal 1 or N (the number of BAUs)." )
+            }      
+        }
+        
         pred_locs <- .FRKTMB_pred(M = SRE_model,    # Fitted SRE model
                                   n_MC = n_MC,      # Number of MC simulations
                                   seed = seed,      # seed for reproducibility (MC simulations)
@@ -351,12 +361,6 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                                   type = type)  
     } 
 
-    ## pred_polys dw
-    ## pred_time dw
-    ## Only allow newdata = NULL for now
-    ## n_MC should be added as an option and only if method="TMB" 
-    ## type "link" or "response" or "mean" only if TMB. IDEA: perhaps we can also offer an option for type = "all".
-    
     
     ## Return predictions
     pred_locs
@@ -1578,7 +1582,7 @@ print.summary.SRE <- function(x, ...) {
     
     ## Check k_Z
     if (response %in% c("binomial", "negative-binomial")) {
-        k-Z <- data$k
+        k_Z <- data[[1]]$k  ## data[[1]] ASSUMES WE ARE IN A SPATIAL SETTING (NOT SPATIO-TEMPORAL)
         if (is.null(k_Z)) {
             stop("For binomial or negative-binomial data, the known constant parameter k must be provided for each observation.")
         } else if (!is.numeric(k_Z) | any(k_Z <= 0) | any(k_Z != round (k_Z))) {
@@ -1613,7 +1617,7 @@ print.summary.SRE <- function(x, ...) {
 
 ## Checks arguments for the predict() function. Code is self-explanatory
 .check_args3 <- function(obs_fs=FALSE, newdata = NULL, pred_polys = NULL,
-                         pred_time = NULL, covariances = FALSE, k_BAU, SRE_model, type, ...) {
+                         pred_time = NULL, covariances = FALSE, SRE_model, type, ...) {
     if(!(obs_fs %in% 0:1)) stop("obs_fs needs to be logical")
 
     if(!(is(newdata,"Spatial") | (is(newdata,"ST")) | is.null(newdata)))
@@ -1629,27 +1633,11 @@ print.summary.SRE <- function(x, ...) {
     if(!is.logical(covariances)) stop("covariances needs to be TRUE or FALSE")
     
     
-    
+    ## Check type
     if(!missing(SRE_model)){
-        
-        ## Check k_BAU
-        if(SRE_model@response %in% c("binomial", "negative-binomial")) {
-            
-            if (is.null(k_BAU)){
-                stop("For binomial or negative-binomial response, the known constant parameter k must be provided for each BAU.")
-            } else if (!is.numeric(k_BAU) | any(k_BAU <= 0) | any(k_BAU != round (k_BAU))) {
-                stop("The known constant parameter k must contain only positive integers.")
-            } else if (length(k_BAU) != nrow(M@S0)) {
-                stop("length(k) not equal to the number of BAUs." )
-            }    
-            
-        }
-        
-        ## Check type
         if (SRE_model@method == "EM" && type != "mean") {
             warning("type argument does nothing when the EM algorithm was used for model fitting.")
         }
-        
     }
     
     
