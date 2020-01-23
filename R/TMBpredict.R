@@ -16,14 +16,12 @@
 #' When the log- or identity-link functions are used the expectation and variance of the \eqn{\mu} may be computed exactly.
 .FRKTMB_pred <- function(M, type = "mean", n_MC, seed = NULL, obs_fs = FALSE) {
   
+  # ---- Create objects needed thoughout the function ----
+  
   ## Id of observed BAUs
-  ## FIX: I have combuted obsidx several times in each function. 
-  ## Instead, only compute here and then pass on as a function argument.
   obsidx <- apply(M@Cmat, 1, function(x) which(x == 1))
   
-  
-  
-  #### Extract the covariate design matrix, X 
+  #### The covariate design matrix, X 
   
   ## Retrieve the dependent variable name
   depname <- all.vars(M@f)[1]
@@ -38,6 +36,7 @@
   M@BAUs[[depname]] <- NULL
   
   rm(depname, L)
+  
   
   # ------ Latent process Y prediction and Uncertainty ------
   
@@ -119,6 +118,7 @@
     } else if (M@response == "negative-binomial" & M@link == "log") {
       ## FIX: people may be interested in the probability of success parameter for negative-binomial with log-link.
       ## In this case, we can estimate it using the mean and the known formula for the mean in terms of the probability of success. 
+      
     }
   }
   
@@ -347,31 +347,35 @@
   ## In the case of type == "all", we simply export Y_smooth_samples as the samples of Y.
 
   ## For families with a known constant parameter (binomial, negative-binomial),
-  ## psi() maps the Gaussian scale Y process to the probability parameter p.
-  ## Then, we map p to the conditional mean mu via psi_mu().
+  ## zeta() maps the Gaussian scale Y process to the probability parameter p.
+  ## Then, we map p to the conditional mean mu via chi().
   ## For all other families, psi() maps Y directly to mu.
+  ## The exception is negative-binomial with a log or square-root link, 
+  ## in which case we map directly from Y to mu.
   
   ## Note that for all cases other than type == "link", we need to compute the conditonal mean samples.
   
-  psi     <- .inv_link_fn(M@link)   # link function (either to p or directly to mu)
+  ## Create the relevant link functions.
+  if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
+    zeta    <- .link_fn(kind = "Y_to_prob", link = M@link)
+    chi     <- .link_fn(kind = "prob_to_mu", response = M@response)
+  } else {
+    psi     <- .link_fn(kind = "Y_to_mu", link = M@link) 
+  }
   
-  #browser()
-  ## FIX: I don't like how psi links to the mean or the prob parameter
-  ## It would be better to always link to the mean, and for distributions that require it we can construct the probability parameter from the mean.
-  if (M@response == "binomial" & M@link %in% c("logit", "probit", "cloglog")) {
-    prob_samples <- psi(Y_samples)
-    mu_samples <- k_BAU * prob_samples
-  } else if (M@response == "negative-binomial" & M@link %in% c("logit", "probit", "cloglog")) {
-    prob_samples <- psi(Y_samples)
-    mu_samples <- k_BAU * (1 / prob_samples - 1)
+  ## Create the mu samples (and prob parameter if applicable)
+  if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
+    prob_samples <- zeta(Y = Y_samples)
+    mu_samples   <- chi(p = prob_samples, k = k_BAU)
   } else if (M@response == "negative-binomial" & M@link %in% c("log", "square-root")) {
-    mu_samples <- k_BAU * psi(Y_samples)
+    mu_samples   <- k_BAU * psi(Y_samples)
+    f            <- .link_fn(kind = "mu_to_prob", response = M@response)
+    prob_samples <- f(mu = mu_samples, k = k_BAU)
   } else {
     mu_samples <- psi(Y_samples)
   }
 
-  ## Output the mean samples.
-  ## If probability parameter p was computed, also output.
+  ## Output the mean samples. If probability parameter p was computed, also output.
   MC$mu_samples <- mu_samples
   if (exists("prob_samples")) MC$prob_samples <- prob_samples
 
@@ -394,13 +398,10 @@
     alpha <- 1/M@phi                 # shape parameter
     beta  <- theta * alpha           # rate parameter (1/scale)
     Z_samples <- rgamma(n = N * n_MC, shape = alpha, rate = beta)
-  } else if (M@response == "inverse-gaussian") {
     Z_samples <- statmod::rinvgauss(n = N * n_MC, mean = c(t(mu_samples)), dispersion = M@phi)
   } else if (M@response == "negative-binomial") {
     k_BAU_vec <- rep(k_BAU, each = n_MC)
-    theta <- log(c(t(mu_samples)) / (k_BAU_vec + c(t(mu_samples))))
-    p <- 1 - exp(theta)
-    Z_samples <- rnbinom(n = N * n_MC, size = k_BAU_vec, prob = p)
+    Z_samples <- rnbinom(n = N * n_MC, size = k_BAU_vec, prob = c(t(prob_samples)))
   } else if (M@response == "binomial") {
     k_BAU_vec <- rep(k_BAU, each = n_MC)
     theta <- log((c(t(mu_samples))/k_BAU_vec) / (1 - (c(t(mu_samples))/k_BAU_vec)))

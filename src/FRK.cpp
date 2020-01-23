@@ -133,7 +133,6 @@ Type objective_function<Type>::operator() ()
     error("Unknown link function");
   }
 
-
   Type epsilon_1 = 10e-8;
   Type epsilon_2 = 2 * (1 - 1/(1 + epsilon_1));
 
@@ -145,11 +144,9 @@ Type objective_function<Type>::operator() ()
     } else if (response == "negative-binomial") {
       mu_O = k_Z * (1 / (p_O + epsilon_1) - 1 + epsilon_2);
     }
-  } else if (response == "negative-binomial" && link == "log") {
+  } else if (response == "negative-binomial" && (link == "log" || link == "square-root")) {
     mu_O *= k_Z;
-  } else if (response == "negative-binomial" && link == "square-root") {
-    mu_O *= k_Z;
-  }
+  } 
   
   // 4.3. Create the canonical parameter lambda,
   //      a function of the conditional mean mu_O.

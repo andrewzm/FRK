@@ -190,38 +190,40 @@
 
   }
 
-  ## Parameter and random effect initialisations.
-  g <- .link_fn(link)
+  # ---- Parameter and random effect initialisations. ----
 
-  ## Create altered data to avoids the problems of applying g() to Z.
+  
+  ## Create the relevant link functions.
+  if (response %in% c("binomial", "negative-binomial") & link %in% c("logit", "probit", "cloglog")) {
+    h     <- .link_fn(kind = "prob_to_Y", link = link)
+    f     <- .link_fn(kind = "mu_to_prob", response = response)
+  } else {
+    g     <- .link_fn(kind = "mu_to_Y", link = link) 
+  }
+
+  ## Create altered data to avoid the problems of applying g() to Z.
   Z0 <- Z
   if (response == "gaussian" & link %in% c("log", "square-root")) {
-    Z0[Z <= 0] <- 1      # set non-positive elements of Z to 1
+    Z0[Z <= 0] <- 0.1      
   } else if (response %in% c("poisson", "gamma", "inverse-gaussian") & link == "log") {
-    Z0[Z == 0] <- 0.1    # add a small quantity to zero elements
-  } else if (response == "negative-binomial" & link %in% c("logit", "probit", "cloglog")) {
-    Z0[Z == 0]   <- 0.1
-  } else if (response == "negative-binomial" & link == "log") {
+    Z0[Z == 0] <- 0.1    
+  } else if (response == "negative-binomial" & link %in% c("logit", "probit", "cloglog", "log")) {
     Z0[Z == 0]   <- 0.1
   } else if (response == "binomial" & link %in% c("logit", "probit", "cloglog")) {
     Z0[Z == 0]   <- 0.1
     Z0[Z == k_Z] <- k_Z[Z == k_Z] - 0.1
-    Z0 <- Z0/k_Z
   } else if (response == "bernoulli" & link %in% c("logit", "probit", "cloglog")) {
     Z0 <- Z + 0.05 * (Z == 0) - 0.05 * (Z == 1)
   }
 
   ## Transformed data
-  if (response == "binomial" & link %in% c("logit", "probit", "cloglog")) {
-    p0   <- Z0 / k_Z
-    Z0_t <- g(p0)
-  } else if (response == "negative-binomial" & link %in% c("logit", "probit", "cloglog")) {
-    p0   <- k_Z / (k_Z + Z0)
-    Z0_t <- g(p0)
-  } else if (response == "negative-binomial" & link == "log") {
-    Z0_t <- g(Z0 / k_Z)
+  if (response %in% c("binomial", "negative-binomial") & link %in% c("logit", "probit", "cloglog")) {
+    p0 <- f(Z0, k_Z) # Convert from response (mean) scale to probability scale
+    Z0_t <- h(p0)    # Convert from probability scale to Gauussian Y scale
+  } else if (response == "negative-binomial" & link %in% c("log", "square-root")) {
+    Z0_t <- g(Z0 / k_Z) # Convert from response (mean) scale to Gaussian Y-scale (accounting for k_Z)
   } else {
-    Z0_t <- g(Z0)
+    Z0_t <- g(Z0) # Convert from response (mean) scale to Gaussian Y-scale
   }
 
   ## Parameter and random effect initialisations.
