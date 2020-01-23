@@ -80,3 +80,11 @@
 .rowVars <- function(X, ...) {
   rowSums((X - rowMeans(X, ...))^2, ...)/(dim(X)[2] - 1)
 }
+
+## FIX: Add documentation to this function
+.concat_percentiles_to_df <- function (samples, df, name) {
+  temp <- t(apply(samples, 1, quantile, c(0.05, 0.25, 0.5, 0.75, 0.95)))
+  colnames(temp) <- paste(name, sep = "_", c("percentile_05", "percentile_25", "percentile_50", "percentile_75", "percentile_95"))
+  df <- cbind(df, temp)
+  return(df)
+}

@@ -107,7 +107,7 @@
 #'  print(g1)}
 SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                 fs_model = "ind", vgm_model = NULL, K_type = "block-exponential", normalise_basis = TRUE, 
-                response = "gaussian", link = "identity", taper = 8) {
+                response = "gaussian", link = "identity", taper = 8, ...) {
 
     ## Strings that must be lower-case
     response  <- tolower(response)

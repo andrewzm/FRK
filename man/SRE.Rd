@@ -40,7 +40,8 @@ SRE(
   normalise_basis = TRUE,
   response = "gaussian",
   link = "identity",
-  taper = 8
+  taper = 8,
+  ...
 )
 
 SRE.fit(
