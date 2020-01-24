@@ -108,15 +108,15 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot fs_model type of fine-scale variation (independent or CAR-based). Currently only "ind" is permitted
 #' @slot info_fit information on fitting (convergence etc.)
 ### SLOTS ADDED FOR FRKTMB
-#' @slot response the assumed distribution of the response variable
-#' @slot link the desired link function
+#' @slot response A character string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "bernoulli", "gamma","inverse-gaussian", "negative-binomial", or "binomial".
+#' @slot link A character string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted. 
 #' @slot taper a positve numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "covariance"} and \code{TMB} is used to fir the data)
 #' @slot mu_xi_O updated expectation of the fine-scale random effects at observed BAUs (estimated)
 #' @slot Q_eta_xi updated joint precision matrix of the basis function random effects and observed fine-scale random effects (estimated)
 #' @slot log_likelihood the log likelihood of the fitted model
 #' @slot method the fitting procedure used to fit the SRE model
 #' @slot phi the estimated dispersion parameter (assumed constant throughout the spatial domain)
-#' @slot k vector of known constant parameters (only applicable to binomial and negative-binomial response distributions) 
+#' @slot k vector of known constant parameters after binning proccess (only applicable to binomial and negative-binomial response distributions) 
 #' @seealso \code{\link{SRE}} for details on how to construct and fit SRE models.
 #' @keywords spatial
 setClass("SRE",representation(data="list",

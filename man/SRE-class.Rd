@@ -61,9 +61,9 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 
 \item{\code{info_fit}}{information on fitting (convergence etc.)}
 
-\item{\code{response}}{the assumed distribution of the response variable}
+\item{\code{response}}{A character string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "bernoulli", "gamma","inverse-gaussian", "negative-binomial", or "binomial".}
 
-\item{\code{link}}{the desired link function}
+\item{\code{link}}{A character string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted.}
 
 \item{\code{taper}}{a positve numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "covariance"} and \code{TMB} is used to fir the data)}
 
@@ -77,7 +77,7 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 
 \item{\code{phi}}{the estimated dispersion parameter (assumed constant throughout the spatial domain)}
 
-\item{\code{k}}{vector of known constant parameters (only applicable to binomial and negative-binomial response distributions)}
+\item{\code{k}}{vector of known constant parameters after binning proccess (only applicable to binomial and negative-binomial response distributions)}
 }}
 
 \seealso{

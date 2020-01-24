@@ -358,10 +358,10 @@
   
   ## Create the relevant link functions.
   if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
-    zeta    <- .link_fn(kind = "Y_to_prob", link = M@link)
-    chi     <- .link_fn(kind = "prob_to_mu", response = M@response)
+    zeta    <- .link_fn("Y_to_prob", link = M@link)
+    chi     <- .link_fn("prob_to_mu", response = M@response)
   } else {
-    psi     <- .link_fn(kind = "Y_to_mu", link = M@link) 
+    psi     <- .link_fn("Y_to_mu", link = M@link) 
   }
   
   ## Create the mu samples (and prob parameter if applicable)

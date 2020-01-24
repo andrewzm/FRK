@@ -80,7 +80,7 @@ loglik(SRE_model)
 \arguments{
 \item{f}{\code{R} formula relating the dependent variable (or transformations thereof) to covariates}
 
-\item{data}{list of objects of class \code{SpatialPointsDataFrame}, \code{SpatialPolygonsDataFrame}, \code{STIDF}, or  \code{STFDF}. If using space-time objects, the data frame must have another field, \code{t}, containing the time index of the data point}
+\item{data}{list of objects of class \code{SpatialPointsDataFrame}, \code{SpatialPolygonsDataFrame}, \code{STIDF}, or  \code{STFDF}. If using space-time objects, the data frame must have another field, \code{t}, containing the time index of the data point. If the assumed response distribution is \code{"binomial"} or \code{"negative-binomial"}, the data frame must have another field, \code{k}, containing the known constant parameter \eqn{k} for each observation.}
 
 \item{basis}{object of class \code{Basis} (or \code{TensorP_Basis})}
 

@@ -7,37 +7,32 @@
 #' @param M An object of class \code{SRE}.
 #' The slots of an \code{SRE} object particularly relevant to \code{FRKTMB_fit} are
 #' \describe{
-#'   \item{\code{K_type}}{A string indicating the desired formulation of the eta prior.
-#'   Permitted values are "precision" and "block-exponential".}
+#'   \item{\code{K_type}}{A string indicating the desired formulation of the prior variance/precision matrix of eta.}
 #'   \item{\code{response}}{A string indicating the assumed distribution of the response variable.}
-#'   \item{\code{link}}{A string indicating the assumed link function.}
-#'   \item{\code{taper}}{A positve numeric indicating the strength of the covariance tapering
-#'   (only applicable if \code{K_type == "covariance"}).}
+#'   \item{\code{link}}{A string indicating the desired link function.}
+#'   \item{\code{taper}}{A positve numeric indicating the strength of the covariance tapering (only applicable if \code{K_type == "covariance"}).}
 #' }
 #' Furthermore in the case of binomial or negative-binomial response variables,
 #' the \code{data} slot of \code{M} must contain a column named \code{k}
 #' which contains the 'known-constant' parameters for each observation
-#' (the number of trials for binomial data, or the target number of successes
-#' for negative-binomial data).
+#' (the number of trials for binomial data, or the target number of successes for negative-binomial data).
 #' @return This function updates the following slots of \code{M}:
 #' \describe{
-#'   \item{Q}{An estimate of the joint precision matrix of all random effects in the model.}
-#'   \item{estimates}{A named list containing estimates of all fixed effects and parameters, and predictions of all random effects.}
-#'   \item{log_likelihood}{The log-likelihood evaluated at the optimal estimates.}
+#'   \item{Q_eta_xi}{An estimate of the joint precision matrix of all random effects in the model (the random weights \eqn{\eta} and observed fine-scale variation \eqn{\xi_O}).}
+#'   \item{mu_eta}{Posterior expectation of the random weights \eqn{\eta}.}
+#'   \item{mu_xi_O}{Posterior expectation of the observed-fine scale variation \eqn{\xi_O}.}
+#'   \item{alphahat}{Estimate of the fixed-effects.}
+#'   \item{sigma2fshat}{Estimate of the variance parameter of the fine-scale variation.}
+#'   \item{phi}{Estimate of the dispersion parameter (only for applicable response distributions).}
+#'   \item{log_likelihood}{The log-likelihood of the model evaluated at the final parameter estimates. Can be obtained by calling loglik(M).}
 #' }
 #' This function also makes the slots \code{K_type}, \code{response}, and \code{link} lower case.
 #' @seealso \code{\link{.FRKTMB_pred}}
-#' @useDynLib FRK
 .FRKTMB_fit <- function(M) {
 
   # ------ Data preparation ------
 
-  data_params_init <- .TMB_prep(M = M,
-                                K_type = M@K_type,
-                                response = M@response,
-                                link = M@link,
-                                taper = M@taper,
-                                k_Z = M@k)
+  data_params_init <- .TMB_prep(M)
 
 
   # ------- Model Compilation -------
@@ -92,9 +87,8 @@
   Q <- obj$env$spHess(par = obj$env$last.par.best, random = TRUE)
   
 
-
   ## Update the slots of M
-  ## NOTE: I had to convert to Matrix as the SRE slot required value Matrix
+  ## Convert to Matrix as these SRE slots require class "Matrix"
   M@alphahat <- as(estimates$beta, "Matrix")
   M@mu_eta   <- as(estimates$eta, "Matrix")
   M@mu_xi_O  <- as(estimates$xi_O, "Matrix")
@@ -103,10 +97,8 @@
   M@Q_eta_xi <- Q          
   M@phi <- unname(exp(estimates$logphi))
   
-  ## Not sure if we need to provide kappa and rho (the parameters of the prior precision matrix)?
-  ## Also not sure if we need to provide phi (the dispersion paramter), as it is not used beyond this point.
-  ## The log-likelihood should be obtained from loglik() function.
-  M@log_likelihood <- log_likelihood # log-likelihood evaluated at optimal estimates
+  ## log-likelihood evaluated at optimal estimates. After fitting, can be obtained from loglik(M).
+  M@log_likelihood <- log_likelihood 
   
   ## Compute prior precision or covariance matrix based on whether we used the precision or covariance model formulation
   if (M@K_type == "precision") {
@@ -133,28 +125,20 @@
 #'
 #' Prepares data and parameter/fixed-effects/random-effects for input to \code{TMB}.
 #'
-#' @inheritParams .cov_tap
-#' @inheritParams .link_fn
 #' @param M An object of class \code{SRE}.
-#' @param K_type A string indicating whether to use a prior covariance matrix
-#' or prior precision matrix for the random effect weights eta.
-#' @param response A string indicating the assumed distribution of the response variable.
-#' @param k_Z An integer vector. Relevant only to the binomial and negative-binomial cases.
-#' For negative-binomial data, the ith element of \code{k_Z} indicates the number of failures until the experiment was stopped for the ith osbervation.
-#' For binomial data, the ith element of \code{k_Z} indicates the number of trials for the ith observation.
 #' @return A list object containing:
 #' \describe{
 #'   \item{data}{The data.}
 #'   \item{parameters}{The initialised parameters/fixed-effects/random-effects.}
 #' }
-.TMB_prep <- function (M,
-                       K_type = c("precision", "block-exponential"),
-                       response = c("gaussian", "poisson", "bernoulli", "gamma",
-                                    "inverse-gaussian", "negative-binomial", "binomial"),
-                       link = c("log", "identity", "logit", "probit", "cloglog", "reciprocal", "reciprocal-squared"),
-                       taper,
-                       k_Z) {
+.TMB_prep <- function (M) {
 
+  K_type   <- M@K_type
+  response <- M@response
+  link     <- M@link
+  taper    <- M@taper
+  k_Z      <- M@k
+  k_Z <- as.vector(k_Z)
 
   nres <- max(M@basis@df$res)      # Number of resolutions
   r    <- M@basis@n                # Number of basis functions in total.
@@ -163,7 +147,7 @@
   m    <- length(Z)                # Number of data points AFTER BINNING
   X    <- as.matrix(M@X)          
   S    <- as(M@S, "sparseMatrix")
-  k_Z <- as.vector(k_Z)
+
 
 
   ## Common to all
@@ -261,9 +245,6 @@
   }
 
   ## Initialise the random effects
-  ## THIS SOLVE IS OF AN rxr MATRIX: FOR NRES = 4, THIS WILL TAKE A LONG TIME.
-  ## FOR AN INITIALISATION, IT WOULD BE NICE TO FIND SOMETHING THAT DOESN'T INVOLVE
-  ## A MATRIX INVERSE.
   temp            <- data$sigma2e+exp(parameters$logsigma2xi)
   parameters$eta  <- as.vector((1 / temp) * solve(Matrix::t(S) %*% S / temp + solve(KInit) ) %*% (Matrix::t(S)  %*% (Z0_t - X %*% parameters$beta)))
   parameters$xi_O <- as.vector((exp(parameters$logsigma2xi) / temp) * (Z0_t - X %*% parameters$beta - S %*% parameters$eta))

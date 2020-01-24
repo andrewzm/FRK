@@ -17,7 +17,7 @@
 #' @title Construct SRE object, fit and predict
 #' @description The Spatial Random Effects (SRE) model is the central object in FRK. The function \code{FRK} provides a wrapper for the construction and estimation of the SRE object from data, using the functions \code{SRE} (the object constructor) and \code{SRE.fit} (for fitting it to the data). Please see \code{\link{SRE-class}} for more details on the SRE object's properties and methods.
 #' @param f \code{R} formula relating the dependent variable (or transformations thereof) to covariates
-#' @param data list of objects of class \code{SpatialPointsDataFrame}, \code{SpatialPolygonsDataFrame}, \code{STIDF}, or  \code{STFDF}. If using space-time objects, the data frame must have another field, \code{t}, containing the time index of the data point
+#' @param data list of objects of class \code{SpatialPointsDataFrame}, \code{SpatialPolygonsDataFrame}, \code{STIDF}, or  \code{STFDF}. If using space-time objects, the data frame must have another field, \code{t}, containing the time index of the data point. If the assumed response distribution is \code{"binomial"} or \code{"negative-binomial"}, the data frame must have another field, \code{k}, containing the known constant parameter \eqn{k} for each observation. 
 #' @param basis object of class \code{Basis} (or \code{TensorP_Basis})
 #' @param BAUs object of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame}, \code{STIDF}, or \code{STFDF}. The object's data frame must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality. If the function \code{FRK} is used directly, then BAUs are created automatically, but only coordinates can then be used as covariates
 #' @param est_error flag indicating whether the measurement-error variance should be estimated from variogram techniques. If this is set to 0, then \code{data} must contain a field \code{std}. Measurement-error estimation is currently not implemented for spatio-temporal datasets
@@ -117,7 +117,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     ## Check that the arguments are OK
     .check_args1(f=f,data=data,basis=basis,BAUs=BAUs,est_error=est_error, 
                  response = response, link = link, taper = taper, K_type = K_type, 
-                 k_Z = data[[1]]$k) ## data[[1]] ASSUMES WE ARE IN A SPATIAL SETTING (NOT SPATIO-TEMPORAL)
+                 k_Z = data[[1]]$k) ## data[[1]] may not be good code: check with Andrew
 
     ## Extract the dependent variable from the formula
     av_var <- all.vars(f)[1]

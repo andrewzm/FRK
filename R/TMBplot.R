@@ -32,12 +32,10 @@
     if ("p_prob" %in% names(newdata)) plots$p_prob <- .plot_map(newdata, col = "p_prob", diverging = TRUE, midpoint = 0.5) + labs(fill = expression(widehat(p)[pi]["|"][bold(Z)]))
     if ("RMSPE_prob" %in% names(newdata)) plots$RMSPE_prob <- .plot_map(newdata, col = "RMSPE_prob", uncertaintyMap = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[pi]["|"][bold(Z)]))))
         
-    if ("p_Z_analytic" %in% names(newdata)) plots$p_Z_analytic <- .plot_map(newdata, col = "p_Z_analytic") + labs(fill = expression(widehat(p)[Z]["|"][bold(Z)]))
-    if ("p_Z_empirical" %in% names(newdata)) plots$p_Z_empirical <- .plot_map(newdata, col = "p_Z_empirical") + labs(fill = expression(widehat(p)[Z]["|"][bold(Z)]))
+    if ("p_Z_analytic" %in% names(newdata)) plots$p_Z_analytic <- .plot_map(newdata, col = "p_Z_analytic") + labs(fill = expression(widehat(p)[Z]["|"][bold(Z)]~" (analytic)")) 
+    if ("p_Z_empirical" %in% names(newdata)) plots$p_Z_empirical <- .plot_map(newdata, col = "p_Z_empirical") + labs(fill = expression(widehat(p)[Z]["|"][bold(Z)]~" (empirical)"))
     if ("RMSPE_Z" %in% names(newdata)) plots$RMSPE_Z <- .plot_map(newdata, col = "RMSPE_Z", uncertaintyMap = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[Z]["|"][bold(Z)]))))
   }
-  
-  ## FIX: Z_analytic and Z_empirical
 
   return(plots)
 }
