@@ -76,6 +76,8 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 \item{\code{method}}{the fitting procedure used to fit the SRE model}
 
 \item{\code{phi}}{the estimated dispersion parameter (assumed constant throughout the spatial domain)}
+
+\item{\code{k}}{vector of known constant parameters (only applicable to binomial and negative-binomial response distributions)}
 }}
 
 \seealso{

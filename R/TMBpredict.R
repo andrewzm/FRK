@@ -14,7 +14,7 @@
 #' }
 #' Note that for all link functions other than the log-link and identity-link, the predictions and prediction uncertainty of \eqn{\mu} contained in \code{newdata} are computed using the Monte Carlo samples contained in \code{MC}.
 #' When the log- or identity-link functions are used the expectation and variance of the \eqn{\mu} may be computed exactly.
-.FRKTMB_pred <- function(M, type = "mean", n_MC, seed = NULL, obs_fs = FALSE) {
+.FRKTMB_pred <- function(M, type = "mean", n_MC, seed = NULL, obs_fs = FALSE, k = NULL) {
   
   # ---- Create objects needed thoughout the function ----
   
@@ -63,7 +63,8 @@
                     type = type,
                     obs_fs = obs_fs,
                     n_MC = n_MC,
-                    seed = seed)
+                    seed = seed, 
+                    k = k)
 
   
   # ------ Create Prediction Dataframe ------
@@ -234,6 +235,7 @@
 #' If \code{"response"} is in \code{type}, the response variable \eqn{Z} samples, and the samples of all other quantities are provided. 
 #' @param n_MC A postive integer indicating the number of MC samples at each location.
 #' @param obs_fs Logical indicating whether the fine-scale variation is included in the latent Y process. 
+#' @param k vector of known constant parameters at each BAU (applicable only for binomial and negative-binomial).
 #' If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{\xi} is included in the latent \eqn{Y} process. 
 #' If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}. 
 #' @param seed A seed for reproducibility.
@@ -246,11 +248,10 @@
 #'   \item{prob_samples}{Samples of the probability of success parameter (only for the relevant response distributions).}
 #'   \item{Z_samples}{Samples of the response variable.}
 #' }
-.MC_sampler <- function(M, X, type = "mean", n_MC = 1600, obs_fs = FALSE, seed = NULL){
+.MC_sampler <- function(M, X, type = "mean", n_MC = 1600, obs_fs = FALSE, seed = NULL, k = NULL){
   
   MC <- list() # object we will return 
   
-  k_BAU <- M@BAUs$k
   Q   <- M@Q_eta_xi
   S0  <- M@S0
   S   <- M@S
@@ -366,11 +367,11 @@
   ## Create the mu samples (and prob parameter if applicable)
   if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
     prob_samples <- zeta(Y = Y_samples)
-    mu_samples   <- chi(p = prob_samples, k = k_BAU)
+    mu_samples   <- chi(p = prob_samples, k = k)
   } else if (M@response == "negative-binomial" & M@link %in% c("log", "square-root")) {
-    mu_samples   <- k_BAU * psi(Y_samples)
+    mu_samples   <- k * psi(Y_samples)
     f            <- .link_fn(kind = "mu_to_prob", response = M@response)
-    prob_samples <- f(mu = mu_samples, k = k_BAU)
+    prob_samples <- f(mu = mu_samples, k = k)
   } else {
     mu_samples <- psi(Y_samples)
   }
@@ -400,13 +401,13 @@
     Z_samples <- rgamma(n = N * n_MC, shape = alpha, rate = beta)
     Z_samples <- statmod::rinvgauss(n = N * n_MC, mean = c(t(mu_samples)), dispersion = M@phi)
   } else if (M@response == "negative-binomial") {
-    k_BAU_vec <- rep(k_BAU, each = n_MC)
-    Z_samples <- rnbinom(n = N * n_MC, size = k_BAU_vec, prob = c(t(prob_samples)))
+    k_vec <- rep(k, each = n_MC)
+    Z_samples <- rnbinom(n = N * n_MC, size = k_vec, prob = c(t(prob_samples)))
   } else if (M@response == "binomial") {
-    k_BAU_vec <- rep(k_BAU, each = n_MC)
-    theta <- log((c(t(mu_samples))/k_BAU_vec) / (1 - (c(t(mu_samples))/k_BAU_vec)))
+    k_vec <- rep(k, each = n_MC)
+    theta <- log((c(t(mu_samples))/k_vec) / (1 - (c(t(mu_samples))/k_vec)))
     p <- 1 / (1 + exp(-theta))
-    Z_samples <- rbinom(n = N * n_MC, size = k_BAU_vec, prob = p)
+    Z_samples <- rbinom(n = N * n_MC, size = k_vec, prob = p)
   }
   
   ## Convert from a long vector to an N * n_MC matrix

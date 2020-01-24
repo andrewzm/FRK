@@ -116,6 +116,7 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot log_likelihood the log likelihood of the fitted model
 #' @slot method the fitting procedure used to fit the SRE model
 #' @slot phi the estimated dispersion parameter (assumed constant throughout the spatial domain)
+#' @slot k vector of known constant parameters (only applicable to binomial and negative-binomial response distributions) 
 #' @seealso \code{\link{SRE}} for details on how to construct and fit SRE models.
 #' @keywords spatial
 setClass("SRE",representation(data="list",
@@ -150,4 +151,5 @@ setClass("SRE",representation(data="list",
                               Q_eta_xi = "dsCMatrix",
                               log_likelihood = "numeric", 
                               method = "character", 
-                              phi = "numeric"))
+                              phi = "numeric", 
+                              k = "Matrix"))

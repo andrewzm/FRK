@@ -116,7 +116,8 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     
     ## Check that the arguments are OK
     .check_args1(f=f,data=data,basis=basis,BAUs=BAUs,est_error=est_error, 
-                 response = response, link = link, taper = taper, K_type = K_type, k_Z = data$k)
+                 response = response, link = link, taper = taper, K_type = K_type, 
+                 k_Z = data[[1]]$k) ## data[[1]] ASSUMES WE ARE IN A SPATIAL SETTING (NOT SPATIO-TEMPORAL)
 
     ## Extract the dependent variable from the formula
     av_var <- all.vars(f)[1]
@@ -166,6 +167,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                                       BAUs,            # BAUs
                                       average_in_BAU = average_in_BAU)   # average in BAU?
 
+        
         ## The mapping can fail if not all data are covered by BAUs. Throw an error message if this is the case
         if(any(is.na(data_proc@data[av_var])))
             stop("NAs found when mapping data to BAUs. Do you have NAs in your data?
@@ -181,6 +183,8 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         X[[i]] <- as(L$X,"Matrix")                # covariate information
         Z[[i]] <- Matrix(L$y)                     # data values
         Ve[[i]] <- Diagonal(x=data_proc$std^2)    # measurement-error variance
+        
+
 
 
         ## Construct the incidence matrix mapping data to BAUs. This just returns indices and values which then need to be
@@ -229,7 +233,8 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     Z <- do.call("rbind",Z)
     Ve <- do.call("bdiag",Ve)
     Vfs <- do.call("bdiag",Vfs)
-
+    
+    
     ## Initialise the expectations and covariances from E-step to reasonable values
     mu_eta_init <- Matrix(0,nbasis(basis),1)
     S_eta_init <- Diagonal(x = rep(1,nbasis(basis)))
@@ -252,6 +257,15 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     ## (possibly come back to this and provide the actual initial values computed in .TMB_prep())
     mu_xi_init <- Matrix(0, nrow = 1)
     Q_eta_xi_init <- Matrix(0, nrow = 1, 1)
+    
+    ## Construct k the same way Z is constructed
+    if(response %in% c("binomial", "negative-binomial")) {
+        k <- list() 
+        k[[i]] <- Matrix(data_proc$k)
+        k <- do.call("rbind",k)
+    } else {
+        k <- Matrix(-1) # just some dummy value (which will hopefully throw errors if used innappropriately)
+    }
     
     ## Construct the SRE object
     new("SRE",
@@ -284,7 +298,8 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         link = link, 
         taper = taper, 
         mu_xi_O = mu_xi_init, 
-        Q_eta_xi = Q_eta_xi_init)
+        Q_eta_xi = Q_eta_xi_init,
+        k = k)
 }
 
 
@@ -322,11 +337,18 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     ## Deprecation coercion
     if(!is.null(pred_polys))
         newdata <- pred_polys
+    
+    ## The user can either provide k in M@BAUs$k or in the predict call. 
+    ## This is so that the user can change k without having to call SRE() and SRE.fit() again.
+    ## The k supplied in predict() will take precedence over the k stored in M@BAUs$k.
+    if (is.null(k)) {
+        k <- SRE_model@BAUs$k
+    }
 
     ## Check the arguments are OK
     .check_args3(obs_fs = obs_fs, newdata = newdata, pred_polys = pred_polys,
                  pred_time = pred_time, covariances = covariances, 
-                 response = SRE_model@response, SRE_model = SRE_model, type = type)
+                 response = SRE_model@response, SRE_model = SRE_model, type = type, k = k)
 
     ## Call internal prediction function
     if (SRE_model@method == "EM") {
@@ -338,27 +360,12 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
         
     } else if (SRE_model@method == "TMB") {
         
-        ## check k (I've put it here because I need to update the SRE_model object)
-        ## Perhaps instead I can use the <<- operator within .check_args3 to check k and update SRE_model within the parent environment
-        if (SRE_model@response %in% c("binomial", "negative-binomial")) {
-            if(length(k) == 1){
-                SRE_model@BAUs$k <- k
-                warning("Single number k provided for all BAUs: assuming k is invariant over the whole spatial domain.")
-            } else if (is.null(k)) {
-                SRE_model@BAUs$k <- 1
-                warning("k not provided for prediction: assuming k is equa to 1 for all BAUs.")
-            } else if (!is.numeric(k) | any(k <= 0) | any(k != round (k))) {
-                stop("The known constant parameter k must contain only positive integers.")
-            } else if (length(k) != nrow(SRE_Model@S0)) {
-                stop("length(k) must equal 1 or N (the number of BAUs)." )
-            }      
-        }
-        
         pred_locs <- .FRKTMB_pred(M = SRE_model,    # Fitted SRE model
                                   n_MC = n_MC,      # Number of MC simulations
                                   seed = seed,      # seed for reproducibility (MC simulations)
                                   obs_fs = obs_fs, 
-                                  type = type)  
+                                  type = type, 
+                                  k = k)  
     } 
 
     
@@ -464,11 +471,12 @@ print.summary.SRE <- function(x, ...) {
 ## Main prediction routine
 .SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method="EM", lambda = 0, print_lik=FALSE) {
 
-    n <- nbasis(SRE_model)  # number of basis functions
-    X <- SRE_model@X        # covariates
     info_fit <- list()      # initialise info_fit
-
+    
     if(method == "EM") {
+        
+        n <- nbasis(SRE_model)  # number of basis functions
+        X <- SRE_model@X        # covariates
 
         info_fit$method <- "EM" # updated info_fit
         llk <- rep(0,n_EM)       # log-likelihood
@@ -531,9 +539,8 @@ print.summary.SRE <- function(x, ...) {
         }
     } else if (method == "TMB") {
         SRE_model <- .FRKTMB_fit(SRE_model)
-    }
-    else {
-        stop("No other estimation method implemented yet. Please use EM or TMB.")
+    } else {
+        stop("No other estimation method implemented yet. Please use method = 'EM' or method = 'TMB'.")
     }
 
     ## Return fitted SRE model
@@ -1582,7 +1589,6 @@ print.summary.SRE <- function(x, ...) {
     
     ## Check k_Z
     if (response %in% c("binomial", "negative-binomial")) {
-        k_Z <- data[[1]]$k  ## data[[1]] ASSUMES WE ARE IN A SPATIAL SETTING (NOT SPATIO-TEMPORAL)
         if (is.null(k_Z)) {
             stop("For binomial or negative-binomial data, the known constant parameter k must be provided for each observation.")
         } else if (!is.numeric(k_Z) | any(k_Z <= 0) | any(k_Z != round (k_Z))) {
@@ -1617,7 +1623,7 @@ print.summary.SRE <- function(x, ...) {
 
 ## Checks arguments for the predict() function. Code is self-explanatory
 .check_args3 <- function(obs_fs=FALSE, newdata = NULL, pred_polys = NULL,
-                         pred_time = NULL, covariances = FALSE, SRE_model, type, ...) {
+                         pred_time = NULL, covariances = FALSE, SRE_model, type, k, ...) {
     if(!(obs_fs %in% 0:1)) stop("obs_fs needs to be logical")
 
     if(!(is(newdata,"Spatial") | (is(newdata,"ST")) | is.null(newdata)))
@@ -1633,11 +1639,26 @@ print.summary.SRE <- function(x, ...) {
     if(!is.logical(covariances)) stop("covariances needs to be TRUE or FALSE")
     
     
-    ## Check type
+    
     if(!missing(SRE_model)){
-        if (SRE_model@method == "EM" && type != "mean") {
-            warning("type argument does nothing when the EM algorithm was used for model fitting.")
+        
+        ## Check type is not used with EM
+        if (SRE_model@method == "EM" && type != "mean") warning("type argument does nothing when the EM algorithm was used for model fitting.")
+        
+        ## Check k_BAU
+        if (SRE_model@response %in% c("binomial", "negative-binomial")) {
+            if(length(k) == 1){
+                warning("Single number k provided for all BAUs: assuming k is invariant over the whole spatial domain.")
+            } else if (is.null(k)) {
+                k <- 1
+                warning("k not provided for prediction: assuming k is equal to 1 for all BAUs.")
+            } else if (!is.numeric(k) | any(k <= 0) | any(k != round (k))) {
+                stop("k must contain only positive integers.")
+            } else if (length(k) != nrow(SRE_model@S0)) {
+                stop("length(k) must equal 1 or N (the number of BAUs)." )
+            }      
         }
+        
     }
     
     

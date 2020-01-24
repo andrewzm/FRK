@@ -37,7 +37,7 @@
                                 response = M@response,
                                 link = M@link,
                                 taper = M@taper,
-                                k_Z = M@data$k_Z)
+                                k_Z = M@k)
 
 
   # ------- Model Compilation -------
@@ -57,7 +57,7 @@
   log_likelihood <- -obj$fn() # could also use - fit$objective
 
   ## Extract parameter and random effect estimates
-  par <- obj$env$last.par
+  par <- obj$env$last.par.best
   estimates <- split(par, names(par)) # convert to named list object
 
 
@@ -69,23 +69,28 @@
   ## Note, that the ordering of the precision matrix follows the original
   ## order supplied to TMB i.e. unique(names(obj$env$par)).
 
-  report <- sdreport(obj, getJointPrecision = TRUE, skip.delta.method = TRUE)
 
-  ## Joint precision matrix of fixed AND random effects
-  Q <- report$jointPrecision
-
+  # ## Joint precision matrix of fixed AND random effects
+  # report <- sdreport(obj, getJointPrecision = TRUE, skip.delta.method = TRUE)
+  # Q <- report$jointPrecision
+  # 
+  # ## Subset the random block
+  # ## The parameters and fixed effects should not be included as random variables,
+  # ## so we remove them from the precision matrix BEFORE inverting.
+  # Q <- Q[row.names(Q) %in% c("eta", "xi_O"), row.names(Q) %in% c("eta", "xi_O")]
+  
+  # ## Other code which may be of use
   # ## For cases in which the dispersion parameter does not change, remove it from Q.
   # if (response %in% c("gaussian", "poisson", "bernoulli", "binomial", "negative-binomial")) {
   #   idx <- which(rownames(Q) == "logphi")
   #   Q <- Q[-idx, -idx]
   # }
-
-  ## The parameters and fixed effects should not be included as random variables,
-  ## so we remove them from the precision matrix BEFORE inverting.
-  m <- length(M@Z)
-  r <- M@basis@n
-  npar <- nrow(Q) - (r + m) # number of parameters/fixed effects
-  Q    <- Q[-(1:npar), -(1:npar)]
+  
+  ## FROM KASPER: 
+  ## The precision matrix of random effects given the fixed effects is calculated inside sdreport as:
+  ## This is good because now I don't even need to call sdreport().
+  Q <- obj$env$spHess(par = obj$env$last.par.best, random = TRUE)
+  
 
 
   ## Update the slots of M
@@ -150,18 +155,16 @@
                        taper,
                        k_Z) {
 
-  if(is.null(k_Z)){
-    k_Z <- -2 # some arbitrary number to keep TMB happy
-  }
 
-  nres        <- max(M@basis@df$res)      # Number of resolutions
-  r           <- M@basis@n                # Number of basis functions in total.
-  N           <- nrow(M@S0)               # Number of BAUs
+  nres <- max(M@basis@df$res)      # Number of resolutions
+  r    <- M@basis@n                # Number of basis functions in total.
+  N    <- nrow(M@S0)               # Number of BAUs
+  Z    <- as.vector(M@Z)           # Binned data
+  m    <- length(Z)                # Number of data points AFTER BINNING
+  X    <- as.matrix(M@X)          
+  S    <- as(M@S, "sparseMatrix")
+  k_Z <- as.vector(k_Z)
 
-  Z   <- as.vector(M@Z)
-  m   <- length(Z)        # Number of data points AFTER BINNING
-  X   <- as.matrix(M@X)
-  S   <- as(M@S, "sparseMatrix")
 
   ## Common to all
   data    <- list(Z = Z, X = X, S = S,
