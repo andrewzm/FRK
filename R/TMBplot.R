@@ -24,19 +24,40 @@
   if (!is.null(newdata)) {
 
     if ("p_Y" %in% names(newdata)) plots$p_Y <- .plot_map(newdata, col = "p_Y") + labs(fill = expression(widehat(p)[Y]["|"][bold(Z)]))
-    if ("RMSPE_Y" %in% names(newdata)) plots$RMSPE_Y <- .plot_map(newdata, col = "RMSPE_Y", uncertaintyMap = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[Y]["|"][bold(Z)]))))
+    if ("RMSPE_Y" %in% names(newdata)) plots$RMSPE_Y <- .plot_map(newdata, col = "RMSPE_Y", uncertaintyMap = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[Y]["|"][bold(Z)], Y))))
+    if (all(c("Y_percentile_05","Y_percentile_95") %in% names(newdata))) {
+      newdata$interval_90 <- newdata$Y_percentile_95 - newdata$Y_percentile_05 
+      plots$interval_90_Y <-  .plot_map(newdata, col = "interval_90", uncertaintyMap = TRUE) + labs(fill = expression("90% Central \nInterval Width:" ~ Y))
+    }
     
     if ("p_mu" %in% names(newdata)) plots$p_mu <- .plot_map(newdata, col = "p_mu") + labs(fill = expression(widehat(p)[mu]["|"][bold(Z)]))
-    if ("RMSPE_mu" %in% names(newdata)) plots$RMSPE_mu <- .plot_map(newdata, col = "RMSPE_mu", uncertaintyMap = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[mu]["|"][bold(Z)]))))
+    if ("RMSPE_mu" %in% names(newdata)) plots$RMSPE_mu <- .plot_map(newdata, col = "RMSPE_mu", uncertaintyMap = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[mu]["|"][bold(Z)], mu))))
+    if (all(c("mu_percentile_05","mu_percentile_95") %in% names(newdata))) {
+      newdata$interval_90 <- newdata$mu_percentile_95 - newdata$mu_percentile_05 
+      plots$interval_90_mu <-  .plot_map(newdata, col = "interval_90", uncertaintyMap = TRUE) + labs(fill = expression("90% Central \nInterval Width:" ~ mu))
+    }
+    
     
     if ("p_prob" %in% names(newdata)) plots$p_prob <- .plot_map(newdata, col = "p_prob", diverging = TRUE, midpoint = 0.5) + labs(fill = expression(widehat(p)[pi]["|"][bold(Z)]))
-    if ("RMSPE_prob" %in% names(newdata)) plots$RMSPE_prob <- .plot_map(newdata, col = "RMSPE_prob", uncertaintyMap = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[pi]["|"][bold(Z)]))))
-        
-    if ("p_Z_analytic" %in% names(newdata)) plots$p_Z_analytic <- .plot_map(newdata, col = "p_Z_analytic") + labs(fill = expression(widehat(p)[Z]["|"][bold(Z)]~" (analytic)")) 
-    if ("p_Z_empirical" %in% names(newdata)) plots$p_Z_empirical <- .plot_map(newdata, col = "p_Z_empirical") + labs(fill = expression(widehat(p)[Z]["|"][bold(Z)]~" (empirical)"))
-    if ("RMSPE_Z" %in% names(newdata)) plots$RMSPE_Z <- .plot_map(newdata, col = "RMSPE_Z", uncertaintyMap = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[Z]["|"][bold(Z)]))))
+    if ("RMSPE_prob" %in% names(newdata)) plots$RMSPE_prob <- .plot_map(newdata, col = "RMSPE_prob", uncertaintyMap = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[pi]["|"][bold(Z)], pi))))
+    if (all(c("prob_percentile_05","prob_percentile_95") %in% names(newdata))) {
+      newdata$interval_90 <- newdata$prob_percentile_95 - newdata$prob_percentile_05 
+      plots$interval_90_prob <-  .plot_map(newdata, col = "interval_90", uncertaintyMap = TRUE) + labs(fill = expression("90% Central \nInterval Width:" ~ pi))
+    }    
+    
+    
+    if ("p_Z" %in% names(newdata)) plots$p_Z <- .plot_map(newdata, col = "p_Z") + labs(fill = expression(widehat(p)[Z]["|"][bold(Z)])) 
+    # if ("p_Z_empirical" %in% names(newdata)) plots$p_Z_empirical <- .plot_map(newdata, col = "p_Z_empirical") + labs(fill = expression(widehat(p)[Z]["|"][bold(Z)]~" (empirical)"))
+    if ("RMSPE_Z" %in% names(newdata)) plots$RMSPE_Z <- .plot_map(newdata, col = "RMSPE_Z", uncertaintyMap = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[Z]["|"][bold(Z)], Z))))
+    if (all(c("Z_percentile_05","Z_percentile_95") %in% names(newdata))) {
+      newdata$interval_90 <- newdata$Z_percentile_95 - newdata$Z_percentile_05 
+      plots$interval_90_Z <-  .plot_map(newdata, col = "interval_90", uncertaintyMap = TRUE) + labs(fill = expression("90% Central \nInterval Width:" ~ Z))
+    }    
+    
   }
 
+  
+  
   return(plots)
 }
 

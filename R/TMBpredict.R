@@ -58,13 +58,8 @@
   # ------ Conditional mean (mu) prediction and uncertainty ------
   
   ## Compute Monte Carlo samples of conditional mean at each location
-  MC <- .MC_sampler(M = M, 
-                    X = X,
-                    type = type,
-                    obs_fs = obs_fs,
-                    n_MC = n_MC,
-                    seed = seed, 
-                    k = k)
+  MC <- .MC_sampler(M = M, X = X, type = type, obs_fs = obs_fs, 
+                    n_MC = n_MC, seed = seed, k = k)
 
   
   # ------ Create Prediction Dataframe ------
@@ -82,8 +77,7 @@
   
   ## If Y is the ONLY quantity of interest, exit the function.
   if (!("mean" %in% type) && !("response" %in% type)) return(list(newdata = newdata, MC = MC)) 
-
-
+  
   ## Conditional mean of the data, mu
   ## If a log- or identity-link function is used, then expectations and variance
   ## of the conditional mean may be evaluated analytically.
@@ -102,32 +96,25 @@
     RMSPE_mu     <- sqrt(.rowVars(MC$mu_samples))
   }
   
-  
-  ## Output mu (and prob) predictions if it is specified
+  ## Output mu (and prob) predictions if it is requested
   if ("mean" %in% type) {
     newdata$p_mu <- p_mu
     newdata$RMSPE_mu <- RMSPE_mu
     newdata <- .concat_percentiles_to_df(samples = MC$mu_samples, df = newdata, "mu")
     
-    ## For some response and link combinations, the probability of success parameter was also computed
-    ## (and is not equal to the conditonal mean, as is the case for the Bernoulli distribution)
+    ## For some response distributions, the probability of success parameter 
+    ## was also computed (and is not equal to the conditonal mean, as is the 
+    ## case for the Bernoulli distribution). 
     if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
       newdata$p_prob     <- rowMeans(MC$prob_samples)
       newdata$RMSPE_prob <- sqrt(.rowVars(MC$prob_samples))
       newdata <- .concat_percentiles_to_df(samples = MC$prob_samples, df = newdata, "prob")
-      
-    } else if (M@response == "negative-binomial" & M@link == "log") {
-      ## FIX: people may be interested in the probability of success parameter for negative-binomial with log-link.
-      ## In this case, we can estimate it using the mean and the known formula for the mean in terms of the probability of success. 
-      
     }
   }
   
-
   ## Response variable, Z
   if ("response" %in% type){
-    newdata$p_Z_analytic <- p_mu 
-    newdata$p_Z_empirical <- rowMeans(MC$Z_samples)
+    newdata$p_Z <- p_mu 
     newdata$RMSPE_Z <- sqrt(.rowVars(MC$Z_samples))
     newdata <- .concat_percentiles_to_df(samples = MC$Z_samples, df = newdata, "Z")
   }

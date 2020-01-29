@@ -115,10 +115,9 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     K_type    <- tolower(K_type)
     
     ## Check that the arguments are OK
-    .check_args1(f=f,data=data,basis=basis,BAUs=BAUs,est_error=est_error, 
-                 response = response, link = link, taper = taper, K_type = K_type, 
-                 k_Z = data[[1]]$k) ## data[[1]] may not be good code: check with Andrew
-
+    .check_args1(f = f,data = data, basis = basis, BAUs = BAUs, est_error = est_error, 
+                 response = response, link = link, taper = taper, K_type = K_type) 
+    
     ## Extract the dependent variable from the formula
     av_var <- all.vars(f)[1]
 
@@ -126,7 +125,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     ndata <- length(data)
 
     ## Initialise list of matrices (We construct one for every data object then concatenate)
-    S <- Ve <- Vfs <- X <- Z <- Cmat <- list()
+    S <- Ve <- Vfs <- X <- Z <- Cmat <- k <- list()
 
     ## Normalise basis functions for the prior process to have constant variance. This was seen to pay dividends in
     ## LatticeKrig, however we only do it once initially
@@ -219,6 +218,12 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
 
         ## S0 is the matrix S in the vignette. Here S is the matrix SZ in the vignette.
         S[[i]] <- Cmat[[i]] %*% S0
+        
+        ## Construct k the same way Z is constructed when response is binomial
+        ## or negative binomial
+        if(response %in% c("binomial", "negative-binomial")) {
+            k[[i]] <- Matrix(data_proc$k)
+        }
     }
 
     if(fs_model == "ind") {
@@ -233,6 +238,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     Z <- do.call("rbind",Z)
     Ve <- do.call("bdiag",Ve)
     Vfs <- do.call("bdiag",Vfs)
+    if(response %in% c("binomial", "negative-binomial")) k <- do.call("rbind",k)
     
     
     ## Initialise the expectations and covariances from E-step to reasonable values
@@ -257,15 +263,6 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     ## (possibly come back to this and provide the actual initial values computed in .TMB_prep())
     mu_xi_init <- Matrix(0, nrow = 1)
     Q_eta_xi_init <- Matrix(0, nrow = 1, 1)
-    
-    ## Construct k the same way Z is constructed
-    if(response %in% c("binomial", "negative-binomial")) {
-        k <- list() 
-        k[[i]] <- Matrix(data_proc$k)
-        k <- do.call("rbind",k)
-    } else {
-        k <- Matrix(-1) # just some dummy value (which will hopefully throw errors if used innappropriately)
-    }
     
     ## Construct the SRE object
     new("SRE",
@@ -359,7 +356,6 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                                   covariances = covariances) # Compute covariances?
         
     } else if (SRE_model@method == "TMB") {
-        
         pred_locs <- .FRKTMB_pred(M = SRE_model,    # Fitted SRE model
                                   n_MC = n_MC,      # Number of MC simulations
                                   seed = seed,      # seed for reproducibility (MC simulations)
@@ -1523,8 +1519,8 @@ print.summary.SRE <- function(x, ...) {
                          response = c("gaussian", "poisson", "bernoulli", "gamma",
                                       "inverse-gaussian", "negative-binomial", "binomial"), 
                          link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"), 
-                         taper = 8, 
-                         k_Z) {
+                         taper = 8) {
+    
     if(!is(f,"formula")) stop("f needs to be a formula.")
     if(!is(data,"list"))
         stop("Please supply a list of Spatial objects.")
@@ -1583,18 +1579,24 @@ print.summary.SRE <- function(x, ...) {
         }
     }
     
-    if (!is.numeric(taper) | taper <= 0){
+    ## Check taper
+    if (!(class(taper) %in% c("numeric", "integer"))) {
+        stop("taper must be numeric or integer.")
+    } else if (taper <= 0) {
         stop("taper must be positive.")
     }
     
-    ## Check k_Z
+    ## Check k (for data)
     if (response %in% c("binomial", "negative-binomial")) {
-        if (is.null(k_Z)) {
-            stop("For binomial or negative-binomial data, the known constant parameter k must be provided for each observation.")
-        } else if (!is.numeric(k_Z) | any(k_Z <= 0) | any(k_Z != round (k_Z))) {
+        if (!all(sapply(data, function(l) "k" %in% names(l)))) {
+            stop("For binomial or negative-binomial data, the known constant 
+                 parameter k must be provided for each observation.")
+        } else if (!all(sapply(data, function(l) class(l$k) %in% c("numeric", "integer")))) {
+            stop("The known constant parameter k must contain only positive integers.")
+        } else if (any(sapply(data, function(l) l$k <= 0)) | 
+                   !all(sapply(data, function(l) l$k == round(l$k)))) {
             stop("The known constant parameter k must contain only positive integers.")
         }
-        
     }
     
     
@@ -1622,7 +1624,7 @@ print.summary.SRE <- function(x, ...) {
 }
 
 ## Checks arguments for the predict() function. Code is self-explanatory
-.check_args3 <- function(obs_fs=FALSE, newdata = NULL, pred_polys = NULL,
+.check_args3 <- function(obs_fs = FALSE, newdata = NULL, pred_polys = NULL,
                          pred_time = NULL, covariances = FALSE, SRE_model, type, k, ...) {
     if(!(obs_fs %in% 0:1)) stop("obs_fs needs to be logical")
 
@@ -1644,25 +1646,23 @@ print.summary.SRE <- function(x, ...) {
         
         ## Check type is not used with EM
         if (SRE_model@method == "EM" && type != "mean") warning("type argument does nothing when the EM algorithm was used for model fitting.")
-        
-        ## Check k_BAU
+
+        ## Check k (for predictions)
         if (SRE_model@response %in% c("binomial", "negative-binomial")) {
             if(length(k) == 1){
                 warning("Single number k provided for all BAUs: assuming k is invariant over the whole spatial domain.")
             } else if (is.null(k)) {
                 k <- 1
                 warning("k not provided for prediction: assuming k is equal to 1 for all BAUs.")
-            } else if (!is.numeric(k) | any(k <= 0) | any(k != round (k))) {
+            } else if (!(class(k) %in% c("numeric", "integer"))) {
+                stop("k must contain only positive integers.")
+            } else if (any(k <= 0) | any(k != round (k))) {
                 stop("k must contain only positive integers.")
             } else if (length(k) != nrow(SRE_model@S0)) {
                 stop("length(k) must equal 1 or N (the number of BAUs)." )
             }      
         }
-        
     }
-    
-    
-    
 }
 
 
