@@ -99,23 +99,26 @@
   
   ## log-likelihood evaluated at optimal estimates. After fitting, can be obtained from loglik(M).
   M@log_likelihood <- log_likelihood 
+
+  ## Posterior variance and precision matrix of eta random effects
+  r <- nbasis(M)
+  M@Q_eta <- Q[1:r, 1:r]
+  M@S_eta <- solve(M@Q_eta)
   
-  ## Compute prior precision or covariance matrix based on whether we used the precision or covariance model formulation
+  ## Compute prior precision or covariance matrix 
+  ## based on whether we used the precision or covariance model formulation
   if (M@K_type == "precision") {
     M@Khat_inv <- .sparse_Q_block_diag(df = M@basis@df, 
                                        kappa = exp(estimates$logkappa), 
                                        rho = exp(estimates$logrho))$Q
-    M@Khat <- Matrix()
-    
+    M@Khat <- solve(M@Khat_inv)
   } else if (M@K_type == "block-exponential") {
     M@Khat <- .K_tap_matrix(M@D_basis,
                             alpha = data_params_init$data$alpha,
                             sigma2 =  exp(estimates$logsigma2),
                             tau = exp(estimates$logtau))
-    M@Khat_inv <- Matrix()
-    
+    M@Khat_inv <- solve(M@Khat)
   }
-  
   
   return(M)
 }

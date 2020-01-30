@@ -223,6 +223,8 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         ## or negative binomial
         if(response %in% c("binomial", "negative-binomial")) {
             k[[i]] <- Matrix(data_proc$k)
+        } else {
+            k <- Matrix(-1) # a dummy value of type Matrix so that we can pass it in the created SRE object
         }
     }
 
