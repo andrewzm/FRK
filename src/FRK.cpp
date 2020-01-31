@@ -16,90 +16,152 @@ Type objective_function<Type>::operator() ()
   DATA_SPARSE_MATRIX(S);      // Design matrix for basis function random weights
   DATA_IVECTOR(ri);           // Number of basis functions at each resolution
   DATA_SCALAR(sigma2e);       // Measurement error estimate (Gaussian case only)
+  DATA_STRING(K_type);        // Indicates the desired model formulation of eta prior (K or Q)
   DATA_STRING(response);      // String specifying the response distribution
   DATA_STRING(link);          // String specifying the link function
-
-  // Only relevant for negative-binomial and binomial
-  DATA_VECTOR(k_Z);
-
+  DATA_VECTOR(k_Z);           // "Known-constant" parameter (only relevant for negative-binomial and binomial)
+  
+  DATA_VECTOR(alpha);         // Tapering parameters (only relevant for block-exponential formulation)
   DATA_IVECTOR(row_indices);
   DATA_IVECTOR(col_indices);
   DATA_VECTOR(x);
-  DATA_IVECTOR(nnz);
+  DATA_IVECTOR(nnz);          // Integer vector indicating the number of non-zeros at each resolution of the K_tap or Q
 
-  int m    = Z.size();     // Sample size
-  int nres = ri.size();    // Number of resolutions
+  int m    = Z.size();       // Sample size
+  int nres = ri.size();      // Number of resolutions
   int r    = ri.sum();
-  int nnz_total = nnz.sum(); // Total number of non-zero elements in Q
+  int nnz_total = nnz.sum(); // Total number of non-zero elements in Q or K_tap
 
   // Parameters                   // Transformed Parameters
   PARAMETER_VECTOR(beta);
   PARAMETER(logsigma2xi);         Type sigma2xi       = exp(logsigma2xi);
   PARAMETER(logphi);              Type phi            = exp(logphi);
 
-  PARAMETER_VECTOR(logrho);       vector<Type> rho    = exp(logrho);
-  PARAMETER_VECTOR(logkappa);     vector<Type> kappa  = exp(logkappa);
+  
+  PARAMETER_VECTOR(logsigma2);    vector<Type> sigma2 = exp(logsigma2);
+  PARAMETER_VECTOR(logtau);       vector<Type> tau    = exp(logtau);
+  vector<Type> rho    = tau;
+  vector<Type> kappa  = sigma2;
 
   // Latent random effects
   PARAMETER_VECTOR(eta);
   PARAMETER_VECTOR(xi_O);
 
 
-  // -------- 1. Construct precision matrix Q  -------- //
+  // ---- 1. Construct prior covariance matrix K or precision matrix Q  ---- //
 
-  // Construct Q as a sparse matrix: use triplet list (row, column, value)
-  std::vector<T> tripletList;     // Create triplet list, called 'tripletList'
-  tripletList.reserve(nnz_total);   // reserve number of non-zeros in Q
+  // NOTE: we cannot declare objects inside if() statements if those objects are also 
+  // used outside the if() statement. We ARE allowed to declare objects inside if() statements
+  // if they are not used outside of this if() statement at any other point in the template.
+  
+  // Construct Q or K as a sparse matrix: use triplet list (row, column, value)
+  std::vector<T> tripletList;       // Create triplet list, called 'tripletList'
+  tripletList.reserve(nnz_total);   // Reserve number of non-zeros in the matrix
 
-  vector<Type> coefficients(nnz_total);
-
-  // Add kappa[i] diagonals of block i, multiply block i by rho[i]
   int start = 0;
-  for (int i = 0; i < nres; i++) {                    // For each resolution
-    for (int j = start; j < start + nnz[i]; j++){     // For each non-zero entry within resolution i
-
-      if (row_indices[j] == col_indices[j]) { // Diagonal terms
-        coefficients[j] = rho[i] * (x[j] + kappa[i]);
-      } else {
-        coefficients[j] = rho[i] * x[j];
+  Type coef = 0;        // Variable to store the current element (coefficient) of the matrix
+  
+  // ---- Precision
+  
+  if (K_type == "precision") {
+    
+    // Add kappa[i] diagonals of block i, multiply block i by rho[i]
+    for (int i = 0; i < nres; i++) {                    // For each resolution
+      for (int j = start; j < start + nnz[i]; j++){     // For each non-zero entry within resolution i
+        
+        if (row_indices[j] == col_indices[j]) { // Diagonal terms
+          coef = rho[i] * (x[j] + kappa[i]);
+        } else {
+          coef = rho[i] * x[j];
+        }
+        tripletList.push_back(T(row_indices[j], col_indices[j], coef));
       }
-      tripletList.push_back(T(row_indices[j], col_indices[j], coefficients[j]));
+      start += nnz[i];
     }
-    start += nnz[i];
+    
   }
-
+  
   // Convert triplet list of non-zero entries to a true SparseMatrix.
   SpMat Q(r, r);
   Q.setFromTriplets(tripletList.begin(), tripletList.end());
 
+  // ----- K Matrix 
+
+  if (K_type == "block-exponential") {
+    
+    for (int i = 0; i < nres; i++){         // For each resolution
+      for (int j = start; j < start + nnz[i]; j++){     // For each non-zero entry within resolution i
+        
+        // Construct the covariance (exponential covariance function WITH spherical taper):
+        coef = sigma2[i] * exp( - x[j] / tau[i] ) * pow( 1 - x[j] / alpha[i], 2.0) * ( 1 + x[j] / (2 * alpha[i]));
+        
+        // Add the current element to the triplet list:
+        tripletList.push_back(T(row_indices[j], col_indices[j], coef));
+        
+      }
+      start += nnz[i];
+    }
+    
+  }
+  
+  
+  //  Convert triplet list of non-zero entries to a true SparseMatrix.
+  SpMat K(r, r);
+  K.setFromTriplets(tripletList.begin(), tripletList.end());
+  
 
   // -------- 2. log-determinant of Q, and the 'u' vector -------- //
 
-  // Compute the Cholesky factorisation of Q:
+  // Compute the Cholesky factorisation of Q (or K):
   Eigen::SimplicialLLT< SpMat, Eigen::Lower, Eigen::NaturalOrdering<int> > llt;
-  llt.compute(Q);
+  
+  // Quadratic forms required in Gaussian density
+  Type quadform_xi = pow(sigma2xi, -1.0) * (xi_O * xi_O).sum();
+  Type quadform_eta = 0; 
+  
+  // Log determinant of the prior covariance matrix of the eta random weights
+  Type logdetK = 0;
+  
+  if (K_type == "precision") {
+    llt.compute(Q);
+    
+    // Cholesky factor M (such that MM' = Q, and M is lower triangular):
+    SpMat M = llt.matrixL();
+    
+    // log-determinant of K (K is the inverse of Q):
+    logdetK = - 2.0 * M.diagonal().array().log().sum();
+    
+    // The vector u such that u = M'eta:
+    vector<Type> u(r);
+    u   = (M.transpose()) * (eta.matrix());
+    
+    quadform_eta = (u * u).sum();
+  } 
+  
+  if (K_type == "block-exponential") {
+    llt.compute(K);
+    
+    // Cholesky factor L (such that LL' = K, and L is lower triangular):
+    SpMat L = llt.matrixL();
+    
+    // log-determinant of K:
+    logdetK = 2.0 * L.diagonal().array().log().sum();
+    
+    // The vector v (such that Lv = eta):
+    vector<Type> v(r); 
+    v   = (L.template triangularView<Eigen::Lower>().solve(eta.matrix())).array();
+    
+    quadform_eta = (v * v).sum();
+  }
 
-  // Cholesky factor M (such that MM' = Q, and M is lower triangular):
-  SpMat M = llt.matrixL();
 
-  // determinant term
-  Type det_term_eta  = M.diagonal().array().log().sum();
-
-  // The vector u such that u = M'eta:
-  vector<Type> u(r);
-  u   = (M.transpose()) * (eta.matrix());
 
 
   // -------- 3. Construct ln[eta|Q] and ln[xi|sigma2xi].  -------- //
 
-  // Compute the quadratic forms required in Gaussian density:
-  Type quadform_eta = (u * u).sum();
-  Type quadform_xi = pow(sigma2xi, -1.0) * (xi_O * xi_O).sum();
-
-
   // ln[eta|K] and ln[xi|sigma2xi]:
   // (These quantities are invariant to the link function/response distribution)
-  Type ld_eta =  -0.5 * r * log(2 * M_PI) + det_term_eta - 0.5 * quadform_eta;
+  Type ld_eta =  -0.5 * r * log(2 * M_PI) - 0.5 * logdetK - 0.5 * quadform_eta;
   Type ld_xi  =  -0.5 * m * log(2 * M_PI) - 0.5 * m * log(sigma2xi) - 0.5 * quadform_xi;
 
 

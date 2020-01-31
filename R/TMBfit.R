@@ -36,11 +36,12 @@
 
 
   # ------- Model Compilation -------
-
+  
   obj <- MakeADFun(data = data_params_init$data,
                    parameters = data_params_init$parameters,
                    random = c("eta", "xi_O"),
                    DLL = "FRK")
+
 
 
   # ------ Fitting and Parameter Estimates/Random Effect Predictions ------
@@ -103,14 +104,14 @@
   ## Posterior variance and precision matrix of eta random effects
   r <- nbasis(M)
   M@Q_eta <- Q[1:r, 1:r]
-  M@S_eta <- solve(M@Q_eta)
+  M@S_eta <- chol2inv(chol(M@Q_eta))
   
   ## Compute prior precision or covariance matrix 
   ## based on whether we used the precision or covariance model formulation
   if (M@K_type == "precision") {
     M@Khat_inv <- .sparse_Q_block_diag(df = M@basis@df, 
-                                       kappa = exp(estimates$logkappa), 
-                                       rho = exp(estimates$logrho))$Q
+                                       kappa = exp(estimates$logsigma2), 
+                                       rho = exp(estimates$logtau))$Q
     M@Khat <- solve(M@Khat_inv)
   } else if (M@K_type == "block-exponential") {
     M@Khat <- .K_tap_matrix(M@D_basis,
@@ -151,34 +152,38 @@
   X    <- as.matrix(M@X)          
   S    <- as(M@S, "sparseMatrix")
 
-
-
   ## Common to all
   data    <- list(Z = Z, X = X, S = S,
                   ri = as.vector(table(M@basis@df$res)), # Size of each "block": number of basis functions for each resolution
                   sigma2e = M@Ve[1, 1], 
+                  K_type = K_type,
                   response = response, 
                   link = link,
                   k_Z = k_Z)
   
   ## Data which depend on K_type
   if (K_type == "block-exponential") {
-
-    TaperValues  <- .cov_tap(M@D_basis, taper = taper)
-    data$D       <- Matrix::bdiag(M@D_basis)
-    data$alpha   <- TaperValues$alpha
-    data$nnz_tap <- TaperValues$nnz_tap
+    
+    # TaperValues  <- .cov_tap(M@D_basis, taper = taper)
+    # data$D       <- Matrix::bdiag(M@D_basis)
+    # data$alpha   <- TaperValues$alpha
+    # data$nnz     <- TaperValues$nnz
+    
+    temp         <- .cov_tap(M@D_basis, taper = taper)
+    data$alpha   <- temp$alpha
+    R            <- as(temp$D_tap, "dgTMatrix")
 
   } else if (K_type == "precision") {
-
     temp <- .sparse_Q_block_diag(M@basis@df, kappa = 0, rho = 1)
+    data$alpha   <- rep(0, 3) # Dummy values as we must supply something to TMB
     R <- as(temp$Q, "dgTMatrix")
-    data$row_indices = R@i
-    data$col_indices = R@j
-    data$x = R@x
-    data$nnz = temp$nnz
-
   }
+  
+  data$nnz         <- temp$nnz
+  data$row_indices <- R@i
+  data$col_indices <- R@j
+  data$x           <- R@x
+  
 
   # ---- Parameter and random effect initialisations. ----
 
@@ -227,24 +232,19 @@
   } else {
     parameters$logphi <- log(data$sigma2e)
   }
+  
+  parameters$logsigma2      <- log(exp(parameters$logsigma2xi) * (0.1)^(0:(nres - 1)))
+  parameters$logtau         <- log((1 / 3)^(1:nres))
 
   if (K_type == "block-exponential") {
-    parameters$logsigma2        <- log(exp(parameters$logsigma2xi) * (0.1)^(0:(nres - 1)))
-    parameters$logtau           <- log((1 / 3)^(1:nres))
-
     ## Tapered prior covariance matrix (required for eta initialisation)
     KInit <- .K_tap_matrix(M@D_basis,
                            alpha = data$alpha,
                            sigma2 =  exp(parameters$logsigma2),
                            tau = exp(parameters$logtau))
-
   } else if (K_type == "precision") {
-    parameters$logrho           <- log(exp(parameters$logsigma2xi) * (0.1)^(0:(nres - 1)))
-    parameters$logkappa         <- log((1 / 3)^(1:nres))
-
     ## Prior covariance matrix (required for eta initialisation)
     KInit <- solve(as(R, "sparseMatrix") + Matrix::sparseMatrix(i = 1:r, j = 1:r, x = 0.5))
-
   }
 
   ## Initialise the random effects
@@ -276,8 +276,8 @@
 #' @return A list containing:
 #' \describe{
 #'   \item{alpha}{A vector of taper parameters.}
-#'   \item{nnz_tap}{A vector containing the number of non-zeros in each block.
-#' of the tapered prior covariance matrix, K_tap.}
+#'   \item{nnz}{A vector containing the number of non-zeros in each block of the 
+#'   tapered prior covariance matrix, K_tap.}
 #' }
 #' @seealso \code{\link{.K_matrix}}
 .cov_tap <- function(D_matrices, taper = 8){
@@ -287,17 +287,30 @@
 
   ## Minimum distance between neighbouring basis functions.
   ## (add a large number to the diagonal, which would otherwise be 0)
+  ## FIX: This approach is flawed. What if we have a very skinny rectangle for the domain of interest?
   minDist <- vector()
-  for(i in 1:nres) minDist[i] <- min(D_matrices[[i]] + 10^5 * diag(ri[i]))
+  for(i in 1:nres) minDist[i] <- min(D_matrices[[i]] + 10^8 * diag(ri[i]))
 
   ## Taper parameters
   alpha   <- taper * minDist
+  
+  ## Construct D matrix with elements set to zero after tapering
+  D_tap <- list()
+  nnz <- c()
+  for (i in 1:nres) {
+    indices    <- D_matrices[[i]] < alpha[i]
+    D_tap[[i]] <- as(D_matrices[[i]] * indices, "sparseMatrix")
+    
+    # Add explicit zeros
+    D_tap[[i]] <- D_tap[[i]] + sparseMatrix(i = 1:ri[i], j = 1:ri[i], x = 0) 
+    
+    # Number of non-zeros in tapered covariance matrix at each resolution
+    nnz[i] <- length(D_tap[[i]]@x) # Note that this approach DOES count explicit zeros
+  }
 
-  ## Number of non-zeros in tapered covariance matrix
-  nnz_tap <- 0
-  for (i in 1:nres) nnz_tap <- nnz_tap + sum(D_matrices[[i]] < alpha[i])
+  D_tap <- Matrix::bdiag(D_tap)
 
-  return(list("alpha" = alpha, "nnz_tap" = nnz_tap))
+  return(list("alpha" = alpha, "nnz" = nnz, "D_tap" = D_tap))
 }
 
 
@@ -531,7 +544,7 @@
     Q_matrices[[i]] <- .sparse_Q(A = A_i,
                                  kappa = kappa[i],
                                  rho = rho[i])
-    nnz[i] <- Matrix::nnzero(Q_matrices[[i]])
+    nnz[i] <- Matrix::nnzero(Q_matrices[[i]]) # note that nnzero does not count explicit zeros
   }
 
   ## Block diagonal
