@@ -240,7 +240,19 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     Z <- do.call("rbind",Z)
     Ve <- do.call("bdiag",Ve)
     Vfs <- do.call("bdiag",Vfs)
-    if(response %in% c("binomial", "negative-binomial")) k <- do.call("rbind",k)
+    if(response %in% c("binomial", "negative-binomial")) {
+        k <- do.call("rbind",k)
+        
+        ## Also round the observations and k parameter.
+        ## The approach of averaging observations and constant parameters which
+        ## fell in the same BAU is not ideal, as we lose information. 
+        ## Preferably, we should add both the Z values  and k values of 
+        ## observations which fell into the same BAU. 
+        Z <- round(Z)
+        k <- round(k)
+    } else if (response == "poisson") {
+        Z <- round(Z)
+    }
     
     
     ## Initialise the expectations and covariances from E-step to reasonable values
@@ -398,9 +410,15 @@ print.SRE <- function(x,...) {
         fs_var = x@sigma2fshat,
         dimC = deparse(dim(x@Cmat)),
         dimS = deparse(dim(x@S)),
-        ncovars = ncol(x@X))
+        ncovars = ncol(x@X), 
+        response = x@response, 
+        link = x@link, 
+        method = x@method)
 
     cat("Formula:",print_list$formula,"\n")
+    cat("Assumed response distribution:",print_list$response,"\n")
+    cat("Specified link function:",print_list$link,"\n")
+    cat("Method of model fitting:",print_list$method,"\n")
     cat("Number of datasets:",print_list$ndatasets,"\n")
     cat("Number of basis functions:",print_list$nbasis,"\n")
     cat("Class of basis functions:",print_list$basis_class,"\n")
@@ -420,7 +438,10 @@ summary.SRE <- function(object,...) {
         summ_Kdiag = summary(diag(object@Khat)),
         summ_mueta = summary(object@mu_eta[,1]),
         summ_vareta = summary(diag(object@S_eta)),
-        reg_coeff = deparse(as.vector(object@alphahat)))
+        summ_muxi_O = summary(object@mu_xi_O[, 1]),
+        finescale_var = deparse(as.vector(object@sigma2fshat)),
+        reg_coeff = deparse(as.vector(object@alphahat)) 
+        )
     class(summ_list) <- "summary.SRE"
     summ_list
 }
@@ -456,7 +477,11 @@ print.summary.SRE <- function(x, ...) {
     cat("\n")
     cat("Summary of Var(eta | Z) [extract using object@S_eta]: \n")
     print(x$summ_vareta)
-    cat("\n")
+    cat("\n")    
+    cat("Summary of E(xi_O | Z) [extract using object@mu_xi_O]: \n")
+    print(x$summ_muxi_O)
+    cat("\n")    
+    cat("Fine-scale variance estimate [extract using object@sigma2fshat]:", x$finescale_var, "\n")
     cat("Regression coefficients [extract using object@alpha]:",x$reg_coeff,"\n")
     cat("For object properties use show().\n")
     invisible(x)

@@ -59,35 +59,24 @@
 
   # ------ Joint precision/covariance matrix of random effects ------
 
-  ## The precision matrix provided by sdreport() is the joint precision matrix
-  ## of the fixed parameters AND the random effects.
-  ## However, we only want the block corresponding to the random effects.
-  ## Note, that the ordering of the precision matrix follows the original
-  ## order supplied to TMB i.e. unique(names(obj$env$par)).
-
-
+  ## TMB treats all parameters (fixed effects, variance components, 
+  ## and random effects) as random quantities, and so the joint precision matrix
+  ## obtained using sdreport(obj, getJointPrecision = TRUE) contains the precision
+  ## for fixed and random effects. 
+  ## However, we assume the regression parameters and variance components are fixed 
+  ## effects, NOT random quantities, and so they should not have a precision associated
+  ## to them. We overcome this by considering the fixed effects as random during the 
+  ## fitting process, and then condition on theta = \hat{theta}, the ML estimate. 
+  
   # ## Joint precision matrix of fixed AND random effects
   # report <- sdreport(obj, getJointPrecision = TRUE, skip.delta.method = TRUE)
   # Q <- report$jointPrecision
-  # 
   # ## Subset the random block
-  # ## The parameters and fixed effects should not be included as random variables,
-  # ## so we remove them from the precision matrix BEFORE inverting.
   # Q <- Q[row.names(Q) %in% c("eta", "xi_O"), row.names(Q) %in% c("eta", "xi_O")]
-  
-  # ## Other code which may be of use
-  # ## For cases in which the dispersion parameter does not change, remove it from Q.
-  # if (response %in% c("gaussian", "poisson", "bernoulli", "binomial", "negative-binomial")) {
-  #   idx <- which(rownames(Q) == "logphi")
-  #   Q <- Q[-idx, -idx]
-  # }
-  
-  ## FROM KASPER: 
-  ## The precision matrix of random effects given the fixed effects is calculated inside sdreport as:
-  ## This is good because now I don't even need to call sdreport().
+
+  ## Precision matrix of the random effects only
   Q <- obj$env$spHess(par = obj$env$last.par.best, random = TRUE)
   
-
   ## Update the slots of M
   ## Convert to Matrix as these SRE slots require class "Matrix"
   M@alphahat <- as(estimates$beta, "Matrix")
@@ -103,22 +92,28 @@
 
   ## Posterior variance and precision matrix of eta random effects
   r <- nbasis(M)
-  M@Q_eta <- Q[1:r, 1:r]
-  M@S_eta <- chol2inv(chol(M@Q_eta))
+  M@Q_eta <- Q[1:r, 1:r] # Don't need it, but this matrix is easily obtained, so provide anyway
+  M@S_eta <- Matrix()    # Don't need this matrix so set it to NA. It is also not easily obtained because to obtain it we need to invert the joint precision matrix Q_eta_xi, which may be very large.
   
   ## Compute prior precision or covariance matrix 
   ## based on whether we used the precision or covariance model formulation
   if (M@K_type == "precision") {
-    M@Khat_inv <- .sparse_Q_block_diag(df = M@basis@df, 
-                                       kappa = exp(estimates$logsigma2), 
-                                       rho = exp(estimates$logtau))$Q
-    M@Khat <- solve(M@Khat_inv)
+    # temp <- .sparse_Q_block_diag(df = M@basis@df, 
+    #                              kappa = exp(estimates$logsigma2), 
+    #                              rho = exp(estimates$logtau))
+    # M@Khat_inv <- temp$Q
+    # M@Khat <- chol2inv(chol(M@Khat)) # NOTE: this matrix is not needed at anypoint in model fitting or prediction
+    M@Khat_inv <- Matrix()
+    M@Khat <- Matrix()
+    
   } else if (M@K_type == "block-exponential") {
-    M@Khat <- .K_tap_matrix(M@D_basis,
-                            alpha = data_params_init$data$alpha,
-                            sigma2 =  exp(estimates$logsigma2),
-                            tau = exp(estimates$logtau))
-    M@Khat_inv <- solve(M@Khat)
+    # M@Khat <- .K_tap_matrix(M@D_basis,
+    #                         alpha = data_params_init$data$alpha,
+    #                         sigma2 =  exp(estimates$logsigma2),
+    #                         tau = exp(estimates$logtau))
+    # M@Khat_inv <- chol2inv(chol(M@Khat)) # NOTE: this matrix is not needed at anypoint in model fitting or prediction
+    M@Khat <- Matrix()
+    M@Khat_inv <- Matrix()
   }
   
   return(M)
