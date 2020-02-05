@@ -204,7 +204,9 @@
     Z0[Z == k_Z] <- k_Z[Z == k_Z] - 0.1
   } else if (response == "bernoulli" & link %in% c("logit", "probit", "cloglog")) {
     Z0 <- Z + 0.05 * (Z == 0) - 0.05 * (Z == 1)
-  }
+  } else if (link %in% c("inverse-squared", "inverse")) {
+    Z0 <- Z + 0.05 * (Z == 0)
+  } 
 
   ## Transformed data
   if (response %in% c("binomial", "negative-binomial") & link %in% c("logit", "probit", "cloglog")) {

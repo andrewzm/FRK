@@ -352,9 +352,18 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     ## The user can either provide k in M@BAUs$k or in the predict call. 
     ## This is so that the user can change k without having to call SRE() and SRE.fit() again.
     ## The k supplied in predict() will take precedence over the k stored in M@BAUs$k.
-    if (is.null(k)) {
-        k <- SRE_model@BAUs$k
+    if (SRE_model@response %in% c("binomial", "negative-binomial")){
+        if (is.null(k)) {
+            if (!is.null(SRE_model@BAUs$k)) {
+                k <- SRE_model@BAUs$k
+                warning("Prespecified BAU level k being used for prediction i.e. SRE_object@BAUs$k.")
+            } else {
+                k <- 1
+                warning("k not provided for prediction: assuming k is equal to 1 for all BAUs.")
+            }
+        } 
     }
+    
 
     ## Check the arguments are OK
     .check_args3(obs_fs = obs_fs, newdata = newdata, pred_polys = pred_polys,
@@ -1678,9 +1687,6 @@ print.summary.SRE <- function(x, ...) {
         if (SRE_model@response %in% c("binomial", "negative-binomial")) {
             if(length(k) == 1){
                 warning("Single number k provided for all BAUs: assuming k is invariant over the whole spatial domain.")
-            } else if (is.null(k)) {
-                k <- 1
-                warning("k not provided for prediction: assuming k is equal to 1 for all BAUs.")
             } else if (!(class(k) %in% c("numeric", "integer"))) {
                 stop("k must contain only positive integers.")
             } else if (any(k <= 0) | any(k != round (k))) {
