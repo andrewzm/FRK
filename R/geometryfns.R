@@ -1230,10 +1230,10 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
 setMethod("map_data_to_BAUs",signature(data_sp="SpatialPixels"),
           function(data_sp,sp_pols,average_in_BAU = TRUE) {
               coordlabels <- coordnames(data_sp)
-              if(is(data_sp, "SpatialPixels")) {
-                  data_sp <- as(data_sp, "SpatialPolygons")
-              } else {
+              if(is(data_sp, "SpatialPixelsDataFrame")) {
                   data_sp <- as(data_sp, "SpatialPolygonsDataFrame")
+              } else {
+                  data_sp <- as(data_sp, "SpatialPolygons")
               }
               coordnames(data_sp) <- coordlabels
               map_data_to_BAUs(data_sp, sp_pols, average_in_BAU = average_in_BAU)
@@ -1379,8 +1379,21 @@ setMethod("BuildC",signature(data="SpatialPolygons"),
               BAU_as_points <- SpatialPoints(coordinates(BAUs))   # convert BAUs to SpatialPoints
               i_idx <- j_idx <-  NULL                             # initialise
               for (i in 1L:length(data)) {                        # for each data point
+
                   this_poly <- SpatialPolygons(list(data@polygons[[i]]),1L) # extract polygon
+
+                  ## If data area spans one or more BAU centroids
                   overlap <- which(over(BAU_as_points,this_poly) == 1)      # see which BAUs are overlapped
+
+                  ## If data does not overlap any BAU centroid, then the area
+                  ## is very small -- simply find which polygon this data point falls in
+                  if(length(overlap) == 0) {
+                      crs <- CRS(proj4string(BAUs))
+                      datum_as_point <- SpatialPoints(this_poly, proj4string = crs)
+                      overlap <- over(datum_as_point, BAUs)$n
+                  }
+
+                  
                   i_idx <- c(i_idx,rep(i,length(overlap)))                  # the row index is the data number repeated
                   j_idx <- c(j_idx,as.numeric(overlap))                     # the column index is the BAU number
               }
@@ -1416,7 +1429,8 @@ setMethod("BuildC",signature(data="STFDF"),
               ## Since data is STFDF, the C matrix for one time points can be found and then
               ## replicated. Without loss of generality, the one-time-point C matrix is found
               ## by mapping the first time point data with the first time point BAU
-              C_one_time <- BuildC(data[,1],
+              data_poly <- as(data[, 1], "SpatialPolygonsDataFrame")
+              C_one_time <- BuildC(data_poly,
                                    BAUs[,1])
 
               ## The first row and column indices are those returned by the spatial BuildC
@@ -1435,14 +1449,18 @@ setMethod("BuildC",signature(data="STFDF"),
 
                   ## If data is covering more than one time point throw error (currently we do not cater)
                   ## for temporal change of support, and all data is assumed to occupy just one temporal BAU
-                  if(!length(overlap_time) == 1L)
+                  if(length(overlap_time) > 1L)
                       stop("Something is wrong in binning polygon data into BAUs.
-                           Note that currently we don't support temporal change of support.")
+                           Note that currently we don't support temporal change of support.
+                           Each datum can correspond to a spatial area for each time point
+                           but not a spatio-temporal volume.")
 
-                  t_idx <- as.numeric(BAUs@time[k])            # find the appropriate time index
-                  j_idx <- c(j_idx, (t_idx-1)*nrow(BAUs) + j)  # find the appropriate column indices and append
-                  i_idx <- c(i_idx, count*nrow(data) + i)      # row indices are simply shifted by
-                  # the amount of spatial locations in the data
+                  if(length(overlap_time) == 1L) {
+                      t_idx <- as.numeric(BAUs@time[k])            # find the appropriate time index
+                      j_idx <- c(j_idx, (t_idx-1)*nrow(BAUs) + j)  # find the appropriate column indices and append
+                      i_idx <- c(i_idx, count*nrow(data) + i)      # row indices are simply shifted by
+                                        # the amount of spatial locations in the data
+                  }
                   count <- count + 1                           # increment count
               }
               list(i_idx=i_idx,j_idx=j_idx)                     # return the (i,j) indices of nonzeros
