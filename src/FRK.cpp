@@ -5,6 +5,34 @@
 template<class Type>
 Type objective_function<Type>::operator() ()
 {
+  
+  /* Steps in constructing the model:
+   *
+   * 0. Read in data, and parameter initialisations.
+   *      - Measure variance components on log-scale to force postive estimate
+   *      - Also define two 'typedefs' to simplify code later.
+   *
+   * 1. Construct K or Q, depending on the spcified K_type.
+   *      - K is the (tapered) prior covariance matrix of eta.
+   *      - Q is the prior precision matrix of eta
+   *
+   * 2. Compute the log-determinant of K or Q, and the 'v'-vector
+   *
+   * 3. Construct ln[eta|K] and ln[xi|sigma2xi].
+   *
+   * 4. Construct ln[Z|Y_O]
+   *      - Construct Y_O, the latent process at observed locations
+   *      - Link the conditional mean m_O to Y_O
+   *      - Create canonincal parameter lambda, and other exp. family functions
+   *      - Construct ln[Z|Y_O]
+   *
+   * 5. Construct objective function:
+   *
+   *      ln[Z, eta, xi | ...] =  ln[Z|Y_O] + ln[eta|K] + ln[xi|sigma2xi]
+   *
+   *      Specify the NEGATIVE log joint-density (R routines minimise by default).
+   *
+   */
 
   // typedef's:
   typedef Eigen::SparseMatrix<Type> SpMat;    // Sparse matrices called 'SpMat'
@@ -110,7 +138,7 @@ Type objective_function<Type>::operator() ()
   K.setFromTriplets(tripletList.begin(), tripletList.end());
   
 
-  // -------- 2. log-determinant of Q, and the 'u' vector -------- //
+  // -------- 2. log-determinant and the 'u' vector -------- //
 
   // Compute the Cholesky factorisation of Q (or K):
   Eigen::SimplicialLLT< SpMat, Eigen::Lower, Eigen::NaturalOrdering<int> > llt;

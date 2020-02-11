@@ -4,13 +4,13 @@
 #' @inheritParams .MC_sampler
 #' @param type A character string (possibly vector) indicating the quantities for which predictions and prediction uncertainty is desired.
 #' If \code{"link"} is in \code{type}, the latent \eqn{Y} process is included; 
-#' If \code{"mean"} is in \code{type}, the conditonal mean \eqn{\mu} is included (and the probability parameter if applicable);
+#' If \code{"mean"} is in \code{type}, the conditional mean \eqn{\mu} is included (and the probability parameter if applicable);
 #' If \code{"response"} is in \code{type}, the response variable \eqn{Z} is included. 
 #' Any combination of these character strings can be provided. For example, if \code{type = c("link", "response")}, then predictions of the latent \eqn{Y} process and the response variable \eqn{Z} are provided.
 #' @return A list object containing:
 #' \describe{
-#'   \item{newdata}{A dataframe with predictions and prediction uncertainty at each prediction location of the latent \eqn{Y} process, the conditional mean of the data \eqn{\mu}, the probability of success parameter \eqn{p} (if applicable), and the response variable \eqn{Z}. The dataframe also contains percentiles of each term.}
-#'   \item{MC}{A list with each element being an \code{N * n_MC} matrix of Monte Carlo samples of the quantities specifed by \code{type} (some combination of \eqn{Y}, \eqn{\mu}, \eqn{p} (if applicable), and \eqn{Z}) at each prediction location.}
+#'   \item{newdata}{A dataframe with predictions and prediction uncertainty at each prediction location of the latent \eqn{Y} process, the conditional mean of the data \eqn{\mu}, the probability of success parameter \eqn{\pi} (if applicable), and the response variable \eqn{Z}. The dataframe also contains percentiles of each term.}
+#'   \item{MC}{A list with each element being an \code{N * n_MC} matrix of Monte Carlo samples of the quantities specified by \code{type} (some combination of \eqn{Y}, \eqn{\mu}, \eqn{p} (if applicable), and \eqn{Z}) at each prediction location.}
 #' }
 #' Note that for all link functions other than the log-link and identity-link, the predictions and prediction uncertainty of \eqn{\mu} contained in \code{newdata} are computed using the Monte Carlo samples contained in \code{MC}.
 #' When the log- or identity-link functions are used the expectation and variance of the \eqn{\mu} may be computed exactly.
@@ -116,7 +116,7 @@
   if ("response" %in% type){
     newdata$p_Z <- p_mu 
     newdata$RMSPE_Z <- sqrt(.rowVars(MC$Z_samples))
-    newdata <- .concat_percentiles_to_df(samples = MC$Z_samples, df = newdata, "Z")
+    newdata <- .concat_percentiles_to_df(samples = MC$Z_samples, df = newdata, "Z") 
   }
 
 
@@ -161,12 +161,15 @@
   
   ## Permuted Cholesky factor
   Q_L <- sparseinv:::cholPermute(Q = Q)
-  
+
   ## Sparse-inverse-subset of fixed AND random effects
   ## (a proxy for the covariance matrix)
   Sigma <- sparseinv::Takahashi_Davis(Q = Q,
                                       cholQp = Q_L$Qpermchol,
                                       P = Q_L$P)
+  
+  Sigma <- chol2inv(chol(Q))
+  warning("Using direct inverse.")
 
   Sigma_eta   <- Sigma[1:r, 1:r]
   Sigma_xi    <- Sigma[(r + 1):(r + m), (r + 1):(r + m)]
@@ -222,7 +225,7 @@
 #' If \code{"response"} is in \code{type}, the response variable \eqn{Z} samples, and the samples of all other quantities are provided. 
 #' @param n_MC A postive integer indicating the number of MC samples at each location.
 #' @param obs_fs Logical indicating whether the fine-scale variation is included in the latent Y process. 
-#' @param k vector of known constant parameters at each BAU (applicable only for binomial and negative-binomial).
+#' @param k vector of size parameters parameters at each BAU (applicable only for binomial and negative-binomial data).
 #' If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{\xi} is included in the latent \eqn{Y} process. 
 #' If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}. 
 #' @param seed A seed for reproducibility.

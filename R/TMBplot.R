@@ -1,9 +1,7 @@
 ## Plotting functions
 
-# Base it on the names of the supplied data frame 
-# i.e. if ("p_mu" %in% colnames(df)) Then plot the mean 
-# etc.
-# potentially also supply M@response so we can provide discrete scales for bernoulli
+
+# Potentially supply M@response so we can provide discrete scales for bernoulli
 
 
 #' Plot non-Gaussian data and predictions.
@@ -37,14 +35,12 @@
       plots$interval_90_mu <-  .plot_map(newdata, x = x, y = y, col = "interval_90", uncertaintyMap = TRUE) + labs(fill = expression("90% Central \nInterval Width:" ~ mu))
     }
     
-    
     if ("p_prob" %in% names(newdata)) plots$p_prob <- .plot_map(newdata, x = x, y = y, col = "p_prob", diverging = TRUE, midpoint = 0.5) + labs(fill = expression(widehat(p)[pi]["|"][bold(Z)]))
     if ("RMSPE_prob" %in% names(newdata)) plots$RMSPE_prob <- .plot_map(newdata, x = x, y = y, col = "RMSPE_prob", uncertaintyMap = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[pi]["|"][bold(Z)], pi))))
     if (all(c("prob_percentile_05","prob_percentile_95") %in% names(newdata))) {
       newdata$interval_90 <- newdata$prob_percentile_95 - newdata$prob_percentile_05 
       plots$interval_90_prob <-  .plot_map(newdata, x = x, y = y, col = "interval_90", uncertaintyMap = TRUE) + labs(fill = expression("90% Central \nInterval Width:" ~ pi))
     }    
-    
     
     if ("p_Z" %in% names(newdata)) plots$p_Z <- .plot_map(newdata, x = x, y = y, col = "p_Z") + labs(fill = expression(widehat(p)[Z]["|"][bold(Z)])) 
     # if ("p_Z_empirical" %in% names(newdata)) plots$p_Z_empirical <- .plot_map(newdata, col = "p_Z_empirical") + labs(fill = expression(widehat(p)[Z]["|"][bold(Z)]~" (empirical)"))
@@ -53,11 +49,8 @@
       newdata$interval_90 <- newdata$Z_percentile_95 - newdata$Z_percentile_05 
       plots$interval_90_Z <-  .plot_map(newdata, x = x, y = y, col = "interval_90", uncertaintyMap = TRUE) + labs(fill = expression("90% Central \nInterval Width:" ~ Z))
     }    
-    
   }
 
-  
-  
   return(plots)
 }
 
@@ -122,7 +115,7 @@
   ## Colour scale
   if (uncertaintyMap == TRUE & diverging == TRUE) {
     p <- p + scale_fill_gradient2(low = "#01665E", mid = "white", midpoint = midpoint, high = "#8C510A", limits = lim)
-  } else if (uncertaintyMap == T) {
+  } else if (uncertaintyMap == TRUE) {
     p <- p + scale_fill_distiller(palette = "BrBG", direction = -1, limits = lim)
   } else if (diverging == TRUE) {
     p <- p + scale_fill_gradient2(low = low, mid = mid, midpoint = midpoint, high = high, limits = lim)

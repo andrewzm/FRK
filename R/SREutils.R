@@ -24,12 +24,12 @@
 #' @param average_in_BAU if \code{TRUE}, then multiple data points falling in the same BAU are averaged; the measurement error of the averaged data point is taken as the average of the individual measurement errors
 #' @param fs_model if "ind" then the fine-scale variation is independent at the BAU level. If "ICAR", then an ICAR model for the fine-scale variation is placed on the BAUs
 #' @param vgm_model an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm}. This object contains the variogram model that will be fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified, the variogram used is \code{gstat::vgm(1, "Lin", d, 1)}, where \code{d} is approximately one third of the maximum distance between any two data points
-#' @param K_type the parameterisation used for the \code{K} matrix. Currently this can be "unstructured" or "block-exponential" (default)
+#' @param K_type the parameterisation used for the \code{K} matrix. If the EM algorithm is used, \code{K_type} can be "unstructured" or "block-exponential". If TMB is used \code{K_type} can be "precision" or "block-exponential". The default is "block-exponential"
 #' @param normalise_basis flag indicating whether to normalise the basis functions so that they reproduce a stochastic process with approximately constant variance spatially
 #' @param SRE_model object returned from the constructor \code{SRE()} containing all the parameters and information on the SRE model
 #' @param n_EM maximum number of iterations for the EM algorithm
 #' @param tol convergence tolerance for the EM algorithm
-#' @param method parameter estimation method to employ. Currently only ``EM'' and ``TMB'' is supported
+#' @param method parameter estimation method to employ. Currently only "EM" and "TMB" is supported
 #' @param lambda ridge-regression regularisation parameter for when \code{K} is unstructured (0 by default). Can be a single number, or a vector (one parameter for each resolution)
 #' @param print_lik flag indicating whether likelihood value should be printed or not after convergence of the EM estimation algorithm
 # #' @param use_centroid flag indicating whether the basis functions are averaged over the BAU, or whether the basis functions are evaluated at the BAUs centroid in order to construct the matrix \eqn{S}. The flag can safely be set when the basis functions are approximately constant over the BAUs in order to reduce computational time
@@ -39,6 +39,9 @@
 #' @param pred_polys deprecated. Please use \code{newdata} instead
 #' @param pred_time vector of time indices at which prediction will be carried out. All time points are used if this option is not specified
 #' @param covariances logical variable indicating whether prediction covariances should be returned or not. If set to \code{TRUE}, a maximum of 4000 prediction locations or polygons are allowed.
+#' @param response A character string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "bernoulli", "gamma","inverse-gaussian", "negative-binomial", or "binomial".
+#' @param link A character string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted. 
+#' @param taper A positive numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "block-exponential"} and \code{TMB} is used to fit the data)
 #' @param ... other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling the function \code{FRK}
 #' @details \code{SRE()} is the main function in the package: It constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of Basic Areal Units (BAUs). The function first takes each object in the list \code{data} and maps it to the BAUs -- this entails binning the point-referenced data into the BAUs (and averaging within the BAU) if \code{average_in_BAU = TRUE}, and finding which BAUs are influenced by the polygon datasets. Following this, the incidence matrix \code{Cmat} is constructed, which appears in the observation model \eqn{Z = CY + C\delta + e}, where \eqn{C} is the incidence matrix and \eqn{\delta} is systematic error at the BAU level.
 #'
@@ -107,7 +110,7 @@
 #'  print(g1)}
 SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                 fs_model = "ind", vgm_model = NULL, K_type = "block-exponential", normalise_basis = TRUE, 
-                response = "gaussian", link = "identity", taper = 8, ...) {
+                response = "gaussian", link = "identity", taper = 4, ...) {
 
     ## Strings that must be lower-case
     response  <- tolower(response)
@@ -1555,7 +1558,7 @@ print.summary.SRE <- function(x, ...) {
                          response = c("gaussian", "poisson", "bernoulli", "gamma",
                                       "inverse-gaussian", "negative-binomial", "binomial"), 
                          link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"), 
-                         taper = 8) {
+                         taper = 4) {
     
     if(!is(f,"formula")) stop("f needs to be a formula.")
     if(!is(data,"list"))
