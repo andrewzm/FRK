@@ -8,7 +8,6 @@
 \alias{data.frame<-,Basis-method}
 \alias{data.frame_Basis,Basis-method}
 \alias{data.frame<-,TensorP_Basis-method}
-\alias{data.frame_Basis,Basis-method}
 \alias{as.data.frame.Basis}
 \alias{as.data.frame.TensorP_Basis}
 \title{Basis-function data frame object}

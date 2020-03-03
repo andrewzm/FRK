@@ -12,18 +12,18 @@
 \usage{
 FRK(f, data, basis = NULL, BAUs = NULL, est_error = TRUE,
   average_in_BAU = TRUE, fs_model = "ind", vgm_model = NULL,
-  K_type = "block-exponential", n_EM = 100, tol = 0.01, method = "EM",
-  lambda = 0, print_lik = FALSE, ...)
+  K_type = "block-exponential", n_EM = 100, tol = 0.01,
+  method = "EM", lambda = 0, print_lik = FALSE, ...)
 
 SRE(f, data, basis, BAUs, est_error = TRUE, average_in_BAU = TRUE,
   fs_model = "ind", vgm_model = NULL, K_type = "block-exponential",
   normalise_basis = TRUE)
 
-SRE.fit(SRE_model, n_EM = 100L, tol = 0.01, method = "EM", lambda = 0,
-  print_lik = FALSE)
+SRE.fit(SRE_model, n_EM = 100L, tol = 0.01, method = "EM",
+  lambda = 0, print_lik = FALSE)
 
-SRE.predict(SRE_model, obs_fs = FALSE, newdata = NULL, pred_polys = NULL,
-  pred_time = NULL, covariances = FALSE)
+SRE.predict(SRE_model, obs_fs = FALSE, newdata = NULL,
+  pred_polys = NULL, pred_time = NULL, covariances = FALSE)
 
 \S4method{predict}{SRE}(object, newdata = NULL, obs_fs = FALSE,
   pred_polys = NULL, pred_time = NULL, covariances = FALSE)

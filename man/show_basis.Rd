@@ -9,8 +9,8 @@
 \usage{
 show_basis(basis, ...)
 
-\S4method{show_basis}{Basis}(basis, g = ggplot() + theme_bw() + xlab("") +
-  ylab(""))
+\S4method{show_basis}{Basis}(basis, g = ggplot() + theme_bw() + xlab("")
+  + ylab(""))
 
 \S4method{show_basis}{TensorP_Basis}(basis, g = ggplot())
 }

@@ -6,7 +6,6 @@
 \alias{nres,Basis-method}
 \alias{nres_basis,Basis-method}
 \alias{nres,TensorP_Basis-method}
-\alias{nres_basis,Basis-method}
 \alias{nres,SRE-method}
 \alias{nres_SRE,SRE-method}
 \title{Return  the number of resolutions}
