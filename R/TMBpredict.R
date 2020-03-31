@@ -168,8 +168,8 @@
                                       cholQp = Q_L$Qpermchol,
                                       P = Q_L$P)
   
-  Sigma <- chol2inv(chol(Q))
-  warning("Using direct inverse.")
+  # Sigma <- chol2inv(chol(Q))
+  # warning("Using direct inverse.")
 
   Sigma_eta   <- Sigma[1:r, 1:r]
   Sigma_xi    <- Sigma[(r + 1):(r + m), (r + 1):(r + m)]
