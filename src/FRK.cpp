@@ -33,11 +33,11 @@ Type objective_function<Type>::operator() ()
    *      Specify the NEGATIVE log joint-density (R routines minimise by default).
    *
    */
-
+  
   // typedef's:
   typedef Eigen::SparseMatrix<Type> SpMat;    // Sparse matrices called 'SpMat'
   typedef Eigen::Triplet<Type> T;             // Triplet lists called 'T'
-
+  
   // Data
   DATA_VECTOR(Z);             // Vector of observations
   DATA_MATRIX(X);             // Design matrix of fixed effects
@@ -52,49 +52,65 @@ Type objective_function<Type>::operator() ()
   DATA_VECTOR(alpha);         // Tapering parameters (only relevant for block-exponential formulation)
   DATA_IVECTOR(row_indices);
   DATA_IVECTOR(col_indices);
-  DATA_VECTOR(x);
-  DATA_IVECTOR(nnz);          // Integer vector indicating the number of non-zeros at each resolution of the K_tap or Q
-
+  DATA_VECTOR(x);             
+  DATA_IVECTOR(nnz);          // Integer vector indicating the number of non-zeros at each resolution of K_tap or Q
+  
+  // Need a vector of parameters
+  
+  
   int m    = Z.size();       // Sample size
   int nres = ri.size();      // Number of resolutions
   int r    = ri.sum();
   int nnz_total = nnz.sum(); // Total number of non-zero elements in Q or K_tap
-
+  
   // Parameters                   // Transformed Parameters
   PARAMETER_VECTOR(beta);
   PARAMETER(logsigma2xi);         Type sigma2xi       = exp(logsigma2xi);
   PARAMETER(logphi);              Type phi            = exp(logphi);
-
   
+  // basis function variance components 
+  // FIX: Currently I am using different names for these terms for each K_type method. 
   PARAMETER_VECTOR(logsigma2);    vector<Type> sigma2 = exp(logsigma2);
   PARAMETER_VECTOR(logtau);       vector<Type> tau    = exp(logtau);
   vector<Type> rho    = tau;
   vector<Type> kappa  = sigma2;
-
+  // vector<Type> rho_c = tau;
+  // vector<Type> rho_r = sigma2;
+  
   // Latent random effects
   PARAMETER_VECTOR(eta);
   PARAMETER_VECTOR(xi_O);
-
-
+  
+  
   // ---- 1. Construct prior covariance matrix K or precision matrix Q  ---- //
+  
 
-  // NOTE: we cannot declare objects inside if() statements if those objects are also 
-  // used outside the if() statement. We ARE allowed to declare objects inside if() statements
-  // if they are not used outside of this if() statement at any other point in the template.
   
   // Construct Q or K as a sparse matrix: use triplet list (row, column, value)
   std::vector<T> tripletList;       // Create triplet list, called 'tripletList'
   tripletList.reserve(nnz_total);   // Reserve number of non-zeros in the matrix
-
-  int start = 0;
-  Type coef = 0;        // Variable to store the current element (coefficient) of the matrix
   
-  // ---- Precision
+  int start = 0;      // Keep track of starting point in x FIX: change this to start_x, or something
+  int start_eta = 0;  // Keep track of starting point in eta
+  Type coef = 0;      // Variable to store the current element (coefficient) of the matrix
+  
+  Type logdetK = 0; 
+  Type quadform_eta = 0; 
+  
+  // FIX: definition of llt could potentially be moved to the very start of this section
+  // i.e. it is a common object to all.
+  
+  // ---- precision (latticeKrig formulation)
   
   if (K_type == "precision") {
     
     // Add kappa[i] diagonals of block i, multiply block i by rho[i]
     for (int i = 0; i < nres; i++) {                    // For each resolution
+      
+      // Construct ith block as a sparse matrix: use triplet list (row, column, value)
+      std::vector<T> tripletList;    // Create triplet list, called 'tripletList'
+      tripletList.reserve(nnz[i]);   // Reserve number of non-zeros in the matrix
+      
       for (int j = start; j < start + nnz[i]; j++){     // For each non-zero entry within resolution i
         
         if (row_indices[j] == col_indices[j]) { // Diagonal terms
@@ -102,107 +118,110 @@ Type objective_function<Type>::operator() ()
         } else {
           coef = rho[i] * x[j];
         }
-        tripletList.push_back(T(row_indices[j], col_indices[j], coef));
+        tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
       }
+      
+      // Convert triplet list of non-zero entries to a true SparseMatrix.
+      SpMat Qi(ri[i], ri[i]);
+      Qi.setFromTriplets(tripletList.begin(), tripletList.end());
+      
+      // Compute Cholesky factor of Qi
+      Eigen::SimplicialLLT< SpMat, Eigen::Lower, Eigen::NaturalOrdering<int> > llt;
+      llt.compute(Qi);
+      SpMat Mi = llt.matrixL();
+
+      // Contribution of determinant of Q_i to the log-determinant of K
+      logdetK -= 2.0 * Mi.diagonal().array().log().sum();
+      
+      // The vector ui (such that u_i = M_i' eta_i):
+      vector<Type> ui = (Mi.transpose()) * (eta.segment(start_eta, ri[i]).matrix());
+
+      quadform_eta += (ui * ui).sum();
+      
+      quadform_eta += 1;
+      
+      start_eta += ri[i];
       start += nnz[i];
+      
     }
     
   }
-  
-  // Convert triplet list of non-zero entries to a true SparseMatrix.
-  SpMat Q(r, r);
-  Q.setFromTriplets(tripletList.begin(), tripletList.end());
 
-  // ----- K Matrix 
+  
+  // ----- block-exponential
 
   if (K_type == "block-exponential") {
     
-    for (int i = 0; i < nres; i++){         // For each resolution
-      for (int j = start; j < start + nnz[i]; j++){     // For each non-zero entry within resolution i
-        
+    for (int i = 0; i < nres; i++){       // For each resolution
+      
+      // Construct ith block as a sparse matrix: use triplet list (row, column, value)
+      std::vector<T> tripletList;    // Create triplet list, called 'tripletList'
+      tripletList.reserve(nnz[i]);   // Reserve number of non-zeros in the matrix
+      
+      for (int j = start; j < start + nnz[i]; j++){   // For each non-zero entry within resolution i
         // Construct the covariance (exponential covariance function WITH spherical taper):
         coef = sigma2[i] * exp( - x[j] / tau[i] ) * pow( 1 - x[j] / alpha[i], 2.0) * ( 1 + x[j] / (2 * alpha[i]));
-        
         // Add the current element to the triplet list:
-        tripletList.push_back(T(row_indices[j], col_indices[j], coef));
-        
+        tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
       }
+      
+      // Convert triplet list of non-zero entries to a true SparseMatrix.
+      SpMat Ki(ri[i], ri[i]);
+      Ki.setFromTriplets(tripletList.begin(), tripletList.end());
+      
+      // Compute Cholesky factor of K_i
+      Eigen::SimplicialLLT< SpMat, Eigen::Lower, Eigen::NaturalOrdering<int> > llt;
+      llt.compute(Ki);
+      SpMat Li = llt.matrixL();
+      
+      // Add the log-determinant of K_i to the log-determinant of K
+      logdetK += 2.0 * Li.diagonal().array().log().sum();
+      
+      // The vector vi (such that L_i v_i = eta_i):
+      vector<Type> vi = (Li.template triangularView<Eigen::Lower>().solve(eta.segment(start_eta, ri[i]).matrix())).array();
+      quadform_eta += (vi * vi).sum();
+      
+      start_eta += ri[i];
       start += nnz[i];
     }
     
   }
   
   
-  //  Convert triplet list of non-zero entries to a true SparseMatrix.
-  SpMat K(r, r);
-  K.setFromTriplets(tripletList.begin(), tripletList.end());
+  // ----- Separable AR1 x AR1
   
-
-  // -------- 2. log-determinant and the 'u' vector -------- //
-
-  // Compute the Cholesky factorisation of Q (or K):
-  Eigen::SimplicialLLT< SpMat, Eigen::Lower, Eigen::NaturalOrdering<int> > llt;
+  // In the case of a separable AR1 x AR1 variance matrix, both the precision
+  // and the cholesky of the precision matrix have a known and closed form. 
+  // For our purposes, we need only compute the Cholesky factors associated 
+  // with the row and column directions. 
+  
+  // if (K_type == "separable") {
+  //   
+  //   
+  // }
+  
+  
+  // -------- 3. Construct ln[eta|Q] and ln[xi|sigma2xi].  -------- //
   
   // Quadratic forms required in Gaussian density
   Type quadform_xi = pow(sigma2xi, -1.0) * (xi_O * xi_O).sum();
-  Type quadform_eta = 0; 
   
-  // Log determinant of the prior covariance matrix of the eta random weights
-  Type logdetK = 0;
-  
-  if (K_type == "precision") {
-    llt.compute(Q);
-    
-    // Cholesky factor M (such that MM' = Q, and M is lower triangular):
-    SpMat M = llt.matrixL();
-    
-    // log-determinant of K (K is the inverse of Q):
-    logdetK = - 2.0 * M.diagonal().array().log().sum();
-    
-    // The vector u such that u = M'eta:
-    vector<Type> u(r);
-    u   = (M.transpose()) * (eta.matrix());
-    
-    quadform_eta = (u * u).sum();
-  } 
-  
-  if (K_type == "block-exponential") {
-    llt.compute(K);
-    
-    // Cholesky factor L (such that LL' = K, and L is lower triangular):
-    SpMat L = llt.matrixL();
-    
-    // log-determinant of K:
-    logdetK = 2.0 * L.diagonal().array().log().sum();
-    
-    // The vector v (such that Lv = eta):
-    vector<Type> v(r); 
-    v   = (L.template triangularView<Eigen::Lower>().solve(eta.matrix())).array();
-    
-    quadform_eta = (v * v).sum();
-  }
-
-
-
-
-  // -------- 3. Construct ln[eta|Q] and ln[xi|sigma2xi].  -------- //
-
   // ln[eta|K] and ln[xi|sigma2xi]:
   // (These quantities are invariant to the link function/response distribution)
   Type ld_eta =  -0.5 * r * log(2 * M_PI) - 0.5 * logdetK - 0.5 * quadform_eta;
   Type ld_xi  =  -0.5 * m * log(2 * M_PI) - 0.5 * m * log(sigma2xi) - 0.5 * quadform_xi;
-
-
+  
+  
   // -------- 4. Construct ln[Z|Y_O]  -------- //
-
+  
   // 4.1. Construct Y_O, the latent spatial process at observed locations
   vector<Type> Y_O  = X * beta + S * eta + xi_O;
-
+  
   // 4.2. Link the conditional mean mu_O to the Gaussian scale predictor Y_O
-
+  
   vector<Type> mu_O(m);
   vector<Type> p_O(m);
-
+  
   if (link == "identity") {
     mu_O = Y_O;
   } else if (link == "inverse") {
@@ -222,10 +241,10 @@ Type objective_function<Type>::operator() ()
   } else {
     error("Unknown link function");
   }
-
+  
   Type epsilon_1 = 10e-8;
   Type epsilon_2 = 2 * (1 - 1/(1 + epsilon_1));
-
+  
   if (link == "logit" || link == "probit" || link == "cloglog") {
     if (response == "bernoulli") {
       mu_O = p_O;
@@ -245,7 +264,7 @@ Type objective_function<Type>::operator() ()
   vector<Type> blambda(m);
   vector<Type> aphi(m);
   vector<Type> cZphi(m);
-
+  
   if (response == "gaussian") {
     phi     =   sigma2e;
     lambda  =   mu_O;
@@ -304,18 +323,30 @@ Type objective_function<Type>::operator() ()
   } else {
     error("Unknown response distribution");
   }
-
+  
   // 4.4. Construct ln[Z|Y_O]
   Type ld_Z  =  ((Z*lambda - blambda)/aphi).sum() + cZphi.sum();
-
-
+  
+  
   // -------- 5. Define Objective function -------- //
-
+  
   // ln[Z, eta, xi | ...] =  ln[Z|Y_O] + ln[eta|K] + ln[xi|sigma2xi]
   // Specify the NEGATIVE joint log-likelihood function,
   // as R optimisation routines minimise by default.
-
+  
   Type nld = -(ld_Z  + ld_xi + ld_eta);
-
+  
   return nld;
 }
+
+
+
+// Defining variables inside loops: https://stackoverflow.com/questions/7959573/declaring-variables-inside-loops-good-practice-or-bad-practice
+
+// NOTE: 
+// We cannot declare objects inside if() statements if those objects are 
+// also used outside the if() statement. 
+// We ARE allowed to declare objects inside if() statements if they are not 
+// used outside of this if() statement at any other point in the template.
+// This is because, in C++, each set of braces defines a scope, so all variables
+// defined in loops and if statements are not accessible outside of them. 

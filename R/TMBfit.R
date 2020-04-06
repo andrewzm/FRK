@@ -430,6 +430,33 @@
 }
 
 
+## Determine if range of vector is FP 0.
+## (thise function tests whether all elements of a vector are equal, with a tolerance) 
+.zero_range <- function(x, tol = .Machine$double.eps ^ 0.5) {
+  if (length(x) == 1) return(TRUE)
+  x <- range(x) / mean(x)
+  isTRUE(all.equal(x[1], x[2], tolerance = tol))
+}
+
+## Determine if the basis functions are in a regular rectangular grid
+## Inspired by: https://stackoverflow.com/a/32916893
+.test_regular_rect_grid <- function(x, y) {
+  
+  a <- sort(unique(x))
+  b <- sort(unique(y))
+  
+  if(
+    FRK:::.zero_range(diff(a)) &
+    FRK:::.zero_range(diff(b)) &
+    (length(a) * length(b)) == nrow(temp)
+  ) {
+    return(TRUE)
+  } else {
+    return(FALSE)
+  }
+  
+}
+
 
 #' Neighbour matrix.
 #'
