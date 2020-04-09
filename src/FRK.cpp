@@ -9,7 +9,7 @@ Type objective_function<Type>::operator() ()
   /* Steps in constructing the model:
    *
    * 0. Read in data, and parameter initialisations.
-   *      - Measure variance components on log-scale to force postive estimate
+   *      - Measure variance components on log-scale to force positive estimate
    *      - Also define two 'typedefs' to simplify code later.
    *
    * 1. Construct K or Q, depending on the spcified K_type.
@@ -54,9 +54,8 @@ Type objective_function<Type>::operator() ()
   DATA_IVECTOR(col_indices);
   DATA_VECTOR(x);             
   DATA_IVECTOR(nnz);          // Integer vector indicating the number of non-zeros at each resolution of K_tap or Q
-  
-  // Need a vector of parameters
-  
+  DATA_IVECTOR(n_r);          // Integer vector indicating the number of rows at each resolution (applicable only if K-type == separable)
+  DATA_IVECTOR(n_c);          // Integer vector indicating the number of columns at each resolution (applicable only if K-type == separable)
   
   int m    = Z.size();       // Sample size
   int nres = ri.size();      // Number of resolutions
@@ -70,12 +69,20 @@ Type objective_function<Type>::operator() ()
   
   // basis function variance components 
   // FIX: Currently I am using different names for these terms for each K_type method. 
+  // I will let the first half of the sigma2 vector correspond to the row direction variances and the second half the column variances.
+  // Same for rho.
+  // FIX: Check that tail() gives the correct order (I want n-3, n-2, n-1, n, NOT n, n-1, n-2, n-3)
   PARAMETER_VECTOR(logsigma2);    vector<Type> sigma2 = exp(logsigma2);
   PARAMETER_VECTOR(logtau);       vector<Type> tau    = exp(logtau);
-  vector<Type> rho    = tau;
   vector<Type> kappa  = sigma2;
-  // vector<Type> rho_c = tau;
-  // vector<Type> rho_r = sigma2;
+  vector<Type> rho    = tau;
+  vector<Type> sigma2_r = sigma2.head(nres);
+  vector<Type> sigma2_c = sigma2.tail(nres);
+  vector<Type> rho_r    = tau.head(nres);
+  vector<Type> rho_c    = tau.tail(nres);
+  //FIX: I can move these variable definitions into if statements if they are not used elsewhere in the script
+  
+  
   
   // Latent random effects
   PARAMETER_VECTOR(eta);
@@ -100,15 +107,13 @@ Type objective_function<Type>::operator() ()
   // FIX: definition of llt could potentially be moved to the very start of this section
   // i.e. it is a common object to all.
   
-  // ---- precision (latticeKrig formulation)
-  
   if (K_type == "precision") {
     
     // Add kappa[i] diagonals of block i, multiply block i by rho[i]
     for (int i = 0; i < nres; i++) {                    // For each resolution
       
       // Construct ith block as a sparse matrix: use triplet list (row, column, value)
-      std::vector<T> tripletList;    // Create triplet list, called 'tripletList'
+      std::vector<T> tripletList;    // Create a vector of triplet lists, called 'tripletList' FIX: could move this outside the loop
       tripletList.reserve(nnz[i]);   // Reserve number of non-zeros in the matrix
       
       for (int j = start; j < start + nnz[i]; j++){     // For each non-zero entry within resolution i
@@ -138,17 +143,12 @@ Type objective_function<Type>::operator() ()
 
       quadform_eta += (ui * ui).sum();
       
-      quadform_eta += 1;
-      
       start_eta += ri[i];
       start += nnz[i];
       
     }
     
   }
-
-  
-  // ----- block-exponential
 
   if (K_type == "block-exponential") {
     
@@ -187,18 +187,53 @@ Type objective_function<Type>::operator() ()
     
   }
   
-  
-  // ----- Separable AR1 x AR1
-  
-  // In the case of a separable AR1 x AR1 variance matrix, both the precision
-  // and the cholesky of the precision matrix have a known and closed form. 
-  // For our purposes, we need only compute the Cholesky factors associated 
-  // with the row and column directions. 
-  
-  // if (K_type == "separable") {
-  //   
-  //   
-  // }
+  if (K_type == "separable") {
+
+    for (int i = 0; i < nres; i++) { // for each resolution
+
+      // First construct M_r and M_c
+      // Look into this for possible better alternative: https://eigen.tuxfamily.org/dox/group__TutorialAdvancedInitialization.html
+      std::vector<T> tripletList_M_r;
+      std::vector<T> tripletList_M_c;
+      tripletList_M_r.reserve(2 * n_r[i] - 1);
+      tripletList_M_c.reserve(2 * n_c[i] - 1);
+      Type common_term_c = sqrt(sigma2_c[i] * (1 - rho_c[i] * rho_c[i]));
+      Type common_term_r = sqrt(sigma2_r[i] * (1 - rho_r[i] * rho_r[i]));
+
+      // Diagonal entries (except last diagonal entry) AND lower diagonal entries
+      for (int j = 0; j < (n_r[i] - 1); j++) {
+        tripletList_M_r.push_back(T(j, j, 1));
+        tripletList_M_r.push_back(T(j + 1, j, -rho_r[i] * common_term_r));
+      }
+      for (int j = 0; j < (n_c[i] - 1); j++) {
+        tripletList_M_c.push_back(T(j, j, 1));
+        tripletList_M_c.push_back(T(j + 1, j, -rho_c[i] * common_term_c));
+      }
+      // Last diagonal entry
+      tripletList_M_r.push_back(T(n_r[i] - 1, n_r[i] - 1, sqrt(1 - rho_r[i] * rho_r[i]) * common_term_r)); // FIX: This cancels i.e. common_term cancels apart from sigma
+      tripletList_M_c.push_back(T(n_c[i] - 1, n_c[i] - 1, sqrt(1 - rho_c[i] * rho_c[i]) * common_term_c));
+
+      // Convert triplet list of non-zero entries to a true SparseMatrix.
+      SpMat M_r(n_r[i], n_r[i]);
+      SpMat M_c(n_c[i], n_c[i]);
+      M_r.setFromTriplets(tripletList_M_r.begin(), tripletList_M_r.end());
+      M_c.setFromTriplets(tripletList_M_c.begin(), tripletList_M_c.end());
+
+      // Log-determinant
+      logdetK += -2.0 * n_c[i] * M_r.diagonal().array().log().sum();
+      logdetK += -2.0 * n_r[i] * M_c.diagonal().array().log().sum();
+
+      // Quadratic form
+      matrix<Type> Hi = eta.segment(start_eta, ri[i]);
+      Hi.resize(n_c[i], n_r[i]);
+      matrix<Type> vi = M_c.transpose() * Hi * M_r;
+      vi.resize(ri[i], 1); // vec() operator
+      vector<Type> vi2 = vi.array(); // FIX: dont bother defining this, just sub in vi.array()
+      quadform_eta += (vi2 * vi2).sum();
+
+      start_eta += ri[i];
+    }
+  }
   
   
   // -------- 3. Construct ln[eta|Q] and ln[xi|sigma2xi].  -------- //
@@ -350,3 +385,18 @@ Type objective_function<Type>::operator() ()
 // used outside of this if() statement at any other point in the template.
 // This is because, in C++, each set of braces defines a scope, so all variables
 // defined in loops and if statements are not accessible outside of them. 
+
+// PARAMETER_VECTOR(eta) defines eta as an ARRAY object in Eigen - be careful, 
+// as matrices/vectors cannot be mixed with arrays!
+
+// Possible vec() in Eigen: https://eigen.tuxfamily.org/dox-devel/group__TutorialReshape.html
+// NO! reshaped() has not been released yet. Instad, we can try to use a Map():
+// https://stackoverflow.com/a/56393956
+
+// Alternative computation of Hi:
+// matrix<Type> Hi(n_c[i], n_r[i]);
+// int start_n_c = 0;
+// for (int j = 0; j < n_r[i]; j++) {
+//   Hi.col(j) = eta.segment(start_eta + start_n_c, n_c[i]); 
+//   start_n_c += n_c[i];
+// }

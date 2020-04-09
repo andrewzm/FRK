@@ -345,8 +345,9 @@ SRE.predict <- function(SRE_model, obs_fs = FALSE, newdata = NULL, pred_polys = 
 #' @export
 setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = FALSE, pred_polys = NULL,
                                               pred_time = NULL, covariances = FALSE, 
-                                              n_MC = 1600, seed = NULL, type = "mean", k = NULL) {
+                                              n_MC = 400, seed = NULL, type = "mean", k = NULL) {
 
+    warning("changed n_MC default to 400 (originally was 1600)")
     SRE_model <- object
     ## Deprecation coercion
     if(!is.null(pred_polys))
@@ -1554,7 +1555,7 @@ print.summary.SRE <- function(x, ...) {
 
 ## Checks arguments for the SRE() function. Code is self-explanatory
 .check_args1 <- function(f,data,basis,BAUs,est_error, 
-                         K_type = c("block-exponential", "precision", "unstructured"), 
+                         K_type = c("block-exponential", "precision", "unstructured", "separable"), 
                          response = c("gaussian", "poisson", "bernoulli", "gamma",
                                       "inverse-gaussian", "negative-binomial", "binomial"), 
                          link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"), 
@@ -1638,7 +1639,16 @@ print.summary.SRE <- function(x, ...) {
         }
     }
     
-    
+    ## Check that, if K_type == separable, the basis functions are in a regular
+    ## rectangular lattice
+    if (K_type == "separable") {
+        for (i in unique(basis@df$res)) {
+            temp <- basis@df[basis@df$res == i, ]
+            if (! FRK:::.test_regular_rect_grid(temp$loc1, temp$loc2) ) {
+                stop("Basis functions are not in a regular rectangular lattice.")
+            }
+        }
+    }
 }
 
 
@@ -1658,6 +1668,7 @@ print.summary.SRE <- function(x, ...) {
         if(method == "EM" & !(SRE_model@response == "gaussian")) stop("The EM algorithm is only available for response = 'gaussian'. Please use method = 'TMB' for all other assumed response distributions.")
         if(method == "EM" & !(SRE_model@link == "identity")) stop("The EM algorithm is only available for link = 'identity'. Please use method = 'TMB' for all other link functions.")
         if(method == "EM" & SRE_model@K_type == "precision") stop("The precision matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
+        if(method == "EM" & SRE_model@K_type == "separable") stop("The separable precision matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
     }
     
 }

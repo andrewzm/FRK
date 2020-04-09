@@ -47,7 +47,13 @@
   # ------ Fitting and Parameter Estimates/Random Effect Predictions ------
 
   ## Fit the model
-  fit <- nlminb(obj$par, obj$fn, obj$gr)
+  fit <- nlminb(obj$par, obj$fn, obj$gr,
+                control = list(eval.max = 100, iter.max = 50,
+                               abs.tol = 0.01, rel.tol = 0.0001, x.tol = 0.0001))
+  ## FIX: Need to add these as an optional argument to the user
+  ## https://www.uni-muenster.de/IT.BennoSueselbeck/s-html/helpfiles/nlminb.control.html
+  
+  
 
   ## Log-likeihood
   log_likelihood <- -obj$fn() # could also use - fit$objective
@@ -114,6 +120,9 @@
     # M@Khat_inv <- chol2inv(chol(M@Khat)) # NOTE: this matrix is not needed at anypoint in model fitting or prediction
     M@Khat <- Matrix()
     M@Khat_inv <- Matrix()
+  } else if (M@K_type == "separable") {
+    M@Khat_inv <- Matrix()
+    M@Khat <- Matrix()
   }
   
   return(M)
@@ -165,19 +174,45 @@
     # data$nnz     <- TaperValues$nnz
     
     temp         <- .cov_tap(M@D_basis, taper = taper)
-    data$alpha   <- temp$alpha
+    data$alpha   <- temp$alpha 
     R            <- as(temp$D_tap, "dgTMatrix")
+    data$nnz         <- temp$nnz
+    data$row_indices <- R@i
+    data$col_indices <- R@j
+    data$x           <- R@x
+    data$n_r <- 0 # Dummy value
+    data$n_c <- 0 # Dummy value
 
   } else if (K_type == "precision") {
     temp <- .sparse_Q_block_diag(M@basis@df, kappa = 0, rho = 1)
-    data$alpha   <- rep(0, 3) # Dummy values as we must supply something to TMB
+    data$alpha   <- 0 # Dummy value
     R <- as(temp$Q, "dgTMatrix")
+    data$nnz         <- temp$nnz
+    data$row_indices <- R@i
+    data$col_indices <- R@j
+    data$x           <- R@x
+    data$n_r <- 0 # Dummy value
+    data$n_c <- 0 # Dummy value
+    
+  } else if (K_type == "separable") {
+    
+    n_r <- n_c <- c()
+    for (i in unique(M@basis@df$res)) {
+      temp <- M@basis@df[M@basis@df$res == i, ]
+      n_r[i] <- length(unique(temp$loc1))
+      n_c[i] <- length(unique(temp$loc2))
+    }
+    
+    data$n_r <- n_r
+    data$n_c <- n_c
+    
+    data$alpha <- 0       # Dummy value
+    data$nnz         <- 0 # Dummy value
+    data$row_indices <- 0 # Dummy value
+    data$col_indices <- 0 # Dummy value
+    data$x           <- 0 # Dummy value
+    
   }
-  
-  data$nnz         <- temp$nnz
-  data$row_indices <- R@i
-  data$col_indices <- R@j
-  data$x           <- R@x
   
 
   # ---- Parameter and random effect initialisations. ----
@@ -242,13 +277,27 @@
   } else if (K_type == "precision") {
     ## Prior covariance matrix (required for eta initialisation)
     KInit <- solve(as(R, "sparseMatrix") + Matrix::sparseMatrix(i = 1:r, j = 1:r, x = 0.5))
+  } else if (K_type == "separable") {
+    ## FIX: this is just using the latticeKrig precision formulation:
+    temp <- .sparse_Q_block_diag(M@basis@df, kappa = 0, rho = 1)
+    R <- as(temp$Q, "dgTMatrix")
+    KInit <- solve(as(R, "sparseMatrix") + Matrix::sparseMatrix(i = 1:r, j = 1:r, x = 0.5))
   }
 
   ## Initialise the random effects
   temp            <- data$sigma2e+exp(parameters$logsigma2xi)
+  ## FIX: Add a check if nres == 4. If so, then it is wise to avoid a solve() here. 
+  ## Also, should to chol2inv(chol()) rather than solve().
   parameters$eta  <- as.vector((1 / temp) * solve(Matrix::t(S) %*% S / temp + solve(KInit) ) %*% (Matrix::t(S)  %*% (Z0_t - X %*% parameters$beta)))
   parameters$xi_O <- as.vector((exp(parameters$logsigma2xi) / temp) * (Z0_t - X %*% parameters$beta - S %*% parameters$eta))
 
+  
+  if (K_type == "separable") {
+    ## Let the first half of the sigma2 vector correspond to the row direction
+    ## variances and the second half the column variances. Same for rho.
+    parameters$logsigma2 <- rep(parameters$logsigma2, 2)
+    parameters$logtau <- rep(parameters$logtau, 2)
+  }
 
   return(list(data = data, parameters = parameters))
 }
@@ -448,7 +497,7 @@
   if(
     FRK:::.zero_range(diff(a)) &
     FRK:::.zero_range(diff(b)) &
-    (length(a) * length(b)) == nrow(temp)
+    (length(a) * length(b)) == length(x)
   ) {
     return(TRUE)
   } else {
