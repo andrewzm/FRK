@@ -131,16 +131,21 @@ Type objective_function<Type>::operator() ()
       Qi.setFromTriplets(tripletList.begin(), tripletList.end());
       
       // Compute Cholesky factor of Qi
-      Eigen::SimplicialLLT< SpMat, Eigen::Lower, Eigen::NaturalOrdering<int> > llt;
+      // Eigen::SimplicialLLT< SpMat, Eigen::Lower, Eigen::NaturalOrdering<int> > llt;
+      Eigen::SimplicialLLT< SpMat > llt;
       llt.compute(Qi);
       SpMat Mi = llt.matrixL();
+      
+      // P (the permutation matrix)
+      Eigen::PermutationMatrix<Eigen::Dynamic> P = llt.permutationP();
 
       // Contribution of determinant of Q_i to the log-determinant of K
       logdetK -= 2.0 * Mi.diagonal().array().log().sum();
       
+      // Quadratic form
       // The vector ui (such that u_i = M_i' eta_i):
-      vector<Type> ui = (Mi.transpose()) * (eta.segment(start_eta, ri[i]).matrix());
-
+      // vector<Type> ui = (Mi.transpose()) * (eta.segment(start_eta, ri[i]).matrix());
+      vector<Type> ui = Mi.transpose() * P * eta.segment(start_eta, ri[i]).matrix();
       quadform_eta += (ui * ui).sum();
       
       start_eta += ri[i];
@@ -170,15 +175,21 @@ Type objective_function<Type>::operator() ()
       Ki.setFromTriplets(tripletList.begin(), tripletList.end());
       
       // Compute Cholesky factor of K_i
-      Eigen::SimplicialLLT< SpMat, Eigen::Lower, Eigen::NaturalOrdering<int> > llt;
+      // Eigen::SimplicialLLT< SpMat, Eigen::Lower, Eigen::NaturalOrdering<int> > llt;
+      Eigen::SimplicialLLT< SpMat > llt;
       llt.compute(Ki);
       SpMat Li = llt.matrixL();
+      
+      // P (the permutation matrix)
+      Eigen::PermutationMatrix<Eigen::Dynamic> P = llt.permutationP();  
       
       // Add the log-determinant of K_i to the log-determinant of K
       logdetK += 2.0 * Li.diagonal().array().log().sum();
       
+      // Quadratic form
       // The vector vi (such that L_i v_i = eta_i):
-      vector<Type> vi = (Li.template triangularView<Eigen::Lower>().solve(eta.segment(start_eta, ri[i]).matrix())).array();
+      // vector<Type> vi = (Li.template triangularView<Eigen::Lower>().solve(eta.segment(start_eta, ri[i]).matrix())).array();
+      vector<Type> vi = (Li.template triangularView<Eigen::Lower>().solve(P * eta.segment(start_eta, ri[i]).matrix())).array();
       quadform_eta += (vi * vi).sum();
       
       start_eta += ri[i];

@@ -42,6 +42,11 @@
                    random = c("eta", "xi_O"),
                    DLL = "FRK")
 
+  ## View the sparsity pattern.
+  ## Note that this can be done before model fitting.
+  # temp <- obj$env$spHess(random = TRUE)
+  # image(temp)
+  # length(temp@x) # number of non-zeros
 
 
   # ------ Fitting and Parameter Estimates/Random Effect Predictions ------
@@ -52,7 +57,7 @@
                                abs.tol = 0.01, rel.tol = 0.0001, x.tol = 0.0001))
   ## FIX: Need to add these as an optional argument to the user
   ## https://www.uni-muenster.de/IT.BennoSueselbeck/s-html/helpfiles/nlminb.control.html
-  
+
   
 
   ## Log-likeihood
