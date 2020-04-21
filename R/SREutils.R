@@ -345,9 +345,10 @@ SRE.predict <- function(SRE_model, obs_fs = FALSE, newdata = NULL, pred_polys = 
 #' @export
 setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = FALSE, pred_polys = NULL,
                                               pred_time = NULL, covariances = FALSE, 
-                                              n_MC = 400, seed = NULL, type = "mean", k = NULL) {
+                                              n_MC = 400, seed = NULL, type = "mean", k = NULL, 
+                                              percents = c(5, 25, 50, 75, 90)) {
 
-    warning("changed n_MC default to 400 (originally was 1600)")
+    # warning("changed n_MC default to 400 (originally was 1600)")
     SRE_model <- object
     ## Deprecation coercion
     if(!is.null(pred_polys))
@@ -372,7 +373,8 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     ## Check the arguments are OK
     .check_args3(obs_fs = obs_fs, newdata = newdata, pred_polys = pred_polys,
                  pred_time = pred_time, covariances = covariances, 
-                 response = SRE_model@response, SRE_model = SRE_model, type = type, k = k)
+                 response = SRE_model@response, SRE_model = SRE_model, type = type, 
+                 k = k, percents = percents)
 
     ## Call internal prediction function
     if (SRE_model@method == "EM") {
@@ -388,7 +390,8 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                                   seed = seed,      # seed for reproducibility (MC simulations)
                                   obs_fs = obs_fs, 
                                   type = type, 
-                                  k = k)  
+                                  k = k, 
+                                  percents = percents)  
     } 
 
     
@@ -918,7 +921,7 @@ print.summary.SRE <- function(x, ...) {
                 ## Find which bases are at this resolution
                 idx <- which(data.frame(Sm@basis)$res == i)
 
-                ## Since we're block exponential, the correlation matrix is simply the
+                ## Since we're block exponential, the correlation matrix is simply
                 ## computed from the distances using the appropriate decay parameters
                 if(is(Sm@basis,"TensorP_Basis")) {
                     ## If we have a tensor basis then construct Ki using the Kronecker product
@@ -1555,11 +1558,13 @@ print.summary.SRE <- function(x, ...) {
 
 ## Checks arguments for the SRE() function. Code is self-explanatory
 .check_args1 <- function(f,data,basis,BAUs,est_error, 
-                         K_type = c("block-exponential", "precision", "unstructured", "separable"), 
+                         K_type = c("block-exponential", "precision", "unstructured", "separable", "precision_exp"), 
                          response = c("gaussian", "poisson", "bernoulli", "gamma",
                                       "inverse-gaussian", "negative-binomial", "binomial"), 
                          link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"), 
                          taper = 4) {
+    
+    warning("Added 'precision_exp' to list of allowed values of K_type.")
     
     if(!is(f,"formula")) stop("f needs to be a formula.")
     if(!is(data,"list"))
@@ -1675,7 +1680,8 @@ print.summary.SRE <- function(x, ...) {
 
 ## Checks arguments for the predict() function. Code is self-explanatory
 .check_args3 <- function(obs_fs = FALSE, newdata = NULL, pred_polys = NULL,
-                         pred_time = NULL, covariances = FALSE, SRE_model, type, k, ...) {
+                         pred_time = NULL, covariances = FALSE, SRE_model, type, 
+                         k, percents, ...) {
     if(!(obs_fs %in% 0:1)) stop("obs_fs needs to be logical")
 
     if(!(is(newdata,"Spatial") | (is(newdata,"ST")) | is.null(newdata)))
@@ -1708,6 +1714,16 @@ print.summary.SRE <- function(x, ...) {
             } else if (length(k) != nrow(SRE_model@S0)) {
                 stop("length(k) must equal 1 or N (the number of BAUs)." )
             }      
+        }
+        
+        ## Check requested percentiles are ok
+        if (!is.null(percents) & !(class(percents) %in% c("numeric", "integer"))) {
+            stop("percents must either be NULL or a numeric or integer vector 
+            with entries between 0 and 100.")
+        } else if (!is.null(percents)) {
+            if (min(percents) < 0 | max(percents) > 100) {
+                stop("percents must be a vector with entries between 0 and 100.")   
+            }
         }
     }
 }

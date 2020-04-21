@@ -93,13 +93,45 @@
   rowSums((X - rowMeans(X, ...))^2, ...)/(dim(X)[2] - 1)
 }
 
-## FIX: Add documentation to this function
-.concat_percentiles_to_df <- function (samples, df, name) {
-  temp <- t(apply(samples, 1, quantile, c(0.05, 0.25, 0.5, 0.75, 0.95)))
-  colnames(temp) <- paste(name, sep = "_", c("percentile_05", "percentile_25", "percentile_50", "percentile_75", "percentile_95"))
-  df <- cbind(df, temp)
+
+#' Computation and concatenation of percentiles to a dataframe.
+#'
+#' Given a matrix of MC samples \code{X} (where rows correspond to locations and 
+#' columns correspond to samples), this function computes the percentiles at 
+#' each location and appends the result to \code{df} (which must have the same 
+#' number of rows as \code{X}). Note that we use percentiles rather than quantiles
+#' because we including a "dot" in the dataframe column name may cause issues. 
+#'
+#' @param X A matrix of Monte Carlo samples (rows are observation, columns are 
+#' samples).
+#' @param df The prediction dataframe, with the same number of rows as \code{X}.
+#' @param name The name of the quantity of interest. The names of the percentile
+#' columns are "name_percentile_percents". In \code{FRK} it will be Y, mu, or Z. 
+#' @param percents A vector containing the desired percentiles which will be 
+#' included in the prediction dataframe. If \code{NULL}, 
+#' no percentiles are computed.
+#' @return The dataframe \code{df} with appended percentiles.
+.concat_percentiles_to_df <- function (X, df, name, 
+                                       percents = c(5, 25, 50, 75, 95)) {
+  if (is.null(percents)) return(df)
+  temp           <- t(apply(X, 1, quantile, percents/100))
+  colnames(temp) <- paste(name, "percentile", as.character(percents), sep = "_")
+  df             <- cbind(df, temp)
   return(df)
 }
 
 
-
+#' Prediction interval width. 
+#'
+#' This function is used to compute prediction interval width
+#' given \code{X}, a matrix of Monte Carlo samples (wherein rows correpsond to locations, columns samples)
+#' 
+#' @param X A matrix of Monte Carlo samples (rows are observation, columns are 
+#' samples).
+#' @param l The lower probability.
+#' @param u The upper probability.
+#' @return The prediction interval width at each location.
+.intervalWidth <- function(X, l = 0.025, u = 0.975) {
+  Q <- apply(X, 1, function(x) quantile(x, c(l, u)))
+  return(Q[2, ] - Q[1, ])
+}

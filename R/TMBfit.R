@@ -51,11 +51,15 @@
 
   # ------ Fitting and Parameter Estimates/Random Effect Predictions ------
 
+  ## the following means we want toprint every parameter passed to obj$fn.
+  obj$env$tracepar <- TRUE
+  
   ## Fit the model
   fit <- nlminb(obj$par, obj$fn, obj$gr,
                 control = list(eval.max = 100, iter.max = 50,
                                abs.tol = 0.01, rel.tol = 0.0001, x.tol = 0.0001))
-  ## FIX: Need to add these as an optional argument to the user
+  # fit <- optim(obj$par, obj$fn, obj$gr)
+  ## FIX: Need to add these as an optional argument to the user for controlling fitting:
   ## https://www.uni-muenster.de/IT.BennoSueselbeck/s-html/helpfiles/nlminb.control.html
 
   
@@ -146,113 +150,107 @@
 #' }
 .TMB_prep <- function (M) {
 
-  K_type   <- M@K_type
-  response <- M@response
-  link     <- M@link
-  taper    <- M@taper
-  k_Z      <- M@k
-  k_Z <- as.vector(k_Z)
-
+  k_Z  <- as.vector(M@k)
   nres <- max(M@basis@df$res)      # Number of resolutions
-  r    <- M@basis@n                # Number of basis functions in total.
+  r    <- M@basis@n                # Number of basis functions in total (space x time).
   N    <- nrow(M@S0)               # Number of BAUs
   Z    <- as.vector(M@Z)           # Binned data
   m    <- length(Z)                # Number of data points AFTER BINNING
   X    <- as.matrix(M@X)          
-  S    <- as(M@S, "sparseMatrix")
 
   ## Common to all
-  data    <- list(Z = Z, X = X, S = S,
-                  ri = as.vector(table(M@basis@df$res)), # Size of each "block": number of basis functions for each resolution
+  data    <- list(Z = Z, X = X, S = M@S,
                   sigma2e = M@Ve[1, 1], 
-                  K_type = K_type,
-                  response = response, 
-                  link = link,
-                  k_Z = k_Z)
+                  K_type = M@K_type,
+                  response = M@response, 
+                  link = M@link,
+                  k_Z = k_Z, 
+                  temporal = as.integer(is(M@basis,"TensorP_Basis")))
+
+  ## Temporal stuff
+  if (data$temporal == TRUE) {
+    spatial_dist_matrix <- M@D_basis[[1]]
+    spatial_basis <- M@basis@Basis1  
+    data$r_t <- M@basis@Basis2@n
+  } else {
+    spatial_dist_matrix <- M@D_basis
+    spatial_basis <- M@basis 
+    data$r_t <- 1
+  }
   
-  ## Data which depend on K_type
-  if (K_type == "block-exponential") {
-    
-    # TaperValues  <- .cov_tap(M@D_basis, taper = taper)
-    # data$D       <- Matrix::bdiag(M@D_basis)
-    # data$alpha   <- TaperValues$alpha
-    # data$nnz     <- TaperValues$nnz
-    
-    temp         <- .cov_tap(M@D_basis, taper = taper)
+  data$r_si <- as.vector(table(spatial_basis@df$res))
+
+  ## Data which depend on K_type:
+  ## Provide dummy data, and only change the ones we actually need.
+  data$alpha <- data$nnz <- data$row_indices <- data$col_indices <- -1       
+  data$x <- data$n_r <- data$n_c  <- -1 
+
+  if (M@K_type == "block-exponential") {
+    temp         <- .cov_tap(spatial_dist_matrix, taper = M@taper)
     data$alpha   <- temp$alpha 
     R            <- as(temp$D_tap, "dgTMatrix")
-    data$nnz         <- temp$nnz
+    data$nnz         <- temp$nnz 
     data$row_indices <- R@i
     data$col_indices <- R@j
     data$x           <- R@x
-    data$n_r <- 0 # Dummy value
-    data$n_c <- 0 # Dummy value
-
-  } else if (K_type == "precision") {
-    temp <- .sparse_Q_block_diag(M@basis@df, kappa = 0, rho = 1)
-    data$alpha   <- 0 # Dummy value
+    
+  } else if (M@K_type == "precision") {
+    temp <- .sparse_Q_block_diag(spatial_basis@df, kappa = 0, rho = 1)
     R <- as(temp$Q, "dgTMatrix")
     data$nnz         <- temp$nnz
     data$row_indices <- R@i
     data$col_indices <- R@j
     data$x           <- R@x
-    data$n_r <- 0 # Dummy value
-    data$n_c <- 0 # Dummy value
     
-  } else if (K_type == "separable") {
-    
-    n_r <- n_c <- c()
-    for (i in unique(M@basis@df$res)) {
-      temp <- M@basis@df[M@basis@df$res == i, ]
-      n_r[i] <- length(unique(temp$loc1))
-      n_c[i] <- length(unique(temp$loc2))
+  } else if (M@K_type == "separable") {
+    for (i in unique(spatial_basis@df$res)) {
+      temp <- spatial_basis@df[spatial_basis@df$res == i, ]
+      data$n_r[i] <- length(unique(temp$loc1))
+      data$n_c[i] <- length(unique(temp$loc2))
     }
-    
-    data$n_r <- n_r
-    data$n_c <- n_c
-    
-    data$alpha <- 0       # Dummy value
-    data$nnz         <- 0 # Dummy value
-    data$row_indices <- 0 # Dummy value
-    data$col_indices <- 0 # Dummy value
-    data$x           <- 0 # Dummy value
-    
+  } else if (M@K_type == "precision_exp") {
+    temp         <- .cov_tap(spatial_dist_matrix, taper = M@taper)
+    data$alpha   <- temp$alpha 
+    R            <- as(temp$D_tap, "dgTMatrix")
+    data$nnz         <- temp$nnz 
+    data$row_indices <- R@i
+    data$col_indices <- R@j
+    data$x           <- R@x
   }
   
-
+  
   # ---- Parameter and random effect initialisations. ----
 
-  
   ## Create the relevant link functions.
-  if (response %in% c("binomial", "negative-binomial") & link %in% c("logit", "probit", "cloglog")) {
-    h     <- .link_fn(kind = "prob_to_Y", link = link)
-    f     <- .link_fn(kind = "mu_to_prob", response = response)
+  if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
+    h     <- .link_fn(kind = "prob_to_Y", link = M@link)
+    f     <- .link_fn(kind = "mu_to_prob", response = M@response)
   } else {
-    g     <- .link_fn(kind = "mu_to_Y", link = link) 
+    g     <- .link_fn(kind = "mu_to_Y", link = M@link) 
   }
 
   ## Create altered data to avoid the problems of applying g() to Z.
   Z0 <- Z
-  if (response == "gaussian" & link %in% c("log", "square-root")) {
+  if (M@response == "gaussian" & M@link %in% c("log", "square-root")) {
     Z0[Z <= 0] <- 0.1      
-  } else if (response %in% c("poisson", "gamma", "inverse-gaussian") & link == "log") {
+  } else if (M@response %in% c("poisson", "gamma", "inverse-gaussian") & M@link == "log") {
     Z0[Z == 0] <- 0.1    
-  } else if (response == "negative-binomial" & link %in% c("logit", "probit", "cloglog", "log")) {
+  } else if (M@response == "negative-binomial" & M@link %in% c("logit", "probit", "cloglog", "log")) {
     Z0[Z == 0]   <- 0.1
-  } else if (response == "binomial" & link %in% c("logit", "probit", "cloglog")) {
+  } else if (M@response == "binomial" & M@link %in% c("logit", "probit", "cloglog")) {
     Z0[Z == 0]   <- 0.1
     Z0[Z == k_Z] <- k_Z[Z == k_Z] - 0.1
-  } else if (response == "bernoulli" & link %in% c("logit", "probit", "cloglog")) {
+  } else if (M@response == "bernoulli" & M@link %in% c("logit", "probit", "cloglog")) {
     Z0 <- Z + 0.05 * (Z == 0) - 0.05 * (Z == 1)
-  } else if (link %in% c("inverse-squared", "inverse")) {
+  } else if (M@link %in% c("inverse-squared", "inverse")) {
     Z0 <- Z + 0.05 * (Z == 0)
   } 
 
   ## Transformed data
-  if (response %in% c("binomial", "negative-binomial") & link %in% c("logit", "probit", "cloglog")) {
+  if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
     p0 <- f(Z0, k_Z) # Convert from response (mean) scale to probability scale
     Z0_t <- h(p0)    # Convert from probability scale to Gauussian Y scale
-  } else if (response == "negative-binomial" & link %in% c("log", "square-root")) {
+  } else if (M@response == "negative-binomial" & M@link %in% c("log", "square-root")) {
     Z0_t <- g(Z0 / k_Z) # Convert from response (mean) scale to Gaussian Y-scale (accounting for k_Z)
   } else {
     Z0_t <- g(Z0) # Convert from response (mean) scale to Gaussian Y-scale
@@ -260,10 +258,13 @@
 
   ## Parameter and random effect initialisations.
   parameters <- list()
-  parameters$beta         <- coef(lm(Z0_t ~ 1))
+  temp       <- as.data.frame(as.matrix(M@X))
+  temp$Z0_t  <- Z0_t
+  parameters$beta         <- coef(lm(update(formula(M@f), Z0_t ~ .), temp)) 
   parameters$logsigma2xi  <- log(var(Z0_t))
+
   
-  ## Dispersion parameter depends on response
+  ## Dispersion parameter depends on response; some require that it is 1. 
   if (M@response %in% c("poisson", "bernoulli", "binomial", "negative-binomial")) {
     parameters$logphi <- log(1)
   } else {
@@ -272,38 +273,61 @@
   
   parameters$logsigma2      <- log(exp(parameters$logsigma2xi) * (0.1)^(0:(nres - 1)))
   parameters$logtau         <- log((1 / 3)^(1:nres))
+  parameters$logsigma2_t    <- log(5)  
+  parameters$logrho_t       <- log(0.4)
 
-  if (K_type == "block-exponential") {
-    ## Tapered prior covariance matrix (required for eta initialisation)
+  
+  ## Separability means we have twice as many spatial basis function variance components
+  if (M@K_type == "separable") {
+    parameters$logsigma2 <- rep(parameters$logsigma2, 2)
+    parameters$logtau <- rep(parameters$logtau, 2)
+    parameters$logdelta <- log(1)
+  } else if (M@K_type == "precision_exp") {
+    parameters$logdelta <- rnorm(length(data$r_si))
+  } else {
+    parameters$logdelta <- log(1)
+  }
+
+  ## Initialise the latent random effects
+  ## FIX: Add a check if nres == 4. If so, then it is wise to avoid a solve() here. 
+  ## FIX: perhaps change solve() to chol2inv(chol()) 
+  ## FIX: maybe change this intialisation to be only in terms of Qinit. Currently leave as is because the theory I wrote is in terms of Kinit and the block-exponential.
+  temp  <- data$sigma2e + exp(parameters$logsigma2xi)
+  if (M@K_type == "block-exponential") {
     KInit <- .K_tap_matrix(M@D_basis,
                            alpha = data$alpha,
                            sigma2 =  exp(parameters$logsigma2),
                            tau = exp(parameters$logtau))
-  } else if (K_type == "precision") {
-    ## Prior covariance matrix (required for eta initialisation)
-    KInit <- solve(as(R, "sparseMatrix") + Matrix::sparseMatrix(i = 1:r, j = 1:r, x = 0.5))
-  } else if (K_type == "separable") {
-    ## FIX: this is just using the latticeKrig precision formulation:
-    temp <- .sparse_Q_block_diag(M@basis@df, kappa = 0, rho = 1)
-    R <- as(temp$Q, "dgTMatrix")
-    KInit <- solve(as(R, "sparseMatrix") + Matrix::sparseMatrix(i = 1:r, j = 1:r, x = 0.5))
+    parameters$eta  <- as.vector((1 / temp) * solve(Matrix::t(M@S) %*% M@S / temp + solve(KInit) ) %*% (Matrix::t(M@S)  %*% (Z0_t - X %*% parameters$beta)))
+    parameters$xi_O <- as.vector((exp(parameters$logsigma2xi) / temp) * (Z0_t - X %*% parameters$beta - M@S %*% parameters$eta))
+  } else {
+    kappa <- exp(-parameters$logsigma2)
+    rho <- exp(parameters$logtau)
+    QInit <- .sparse_Q_block_diag(M@basis@df, kappa = 0.5, rho = 1)$Q
+    parameters$eta  <- as.vector((1 / temp) * solve(Matrix::t(M@S) %*% M@S / temp + QInit ) %*% (Matrix::t(M@S)  %*% (Z0_t - X %*% parameters$beta)))
+    parameters$xi_O <- as.vector((exp(parameters$logsigma2xi) / temp) * (Z0_t - X %*% parameters$beta - M@S %*% parameters$eta))
   }
 
-  ## Initialise the random effects
-  temp            <- data$sigma2e+exp(parameters$logsigma2xi)
-  ## FIX: Add a check if nres == 4. If so, then it is wise to avoid a solve() here. 
-  ## Also, should to chol2inv(chol()) rather than solve().
-  parameters$eta  <- as.vector((1 / temp) * solve(Matrix::t(S) %*% S / temp + solve(KInit) ) %*% (Matrix::t(S)  %*% (Z0_t - X %*% parameters$beta)))
-  parameters$xi_O <- as.vector((exp(parameters$logsigma2xi) / temp) * (Z0_t - X %*% parameters$beta - S %*% parameters$eta))
 
+  # browser()
+
+  length(data$x)
+  length(data$row_indices)
+  length(data$col_indices)
+
+  range(data$col_indices)
+  range(data$row_indices)
+  spatial_basis@n
+
+  data$r_si
   
-  if (K_type == "separable") {
-    ## Let the first half of the sigma2 vector correspond to the row direction
-    ## variances and the second half the column variances. Same for rho.
-    parameters$logsigma2 <- rep(parameters$logsigma2, 2)
-    parameters$logtau <- rep(parameters$logtau, 2)
-  }
 
+  data$nnz
+  sum(data$nnz)
+  
+  length(parameters$logsigma2)
+  
+  
   return(list(data = data, parameters = parameters))
 }
 
@@ -515,9 +539,10 @@
 #' Neighbour matrix.
 #'
 #' Creates a matrix \eqn{A} with elements \eqn{A_{i, j}} equal to 1 if basis
-#' functions i and j (i not equal to j) are neighbours and 0 otherwise.
-#' The diagonal elements of \eqn{A} (i.e. \eqn{A_{i, i}}) indicate the total
-#' number of neighbours associated with basis function i.
+#' functions i and j (i not equal to j) are first order neighbours, 1/2 if they are second order neighbours, and so on.
+#' Neighbours with a larger order than specified by \code{order} have 0 in this matrix.
+#' The diagonal elements of \eqn{A} (i.e. \eqn{A_{i, i}}) indicate the row sums (if 
+#' the \code{order == 1}, then it is the totalnumber of first order neighbours associated with basis function i).
 #'
 #' This function is only designed for basis functions
 #' at \emph{one resolution}. It also assumes the basis functions are in a
@@ -530,44 +555,55 @@
 #' @param df A dataframe containing spatial coordinates.
 #' @param loc1 A string indicating the name of the column storing the x-coordinate.
 #' @param loc2 A string indicating the name of the column storing the y-coordinate.
+#' @param order If order == 1, only first order neighbours are considered. If order == 2, second order neighbours are also considered, and so on.
+#' @param diag_neighbours Indicates whether to consider the diagonal neighbours. If FALSE (the default), only the horizontal and vertical neighbours are considered.
 #' @return A "neighbour" matrix with element (i, j), for i not equal to j,
-#' equal to 1 if basis functions i and j are neighbours, and 0 otherwise.
-#' Diagonal elements indicate number of neighbours for that basis function.
-.neighbour_matrix <- function(df, loc1 = "loc1", loc2 = "loc2") {
+#' equal to 1/l if basis functions i and j are lth order neighbours (provided \code{l <= order}), and 0 otherwise.
+#' Diagonal elements indicate the row sums.
+.neighbour_matrix <- function(df, loc1 = "loc1", loc2 = "loc2", order = 1, diag_neighbours = FALSE) {
+  
+  A <- matrix(0, nrow = nrow(df), ncol = nrow(df))
+  
+  ## absolute difference in x- and y-coordinate
+  abs_diff_x <- abs(outer(df[, loc1], df[, loc1], "-"))
+  abs_diff_y <- abs(outer(df[, loc2], df[, loc2], "-"))
+  
+  ## Vectors containing all x and y distances. 
+  ## Note that the first elements in each vector is 0. 
+  ## Note also that we only use 1 row from the abs_diff matrices (this helps 
+  ## to prevents problems with unique() and floating point accuracy and is a 
+  ## bit faster)
+  x_distances <- sort(unique(abs_diff_x[1, ]))
+  y_distances <- sort(unique(abs_diff_y[1, ]))
+  
+  for (i in 1:order) { ## Order will usually be 1
+    x_min <- x_distances[i + 1] # x distance we are focused on for this order
+    y_min <- y_distances[i + 1] # y distance we are focused on for this order
+    
+    ## Find the "horizontal" neighbours
+    ## This produces a matrix with (i, j)th entry equal to 1 if i and j are 
+    ## horizontal neighbours, and zero otherwise.
+    ## Similarly, find the "vertical" neighbours.
+    horizontal_neighbours <- .equal_within_tol(abs_diff_x, x_min) & .equal_within_tol(abs_diff_y, 0) 
+    vertical_neighbours   <- .equal_within_tol(abs_diff_y, y_min) & .equal_within_tol(abs_diff_x, 0)
+    
+    ## Consider the diagonal neighbours, if specified.
+    if (diag_neighbours == TRUE) {
+      ## Two conditions which must be met for basis functions to be diagonal neighours
+      diagonal_neighbours <- .equal_within_tol(abs_diff_y, y_min) & .equal_within_tol(abs_diff_x, x_min)
+      ## Update A
+      A <- A + 1/i * diagonal_neighbours
+    }
+    
+    ## Update neighbour matrix (with zeros along the diagonal)
+    ## We weight the neighbours by their order. 
+    A <- A + 1/i * vertical_neighbours + 1/i * horizontal_neighbours
+  }
 
-  ## difference in x-coordinate
-  diff_x <- outer(df[, loc1], df[, loc1], "-")
-  abs_diff_x <- abs(diff_x)
-
-  ## difference in y-coordinate
-  diff_y <- outer(df[, loc2], df[, loc2], "-")
-  abs_diff_y <- abs(diff_y)
-
-  ## Minimum x and y distances
-  x_min <- sort(unique(abs_diff_x[1, ]))[2]
-  y_min <- sort(unique(abs_diff_y[1, ]))[2]
-
-  ## 1. Find the "vertical" neighbours
-  ## Two conditions which must be met for basis functions to be neighours
-  condition1 <- .equal_within_tol(abs_diff_y, y_min)
-  condition2 <- .equal_within_tol(diff_x, 0)
-  vertical_neighbours <- condition1 & condition2
-
-  ## 2. Find the "horizontal" neighbours
-  ## Two conditions which must be met for basis functions to be neighours
-  condition1 <- .equal_within_tol(abs_diff_x, x_min)
-  condition2 <- .equal_within_tol(diff_y, 0)
-  horizontal_neighbours <- condition1 & condition2
-
-  ## Full neighbour matrix (with zeros along the diagonal)
-  A <- vertical_neighbours + horizontal_neighbours
-
-  ## number of neighbours for each basis function
-  nn <- rowSums(A)
-
-  ## Add the number of neighbours to the diagonal
-  diag(A) <- nn
-
+  ## Add the sums of each row to the diagonal (required for use in the 
+  ## precision matrix computation later)
+  diag(A) <- rowSums(A)
+  
   return(A)
 }
 
@@ -608,8 +644,9 @@
 #' @param df A dataframe containing the spatial coordinates (named "loc1" and "loc2") and a blocking column (named "res").
 #' @return A list containing the sparse block-diagonal precision matrix (Q) of class "dgCMatrix", and the number of non-zero elements (nnz) at each resolution.
 #' @seealso \code{\link{.sparse_Q}}, \code{\link{.neighbour_matrix}}
-.sparse_Q_block_diag <- function(df, kappa, rho) {
+.sparse_Q_block_diag <- function(df, kappa, rho, order = 1, diag_neighbours = FALSE) {
 
+  
   nres <- max(df$res)
   if (length(kappa) == 1) kappa <- rep(kappa, nres)
   if (length(rho) == 1) rho <- rep(rho, nres)
@@ -618,7 +655,7 @@
   Q_matrices  <- list()
   nnz <- c()
   for (i in 1:nres) {
-    A_i <- .neighbour_matrix(df[df$res == i, ])
+    A_i <- .neighbour_matrix(df[df$res == i, ], order = order, diag_neighbours = diag_neighbours)
     Q_matrices[[i]] <- .sparse_Q(A = A_i,
                                  kappa = kappa[i],
                                  rho = rho[i])

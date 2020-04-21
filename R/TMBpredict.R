@@ -2,6 +2,7 @@
 #'
 #' @inheritParams .Y_var
 #' @inheritParams .MC_sampler
+#' @inheritParams .concat_percentiles_to_df
 #' @param type A character string (possibly vector) indicating the quantities for which predictions and prediction uncertainty is desired.
 #' If \code{"link"} is in \code{type}, the latent \eqn{Y} process is included; 
 #' If \code{"mean"} is in \code{type}, the conditional mean \eqn{\mu} is included (and the probability parameter if applicable);
@@ -14,14 +15,17 @@
 #' }
 #' Note that for all link functions other than the log-link and identity-link, the predictions and prediction uncertainty of \eqn{\mu} contained in \code{newdata} are computed using the Monte Carlo samples contained in \code{MC}.
 #' When the log- or identity-link functions are used the expectation and variance of the \eqn{\mu} may be computed exactly.
-.FRKTMB_pred <- function(M, type = "mean", n_MC, seed = NULL, obs_fs = FALSE, k = NULL) {
+.FRKTMB_pred <- function(M, type = "mean", n_MC, seed = NULL, obs_fs = FALSE, 
+                         k = NULL, 
+                         percents = c(5, 25, 50, 75, 95)) {
   
   # ---- Create objects needed thoughout the function ----
+
   
   ## Id of observed BAUs
   obsidx <- apply(M@Cmat, 1, function(x) which(x == 1))
   
-  #### The covariate design matrix, X 
+  #### The covariate design matrix, X (at the BAU level i.e. for all BAUs)
   
   ## Retrieve the dependent variable name
   depname <- all.vars(M@f)[1]
@@ -49,11 +53,11 @@
   ## Add posterior estimate of xi_O at observed BAUs
   p_Y[obsidx]   <-  p_Y[obsidx] + as.vector(M@mu_xi_O)
   
+  
   #### Posterior variance of Y at each prediction location.
   ## Note that MSPE(E(Y|Z), Y) is approximated by var(Y|Z).
   MSPE_Y  <- .Y_var(M = M) 
 
-  
   
   # ------ Conditional mean (mu) prediction and uncertainty ------
   
@@ -70,9 +74,10 @@
   
   ## Latent Y-process
   if ("link" %in% type) {
-    newdata$p_Y     <- p_Y          # Prediction
-    newdata$RMSPE_Y <- sqrt(MSPE_Y) # Uncertainty
-    newdata <- .concat_percentiles_to_df(samples = MC$Y_samples, df = newdata, "Y")
+    newdata$p_Y     <- p_Y          
+    newdata$RMSPE_Y <- sqrt(MSPE_Y) 
+    newdata <- .concat_percentiles_to_df(X = MC$Y_samples, df = newdata, 
+                                         name = "Y", percents = percents)  
   }
   
   ## If Y is the ONLY quantity of interest, exit the function.
@@ -100,7 +105,8 @@
   if ("mean" %in% type) {
     newdata$p_mu <- p_mu
     newdata$RMSPE_mu <- RMSPE_mu
-    newdata <- .concat_percentiles_to_df(samples = MC$mu_samples, df = newdata, "mu")
+    newdata <- .concat_percentiles_to_df(X = MC$mu_samples, df = newdata, 
+                                         name = "mu", percents = percents)
     
     ## For some response distributions, the probability of success parameter 
     ## was also computed (and is not equal to the conditonal mean, as is the 
@@ -116,9 +122,16 @@
   if ("response" %in% type){
     newdata$p_Z <- p_mu 
     newdata$RMSPE_Z <- sqrt(.rowVars(MC$Z_samples))
-    newdata <- .concat_percentiles_to_df(samples = MC$Z_samples, df = newdata, "Z") 
+    newdata <- .concat_percentiles_to_df(X = MC$Z_samples, df = newdata, 
+                                         name = "Z", percents = percents) 
   }
 
+  
+  # ---- CHECK: Add a column indicating the time point in space-time setting ----
+  
+  if (is(M@basis,"TensorP_Basis")) {
+    newdata$t <- M@BAUs@data$t
+  }
 
   # ---- Return output ----
 
@@ -150,33 +163,30 @@
 #' @return A vector of the posterior variance of Y at every BAU. 
 .Y_var <- function(M){
   
-  Q  <- M@Q_eta_xi
-  S0 <- M@S0
-  S  <- M@S
   obsidx <- apply(M@Cmat, 1, function(x) which(x == 1))
-  r  <- ncol(S0)
+  r  <- ncol(M@S0)
   m  <- length(obsidx)
   
   # ---- Sparse-inverse-subset of Q (acting as a proxy for the true covariance matrix) ----
   
   ## Permuted Cholesky factor
-  Q_L <- sparseinv:::cholPermute(Q = Q)
+  Q_L <- sparseinv:::cholPermute(Q = M@Q_eta_xi)
 
   ## Sparse-inverse-subset of fixed AND random effects
   ## (a proxy for the covariance matrix)
-  Sigma <- sparseinv::Takahashi_Davis(Q = Q,
+  Sigma <- sparseinv::Takahashi_Davis(Q = M@Q_eta_xi,
                                       cholQp = Q_L$Qpermchol,
                                       P = Q_L$P)
   
-  # Sigma <- chol2inv(chol(Q))
-  # warning("Using direct inverse.")
-
+  # Sigma <- chol2inv(chol(M@Q_eta_xi))
+  # warning("Removed sparse-inverse-subset and using full inverse: 
+  #         we cannot do this for large m + r.")
+  
   Sigma_eta   <- Sigma[1:r, 1:r]
   Sigma_xi    <- Sigma[(r + 1):(r + m), (r + 1):(r + m)]
   
   # Covariances between xi and eta
   Cov_eta_xi  <- Sigma[1:r, ( r+ 1):(r + m)]
-  
   
   # ----- Uncertainty: Posterior variance of Y at each BAU ------
   
@@ -186,13 +196,13 @@
   ##      diag(AB) = (A*B')1
   
   ## Only one common term for both observed and unobserved locations:
-  vY <- as.vector( (S0 %*% Sigma_eta * S0) %*% rep(1, r) )
+  vY <- as.vector( (M@S0 %*% Sigma_eta * M@S0) %*% rep(1, r) )
   
   ## UNOBSERVED locations: simply add the estimate of sigma2xi to this quantity:
   vY[-obsidx] <- vY[-obsidx] + M@sigma2fshat
   
   ## OBSERVED location: add both var(xi_O|Z) and cov(xi_O, eta | Z)
-  covar       <- (S * Matrix::t(Cov_eta_xi)) %*% rep(1, r)        # Covariance terms
+  covar       <- (M@S * Matrix::t(Cov_eta_xi)) %*% rep(1, r)        # Covariance terms
   vY[obsidx]  <- vY[obsidx] + Matrix::diag(Sigma_xi) + 2 * covar
   
   # ---- Output ----
@@ -241,14 +251,10 @@
 .MC_sampler <- function(M, X, type = "mean", n_MC = 1600, obs_fs = FALSE, seed = NULL, k = NULL){
   
   MC <- list() # object we will return 
-  
-  Q   <- M@Q_eta_xi
-  S0  <- M@S0
-  S   <- M@S
-  N   <- nrow(S0)
-  obsidx <- apply(M@Cmat, 1, function(x) which(x == 1))
-  m   <- length(obsidx)
-  r   <- ncol(S0)
+  N   <- nrow(M@S0)
+  obsidx <- apply(M@Cmat, 1, function(x) which(x == 1)) ## FIX: I compute this in the parent environment, so I could just pass it in
+  m   <- length(M@Z)
+  r   <- ncol(M@S0) # Total number of basis functions
   
   
   # ---- Generate samples from (eta, xi_O) ----
@@ -268,7 +274,7 @@
   ## Then, to generate samples from (eta, xi_O), 
   ## use eta_xi_O = L^{-T} z + mu = U^{-1} z + mu, 
   ## where U upper cholesky factor of Q, so that Q = U'U.
-  U           <- Matrix::chol(Q)
+  U           <- Matrix::chol(M@Q_eta_xi)
   eta_xi_O    <- as.matrix(Matrix::solve(U, z) + mu_eta_xi_O_Matrix)
   
   ## Separate the eta and xi_O samples
@@ -300,10 +306,10 @@
   X_U <- X[-obsidx, ]
   
   ## Observed Samples
-  Y_smooth_O <- X_O %*% M@alphahat + S %*% eta
+  Y_smooth_O <- X_O %*% M@alphahat + M@S %*% eta
   
   ## Unobserved Samples
-  S_U          <- S0[-obsidx, ] # Unobserved random effect 'design' matrix
+  S_U          <- M@S0[-obsidx, ] # Unobserved random effect 'design' matrix
   Y_smooth_U  <- X_U %*% M@alphahat + S_U %*% eta
   
   ## Combine samples

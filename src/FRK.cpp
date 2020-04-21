@@ -11,8 +11,10 @@ Type objective_function<Type>::operator() ()
    * 0. Read in data, and parameter initialisations.
    *      - Measure variance components on log-scale to force positive estimate
    *      - Also define two 'typedefs' to simplify code later.
+   *      
+   * 1. Construct the temporal precision matrix (if applicable)
    *
-   * 1. Construct K or Q, depending on the spcified K_type.
+   * 1. Construct spatial variance/precision matrix, depending on K_type.
    *      - K is the (tapered) prior covariance matrix of eta.
    *      - Q is the prior precision matrix of eta
    *
@@ -38,16 +40,24 @@ Type objective_function<Type>::operator() ()
   typedef Eigen::SparseMatrix<Type> SpMat;    // Sparse matrices called 'SpMat'
   typedef Eigen::Triplet<Type> T;             // Triplet lists called 'T'
   
-  // Data
+  // ---- 0. Data and Parameters ----
+
   DATA_VECTOR(Z);             // Vector of observations
+  int m    = Z.size();        // Sample size
   DATA_MATRIX(X);             // Design matrix of fixed effects
   DATA_SPARSE_MATRIX(S);      // Design matrix for basis function random weights
-  DATA_IVECTOR(ri);           // Number of basis functions at each resolution
-  DATA_SCALAR(sigma2e);       // Measurement error estimate (Gaussian case only)
+  DATA_SCALAR(sigma2e);       // Measurement error estimate (relevant to Gaussian case only)
   DATA_STRING(K_type);        // Indicates the desired model formulation of eta prior (K or Q)
   DATA_STRING(response);      // String specifying the response distribution
   DATA_STRING(link);          // String specifying the link function
   DATA_VECTOR(k_Z);           // "Known-constant" parameter (only relevant for negative-binomial and binomial)
+  DATA_INTEGER(temporal);     // Boolean indicating whether we are in space-time or not
+  
+  DATA_INTEGER(r_t);         // Total number of temporal basis functions
+  DATA_IVECTOR(r_si);        // Vector containing the number of spatial basis functions at each resolution
+  int nres = r_si.size();    // Number of resolutions (of spatial basis functions) 
+  int r_s  = r_si.sum();     // Total number of spatial basis functions
+  int r = r_s * r_t;
   
   DATA_VECTOR(alpha);         // Tapering parameters (only relevant for block-exponential formulation)
   DATA_IVECTOR(row_indices);
@@ -56,105 +66,234 @@ Type objective_function<Type>::operator() ()
   DATA_IVECTOR(nnz);          // Integer vector indicating the number of non-zeros at each resolution of K_tap or Q
   DATA_IVECTOR(n_r);          // Integer vector indicating the number of rows at each resolution (applicable only if K-type == separable)
   DATA_IVECTOR(n_c);          // Integer vector indicating the number of columns at each resolution (applicable only if K-type == separable)
-  
-  int m    = Z.size();       // Sample size
-  int nres = ri.size();      // Number of resolutions
-  int r    = ri.sum();
-  int nnz_total = nnz.sum(); // Total number of non-zero elements in Q or K_tap
-  
-  // Parameters                   // Transformed Parameters
+
+  // Parameters/basis function variance components/latent random effects 
   PARAMETER_VECTOR(beta);
-  PARAMETER(logsigma2xi);         Type sigma2xi       = exp(logsigma2xi);
-  PARAMETER(logphi);              Type phi            = exp(logphi);
+  PARAMETER(logsigma2xi);     Type sigma2xi = exp(logsigma2xi);
+  PARAMETER(logphi);          Type phi      = exp(logphi);
   
-  // basis function variance components 
   // FIX: Currently I am using different names for these terms for each K_type method. 
-  // I will let the first half of the sigma2 vector correspond to the row direction variances and the second half the column variances.
-  // Same for rho.
-  // FIX: Check that tail() gives the correct order (I want n-3, n-2, n-1, n, NOT n, n-1, n-2, n-3)
-  PARAMETER_VECTOR(logsigma2);    vector<Type> sigma2 = exp(logsigma2);
-  PARAMETER_VECTOR(logtau);       vector<Type> tau    = exp(logtau);
-  vector<Type> kappa  = sigma2;
-  vector<Type> rho    = tau;
-  vector<Type> sigma2_r = sigma2.head(nres);
-  vector<Type> sigma2_c = sigma2.tail(nres);
-  vector<Type> rho_r    = tau.head(nres);
-  vector<Type> rho_c    = tau.tail(nres);
-  //FIX: I can move these variable definitions into if statements if they are not used elsewhere in the script
+  PARAMETER_VECTOR(logsigma2);  vector<Type> sigma2 = exp(logsigma2);
+  PARAMETER_VECTOR(logtau);     vector<Type> tau    = exp(logtau);
+  PARAMETER(logsigma2_t);       Type sigma2_t       = exp(logsigma2_t);
+  PARAMETER(logrho_t);          Type rho_t          = exp(logrho_t);
+  PARAMETER_VECTOR(logdelta);   vector<Type> delta  = exp(logdelta);
   
-  
-  
-  // Latent random effects
   PARAMETER_VECTOR(eta);
   PARAMETER_VECTOR(xi_O);
   
+
   
   // ---- 1. Construct prior covariance matrix K or precision matrix Q  ---- //
   
-
-  
-  // Construct Q or K as a sparse matrix: use triplet list (row, column, value)
-  std::vector<T> tripletList;       // Create triplet list, called 'tripletList'
-  tripletList.reserve(nnz_total);   // Reserve number of non-zeros in the matrix
-  
-  int start = 0;      // Keep track of starting point in x FIX: change this to start_x, or something
+  int start_x = 0;    // Keep track of starting point in x (the vector of non-zero coefficients)
   int start_eta = 0;  // Keep track of starting point in eta
   Type coef = 0;      // Variable to store the current element (coefficient) of the matrix
   
   Type logdetK = 0; 
   Type quadform_eta = 0; 
   
-  // FIX: definition of llt could potentially be moved to the very start of this section
-  // i.e. it is a common object to all.
   
-  if (K_type == "precision") {
+  // ---- Temporal precision matrix (if relevant) ----
+  
+  // This code assumes the temporal basis functions are one resolution only. 
+  
+  // In C++ variables defined in if-statements or for-loops cannot be accessed outside the 
+  // scope of the if-statement or for-loop. Hence we need to define a matrix variable here,
+  // even though this variable will not be used if temporal == 0. This matrix, J, will store 
+  // the various products of L_si, H_i, and L_t needed for the quadratic form. 
+  matrix<Type> J; 
+  
+  if (temporal == 1) {
+    // Construct the temporal Cholesky factor, L_t.
+    std::vector<T> tripletList_L_t;
+    tripletList_L_t.reserve(2 * r_t - 1);
+    Type common_term = 1 / sqrt(sigma2_t * (1 - rho_t * rho_t));
+
+    // Diagonal entries (except last diagonal entry), lower diagonal entries
+    for (int j = 0; j < (r_t - 1); j++) {
+      tripletList_L_t.push_back(T(j, j, 1));
+      tripletList_L_t.push_back(T(j + 1, j, -rho_t * common_term));
+    }
+    // Final diagonal entry
+    tripletList_L_t.push_back(T(r_t - 1, r_t - 1, 1 / sqrt(sigma2_t)));
+
+    // Convert triplet list of non-zero entries to a true SparseMatrix.
+    SpMat L_t(r_t, r_t);
+    L_t.setFromTriplets(tripletList_L_t.begin(), tripletList_L_t.end());
+
+    // Log-determinant
+    logdetK += -2.0 * r_s * L_t.diagonal().array().log().sum();
+
+    // Quadratic form
+    J = eta;
+    J.resize(r_s, r_t);
+    J *= L_t; 
+  }
+  
+
+  // ---- Spatial variance/precision matrix ----
+  
+  // Exponentially-decaying precision
+  if (K_type == "precision_exp") {
+
+    // Variance components: delta, rho, tau
+    vector<Type> rho    = sigma2;
     
-    // Add kappa[i] diagonals of block i, multiply block i by rho[i]
-    for (int i = 0; i < nres; i++) {                    // For each resolution
+    for (int i = 0; i < nres; i++) {  // For each spatial-resolution
       
       // Construct ith block as a sparse matrix: use triplet list (row, column, value)
-      std::vector<T> tripletList;    // Create a vector of triplet lists, called 'tripletList' FIX: could move this outside the loop
+      std::vector<T> tripletList;    // Create a vector of triplet lists, called 'tripletList'
       tripletList.reserve(nnz[i]);   // Reserve number of non-zeros in the matrix
+      vector<Type> rowSums(r_si[i]); // Vector to store the row sums
+      rowSums.fill(0);
       
-      for (int j = start; j < start + nnz[i]; j++){     // For each non-zero entry within resolution i
-        
-        if (row_indices[j] == col_indices[j]) { // Diagonal terms
+      for (int j = start_x; j < start_x + nnz[i]; j++){ // For each non-zero entry within resolution i
+        if (col_indices[j] != row_indices[j]) { // For non-diagonal elements only
+          coef = -rho[i] * exp( - x[j] / tau[i] ) * pow( 1 - x[j] / alpha[i], 2.0) * ( 1 + x[j] / (2.0 * alpha[i]));
+          // Add the current element to the triplet list (which we will construct Qi with),
+          // and add the element to the vector containing the rowSums.
+          tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
+          rowSums[row_indices[j] - start_eta] += coef;
+        }
+      }
+  
+      // Now add the diagonal elements (these depend on the row sums)
+      for (int j = 0; j < r_si[i]; j++) {
+        tripletList.push_back(T(j, j, delta[i] - rowSums[j]));
+      }
+
+      // Convert triplet list of non-zero entries to a true SparseMatrix.
+      SpMat Qi(r_si[i], r_si[i]);
+      Qi.setFromTriplets(tripletList.begin(), tripletList.end());
+
+      // Compute Cholesky factor of Qi
+      Eigen::SimplicialLLT< SpMat > llt;
+      llt.compute(Qi);
+      SpMat Mi = llt.matrixL();
+
+      // P (the permutation matrix)
+      Eigen::PermutationMatrix<Eigen::Dynamic> P = llt.permutationP();
+
+      // Contribution of determinant of Q_i to the log-determinant of K
+      logdetK -= 2.0 * r_t * Mi.diagonal().array().log().sum();
+
+      // Quadratic form
+      if (temporal == 1) {
+        // Update the block of J corresponding to the spatial random weights of resolution i
+        J.block(start_eta, 0, r_si[i], r_t) = Mi * J.block(start_eta, 0, r_si[i], r_t);
+      } else {
+        vector<Type> ui = Mi.transpose() * P * eta.segment(start_eta, r_si[i]).matrix();
+        quadform_eta += (ui * ui).sum();
+      }
+      
+      start_eta += r_si[i];
+      start_x += nnz[i];
+    }
+  }
+  
+  // My original precision implementation
+  if (K_type == "precision") {
+
+    // Variance components
+    vector<Type> kappa  = sigma2;
+    vector<Type> rho    = tau;
+
+    for (int i = 0; i < nres; i++) {  // For each spatial-resolution
+
+      // Construct ith block as a sparse matrix: use triplet list (row, column, value)
+      std::vector<T> tripletList;    // Create a vector of triplet lists, called 'tripletList'
+      tripletList.reserve(nnz[i]);   // Reserve number of non-zeros in the matrix
+
+      for (int j = start_x; j < start_x + nnz[i]; j++){ // For each non-zero entry within resolution i
+
+        if (row_indices[j] == col_indices[j]) {     // Diagonal terms
           coef = rho[i] * (x[j] + kappa[i]);
         } else {
           coef = rho[i] * x[j];
         }
         tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
       }
-      
+
       // Convert triplet list of non-zero entries to a true SparseMatrix.
-      SpMat Qi(ri[i], ri[i]);
+      SpMat Qi(r_si[i], r_si[i]);
       Qi.setFromTriplets(tripletList.begin(), tripletList.end());
-      
+
       // Compute Cholesky factor of Qi
-      // Eigen::SimplicialLLT< SpMat, Eigen::Lower, Eigen::NaturalOrdering<int> > llt;
       Eigen::SimplicialLLT< SpMat > llt;
       llt.compute(Qi);
       SpMat Mi = llt.matrixL();
-      
+
       // P (the permutation matrix)
       Eigen::PermutationMatrix<Eigen::Dynamic> P = llt.permutationP();
 
       // Contribution of determinant of Q_i to the log-determinant of K
-      logdetK -= 2.0 * Mi.diagonal().array().log().sum();
-      
+      logdetK -= 2.0 * r_t * Mi.diagonal().array().log().sum();
+
       // Quadratic form
-      // The vector ui (such that u_i = M_i' eta_i):
-      // vector<Type> ui = (Mi.transpose()) * (eta.segment(start_eta, ri[i]).matrix());
-      vector<Type> ui = Mi.transpose() * P * eta.segment(start_eta, ri[i]).matrix();
-      quadform_eta += (ui * ui).sum();
-      
-      start_eta += ri[i];
-      start += nnz[i];
-      
+      if (temporal == 1) {
+        // Update the block of J corresponding to the spatial random weights of resolution i
+        J.block(start_eta, 0, r_si[i], r_t) = Mi * J.block(start_eta, 0, r_si[i], r_t);
+      } else {
+        vector<Type> ui = Mi.transpose() * P * eta.segment(start_eta, r_si[i]).matrix();
+        quadform_eta += (ui * ui).sum();
+      }
+
+      start_eta += r_si[i];
+      start_x += nnz[i];
     }
-    
   }
 
+  // Nychka (2015) formulation
+  if (K_type == "precision_latticeKrig") {
+
+    // Variance components
+    vector<Type> kappa  = sigma2;
+    vector<Type> rho    = tau;
+
+    for (int i = 0; i < nres; i++) {  // For each spatial-resolution
+
+      // Construct ith block as a sparse matrix: use triplet list (row, column, value)
+      std::vector<T> tripletList;    // Create a vector of triplet lists, called 'tripletList'
+      tripletList.reserve(nnz[i]);   // Reserve number of non-zeros in the matrix
+
+      for (int j = start_x; j < start_x + nnz[i]; j++){ // For each non-zero entry within resolution i
+
+        if (row_indices[j] == col_indices[j]) {     // Diagonal terms
+          coef = x[j] + kappa[i];
+        } else {
+          coef = x[j];
+        }
+        tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
+      }
+
+      // Convert triplet list of non-zero entries to a true SparseMatrix.
+      SpMat Bi(r_si[i], r_si[i]);
+      Bi.setFromTriplets(tripletList.begin(), tripletList.end());
+
+      // Compute Cholesky factor of Bi
+      Eigen::SimplicialLLT< SpMat > llt;
+      llt.compute(Bi);
+      SpMat Mi = llt.matrixL();
+
+      // Contribution of determinant of Q_i to the log-determinant of K
+      logdetK += r_t * (r_si[i] * log(rho[i]) - 4.0 * Mi.diagonal().array().log().sum());
+
+      // Quadratic form
+      if (temporal == 1) {
+        // FIX: need to figure out how this works for ST
+        // Update the block of J corresponding to the spatial random weights of resolution i
+        J.block(start_eta, 0, r_si[i], r_t) = Mi * J.block(start_eta, 0, r_si[i], r_t);
+      } else {
+        vector<Type> ui = Bi * eta.segment(start_eta, r_si[i]).matrix();
+        quadform_eta += ((ui * ui).sum())/rho[i];
+      }
+
+      start_eta += r_si[i];
+      start_x += nnz[i];
+    }
+  }
+  
   if (K_type == "block-exponential") {
     
     for (int i = 0; i < nres; i++){       // For each resolution
@@ -163,15 +302,15 @@ Type objective_function<Type>::operator() ()
       std::vector<T> tripletList;    // Create triplet list, called 'tripletList'
       tripletList.reserve(nnz[i]);   // Reserve number of non-zeros in the matrix
       
-      for (int j = start; j < start + nnz[i]; j++){   // For each non-zero entry within resolution i
+      for (int j = start_x; j < start_x + nnz[i]; j++){   // For each non-zero entry within resolution i
         // Construct the covariance (exponential covariance function WITH spherical taper):
-        coef = sigma2[i] * exp( - x[j] / tau[i] ) * pow( 1 - x[j] / alpha[i], 2.0) * ( 1 + x[j] / (2 * alpha[i]));
+        coef = sigma2[i] * exp( - x[j] / tau[i] ) * pow( 1 - x[j] / alpha[i], 2.0) * ( 1 + x[j] / (2 * alpha[i])); // FIX: could just do the second two terms in R
         // Add the current element to the triplet list:
         tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
       }
       
       // Convert triplet list of non-zero entries to a true SparseMatrix.
-      SpMat Ki(ri[i], ri[i]);
+      SpMat Ki(r_si[i], r_si[i]);
       Ki.setFromTriplets(tripletList.begin(), tripletList.end());
       
       // Compute Cholesky factor of K_i
@@ -187,18 +326,24 @@ Type objective_function<Type>::operator() ()
       logdetK += 2.0 * Li.diagonal().array().log().sum();
       
       // Quadratic form
-      // The vector vi (such that L_i v_i = eta_i):
-      // vector<Type> vi = (Li.template triangularView<Eigen::Lower>().solve(eta.segment(start_eta, ri[i]).matrix())).array();
-      vector<Type> vi = (Li.template triangularView<Eigen::Lower>().solve(P * eta.segment(start_eta, ri[i]).matrix())).array();
+      vector<Type> vi = (Li.template triangularView<Eigen::Lower>().solve(P * eta.segment(start_eta, r_si[i]).matrix())).array();
       quadform_eta += (vi * vi).sum();
       
-      start_eta += ri[i];
-      start += nnz[i];
+      start_eta += r_si[i];
+      start_x += nnz[i];
     }
-    
   }
   
   if (K_type == "separable") {
+    
+    // Variance components associated with each direction.
+    // I will let the first half of the sigma2 vector correspond to the row direction variances and the second half the column variances.
+    // Same for rho.
+    // FIX: Check that tail() gives the correct order (I want n-3, n-2, n-1, n, NOT n, n-1, n-2, n-3)
+    vector<Type> sigma2_r = sigma2.head(nres);
+    vector<Type> sigma2_c = sigma2.tail(nres);
+    vector<Type> rho_r    = tau.head(nres);
+    vector<Type> rho_c    = tau.tail(nres);
 
     for (int i = 0; i < nres; i++) { // for each resolution
 
@@ -208,8 +353,8 @@ Type objective_function<Type>::operator() ()
       std::vector<T> tripletList_M_c;
       tripletList_M_r.reserve(2 * n_r[i] - 1);
       tripletList_M_c.reserve(2 * n_c[i] - 1);
-      Type common_term_c = sqrt(sigma2_c[i] * (1 - rho_c[i] * rho_c[i]));
-      Type common_term_r = sqrt(sigma2_r[i] * (1 - rho_r[i] * rho_r[i]));
+      Type common_term_c = 1 / sqrt(sigma2_c[i] * (1 - rho_c[i] * rho_c[i]));
+      Type common_term_r = 1 / sqrt(sigma2_r[i] * (1 - rho_r[i] * rho_r[i]));
 
       // Diagonal entries (except last diagonal entry) AND lower diagonal entries
       for (int j = 0; j < (n_r[i] - 1); j++) {
@@ -221,8 +366,8 @@ Type objective_function<Type>::operator() ()
         tripletList_M_c.push_back(T(j + 1, j, -rho_c[i] * common_term_c));
       }
       // Last diagonal entry
-      tripletList_M_r.push_back(T(n_r[i] - 1, n_r[i] - 1, sqrt(1 - rho_r[i] * rho_r[i]) * common_term_r)); // FIX: This cancels i.e. common_term cancels apart from sigma
-      tripletList_M_c.push_back(T(n_c[i] - 1, n_c[i] - 1, sqrt(1 - rho_c[i] * rho_c[i]) * common_term_c));
+      tripletList_M_r.push_back(T(n_r[i] - 1, n_r[i] - 1, 1 / sqrt(sigma2_r[i]))); 
+      tripletList_M_c.push_back(T(n_c[i] - 1, n_c[i] - 1, 1 / sqrt(sigma2_c[i])));
 
       // Convert triplet list of non-zero entries to a true SparseMatrix.
       SpMat M_r(n_r[i], n_r[i]);
@@ -235,21 +380,25 @@ Type objective_function<Type>::operator() ()
       logdetK += -2.0 * n_r[i] * M_c.diagonal().array().log().sum();
 
       // Quadratic form
-      matrix<Type> Hi = eta.segment(start_eta, ri[i]);
+      matrix<Type> Hi = eta.segment(start_eta, r_si[i]);
       Hi.resize(n_c[i], n_r[i]);
       matrix<Type> vi = M_c.transpose() * Hi * M_r;
-      vi.resize(ri[i], 1); // vec() operator
-      vector<Type> vi2 = vi.array(); // FIX: dont bother defining this, just sub in vi.array()
-      quadform_eta += (vi2 * vi2).sum();
+      vi.resize(r_si[i], 1); // vec() operator
+      quadform_eta += (vi.array() * vi.array()).sum();
 
-      start_eta += ri[i];
+      start_eta += r_si[i];
     }
+  }
+  
+  // ---- Quadratic form in the case of space-time ----
+  if (temporal == 1) { 
+    J.resize(r_s * r_t, 1); // apply the vec operator
+    quadform_eta += (J.array() * J.array()).sum();
   }
   
   
   // -------- 3. Construct ln[eta|Q] and ln[xi|sigma2xi].  -------- //
   
-  // Quadratic forms required in Gaussian density
   Type quadform_xi = pow(sigma2xi, -1.0) * (xi_O * xi_O).sum();
   
   // ln[eta|K] and ln[xi|sigma2xi]:
@@ -397,12 +546,12 @@ Type objective_function<Type>::operator() ()
 // This is because, in C++, each set of braces defines a scope, so all variables
 // defined in loops and if statements are not accessible outside of them. 
 
-// PARAMETER_VECTOR(eta) defines eta as an ARRAY object in Eigen - be careful, 
-// as matrices/vectors cannot be mixed with arrays!
+// PARAMETER_VECTOR(eta) defines eta as an ARRAY object in Eigen i.e. vector<type> 
+// is equivalent to an array.  - be careful,  as matrices/vectors cannot be mixed 
+// with arrays! 
+// PARAMETER_MATRIX() casts as matrix<type>, which is indeed a matrix.
 
-// Possible vec() in Eigen: https://eigen.tuxfamily.org/dox-devel/group__TutorialReshape.html
-// NO! reshaped() has not been released yet. Instad, we can try to use a Map():
-// https://stackoverflow.com/a/56393956
+
 
 // Alternative computation of Hi:
 // matrix<Type> Hi(n_c[i], n_r[i]);

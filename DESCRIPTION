@@ -58,5 +58,5 @@ Additional_repositories: https://andrewzm.github.io/dggrids-repo,
 License: GPL (>= 2)
 NeedsCompilation: yes
 LazyData: true
-RoxygenNote: 7.0.2
+RoxygenNote: 7.1.0
 LinkingTo: Rcpp, TMB, RcppEigen
