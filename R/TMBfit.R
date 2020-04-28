@@ -54,6 +54,32 @@
   ## the following means we want toprint every parameter passed to obj$fn.
   obj$env$tracepar <- TRUE
   
+  # browser()
+  # 
+  # B <- obj$report()$mat1
+  # Matrix::image(B)
+  # range(B)
+  # obj$par
+  # exp(1.7925182) + 4
+  # 
+  # Q <- obj$report()$mat
+  # Matrix::image(Q)
+  # range(Q)
+  # 
+  # ## Q should equal BB/tau
+  # tau <- exp(-2.1972246)
+  # temp <- B %*% B /tau
+  # Matrix::image(temp)
+  # range(temp)
+  # sum(abs(temp - Q))
+  # 
+  # matrixcalc::is.positive.definite(as.matrix(Q))
+  # matrixcalc::is.positive.definite(as.matrix(B))
+  # 
+  # which(Q > 0, arr.ind = T)
+  # which(B > 0, arr.ind = T)
+
+  
   ## Fit the model
   fit <- nlminb(obj$par, obj$fn, obj$gr,
                 control = list(eval.max = 100, iter.max = 50,
@@ -110,29 +136,9 @@
   M@Q_eta <- Q[1:r, 1:r] # Don't need it, but this matrix is easily obtained, so provide anyway
   M@S_eta <- Matrix()    # Don't need this matrix so set it to NA. It is also not easily obtained because to obtain it we need to invert the joint precision matrix Q_eta_xi, which may be very large.
   
-  ## Compute prior precision or covariance matrix 
-  ## based on whether we used the precision or covariance model formulation
-  if (M@K_type == "precision") {
-    # temp <- .sparse_Q_block_diag(df = M@basis@df, 
-    #                              kappa = exp(estimates$logsigma2), 
-    #                              rho = exp(estimates$logtau))
-    # M@Khat_inv <- temp$Q
-    # M@Khat <- chol2inv(chol(M@Khat)) # NOTE: this matrix is not needed at anypoint in model fitting or prediction
-    M@Khat_inv <- Matrix()
-    M@Khat <- Matrix()
-    
-  } else if (M@K_type == "block-exponential") {
-    # M@Khat <- .K_tap_matrix(M@D_basis,
-    #                         alpha = data_params_init$data$alpha,
-    #                         sigma2 =  exp(estimates$logsigma2),
-    #                         tau = exp(estimates$logtau))
-    # M@Khat_inv <- chol2inv(chol(M@Khat)) # NOTE: this matrix is not needed at anypoint in model fitting or prediction
-    M@Khat <- Matrix()
-    M@Khat_inv <- Matrix()
-  } else if (M@K_type == "separable") {
-    M@Khat_inv <- Matrix()
-    M@Khat <- Matrix()
-  }
+  ## For TMB, we do not need to compute these matrices; return an empty matrix.
+  M@Khat_inv <- Matrix()
+  M@Khat <- Matrix()
   
   return(M)
 }
@@ -194,7 +200,7 @@
     data$col_indices <- R@j
     data$x           <- R@x
     
-  } else if (M@K_type == "precision") {
+  } else if (M@K_type == "precision" || M@K_type == "precision_latticekrig") {
     temp <- .sparse_Q_block_diag(spatial_basis@df, kappa = 0, rho = 1)
     R <- as(temp$Q, "dgTMatrix")
     data$nnz         <- temp$nnz
@@ -277,12 +283,14 @@
   parameters$logrho_t       <- log(0.4)
 
   
-  ## Separability means we have twice as many spatial basis function variance components
+  
   if (M@K_type == "separable") {
+    ## Separability means we have twice as many spatial basis function variance components
     parameters$logsigma2 <- rep(parameters$logsigma2, 2)
     parameters$logtau <- rep(parameters$logtau, 2)
     parameters$logdelta <- log(1)
   } else if (M@K_type == "precision_exp") {
+    ## Precision exp requires one extra parameter
     parameters$logdelta <- rnorm(length(data$r_si))
   } else {
     parameters$logdelta <- log(1)
@@ -309,23 +317,7 @@
   }
 
 
-  # browser()
-
-  length(data$x)
-  length(data$row_indices)
-  length(data$col_indices)
-
-  range(data$col_indices)
-  range(data$row_indices)
-  spatial_basis@n
-
-  data$r_si
   
-
-  data$nnz
-  sum(data$nnz)
-  
-  length(parameters$logsigma2)
   
   
   return(list(data = data, parameters = parameters))
