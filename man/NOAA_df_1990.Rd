@@ -4,7 +4,8 @@
 \name{NOAA_df_1990}
 \alias{NOAA_df_1990}
 \title{NOAA maximum temperature data for 1990--1993}
-\format{A data frame with 196,253 rows and 8 variables:
+\format{
+A data frame with 196,253 rows and 8 variables:
 \describe{
   \item{year}{year of retrieval}
   \item{month}{month of retrieval}
@@ -14,7 +15,8 @@
   \item{id}{station id}
   \item{lon}{longitude coordinate of measurement station}
   \item{lat}{latitude coordinate of measurement station}
-}}
+}
+}
 \usage{
 NOAA_df_1990
 }

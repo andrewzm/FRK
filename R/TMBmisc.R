@@ -27,12 +27,6 @@
 #' @param link A character string indicating the assumed link function. \emph{Not} required if \code{kind} is \code{"prob_to_mu"} or \code{"mu_to_prob"}. 
 #' @param response A character string indicating the assumed response distribution. \emph{Only} required if \code{kind} is \code{"prob_to_mu"} or \code{"mu_to_prob"}.
 #' @return A function.
-#' @examples
-#' g <- .link_fn(kind = "mu_to_Y", link = "log")
-#' g(20)
-#' psi <- .link_fn(kind = "Y_to_mu", link = "log")
-#' psi(3)
-#' chi <- .link_fn(kind = "prob_to_mu, response = "negative-binomial")
 .link_fn <- function (kind, link, response) {
   
   if (kind == "Y_to_mu") {

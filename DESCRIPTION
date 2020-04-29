@@ -60,3 +60,4 @@ NeedsCompilation: yes
 LazyData: true
 RoxygenNote: 7.1.0
 LinkingTo: Rcpp, TMB, RcppEigen
+Encoding: UTF-8

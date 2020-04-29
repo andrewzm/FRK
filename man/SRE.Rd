@@ -40,7 +40,7 @@ SRE(
   normalise_basis = TRUE,
   response = "gaussian",
   link = "identity",
-  taper = 8,
+  taper = 4,
   ...
 )
 
@@ -69,10 +69,11 @@ SRE.predict(
   pred_polys = NULL,
   pred_time = NULL,
   covariances = FALSE,
-  n_MC = 1600,
+  n_MC = 400,
   seed = NULL,
   type = "mean",
-  k = NULL
+  k = NULL,
+  percents = c(5, 25, 50, 75, 90)
 )
 
 loglik(SRE_model)
@@ -94,13 +95,13 @@ loglik(SRE_model)
 
 \item{vgm_model}{an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm}. This object contains the variogram model that will be fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified, the variogram used is \code{gstat::vgm(1, "Lin", d, 1)}, where \code{d} is approximately one third of the maximum distance between any two data points}
 
-\item{K_type}{the parameterisation used for the \code{K} matrix. Currently this can be "unstructured" or "block-exponential" (default)}
+\item{K_type}{the parameterisation used for the \code{K} matrix. If the EM algorithm is used, \code{K_type} can be "unstructured" or "block-exponential". If TMB is used \code{K_type} can be "precision" or "block-exponential". The default is "block-exponential"}
 
 \item{n_EM}{maximum number of iterations for the EM algorithm}
 
 \item{tol}{convergence tolerance for the EM algorithm}
 
-\item{method}{parameter estimation method to employ. Currently only ``EM'' and ``TMB'' is supported}
+\item{method}{parameter estimation method to employ. Currently only "EM" and "TMB" is supported}
 
 \item{lambda}{ridge-regression regularisation parameter for when \code{K} is unstructured (0 by default). Can be a single number, or a vector (one parameter for each resolution)}
 
@@ -109,6 +110,12 @@ loglik(SRE_model)
 \item{...}{other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling the function \code{FRK}}
 
 \item{normalise_basis}{flag indicating whether to normalise the basis functions so that they reproduce a stochastic process with approximately constant variance spatially}
+
+\item{response}{A character string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "bernoulli", "gamma","inverse-gaussian", "negative-binomial", or "binomial".}
+
+\item{link}{A character string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted.}
+
+\item{taper}{A positive numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "block-exponential"} and \code{TMB} is used to fit the data)}
 
 \item{SRE_model}{object returned from the constructor \code{SRE()} containing all the parameters and information on the SRE model}
 

@@ -4,7 +4,8 @@
 \name{worldmap}
 \alias{worldmap}
 \title{World map}
-\format{A data frame with 33971 rows and 6 variables:
+\format{
+A data frame with 33971 rows and 6 variables:
 \describe{
   \item{long}{longitude coordinate}
   \item{lat}{latitude coordinate}
@@ -12,7 +13,8 @@
   \item{order}{order of point in polygon boundary}
   \item{region}{region name}
   \item{subregion}{subregion name}
-}}
+}
+}
 \usage{
 worldmap
 }
