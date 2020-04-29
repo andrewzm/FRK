@@ -54,32 +54,6 @@
   ## the following means we want toprint every parameter passed to obj$fn.
   obj$env$tracepar <- TRUE
   
-  # browser()
-  # 
-  # B <- obj$report()$mat1
-  # Matrix::image(B)
-  # range(B)
-  # obj$par
-  # exp(1.7925182) + 4
-  # 
-  # Q <- obj$report()$mat
-  # Matrix::image(Q)
-  # range(Q)
-  # 
-  # ## Q should equal BB/tau
-  # tau <- exp(-2.1972246)
-  # temp <- B %*% B /tau
-  # Matrix::image(temp)
-  # range(temp)
-  # sum(abs(temp - Q))
-  # 
-  # matrixcalc::is.positive.definite(as.matrix(Q))
-  # matrixcalc::is.positive.definite(as.matrix(B))
-  # 
-  # which(Q > 0, arr.ind = T)
-  # which(B > 0, arr.ind = T)
-
-  
   ## Fit the model
   fit <- nlminb(obj$par, obj$fn, obj$gr,
                 control = list(eval.max = 100, iter.max = 50,
@@ -297,6 +271,7 @@
   }
 
   ## Initialise the latent random effects
+  ## FIX: Should the following be in terms of M@basis@df? Perhaps we could just initialise at one time point, and use the same initialisation for all times e.g. with spatial_basis@df and rep.
   ## FIX: Add a check if nres == 4. If so, then it is wise to avoid a solve() here. 
   ## FIX: perhaps change solve() to chol2inv(chol()) 
   ## FIX: maybe change this intialisation to be only in terms of Qinit. Currently leave as is because the theory I wrote is in terms of Kinit and the block-exponential.
@@ -312,14 +287,29 @@
     kappa <- exp(-parameters$logsigma2)
     rho <- exp(parameters$logtau)
     QInit <- .sparse_Q_block_diag(M@basis@df, kappa = 0.5, rho = 1)$Q
-    parameters$eta  <- as.vector((1 / temp) * solve(Matrix::t(M@S) %*% M@S / temp + QInit ) %*% (Matrix::t(M@S)  %*% (Z0_t - X %*% parameters$beta)))
-    parameters$xi_O <- as.vector((exp(parameters$logsigma2xi) / temp) * (Z0_t - X %*% parameters$beta - M@S %*% parameters$eta))
+    if (nres >= 4) { # Avoid full inverse if we have four resolutions (in which case r approx 10,000)
+      
+      ## Matrix we need to invert:
+      mat <- Matrix::t(M@S) %*% M@S / temp + QInit
+      
+      ## Permuted Cholesky factor
+      mat_L <- sparseinv:::cholPermute(Q = mat) 
+      
+      ## Sparse-inverse-subset (a proxy for the inverse)
+      mat_inv <- sparseinv::Takahashi_Davis(Q = mat,
+                                            cholQp = mat_L$Qpermchol,
+                                            P = mat_L$P)
+  
+      parameters$eta  <- as.vector((1 / temp) * mat_inv %*% Matrix::t(M@S)  %*% (Z0_t - X %*% parameters$beta))
+      parameters$xi_O <- as.vector((exp(parameters$logsigma2xi) / temp) * (Z0_t - X %*% parameters$beta - M@S %*% parameters$eta))  
+    } else {
+      parameters$eta  <- as.vector((1 / temp) * solve(Matrix::t(M@S) %*% M@S / temp + QInit ) %*% (Matrix::t(M@S)  %*% (Z0_t - X %*% parameters$beta)))
+      parameters$xi_O <- as.vector((exp(parameters$logsigma2xi) / temp) * (Z0_t - X %*% parameters$beta - M@S %*% parameters$eta))  
+    }
+    
   }
 
-
-  
-  
-  
+    
   return(list(data = data, parameters = parameters))
 }
 
