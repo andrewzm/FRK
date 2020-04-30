@@ -13,7 +13,8 @@ latent process Y).}
   obs_fs = FALSE,
   seed = NULL,
   k = NULL,
-  Q_L
+  Q_L,
+  obsidx
 )
 }
 \arguments{
@@ -38,6 +39,8 @@ If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{
 If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}.}
 
 \item{Q_L}{A list containing the Cholesky factor of the permuted precision matrix (stored as \texttt{Q$Qpermchol}) and the associated permutationmatrix (stored as \texttt{Q_L$P}).}
+
+\item{obsidx}{A vector containing the indices of observed locations.}
 }
 \value{
 A list containing Monte Carlo samples of various quantites of interest. 

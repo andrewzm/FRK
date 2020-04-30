@@ -68,7 +68,7 @@
   #### Posterior variance of Y at each prediction location.
   ## Note that MSPE(E(Y|Z), Y) is approximated by var(Y|Z).
 
-  MSPE_Y  <- .Y_var(M = M, Q_L = Q_L) 
+  MSPE_Y  <- .Y_var(M = M, Q_L = Q_L, obsidx = obsidx) 
   })
   
   # ------ Conditional mean (mu) prediction and uncertainty ------
@@ -76,7 +76,7 @@
   ## Compute Monte Carlo samples of conditional mean at each location
   pred_time$MC_sample_total <- system.time(
     MC <- .MC_sampler(M = M, X = X, type = type, obs_fs = obs_fs, 
-                      n_MC = n_MC, seed = seed, k = k, Q_L = Q_L)
+                      n_MC = n_MC, seed = seed, k = k, Q_L = Q_L, obsidx = obsidx)
   ) 
 
   pred_time$MC_sample_backsolve <- MC$times$backsolve # time of backsolve specifically
@@ -176,10 +176,10 @@
 #' 
 #' @param M An object of class SRE.
 #' @param Q_L A list containing the Cholesky factor of the permuted precision matrix (stored as \texttt{Q$Qpermchol}) and the associated permutationmatrix (stored as \texttt{Q_L$P}).
+#' @param obsidx Vector containing the observed locations.
 #' @return A vector of the posterior variance of Y at every BAU. 
-.Y_var <- function(M, Q_L){
+.Y_var <- function(M, Q_L, obsidx){
   
-  obsidx <- apply(M@Cmat, 1, function(x) which(x == 1))
   r  <- ncol(M@S0)
   m  <- length(obsidx)
   
@@ -253,6 +253,7 @@
 #' If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}. 
 #' @param seed A seed for reproducibility.
 #' @param Q_L A list containing the Cholesky factor of the permuted precision matrix (stored as \texttt{Q$Qpermchol}) and the associated permutationmatrix (stored as \texttt{Q_L$P}).
+#' @param obsidx A vector containing the indices of observed locations.
 #' @return A list containing Monte Carlo samples of various quantites of interest. 
 #' The list elements are (N x n_MC) matrices, whereby the ith row of each matrix corresponds to
 #' n_MC samples of the given quantity at the ith BAU. The available quantities are:
@@ -263,13 +264,10 @@
 #'   \item{Z_samples}{Samples of the response variable.}
 #' }
 .MC_sampler <- function(M, X, type = "mean", n_MC = 1600, obs_fs = FALSE, seed = NULL, k = NULL, 
-                        Q_L){
-  
-
+                        Q_L, obsidx){
   
   MC <- list() # object we will return 
   N   <- nrow(M@S0)
-  obsidx <- apply(M@Cmat, 1, function(x) which(x == 1)) ## FIX: I compute this in the parent environment, so I could just pass it in
   m   <- length(M@Z)
   r   <- ncol(M@S0) # Total number of basis functions
   
