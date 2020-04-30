@@ -12,7 +12,8 @@ latent process Y).}
   n_MC = 1600,
   obs_fs = FALSE,
   seed = NULL,
-  k = NULL
+  k = NULL,
+  Q_L
 )
 }
 \arguments{
@@ -35,6 +36,8 @@ If \code{"response"} is in \code{type}, the response variable \eqn{Z} samples, a
 \item{k}{vector of size parameters parameters at each BAU (applicable only for binomial and negative-binomial data).
 If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{\xi} is included in the latent \eqn{Y} process. 
 If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}.}
+
+\item{Q_L}{A list containing the Cholesky factor of the permuted precision matrix (stored as \texttt{Q$Qpermchol}) and the associated permutationmatrix (stored as \texttt{Q_L$P}).}
 }
 \value{
 A list containing Monte Carlo samples of various quantites of interest. 

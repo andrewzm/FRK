@@ -4,10 +4,12 @@
 \alias{.Y_var}
 \title{Posterior variance of the latent Y process.}
 \usage{
-.Y_var(M)
+.Y_var(M, Q_L)
 }
 \arguments{
 \item{M}{An object of class SRE.}
+
+\item{Q_L}{A list containing the Cholesky factor of the permuted precision matrix (stored as \texttt{Q$Qpermchol}) and the associated permutationmatrix (stored as \texttt{Q_L$P}).}
 }
 \value{
 A vector of the posterior variance of Y at every BAU.

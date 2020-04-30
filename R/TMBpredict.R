@@ -19,8 +19,9 @@
                          k = NULL, 
                          percents = c(5, 25, 50, 75, 95)) {
   
+  pred_time <- list()
+  
   # ---- Create objects needed thoughout the function ----
-
   
   ## Id of observed BAUs
   obsidx <- apply(M@Cmat, 1, function(x) which(x == 1))
@@ -42,10 +43,21 @@
   rm(depname, L)
   
   
+  # ---- Computed the Cholesky factor of the permuted precision matrix ----
+  
+  ## Permuted Cholesky factor
+  pred_time$compute_cholesky_factor <- system.time(
+    Q_L <- sparseinv::cholPermute(Q = M@Q_eta_xi)
+  )
+  
+
+  
   # ------ Latent process Y prediction and Uncertainty ------
   
   ## Note that this does NOT depend on the response of Z.
   
+  pred_time$Y_pred_and_uncertainty <- system.time({
+    
   #### Posterior expectation E(Y|Z) at each prediction location.
   ## large- and medium-scale variation terms:
   p_Y <- as.vector(X %*% M@alphahat + M@S0 %*% M@mu_eta)
@@ -53,18 +65,21 @@
   ## Add posterior estimate of xi_O at observed BAUs
   p_Y[obsidx]   <-  p_Y[obsidx] + as.vector(M@mu_xi_O)
   
-  
   #### Posterior variance of Y at each prediction location.
   ## Note that MSPE(E(Y|Z), Y) is approximated by var(Y|Z).
-  MSPE_Y  <- .Y_var(M = M) 
 
+  MSPE_Y  <- .Y_var(M = M, Q_L = Q_L) 
+  })
   
   # ------ Conditional mean (mu) prediction and uncertainty ------
   
   ## Compute Monte Carlo samples of conditional mean at each location
-  MC <- .MC_sampler(M = M, X = X, type = type, obs_fs = obs_fs, 
-                    n_MC = n_MC, seed = seed, k = k)
+  pred_time$MC_sample_total <- system.time(
+    MC <- .MC_sampler(M = M, X = X, type = type, obs_fs = obs_fs, 
+                      n_MC = n_MC, seed = seed, k = k, Q_L = Q_L)
+  ) 
 
+  pred_time$MC_sample_backsolve <- MC$times$backsolve # time of backsolve specifically
   
   # ------ Create Prediction Dataframe ------
   
@@ -139,7 +154,7 @@
   if (!("link" %in% type)) MC$Y_samples <- NULL
   if (!("mean" %in% type)) {MC$mu_samples <- NULL; MC$prob_samples <- NULL}
   
-  return(list(newdata = newdata, MC = MC))
+  return(list(newdata = newdata, MC = MC, pred_time = pred_time))
 }
 
 
@@ -160,17 +175,15 @@
 #' Note that as we are using E(\eqn{Y|Z}) to predict \eqn{Y}, the posterior variance acts as an approximation of the mean-squared prediction error (see pg. 72 of Honours thesis).
 #' 
 #' @param M An object of class SRE.
+#' @param Q_L A list containing the Cholesky factor of the permuted precision matrix (stored as \texttt{Q$Qpermchol}) and the associated permutationmatrix (stored as \texttt{Q_L$P}).
 #' @return A vector of the posterior variance of Y at every BAU. 
-.Y_var <- function(M){
+.Y_var <- function(M, Q_L){
   
   obsidx <- apply(M@Cmat, 1, function(x) which(x == 1))
   r  <- ncol(M@S0)
   m  <- length(obsidx)
   
   # ---- Sparse-inverse-subset of Q (acting as a proxy for the true covariance matrix) ----
-  
-  ## Permuted Cholesky factor
-  Q_L <- sparseinv:::cholPermute(Q = M@Q_eta_xi)
 
   ## Sparse-inverse-subset of fixed AND random effects
   ## (a proxy for the covariance matrix)
@@ -239,6 +252,7 @@
 #' If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{\xi} is included in the latent \eqn{Y} process. 
 #' If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}. 
 #' @param seed A seed for reproducibility.
+#' @param Q_L A list containing the Cholesky factor of the permuted precision matrix (stored as \texttt{Q$Qpermchol}) and the associated permutationmatrix (stored as \texttt{Q_L$P}).
 #' @return A list containing Monte Carlo samples of various quantites of interest. 
 #' The list elements are (N x n_MC) matrices, whereby the ith row of each matrix corresponds to
 #' n_MC samples of the given quantity at the ith BAU. The available quantities are:
@@ -248,7 +262,10 @@
 #'   \item{prob_samples}{Samples of the probability of success parameter (only for the relevant response distributions).}
 #'   \item{Z_samples}{Samples of the response variable.}
 #' }
-.MC_sampler <- function(M, X, type = "mean", n_MC = 1600, obs_fs = FALSE, seed = NULL, k = NULL){
+.MC_sampler <- function(M, X, type = "mean", n_MC = 1600, obs_fs = FALSE, seed = NULL, k = NULL, 
+                        Q_L){
+  
+
   
   MC <- list() # object we will return 
   N   <- nrow(M@S0)
@@ -256,10 +273,12 @@
   m   <- length(M@Z)
   r   <- ncol(M@S0) # Total number of basis functions
   
+  MC$times <- list() # object to track timings of function components
   
   # ---- Generate samples from (eta, xi_O) ----
   
   ## Must generate samples jointly, as eta and xi_O are correlated.
+
   
   ## Construct the mean vector of (eta, xi_O).
   ## Also make an (r+m) x n_MC matrix whose columns are the mean vector of (eta, xi_O).
@@ -274,8 +293,17 @@
   ## Then, to generate samples from (eta, xi_O), 
   ## use eta_xi_O = L^{-T} z + mu = U^{-1} z + mu, 
   ## where U upper cholesky factor of Q, so that Q = U'U.
-  U           <- Matrix::chol(M@Q_eta_xi)
-  eta_xi_O    <- as.matrix(Matrix::solve(U, z) + mu_eta_xi_O_Matrix)
+  # U           <- Matrix::chol(M@Q_eta_xi)
+  # eta_xi_O    <- as.matrix(Matrix::solve(U, z) + mu_eta_xi_O_Matrix)
+  
+  ## Method 2: sparseinv package, Cholesky of permuted Q, then backsolve
+  U <- Matrix::t(Q_L$Qpermchol) # upper Cholesky factor of permuted joint precision matrix M@Q_eta_xi
+  MC$times$backsolve <- system.time(
+    x <- backsolve(U, z)          # x ~ Gau(0, A), where A is the permuted precision matrix i.e. A = P'QP
+  )
+  y <- Q_L$P %*% x              # y ~ Gau(0, Q^{-1})
+  eta_xi_O  <- as.matrix(y + mu_eta_xi_O_Matrix) # add the mean to y
+  
   
   ## Separate the eta and xi_O samples
   eta     <- eta_xi_O[1:r, ]
@@ -317,6 +345,7 @@
   xi_samples        <- rbind(xi_O, xi_U) 
   
   ## Use permutation matrix to get the correct (original) ordering
+  ## FIXME: could just use row indexing to avoid matrix multiplication here
   unobsidx         <- (1:N)[-obsidx]       # Unobserved BAUs indices
   ids              <- c(obsidx, unobsidx)  # All indices (observed and unobserved)
   P                <- Matrix::sparseMatrix(i = 1:N, j = 1:N, x = 1)[ids, ]
@@ -411,6 +440,8 @@
   
   ## Add Z_samples to list object
   MC$Z_samples <- Z_samples
+  
+
   
   return(MC)
 }
