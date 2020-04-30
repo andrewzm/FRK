@@ -106,10 +106,6 @@ Type objective_function<Type>::operator() ()
 
   // ---- 1. Construct prior covariance matrix K or precision matrix Q  ---- //
   
-  int start_x = 0;    // Keep track of starting point in x (the vector of non-zero coefficients)
-  int start_eta = 0;  // Keep track of starting point in eta
-  Type coef = 0;      // Variable to store the current element (coefficient) of the matrix
-  
   Type logdetQ_inv = 0; 
   Type quadform_eta = 0; 
   
@@ -154,6 +150,10 @@ Type objective_function<Type>::operator() ()
   
 
   // ---- Spatial variance/precision matrix ----
+  
+  int start_x = 0;    // Keep track of starting point in x (the vector of non-zero coefficients)
+  int start_eta = 0;  // Keep track of starting point in eta
+  Type coef = 0;      // Variable to store the current element (coefficient) of the matrix
   
   for (int k = 0; k < nres; k++) { // For each resolution of spatial basis functions
     
@@ -274,32 +274,31 @@ Type objective_function<Type>::operator() ()
         }
       }
       
-      if (K_type == "block_exponential") {
-        
+      if (K_type == "block-exponential") {
+
         for (int j = start_x; j < start_x + nnz[k]; j++){   // For each non-zero entry within resolution i
-          coef = sigma2[k] * exp( -x[j] / tau[k] ) * pow( 1.0 - x[j] / alpha[k], 2.0) * ( 1.0 + x[j] / (2.0 * alpha[k])); 
+          coef = sigma2[k] * exp( -x[j] / tau[k] ) * pow( 1.0 - x[j] / alpha[k], 2.0) * ( 1.0 + x[j] / (2.0 * alpha[k]));
           tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
         }
       }
       
       // Convert triplet list of non-zero entries to a true SparseMatrix.
-      // NB: this is "Kk" the variance matrix if K_type == "block-exponential", 
-      // the "Bk" matrix if K_type == "precision_latticeKrig", 
-      // and the precision matrix "Qk" for other formulations.
+      // NB: this is "Kk" the variance matrix if K_type == "block-exponential",
+      // the "Bk" matrix if K_type == "precision_latticeKrig" (and rhoInB == false),
+      // and the precision matrix "Qk" for all other formulations.
       SpMat mat(r_si[k], r_si[k]);
       mat.setFromTriplets(tripletList.begin(), tripletList.end());
+      
       
       // SpMat B = mat; REPORT(B);
       
       bool constructQ = false;
       if (K_type == "precision_latticekrig" && constructQ == true) {
-        
         if(rhoInB == false) {
-          mat = mat * mat / (tau[k] + Type(1e-10)); 
+          mat = mat * mat / (tau[k] + Type(1e-10));
         } else if (rhoInB == true) {
           mat = mat * mat;
         }
-        
       }
 
       // SpMat Q = mat; REPORT(Q);
@@ -309,12 +308,12 @@ Type objective_function<Type>::operator() ()
       llt.compute(mat);
       SpMat Uk = llt.matrixU();
       
-      // Log-determinant 
+      // Log-determinant
       if (K_type == "precision_latticekrig" && constructQ == false && rhoInB == true) {
         logdetQ_inv += -4.0 * r_t * Uk.diagonal().array().log().sum();
       } else if (K_type == "precision_latticekrig" && constructQ == false && rhoInB == false) {
         logdetQ_inv += r_si[k] * log(tau[k] + 1e-10) - 4.0 * r_t * Uk.diagonal().array().log().sum();
-      } else if (K_type == "block_exponential") {
+      } else if (K_type == "block-exponential") {
         logdetQ_inv += 2.0 * r_t * Uk.diagonal().array().log().sum();
       } else {
         logdetQ_inv += -2.0 * r_t * Uk.diagonal().array().log().sum();
@@ -329,20 +328,20 @@ Type objective_function<Type>::operator() ()
         Mk = mat;
       } else if (K_type == "precision_latticekrig" && constructQ == false && rhoInB == false) {
         Mk = mat / sqrt(tau[k] + 1e-10);
-      } else if (K_type == "block_exponential") {
-        std::cout << "Don't construct Mk explicitly with block_exponential";
+      } else if (K_type == "block-exponential") {
+        // Don't construct Mk explicitly with block-exponential
       } else {
         Mk = Uk * P;
       }
 
       // Quadratic form
       if (temporal == 1) {
-        if (K_type == "block_exponential") {
+        if (K_type == "block-exponential") {
           J.block(start_eta, 0, r_si[k], r_t) = (Uk.transpose()).template triangularView<Eigen::Lower>().solve(P * J.block(start_eta, 0, r_si[k], r_t));
         } else {
           J.block(start_eta, 0, r_si[k], r_t) = Mk * J.block(start_eta, 0, r_si[k], r_t);
         }
-        
+
       } else {
         vector<Type> vk(r_si[k]);
         if (K_type == "block-exponential") {
@@ -352,6 +351,7 @@ Type objective_function<Type>::operator() ()
         }
         quadform_eta += (vk * vk).sum();
       }
+    
     }
     
     start_eta += r_si[k];

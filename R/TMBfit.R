@@ -41,7 +41,7 @@
                    parameters = data_params_init$parameters,
                    random = c("eta", "xi_O"),
                    DLL = "FRK")
-
+  
   ## View the sparsity pattern.
   ## Note that this can be done before model fitting.
   # temp <- obj$env$spHess(random = TRUE)
@@ -308,7 +308,6 @@
     }
     
   }
-
     
   return(list(data = data, parameters = parameters))
 }
@@ -319,8 +318,10 @@
 #' Covariance tapering based on distances.
 #'
 #' Computes the covariance tapering parameters \eqn{\alpha} (which are dependent
-#' on resolution) and the number of non-zeros in each block of the tapered
-#' covariance matrix K_tap.
+#' on resolution), number of non-zeros in each block of the tapered
+#' covariance matrix K_tap, and the tapered distance matrix whereby some distances
+#' have been set to zero post tapering (although the remaining non-zero distances 
+#' are unchanged).
 #'
 #' \code{taper} determines how strong the covariance tapering is; the ith taper parameter
 #' \eqn{\alpha_i} is equal to \code{taper[i]} * \code{minDist[i]}, where
@@ -335,6 +336,8 @@
 #'   \item{alpha}{A vector of taper parameters.}
 #'   \item{nnz}{A vector containing the number of non-zeros in each block of the 
 #'   tapered prior covariance matrix, K_tap.}
+#'   \item{D_tap}{A sparse block-diagonal matrix containing the distances with 
+#'   some distances set to zero post tapering. }
 #' }
 #' @seealso \code{\link{.K_matrix}}
 .cov_tap <- function(D_matrices, taper = 8){
@@ -344,7 +347,7 @@
 
   ## Minimum distance between neighbouring basis functions.
   ## (add a large number to the diagonal, which would otherwise be 0)
-  ## FIX: This approach is flawed. What if we have a very skinny rectangle for the domain of interest?
+  ## FIXME: This approach is flawed. What if we have a very skinny rectangle for the domain of interest?
   minDist <- vector()
   for(i in 1:nres) minDist[i] <- min(D_matrices[[i]] + 10^8 * diag(ri[i]))
 
@@ -352,6 +355,10 @@
   alpha   <- taper * minDist
   
   ## Construct D matrix with elements set to zero after tapering
+  ## FIXME: I could also apply the taper here, whereby we compute the spherical 
+  ## taper and multiply the distances by the taper. This would have the advtange 
+  ## that we no longer need to construct the taper within C++. However, it is 
+  ## probably simpler to leave as is.
   D_tap <- list()
   nnz <- c()
   for (i in 1:nres) {
