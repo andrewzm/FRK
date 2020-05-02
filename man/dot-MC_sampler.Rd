@@ -38,7 +38,7 @@ If \code{"response"} is in \code{type}, the response variable \eqn{Z} samples, a
 If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{\xi} is included in the latent \eqn{Y} process. 
 If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}.}
 
-\item{Q_L}{A list containing the Cholesky factor of the permuted precision matrix (stored as \texttt{Q$Qpermchol}) and the associated permutationmatrix (stored as \texttt{Q_L$P}).}
+\item{Q_L}{A list containing the Cholesky factor of the permuted precision matrix (stored as \code{Q$Qpermchol}) and the associated permutationmatrix (stored as \code{Q_L$P}).}
 
 \item{obsidx}{A vector containing the indices of observed locations.}
 }

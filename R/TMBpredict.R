@@ -176,7 +176,7 @@
 #' Note that as we are using E(\eqn{Y|Z}) to predict \eqn{Y}, the posterior variance acts as an approximation of the mean-squared prediction error (see pg. 72 of Honours thesis).
 #' 
 #' @param M An object of class SRE.
-#' @param Q_L A list containing the Cholesky factor of the permuted precision matrix (stored as \texttt{Q$Qpermchol}) and the associated permutationmatrix (stored as \texttt{Q_L$P}).
+#' @param Q_L A list containing the Cholesky factor of the permuted precision matrix (stored as \code{Q$Qpermchol}) and the associated permutationmatrix (stored as \code{Q_L$P}).
 #' @param obsidx Vector containing the observed locations.
 #' @return A vector of the posterior variance of Y at every BAU. 
 .Y_var <- function(M, Q_L, obsidx){
@@ -253,7 +253,7 @@
 #' If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{\xi} is included in the latent \eqn{Y} process. 
 #' If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}. 
 #' @param seed A seed for reproducibility.
-#' @param Q_L A list containing the Cholesky factor of the permuted precision matrix (stored as \texttt{Q$Qpermchol}) and the associated permutationmatrix (stored as \texttt{Q_L$P}).
+#' @param Q_L A list containing the Cholesky factor of the permuted precision matrix (stored as \code{Q$Qpermchol}) and the associated permutationmatrix (stored as \code{Q_L$P}).
 #' @param obsidx A vector containing the indices of observed locations.
 #' @return A list containing Monte Carlo samples of various quantites of interest. 
 #' The list elements are (N x n_MC) matrices, whereby the ith row of each matrix corresponds to

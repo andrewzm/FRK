@@ -1558,7 +1558,7 @@ print.summary.SRE <- function(x, ...) {
 
 ## Checks arguments for the SRE() function. Code is self-explanatory
 .check_args1 <- function(f,data,basis,BAUs,est_error, 
-                         K_type = c("block-exponential", "precision", "unstructured", "separable", "precision_exp", "precision_latticekrig"), 
+                         K_type = c("block-exponential", "precision", "unstructured", "separable", "precision_exp", "latticekrig"), 
                          response = c("gaussian", "poisson", "bernoulli", "gamma",
                                       "inverse-gaussian", "negative-binomial", "binomial"), 
                          link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"), 
@@ -1673,7 +1673,7 @@ print.summary.SRE <- function(x, ...) {
         if(method == "EM" & SRE_model@K_type == "precision") stop("The precision matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
         if(method == "EM" & SRE_model@K_type == "separable") stop("The separable precision matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
         if(method == "EM" & SRE_model@K_type == "precision_exp") stop("The exponential precision matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
-        if(method == "EM" & SRE_model@K_type == "precision_latticekrig") stop("The latticekrig precision matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
+        if(method == "EM" & SRE_model@K_type == "latticekrig") stop("The LatticeKrig precision matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
     }
     
 }

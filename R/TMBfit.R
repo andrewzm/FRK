@@ -41,7 +41,6 @@
                    parameters = data_params_init$parameters,
                    random = c("eta", "xi_O"),
                    DLL = "FRK")
-  
   ## View the sparsity pattern.
   ## Note that this can be done before model fitting.
   # temp <- obj$env$spHess(random = TRUE)
@@ -174,7 +173,7 @@
     data$col_indices <- R@j
     data$x           <- R@x
     
-  } else if (M@K_type == "precision" || M@K_type == "precision_latticekrig") {
+  } else if (M@K_type == "precision" || M@K_type == "latticekrig") {
     temp <- .sparse_Q_block_diag(spatial_basis@df, kappa = 0, rho = 1)
     R <- as(temp$Q, "dgTMatrix")
     data$nnz         <- temp$nnz

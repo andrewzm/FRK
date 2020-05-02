@@ -17,12 +17,16 @@ A list containing:
   \item{alpha}{A vector of taper parameters.}
   \item{nnz}{A vector containing the number of non-zeros in each block of the 
   tapered prior covariance matrix, K_tap.}
+  \item{D_tap}{A sparse block-diagonal matrix containing the distances with 
+  some distances set to zero post tapering. }
 }
 }
 \description{
 Computes the covariance tapering parameters \eqn{\alpha} (which are dependent
-on resolution) and the number of non-zeros in each block of the tapered
-covariance matrix K_tap.
+on resolution), number of non-zeros in each block of the tapered
+covariance matrix K_tap, and the tapered distance matrix whereby some distances
+have been set to zero post tapering (although the remaining non-zero distances 
+are unchanged).
 }
 \details{
 \code{taper} determines how strong the covariance tapering is; the ith taper parameter

@@ -17,7 +17,7 @@ Type choleskyAR1(Type sigma2, Type rho, int n){
   // typedef's:
   typedef Eigen::SparseMatrix<Type> SpMat;    // Sparse matrices called 'SpMat'
   typedef Eigen::Triplet<Type> T;             // Triplet lists called 'T'
-
+  
   std::vector< T > tripletList;
   tripletList.reserve(2 * n - 1);
   Type common_term = 1 / sqrt(sigma2 * (1 - rho * rho));
@@ -33,7 +33,7 @@ Type choleskyAR1(Type sigma2, Type rho, int n){
   // Convert triplet list of non-zero entries to a true SparseMatrix.
   SpMat L(n, n);
   L.setFromTriplets(tripletList.begin(), tripletList.end());
-
+  
   return L;
 }
 
@@ -54,14 +54,14 @@ Type objective_function<Type>::operator() ()
   // - Change r_si to r_sk
   // - See if we can use our defined functions within the template
   //    * could add a function which creates an AR1 matrix (requires three params; sigma, rho, and n)
-
+  
   
   // typedef's:
   typedef Eigen::SparseMatrix<Type> SpMat;    // Sparse matrices called 'SpMat'
   typedef Eigen::Triplet<Type> T;             // Triplet lists called 'T'
   
   // ---- 0. Data and Parameters ----
-
+  
   DATA_VECTOR(Z);             // Vector of observations
   int m    = Z.size();        // Sample size
   DATA_MATRIX(X);             // Design matrix of fixed effects
@@ -86,7 +86,7 @@ Type objective_function<Type>::operator() ()
   DATA_IVECTOR(nnz);          // Integer vector indicating the number of non-zeros at each resolution of K_tap or Q
   DATA_IVECTOR(n_r);          // Integer vector indicating the number of rows at each resolution (applicable only if K-type == separable)
   DATA_IVECTOR(n_c);          // Integer vector indicating the number of columns at each resolution (applicable only if K-type == separable)
-
+  
   // Parameters/basis function variance components/latent random effects 
   PARAMETER_VECTOR(beta);
   PARAMETER(logsigma2xi);     Type sigma2xi = exp(logsigma2xi);
@@ -103,7 +103,7 @@ Type objective_function<Type>::operator() ()
   PARAMETER_VECTOR(eta);
   PARAMETER_VECTOR(xi_O);
   
-
+  
   // ---- 1. Construct prior covariance matrix K or precision matrix Q  ---- //
   
   Type logdetQ_inv = 0; 
@@ -126,7 +126,7 @@ Type objective_function<Type>::operator() ()
     std::vector<T> tripletList_L_t;
     tripletList_L_t.reserve(2 * r_t - 1);
     Type common_term = 1 / sqrt(sigma2_t * (1 - rho_t * rho_t));
-
+    
     // Diagonal entries (except last diagonal entry), lower diagonal entries
     for (int j = 0; j < (r_t - 1); j++) {
       tripletList_L_t.push_back(T(j, j, 1));
@@ -134,21 +134,21 @@ Type objective_function<Type>::operator() ()
     }
     // Final diagonal entry
     tripletList_L_t.push_back(T(r_t - 1, r_t - 1, 1 / sqrt(sigma2_t)));
-
+    
     // Convert triplet list of non-zero entries to a true SparseMatrix.
     SpMat L_t(r_t, r_t);
     L_t.setFromTriplets(tripletList_L_t.begin(), tripletList_L_t.end());
-
+    
     // Log-determinant
     logdetQ_inv -= 2.0 * r_s * L_t.diagonal().array().log().sum();
-
+    
     // Quadratic form
     J = eta;
     J.resize(r_s, r_t);
     J *= L_t; 
   }
   
-
+  
   // ---- Spatial variance/precision matrix ----
   
   int start_x = 0;    // Keep track of starting point in x (the vector of non-zero coefficients)
@@ -160,7 +160,7 @@ Type objective_function<Type>::operator() ()
     // Separable is very different, so treat it as a special case
     if (K_type == "separable") {
       
-      // Variance components associated with row and column direction 
+      // Variance components associated with row and column direction
       // The first half of the sigma2 vector corresponds to row direction variances
       // and second half the column variances. Same for rho.
       // FIX: Check that tail() gives the correct order (I want n-3, n-2, n-1, n, NOT n, n-1, n-2, n-3)
@@ -188,7 +188,7 @@ Type objective_function<Type>::operator() ()
         tripletList_M_c.push_back(T(j + 1, j, -rho_c[k] * common_term_c));
       }
       // Last diagonal entry
-      tripletList_M_r.push_back(T(n_r[k] - 1, n_r[k] - 1, 1 / sqrt(sigma2_r[k]))); 
+      tripletList_M_r.push_back(T(n_r[k] - 1, n_r[k] - 1, 1 / sqrt(sigma2_r[k])));
       tripletList_M_c.push_back(T(n_c[k] - 1, n_c[k] - 1, 1 / sqrt(sigma2_c[k])));
       
       // Convert triplet list of non-zero entries to a true SparseMatrix.
@@ -217,7 +217,7 @@ Type objective_function<Type>::operator() ()
       tripletList.reserve(nnz[k]);   // Reserve number of non-zeros in the matrix
       
       // Vector to store the row sums
-      vector<Type> rowSums(r_si[k]); 
+      vector<Type> rowSums(r_si[k]);
       rowSums.fill(0);
       
       // make a quantity which is between 0 and 1 (for the correlation parameters)
@@ -227,7 +227,7 @@ Type objective_function<Type>::operator() ()
       if (K_type == "precision_exp") {
         
         for (int j = start_x; j < start_x + nnz[k]; j++){ // For each non-zero entry within resolution k
-          if (col_indices[j] != row_indices[j]) { 
+          if (col_indices[j] != row_indices[j]) {
             coef = -sigma2[k] * exp( -x[j] / tau[k] ) * pow(1.0 - x[j] / alpha[k], 2.0) * ( 1.0 + x[j] / (2.0 * alpha[k]));
             tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
             rowSums[row_indices[j] - start_eta] += coef;
@@ -241,20 +241,20 @@ Type objective_function<Type>::operator() ()
       
       if (K_type == "precision") {
         for (int j = start_x; j < start_x + nnz[k]; j++){  // For each non-zero entry within resolution k
-          if (row_indices[j] == col_indices[j]) {     
+          if (row_indices[j] == col_indices[j]) {
             coef = tau[k] * (x[j] + sigma2[k]);
           } else {
             coef = tau[k] * x[j]; // The "neighbour matrix" in R is responsible for setting the weights
           }
           tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
         }
-      } 
+      }
       
       bool rhoInB = false;
       
-      if (K_type == "precision_latticekrig" && rhoInB == true) {
+      if (K_type == "latticekrig" && rhoInB == true) {
         for (int j = start_x; j < start_x + nnz[k]; j++){  // For each non-zero entry within resolution k
-          if (row_indices[j] == col_indices[j]) {     
+          if (row_indices[j] == col_indices[j]) {
             coef = (x[j] + sigma2[k]) / sqrt(tau[k] + 1e-10);
           } else {
             coef = x[j] / sqrt(tau[k] + 1e-10); // The "neighbour matrix" in R is responsible for setting the weights
@@ -263,19 +263,19 @@ Type objective_function<Type>::operator() ()
         }
       }
       
-      if (K_type == "precision_latticekrig" && rhoInB == false) {
+      if (K_type == "latticekrig" && rhoInB == false) {
         for (int j = start_x; j < start_x + nnz[k]; j++){  // For each non-zero entry within resolution k
           if (row_indices[j] == col_indices[j]) {
             coef = x[j] + sigma2[k];
           } else {
-            coef = x[j]; 
+            coef = x[j];
           }
           tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
         }
       }
       
       if (K_type == "block-exponential") {
-
+        
         for (int j = start_x; j < start_x + nnz[k]; j++){   // For each non-zero entry within resolution i
           coef = sigma2[k] * exp( -x[j] / tau[k] ) * pow( 1.0 - x[j] / alpha[k], 2.0) * ( 1.0 + x[j] / (2.0 * alpha[k]));
           tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
@@ -284,7 +284,7 @@ Type objective_function<Type>::operator() ()
       
       // Convert triplet list of non-zero entries to a true SparseMatrix.
       // NB: this is "Kk" the variance matrix if K_type == "block-exponential",
-      // the "Bk" matrix if K_type == "precision_latticeKrig" (and rhoInB == false),
+      // the "Bk" matrix if K_type == "latticekrig" (and rhoInB == false),
       // and the precision matrix "Qk" for all other formulations.
       SpMat mat(r_si[k], r_si[k]);
       mat.setFromTriplets(tripletList.begin(), tripletList.end());
@@ -293,47 +293,47 @@ Type objective_function<Type>::operator() ()
       // SpMat B = mat; REPORT(B);
       
       bool constructQ = false;
-      if (K_type == "precision_latticekrig" && constructQ == true) {
+      if (K_type == "latticekrig" && constructQ == true) {
         if(rhoInB == false) {
           mat = mat * mat / (tau[k] + Type(1e-10));
         } else if (rhoInB == true) {
           mat = mat * mat;
         }
       }
-
+      
       // SpMat Q = mat; REPORT(Q);
-
+      
       // Compute the (upper) Cholesky factor of mat
       Eigen::SimplicialLLT< SpMat, Eigen::Upper > llt;
       llt.compute(mat);
       SpMat Uk = llt.matrixU();
       
       // Log-determinant
-      if (K_type == "precision_latticekrig" && constructQ == false && rhoInB == true) {
+      if (K_type == "latticekrig" && constructQ == false && rhoInB == true) {
         logdetQ_inv += -4.0 * r_t * Uk.diagonal().array().log().sum();
-      } else if (K_type == "precision_latticekrig" && constructQ == false && rhoInB == false) {
+      } else if (K_type == "latticekrig" && constructQ == false && rhoInB == false) {
         logdetQ_inv += r_si[k] * log(tau[k] + 1e-10) - 4.0 * r_t * Uk.diagonal().array().log().sum();
       } else if (K_type == "block-exponential") {
         logdetQ_inv += 2.0 * r_t * Uk.diagonal().array().log().sum();
       } else {
         logdetQ_inv += -2.0 * r_t * Uk.diagonal().array().log().sum();
       }
-
+      
       // P (the permutation matrix)
       Eigen::PermutationMatrix<Eigen::Dynamic> P = llt.permutationP();
       
       // Construct the matrix Mk such that Qk = Mk' Mk.
       SpMat Mk(r_si[k], r_si[k]);
-      if (K_type == "precision_latticekrig" && constructQ == false && rhoInB == true) {
+      if (K_type == "latticekrig" && constructQ == false && rhoInB == true) {
         Mk = mat;
-      } else if (K_type == "precision_latticekrig" && constructQ == false && rhoInB == false) {
+      } else if (K_type == "latticekrig" && constructQ == false && rhoInB == false) {
         Mk = mat / sqrt(tau[k] + 1e-10);
       } else if (K_type == "block-exponential") {
         // Don't construct Mk explicitly with block-exponential
       } else {
         Mk = Uk * P;
       }
-
+      
       // Quadratic form
       if (temporal == 1) {
         if (K_type == "block-exponential") {
@@ -341,7 +341,7 @@ Type objective_function<Type>::operator() ()
         } else {
           J.block(start_eta, 0, r_si[k], r_t) = Mk * J.block(start_eta, 0, r_si[k], r_t);
         }
-
+        
       } else {
         vector<Type> vk(r_si[k]);
         if (K_type == "block-exponential") {
@@ -351,7 +351,7 @@ Type objective_function<Type>::operator() ()
         }
         quadform_eta += (vk * vk).sum();
       }
-    
+      
     }
     
     start_eta += r_si[k];

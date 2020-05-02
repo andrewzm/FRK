@@ -9,7 +9,7 @@
 \arguments{
 \item{M}{An object of class SRE.}
 
-\item{Q_L}{A list containing the Cholesky factor of the permuted precision matrix (stored as \texttt{Q$Qpermchol}) and the associated permutationmatrix (stored as \texttt{Q_L$P}).}
+\item{Q_L}{A list containing the Cholesky factor of the permuted precision matrix (stored as \code{Q$Qpermchol}) and the associated permutationmatrix (stored as \code{Q_L$P}).}
 
 \item{obsidx}{Vector containing the observed locations.}
 }

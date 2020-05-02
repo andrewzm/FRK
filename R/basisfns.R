@@ -71,6 +71,7 @@ Basis <- function(manifold, n, fn, pars, df) {
 #' @param loc a matrix of size \code{n} by \code{dimensions(manifold)} indicating centres of basis functions
 #' @param scale vector of length \code{n} containing the scale parameters of the basis functions; see details
 #' @param type either ``bisquare'', ``Gaussian'', ``exp'', or ``Matern32''
+#' @param res vector of length \code{n} containing the resolutions of the basis functions
 #' @details This functions lays out local basis functions in a domain of interest based on pre-specified location and scale parameters. If \code{type} is ``bisquare'', then
 #'\deqn{\phi(u) = \left(1- \left(\frac{\| u \|}{R}\right)^2\right)^2 I(\|u\| < R),}
 #' and \code{scale} is given by \eqn{R}, the range of support of the bisquare function. If \code{type} is ``Gaussian'', then
@@ -91,8 +92,9 @@ Basis <- function(manifold, n, fn, pars, df) {
 #' @export
 local_basis <- function(manifold=sphere(),          # default manifold is sphere
                         loc=matrix(c(1,0),nrow=1),  # one centroid at (1,0)
-                        scale=1,                    # std = 1, and Gaussian RBF
-                        type=c("bisquare","Gaussian","exp","Matern32")) {
+                        scale = 1,                    # std = 1, and Gaussian RBF
+                        type=c("bisquare","Gaussian","exp","Matern32"), 
+                        res = 1) {
 
     ## Basic checks
     if(!is.matrix(loc)) stop("loc needs to be a matrix")
@@ -123,7 +125,11 @@ local_basis <- function(manifold=sphere(),          # default manifold is sphere
     }
 
     ## Create a data frame which summarises info about the functions. Set resolution = 1
-    df <- data.frame(loc,scale,res=1)
+    warning("I have changed local_basis to allow multiple resolutions. 
+            Check with Andrew that he is ok with this.")
+    ## Original code:
+    # df <- data.frame(loc,scale,res=1) 
+    df <- data.frame(loc, scale, res)
 
     ## Create new basis function, using the manifold, n, functions, parameters list, and data frame.
     this_basis <- Basis(manifold = manifold,  n = n, fn = fn, pars = pars, df = df)
