@@ -24,7 +24,7 @@
 #' @param average_in_BAU if \code{TRUE}, then multiple data points falling in the same BAU are averaged; the measurement error of the averaged data point is taken as the average of the individual measurement errors
 #' @param fs_model if "ind" then the fine-scale variation is independent at the BAU level. If "ICAR", then an ICAR model for the fine-scale variation is placed on the BAUs
 #' @param vgm_model an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm}. This object contains the variogram model that will be fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified, the variogram used is \code{gstat::vgm(1, "Lin", d, 1)}, where \code{d} is approximately one third of the maximum distance between any two data points
-#' @param K_type the parameterisation used for the \code{K} matrix. If the EM algorithm is used, \code{K_type} can be "unstructured" or "block-exponential". If TMB is used \code{K_type} can be "precision" or "block-exponential". The default is "block-exponential"
+#' @param K_type the parameterisation used for the \code{K} matrix. If the EM algorithm is used for model fitting, \code{K_type} can be "unstructured" or "block-exponential". If TMB is used for model fitting, \code{K_type} can be "neighbour" or "block-exponential". The default is "block-exponential"
 #' @param normalise_basis flag indicating whether to normalise the basis functions so that they reproduce a stochastic process with approximately constant variance spatially
 #' @param SRE_model object returned from the constructor \code{SRE()} containing all the parameters and information on the SRE model
 #' @param n_EM maximum number of iterations for the EM algorithm
@@ -116,6 +116,13 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     response  <- tolower(response)
     link      <- tolower(link)
     K_type    <- tolower(K_type)
+    
+    ## Produce a warning if method is TMB and user has specified 
+    ## the block-exponential covariance formulation
+    if (method == "TMB" & K_type == "block-exponential") {
+        warning("Fitting using method = 'TMB' is computationally inefficient under the block-exponential covariance formulation. Consider using K_type = 'neighbour' or K_type = 'separable'.")
+    }
+    
     
     ## Check that the arguments are OK
     .check_args1(f = f,data = data, basis = basis, BAUs = BAUs, est_error = est_error, 
@@ -1558,7 +1565,7 @@ print.summary.SRE <- function(x, ...) {
 
 ## Checks arguments for the SRE() function. Code is self-explanatory
 .check_args1 <- function(f,data,basis,BAUs,est_error, 
-                         K_type = c("block-exponential", "precision", "unstructured", "separable", "precision_exp", "latticekrig"), 
+                         K_type = c("block-exponential", "neighbour", "unstructured", "separable", "precision_exp", "latticekrig"), 
                          response = c("gaussian", "poisson", "bernoulli", "gamma",
                                       "inverse-gaussian", "negative-binomial", "binomial"), 
                          link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"), 
@@ -1670,8 +1677,8 @@ print.summary.SRE <- function(x, ...) {
     if(!missing(SRE_model)) {
         if(method == "EM" & !(SRE_model@response == "gaussian")) stop("The EM algorithm is only available for response = 'gaussian'. Please use method = 'TMB' for all other assumed response distributions.")
         if(method == "EM" & !(SRE_model@link == "identity")) stop("The EM algorithm is only available for link = 'identity'. Please use method = 'TMB' for all other link functions.")
-        if(method == "EM" & SRE_model@K_type == "precision") stop("The precision matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
-        if(method == "EM" & SRE_model@K_type == "separable") stop("The separable precision matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
+        if(method == "EM" & SRE_model@K_type == "neighbour") stop("The neighbour matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
+        if(method == "EM" & SRE_model@K_type == "separable") stop("The separable spatial model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
         if(method == "EM" & SRE_model@K_type == "precision_exp") stop("The exponential precision matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
         if(method == "EM" & SRE_model@K_type == "latticekrig") stop("The LatticeKrig precision matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
     }

@@ -115,6 +115,7 @@
 }
 
 
+## FIXME: I made a nicer, more-genral function in the MODIS comparison study script.
 #' Prediction interval width. 
 #'
 #' This function is used to compute prediction interval width
@@ -129,3 +130,4 @@
   Q <- apply(X, 1, function(x) quantile(x, c(l, u)))
   return(Q[2, ] - Q[1, ])
 }
+

@@ -53,6 +53,16 @@
   ## the following means we want toprint every parameter passed to obj$fn.
   obj$env$tracepar <- TRUE
   
+  
+  
+  ## ---- Testing the LatticeKrig model
+  
+  # browser()
+  ## Log-likeihood:
+  # obj$fn()
+  ##    constructQ == false, rhoInB == true:    
+  ##    constructQ == true, rhoInB == true:    11602.98
+  
   ## Fit the model
   fit <- nlminb(obj$par, obj$fn, obj$gr,
                 control = list(eval.max = 100, iter.max = 50,
@@ -173,7 +183,7 @@
     data$col_indices <- R@j
     data$x           <- R@x
     
-  } else if (M@K_type == "precision" || M@K_type == "latticekrig") {
+  } else if (M@K_type == "neighbour" || M@K_type == "latticekrig") {
     temp <- .sparse_Q_block_diag(spatial_basis@df, kappa = 0, rho = 1)
     R <- as(temp$Q, "dgTMatrix")
     data$nnz         <- temp$nnz

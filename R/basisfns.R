@@ -90,6 +90,7 @@ Basis <- function(manifold, n, fn, pars, df) {
 #'                    type="bisquare")
 #' \dontrun{show_basis(G)}
 #' @export
+
 local_basis <- function(manifold=sphere(),          # default manifold is sphere
                         loc=matrix(c(1,0),nrow=1),  # one centroid at (1,0)
                         scale = 1,                    # std = 1, and Gaussian RBF
@@ -124,12 +125,8 @@ local_basis <- function(manifold=sphere(),          # default manifold is sphere
         pars[[i]] <- list(loc = matrix(loc[i,],nrow=1), scale=scale[i])
     }
 
-    ## Create a data frame which summarises info about the functions. Set resolution = 1
-    warning("I have changed local_basis to allow multiple resolutions. 
-            Check with Andrew that he is ok with this.")
-    ## Original code:
-    # df <- data.frame(loc,scale,res=1) 
-    df <- data.frame(loc, scale, res)
+    ## Create a data frame which summarises info about the functions, and set the resolution.
+    df <- data.frame(loc, scale, res = res)
 
     ## Create new basis function, using the manifold, n, functions, parameters list, and data frame.
     this_basis <- Basis(manifold = manifold,  n = n, fn = fn, pars = pars, df = df)
@@ -150,6 +147,7 @@ local_basis <- function(manifold=sphere(),          # default manifold is sphere
 #' @param scale_aperture the aperture (in the case of the bisquare, but similar interpretation for other basis) width of the basis function is the minimum distance between all the basis function centroids multiplied by \code{scale_aperture}. Typically this ranges between 1 and 1.5 and is defaulted to 1 on the sphere and 1.25 on the other manifolds.
 #' @param bndary a \code{matrix} containing points containing the boundary. If \code{regular == 0} this can be used to define a boundary in which irregularly-spaced basis functions are placed
 #' @param verbose a logical variable indicating whether to output a summary of the basis functions created or not
+#' @param buffer a numeric between 0 and 0.5 indicating the size of the buffer of basis functions along the boundary. The buffer is added by computing the number of basis functions in each dimension, and increasing this number by a factor of \code{buffer}. A buffer may be needed when the prior of the basis function random weights, eta,  is formulated in terms of a precision matrix
 #' @param ... unused
 #' @details This function automatically places basis functions within the domain of interest. If the domain is a plane or the real line, then the object \code{data} is used to establish the domain boundary.
 #'
@@ -206,6 +204,7 @@ auto_basis <- function(manifold = plane(),
                        bndary = NULL,
                        scale_aperture = ifelse(is(manifold,"sphere"),1,1.25),
                        verbose = 0L,
+                       buffer = 0,
                        ...) {      # currently unused
 
     ## Basic checks
@@ -222,6 +221,12 @@ auto_basis <- function(manifold = plane(),
         stop("isea3h_lo needs to be an integer greater than 0")
     if(!(is.numeric(nres) | is.null(nres)))
         stop("nres needs to be greater than zero or NULL")
+    if (!is.numeric(buffer))
+      stop("buffer needs to be a numeric")
+    if (buffer < 0 | buffer > 0.5)
+      stop("buffer needs to be between 0 and 0.5")
+    if (buffer != 0 & regular != 1)
+      stop("A buffer of basis functions along the boundary can only be computed if regular == 1")
 
     ## If the user has specified a maximum number of basis functions then
     ## we need to add resolutions iteratively and stop when exceed the maximum
@@ -251,9 +256,10 @@ auto_basis <- function(manifold = plane(),
     }
 
     ## Now call the local function with checked parameters
-    .auto_basis(manifold=manifold,data=data,regular=regular,nres=nres,
-                prune=prune,subsamp=subsamp,type=type,isea3h_lo = isea3h_lo,
-                bndary=bndary, scale_aperture = scale_aperture, verbose=verbose)
+    .auto_basis(manifold = manifold, data = data, regular = regular, nres = nres,
+                prune = prune, subsamp = subsamp, type = type, isea3h_lo = isea3h_lo,
+                bndary = bndary, scale_aperture = scale_aperture, verbose = verbose, 
+                buffer = buffer)
 }
 
 
@@ -267,7 +273,8 @@ auto_basis <- function(manifold = plane(),
                         isea3h_lo = 2,
                         bndary = NULL,
                         scale_aperture = ifelse(is(manifold,"sphere"),1,1.25),
-                        verbose = 0L) {
+                        verbose = 0L, 
+                        buffer = 0) {
 
     type <- match.arg(type)            # match type
     m <- manifold                      # abbreviate for convenience
@@ -449,8 +456,86 @@ auto_basis <- function(manifold = plane(),
 
     ## Finally concatenate all the basis functions together using the S4 method concat
     G_basis <- Reduce("concat",G)
-    G_basis
+    
+    ## Add a buffer if requested (note that this is only allowed if regular == 1, 
+    ## which has already been checked at this stage of the function, i.e., if 
+    ## the user specifies a non-zero buffer with regular == 0, an error is 
+    ## thrown upon entry of auto_basis)
+    if (buffer != 0) {
+      G_basis <- .buffer(G_basis, buffer = buffer, type = type)  
+    }
+
+    return(G_basis)
 }
+
+## Function to add a buffer of basis functions along the boundary.
+## buffer indicates the percentage increase in the number of basis functions 
+## in each dimension.
+.buffer <- function(basis, buffer, type) {
+  
+  L      <- length(unique(basis@df$res))   # number of resolutions of basis functions
+  dimens <- basis@manifold@measure@dim     # dimension of the manifold
+  dim_names <- c(paste0("loc",1:(dimens))) # names of each dimension
+  basis_locs_list <- list()
+  scale <- res <- c()
+  
+  for (k in 1:L) { # for each resolution
+    
+    ## Extract basis function dataframe for the kth resolution
+    temp <- basis@df[basis@df$res == k, ]
+    
+    ## unique locations for all dimensions
+    unique_locs <- apply(temp[, dim_names, drop = FALSE], 2, function(x) sort(unique(x)))  
+    
+    ## in the case of dimens == 1, apply() creates a matrix. So, force to a list. 
+    if (dimens == 1) {
+      unique_locs <- list(unique_locs)  
+    } 
+    
+    ## Compute the distance between locations 
+    ## (assumes equally spaced basis functions in each dimension)
+    dist_btwn_locs <- sapply(unique_locs, function(x) diff(x)[1])
+    
+    ## Compute number of extra terms to add in each direction of each dimension
+    ## (divide buffer by 2 because we add locations to in both directions of a 
+    ## given dimension)
+    n_add <- sapply(unique_locs, function(x) ceiling(buffer/2 * length(x)))
+    
+    ## Compute the new unique locations of basis functions for each dimension. 
+    ## First, define a function to add n_add elements separated by a units to 
+    ## the head and tail of a vector x.
+    .add_head_tail <- function(x, n_add, a) {
+      c(head(x, 1) - (n_add:1) * a, 
+        x, 
+        tail(x, 1) + (1:n_add) * a)
+    }
+    unique_locs_new <- mapply(.add_head_tail, unique_locs, n_add, dist_btwn_locs)
+    
+    ## Now create new basis function locations, and append to previously 
+    ## computed basis function locations. Conveniently, expand.grid() allows 
+    ## lists to be passed as arguments.
+    basis_locs_list[[k]] <- as.matrix(expand.grid(unique_locs_new))
+    
+    scale <- c(scale, 
+               rep(temp$scale[1], nrow(basis_locs_list[[k]])))
+    
+    res <- c(res, 
+             rep(k, nrow(basis_locs_list[[k]])))
+  }
+  
+  ## Convert to matrix
+  basis_locs <- do.call(rbind, basis_locs_list)
+  
+  ## Convert to a basis 
+  basis_buffer <- local_basis(manifold = basis@manifold, 
+                              loc = basis_locs, 
+                              scale = scale, 
+                              type = type, 
+                              res = res)
+  
+  return(basis_buffer)
+}
+
 
 
 #' @rdname TensorP

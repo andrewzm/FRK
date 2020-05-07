@@ -239,7 +239,7 @@ Type objective_function<Type>::operator() ()
         }
       }
       
-      if (K_type == "precision") {
+      if (K_type == "neighbour") {
         for (int j = start_x; j < start_x + nnz[k]; j++){  // For each non-zero entry within resolution k
           if (row_indices[j] == col_indices[j]) {
             coef = tau[k] * (x[j] + sigma2[k]);
@@ -250,7 +250,7 @@ Type objective_function<Type>::operator() ()
         }
       }
       
-      bool rhoInB = false;
+      bool rhoInB = true;
       
       if (K_type == "latticekrig" && rhoInB == true) {
         for (int j = start_x; j < start_x + nnz[k]; j++){  // For each non-zero entry within resolution k
