@@ -123,6 +123,12 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         warning("Fitting using method = 'TMB' is computationally inefficient under the block-exponential covariance formulation. Consider using K_type = 'neighbour' or K_type = 'separable'.")
     }
     
+    ## Produce a warning if the response is non-Gaussian and user has specified 
+    ## the block-exponential covariance formulation
+    if (response != "gaussian" & K_type == "block-exponential") {
+        warning("Using K_type = 'block-exponential' is computationally inefficient when response != 'gaussian' (or, in general, when method == 'TMB'). For these situations, consider using K_type = 'neighbour' or K_type = 'separable'.")
+    }
+    
     
     ## Check that the arguments are OK
     .check_args1(f = f,data = data, basis = basis, BAUs = BAUs, est_error = est_error, 
