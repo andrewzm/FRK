@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/andrewzm/FRK.svg)](https://travis-ci.org/andrewzm/FRK)
 [![codecov.io](http://codecov.io/github/andrewzm/FRK/coverage.svg?branch=master)](http://codecov.io/github/andrewzm/FRK?branch=master)
-
+[![FRK_logo](https://raw.githubusercontent.com/andrewzm/FRK/master/man/figures/FRK_logo.png)](https://www.github.com/andrewzm/FRK "FRK")
 
 Fixed Rank Kriging
 ================
