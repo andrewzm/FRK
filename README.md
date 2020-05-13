@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/andrewzm/FRK.svg)](https://travis-ci.org/andrewzm/FRK)
 [![codecov.io](http://codecov.io/github/andrewzm/FRK/coverage.svg?branch=master)](http://codecov.io/github/andrewzm/FRK?branch=master)
 
-<img src="https://raw.githubusercontent.com/andrewzm/FRK/master/man/figures/FRK_logo.jpg" width="10%"> Fixed Rank Kriging
+Fixed Rank Kriging <img src="https://raw.githubusercontent.com/andrewzm/FRK/master/man/figures/FRK_logo.jpg" width="8%">
 ================
 
 
