@@ -40,9 +40,9 @@ Type: Package
 
 Title: Fixed Rank Kriging
 
-Version: 0.1.8
+Version: 0.2.3
 
-Date: 2018-01-12
+Date: 2019-02-07
 
 Author: Andrew Zammit-Mangion
 
