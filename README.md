@@ -4,7 +4,7 @@
 Fixed Rank Kriging 
 ================
 
-<img src="https://raw.githubusercontent.com/andrewzm/FRK/master/man/figures/FRK_logo.jpg" width="10%">
+<img src="./man/figures/FRK_logo.svg" width=100>
 
 
 Installation 
@@ -101,3 +101,8 @@ Demonstrations
 The package `FRK` is currently being used to generate spatio-temporal animations of fields observed by satellite data. [Here](https://www.youtube.com/watch?v=_kPa8VoeSdM) we show a daily prediction of CO2 using data from the NASA OCO-2 between September 2014 and June 2016.
 
 [![alt tag](https://img.youtube.com/vi/ENx4CIZdoQk/0.jpg)](https://www.youtube.com/watch?v=ENx4CIZdoQk)
+
+Acknowledgements
+--------------
+
+Thanks to [Michael Bertolacci](https://mbertolacci.github.io/) for designing the FRK hex logo!

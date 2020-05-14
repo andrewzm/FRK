@@ -8,13 +8,16 @@
    xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   inkscape:export-ydpi="43.040001"
+   inkscape:export-xdpi="43.040001"
+   inkscape:export-filename="/Users/mgnb/Projects/Wollongong/Miscellaneous/FRK_logo_200.png"
    sodipodi:docname="FRK logo.svg"
    inkscape:version="1.0 (4035a4f, 2020-05-01)"
    id="svg8"
    version="1.1"
-   viewBox="0 0 210 297"
-   height="297mm"
-   width="210mm">
+   viewBox="0 0 118.02958 136.28882"
+   height="136.28882mm"
+   width="118.02958mm">
   <defs
      id="defs2">
     <linearGradient
@@ -122,7 +125,7 @@
   </defs>
   <sodipodi:namedview
      inkscape:window-maximized="0"
-     inkscape:window-y="32"
+     inkscape:window-y="23"
      inkscape:window-x="1528"
      inkscape:window-height="1059"
      inkscape:window-width="1384"
@@ -130,18 +133,25 @@
      inkscape:document-rotation="0"
      inkscape:current-layer="layer8"
      inkscape:document-units="mm"
-     inkscape:cy="594.74079"
-     inkscape:cx="411.55619"
+     inkscape:cy="122.02386"
+     inkscape:cx="244.81009"
      inkscape:zoom="0.8624856"
      inkscape:pageshadow="2"
-     inkscape:pageopacity="0.0"
+     inkscape:pageopacity="0"
      borderopacity="1.0"
      bordercolor="#666666"
      pagecolor="#ffffff"
-     id="base">
+     id="base"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     inkscape:pagecheckerboard="true">
     <inkscape:grid
        id="grid964"
-       type="xygrid" />
+       type="xygrid"
+       originx="-48.10623"
+       originy="-79.671292" />
   </sodipodi:namedview>
   <metadata
      id="metadata5">
@@ -151,7 +161,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -159,7 +169,8 @@
      style="display:inline"
      inkscape:label="Layer 5"
      id="layer6"
-     inkscape:groupmode="layer">
+     inkscape:groupmode="layer"
+     transform="translate(-48.106228,-79.671296)">
     <path
        clip-path="url(#clipPath14065)"
        sodipodi:type="star"
@@ -167,7 +178,7 @@
        id="path18-7"
        sodipodi:sides="6"
        sodipodi:cx="107.12102"
-       sodipodi:cy="147.81571"
+       sodipodi:cy="147.8157"
        sodipodi:r1="66.989708"
        sodipodi:r2="58.014793"
        sodipodi:arg1="1.5707963"
@@ -181,7 +192,8 @@
      style="display:inline"
      inkscape:label="Layer 3"
      id="layer3"
-     inkscape:groupmode="layer">
+     inkscape:groupmode="layer"
+     transform="translate(-48.106228,-79.671296)">
     <g
        clip-path="url(#clipPath14061)"
        transform="translate(12.828425,-22.902979)"
@@ -343,7 +355,8 @@
      style="display:inline"
      inkscape:label="Layer 2"
      id="layer2"
-     inkscape:groupmode="layer">
+     inkscape:groupmode="layer"
+     transform="translate(-48.106228,-79.671296)">
     <g
        clip-path="url(#clipPath14057)"
        transform="translate(0.38811858,-1.3047455)"
@@ -2062,7 +2075,8 @@
      style="display:inline"
      inkscape:label="Layer 4"
      id="layer5"
-     inkscape:groupmode="layer">
+     inkscape:groupmode="layer"
+     transform="translate(-48.106228,-79.671296)">
     <g
        clip-path="url(#clipPath14053)"
        transform="translate(0.38808149,-1.3064156)"
@@ -2360,7 +2374,8 @@
      style="display:inline"
      id="layer1"
      inkscape:groupmode="layer"
-     inkscape:label="Layer 1">
+     inkscape:label="Layer 1"
+     transform="translate(-48.106228,-79.671296)">
     <path
        d="m 107.12102,214.80541 -58.014791,-33.49485 -10e-7,-66.98971 58.014792,-33.494854 58.01479,33.494854 0,66.98971 z"
        inkscape:randomized="0"
@@ -2380,5 +2395,6 @@
   <g
      inkscape:label="Layer 6"
      id="layer8"
-     inkscape:groupmode="layer" />
+     inkscape:groupmode="layer"
+     transform="translate(-48.106228,-79.671296)" />
 </svg>
