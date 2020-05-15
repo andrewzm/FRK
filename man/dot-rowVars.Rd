@@ -4,7 +4,7 @@
 \alias{.rowVars}
 \title{Variance by rows.}
 \usage{
-.rowVars(X, ...)
+.rowVars(X)
 }
 \arguments{
 \item{X}{An array like object (with a dim-attribute).}

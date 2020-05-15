@@ -12,6 +12,10 @@
 \item{kappa}{Quantity to add to the diagonal elements. This must be positive if Q is to be positive definite.}
 
 \item{rho}{Quantity to multiply matrix by. This must be positive if Q is to be positive definite.}
+
+\item{order}{If order == 1, only first order neighbours are considered. If order == 2, second order neighbours are also considered, and so on.}
+
+\item{diag_neighbours}{Indicates whether to consider the diagonal neighbours. If FALSE (the default), only the horizontal and vertical neighbours are considered.}
 }
 \value{
 A list containing the sparse block-diagonal precision matrix (Q) of class "dgCMatrix", and the number of non-zero elements (nnz) at each resolution.

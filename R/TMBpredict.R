@@ -16,7 +16,7 @@
 #' }
 #' Note that for all link functions other than the log-link and identity-link, the predictions and prediction uncertainty of \eqn{\mu} contained in \code{newdata} are computed using the Monte Carlo samples contained in \code{MC}.
 #' When the log- or identity-link functions are used the expectation and variance of the \eqn{\mu} may be computed exactly.
-.FRKTMB_pred <- function(M, type = "mean", n_MC, seed = NULL, obs_fs = FALSE, 
+.FRKTMB_pred <- function(M, type = "mean", n_MC = 400, seed = NULL, obs_fs = FALSE, 
                          k = NULL, 
                          percents = c(5, 25, 50, 75, 95)) {
   
@@ -42,7 +42,6 @@
   M@BAUs[[depname]] <- NULL
   
   rm(depname, L)
-  
   
   # ---- Computed the Cholesky factor of the permuted precision matrix ----
   
@@ -130,7 +129,8 @@
     if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
       newdata$p_prob     <- rowMeans(MC$prob_samples)
       newdata$RMSPE_prob <- sqrt(.rowVars(MC$prob_samples))
-      newdata <- .concat_percentiles_to_df(samples = MC$prob_samples, df = newdata, "prob")
+      newdata <- .concat_percentiles_to_df(X = MC$prob_samples, df = newdata, 
+                                           name = "prob", percents = percents)
     }
   }
   
@@ -264,7 +264,7 @@
 #'   \item{prob_samples}{Samples of the probability of success parameter (only for the relevant response distributions).}
 #'   \item{Z_samples}{Samples of the response variable.}
 #' }
-.MC_sampler <- function(M, X, type = "mean", n_MC = 1600, obs_fs = FALSE, seed = NULL, k = NULL, 
+.MC_sampler <- function(M, X, type = "mean", n_MC = 400, obs_fs = FALSE, seed = NULL, k = NULL, 
                         Q_L, obsidx){
   
   MC <- list() # object we will return 

@@ -2,7 +2,7 @@
 #'
 #' Performs model fitting using \code{TMB}.
 #' Prepares an object of class \code{SRE} for the prediction stage
-#' (which is performed via the function \code{\link{FRKTMB_pred}}).
+#' (performed internally with \code{\link{.FRKTMB_pred}}).
 #'
 #' @param M An object of class \code{SRE}.
 #' The slots of an \code{SRE} object particularly relevant to \code{FRKTMB_fit} are
@@ -27,13 +27,12 @@
 #'   \item{log_likelihood}{The log-likelihood of the model evaluated at the final parameter estimates. Can be obtained by calling loglik(M).}
 #' }
 #' This function also makes the slots \code{K_type}, \code{response}, and \code{link} lower case.
-#' @seealso \code{\link{.FRKTMB_pred}}
 .FRKTMB_fit <- function(M) {
 
   # ------ Data preparation ------
 
   data_params_init <- .TMB_prep(M)
-
+  
 
   # ------- Model Compilation -------
   
@@ -52,27 +51,43 @@
 
   ## the following means we want toprint every parameter passed to obj$fn.
   obj$env$tracepar <- TRUE
+
   
-  
-  
-  ## ---- Testing the LatticeKrig model
-  
-  # browser()
-  ## Log-likeihood:
-  # obj$fn()
-  ##    constructQ == false, rhoInB == true:    
-  ##    constructQ == true, rhoInB == true:    11602.98
-  
-  ## Fit the model
-  fit <- nlminb(obj$par, obj$fn, obj$gr,
-                control = list(eval.max = 100, iter.max = 50,
-                               abs.tol = 0.01, rel.tol = 0.0001, x.tol = 0.0001))
-  # fit <- optim(obj$par, obj$fn, obj$gr)
-  ## FIX: Need to add these as an optional argument to the user for controlling fitting:
+  ## Fit the model. We can choose between optim and nlminb. 
+  ## See https://stackoverflow.com/a/53201414 for a small comparison.
+  ## Note that each function has a lower and upper bound argument, which
+  ## may be used to constrain parameter values. This could be useful to 
+  ## prevent NAN and Inf evaluations.
+  ## FIXME: Need to add control.list as an optional argument to the user for 
+  ## controlling fitting. See here for details:
   ## https://www.uni-muenster.de/IT.BennoSueselbeck/s-html/helpfiles/nlminb.control.html
+  ## We could simply allow users to specify a list as control.list, then use the nlminb()
+  ## function to check that these arguments are valid. 
+  
+  # optimiser <- list()
+  # optimiser$functn <- "optim"
+  # optimiser$method <- "L-BFGS-B"
+  # optimiser$control <- list()
+  
+  # optimiser$functn <- "nlminb"
+  # optimiser$control <- list(eval.max = 100, iter.max = 50,
+  #                           abs.tol = 0.01, rel.tol = 0.0001, x.tol = 0.0001)
+  
+  
+  # if (optimiser$functn == "optim") {
+  #   fit <- optim(obj$par, obj$fn, obj$gr)
+  #   
+  # } else if (optimiser$functn == "nlminb") {
+  #   fit <- nlminb(obj$par, obj$fn, obj$gr,
+  #                 control = optimiser$control)
+  # }
+  
+    fit <- nlminb(obj$par, obj$fn, obj$gr,
+                  control = list(eval.max = 100, iter.max = 50,
+                                 abs.tol = 0.01, rel.tol = 0.0001, x.tol = 0.0001))
+    
 
   
-
   ## Log-likeihood
   log_likelihood <- -obj$fn() # could also use - fit$objective
 
@@ -156,7 +171,9 @@
                   k_Z = k_Z, 
                   temporal = as.integer(is(M@basis,"TensorP_Basis")))
 
-  ## Temporal stuff
+  ## The location of the stored spatial basis functions depend on whether the 
+  ## data is spatio-temporal or not. Here, we also define the number of temporal
+  ## basis function locations (equal to 1 if in a spatial setting).
   if (data$temporal == TRUE) {
     spatial_dist_matrix <- M@D_basis[[1]]
     spatial_basis <- M@basis@Basis1  
@@ -210,7 +227,12 @@
   
   # ---- Parameter and random effect initialisations. ----
 
-  ## Create the relevant link functions.
+  ## Create the relevant link functions. When a probability parameter is 
+  ## present in a model and the link-function is appropriate for modelling 
+  ## probabilities (i.e., the link function maps to [0, 1]), we may use 
+  ## hierarchical linking to first link the probability parameter to the 
+  ## Gaussian Y-scale, and then the probability parameter to the conditional 
+  ## mean at the data scale. In other situations, we simply map from Y to the mean.
   if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
     h     <- .link_fn(kind = "prob_to_Y", link = M@link)
     f     <- .link_fn(kind = "mu_to_prob", response = M@response)
@@ -219,6 +241,7 @@
   }
 
   ## Create altered data to avoid the problems of applying g() to Z.
+  ## This altered data is used only during the initialisation stage.
   Z0 <- Z
   if (M@response == "gaussian" & M@link %in% c("log", "square-root")) {
     Z0[Z <= 0] <- 0.1      
@@ -235,7 +258,7 @@
     Z0 <- Z + 0.05 * (Z == 0)
   } 
 
-  ## Transformed data
+  ## Transformed data: convert from data scale to Gaussian Y-scale.
   if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
     p0 <- f(Z0, k_Z) # Convert from response (mean) scale to probability scale
     Z0_t <- h(p0)    # Convert from probability scale to Gauussian Y scale
@@ -268,7 +291,8 @@
   
   
   if (M@K_type == "separable") {
-    ## Separability means we have twice as many spatial basis function variance components
+    ## Separability means we have twice as many spatial basis function variance 
+    ## components. So, just replicate the already defined parameters. 
     parameters$logsigma2 <- rep(parameters$logsigma2, 2)
     parameters$logtau <- rep(parameters$logtau, 2)
     parameters$logdelta <- log(1)
@@ -280,10 +304,10 @@
   }
 
   ## Initialise the latent random effects
-  ## FIX: Should the following be in terms of M@basis@df? Perhaps we could just initialise at one time point, and use the same initialisation for all times e.g. with spatial_basis@df and rep.
-  ## FIX: Add a check if nres == 4. If so, then it is wise to avoid a solve() here. 
-  ## FIX: perhaps change solve() to chol2inv(chol()) 
-  ## FIX: maybe change this intialisation to be only in terms of Qinit. Currently leave as is because the theory I wrote is in terms of Kinit and the block-exponential.
+  ## FIXME: Should the following be in terms of M@basis@df? Perhaps we could just initialise at one time point, and use the same initialisation for all times e.g. with spatial_basis@df and rep.
+  ## FIXME: Add a check if nres == 4. If so, then it is wise to avoid a solve() here. 
+  ## FIXME: perhaps change solve() to chol2inv(chol()). However, this requires positive definite matrix.
+  ## FIXME: maybe change this intialisation to be only in terms of Qinit. Currently leave as is because the theory I wrote is in terms of Kinit and the block-exponential.
   temp  <- data$sigma2e + exp(parameters$logsigma2xi)
   if (M@K_type == "block-exponential") {
     KInit <- .K_tap_matrix(M@D_basis,
@@ -302,7 +326,7 @@
       mat <- Matrix::t(M@S) %*% M@S / temp + QInit
       
       ## Permuted Cholesky factor
-      mat_L <- sparseinv:::cholPermute(Q = mat) 
+      mat_L <- sparseinv::cholPermute(Q = mat) 
       
       ## Sparse-inverse-subset (a proxy for the inverse)
       mat_inv <- sparseinv::Takahashi_Davis(Q = mat,
@@ -317,6 +341,8 @@
     }
     
   }
+  
+  ## Check that initialisations are equal. 
     
   return(list(data = data, parameters = parameters))
 }
@@ -392,14 +418,12 @@
 #'
 #' Construct the prior covariance matrix of the random effects (NOT-TAPERED).
 #'
-#' @param D_matrices A list of distance matrices corresponding to each resolution
-#' (see \code{dist_matrices}).
+#' @param D_matrices A list of distance matrices corresponding to each resolution.
 #' @param sigma2 The variance components: a vector with length equal to the number
 #' of resolutions i.e. \code{length(D_matrices)}.
 #' @param tau The correlation components: a vector with length equal to the number
 #' of resolutions i.e. \code{length(D_matrices)}.
 #' @return The block-diagonal (class \code{dgCmatrix}) prior covariance matrix, K.
-#' @seealso \code{\link{dist_matrices}}
 .K_matrix <- function(D_matrices, sigma2, tau){
 
   exp_cov_function <- function(dist_matrix, sigma2, tau) {
@@ -435,8 +459,7 @@
 #' \deqn{C_\alpha(s, s^*) = (1-\frac{d(s,s^*)}{\alpha})^2_{+}  (1+\frac{d(s,s^*)}{2\alpha}), }
 #' where \eqn{x_+ = max(x, 0)}.
 #'
-#' @param D_matrices A list of distance matrices corresponding to each resolution
-#' (see \code{dist_matrices}).
+#' @param D_matrices A list of distance matrices corresponding to each resolution.
 #' @param alpha The taper parameters (which vary based on resolution).
 #' @return A taper matrix, which is block-diagonal and of class \code{dgCmatrix}.
 .K_alpha_matrix <- function(D_matrices, alpha){
@@ -489,18 +512,23 @@
 #'
 #' @param x \code{R} object.
 #' @param y \code{R} object we wish to compare to \code{x}.
+#' @param tol Tolerance.
 #' @return If \code{x} and \code{y} are single numbers, then the function
 #' returns 1 if \code{x} and \code{y} are equal (within \code{tol}), and 0
 #' otherwise. However matrices may also be passed, in which case the function
 #' returns a matrix of equal size with elementwise comparisons.
-#' @examples
-#' .equal_within_tol(2, 2 + 0.00000000000001)
-#' .equal_within_tol(2, 2 + 0.1)
-#'
-#' A <- matrix(1:4, ncol = 2, byrow = TRUE)
-#' B <- matrix(c(1:3, 5), ncol = 2, byrow = TRUE)
-#' .equal_within_tol(A, B)
-#' .equal_within_tol(A, 3)
+## Examples:
+## Note that .equal_within_tol is not exported, so it cannot be used in the 
+## usual roxygen @examples format. We could use FRK:::.equal_within_tol, 
+## but this produces a warning. For unexported functions, it is best to leave
+## examples as regular comments.
+# .equal_within_tol(2, 2 + 0.00000000000001)
+# .equal_within_tol(2, 2 + 0.1)
+# 
+# A <- matrix(1:4, ncol = 2, byrow = TRUE)
+# B <- matrix(c(1:3, 5), ncol = 2, byrow = TRUE)
+# .equal_within_tol(A, B)
+# .equal_within_tol(A, 3)
 .equal_within_tol <- function(x, y, tol = 1e-8) {
   return(1 * (abs(x - y) < tol))
 }
@@ -522,8 +550,8 @@
   b <- sort(unique(y))
   
   if(
-    FRK:::.zero_range(diff(a)) &
-    FRK:::.zero_range(diff(b)) &
+    .zero_range(diff(a)) &
+    .zero_range(diff(b)) &
     (length(a) * length(b)) == length(x)
   ) {
     return(TRUE)
@@ -639,6 +667,7 @@
 #' using \code{sparse_Q}.
 #'
 #' @inheritParams .sparse_Q
+#' @inheritParams .neighbour_matrix
 #' @param df A dataframe containing the spatial coordinates (named "loc1" and "loc2") and a blocking column (named "res").
 #' @return A list containing the sparse block-diagonal precision matrix (Q) of class "dgCMatrix", and the number of non-zero elements (nnz) at each resolution.
 #' @seealso \code{\link{.sparse_Q}}, \code{\link{.neighbour_matrix}}

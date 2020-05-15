@@ -29,6 +29,14 @@ FRK <- function(f,                     # formula (compulsory)
                 method = "EM",         # method for parameter estimation
                 lambda = 0,            # regularisation parameter
                 print_lik = FALSE,     # print log-likelihood at each iteration
+                response = "gaussian", 
+                link = "identity", 
+                taper = 4,
+                n_MC = 400, 
+                seed = NULL,           # seed for Monte Carlo sampling (the only random part of FRKTMB)
+                type = "mean",         
+                k = NULL,              # k used for prediction
+                percents = c(5, 25, 50, 75, 90),  # Desired percentiles of the quantitity of interest
                 ...)                   # other arguments for BAUs/basis-function construction
 {
 

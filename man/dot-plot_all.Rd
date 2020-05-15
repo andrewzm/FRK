@@ -12,6 +12,10 @@
 \item{zdf}{A \code{dataframe} containing spatial coordinates (named "x" and "y") and the value of the observations (named "z").}
 
 \item{response}{A character indicating the assumed response distribution.}
+
+\item{x}{A \code{string} indicating the name of the column containing x-locations.}
+
+\item{y}{A \code{string} indicating the name of the column containing the y-locations.}
 }
 \value{
 A list of ggplot() objects.

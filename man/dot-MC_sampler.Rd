@@ -9,7 +9,7 @@ latent process Y).}
   M,
   X,
   type = "mean",
-  n_MC = 1600,
+  n_MC = 400,
   obs_fs = FALSE,
   seed = NULL,
   k = NULL,

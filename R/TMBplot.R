@@ -54,23 +54,29 @@
   return(plots)
 }
 
-
-#' Plot of spatial data.
+#' Plot 2D spatial data
 #'
-#' @param zdf A \code{dataframe} containing spatial coordinates (named "x" and "y") and the value of the response variable (named "z").
+#' Plot 2D spatial data using a diverging red and blue palette if 
+#' \code{response == "bernoulli"}, and a spectral palette otherwise.
+#'
+#' @param zdf A \code{dataframe} containing spatial coordinates and the value of the response variable.
 #' @param response A character indicating the assumed response distribution.
 #' @param point_size Size of plotted points.
 #' @param lim Controls the limits of the colour scale.
-#' @return A \code{ggplot} of the data.
+#' @param z A \code{string} indicating the data column.
+#' @param x A \code{string} indicating the name of the column containing x-locations.
+#' @param y A \code{string} indicating the name of the column containing the y-locations.
+#' @return A \code{ggplot} object.
 #' @seealso \code{\link{.plot_map}}, \code{\link{.plot_all}}
 .plot_data <- function(zdf,
                       response,
                       point_size = 1,
-                      lim = range(zdf[["z"]])){
+                      lim = range(zdf[["z"]]), 
+                      z = "z", x = "x", y = "y"){
   
   ## Make ggplot() object
   p <- ggplot(zdf) +
-    geom_point(aes(x, y, colour = z), size = point_size) +
+    geom_point(aes_string(x = x, y = y, colour = z), size = point_size) +
     theme_bw() + coord_fixed()
   
   ## Colour scale
@@ -91,8 +97,7 @@
 #' @param df A \code{dataframe} containing spatial coordinates (named "x" and "y")
 #' and the value of the process (whose name is specified by the \code{col} argument).
 #' @param col A \code{string} indicating the name of the column containing the process values.
-#' @param col A \code{string} indicating the name of the column containing x-locations.
-#' @param col A \code{string} indicating the name of the column containing the y-locations.
+#' @param diverging \code{logical}, indicating whether a diverging palette should be used.
 #' @param low Low colour (only applicable if \code{diverging == TRUE}).
 #' @param mid Mid colour (only applicable if \code{diverging == TRUE}).
 #' @param high High colour (only applicable if \code{diverging == TRUE}).
@@ -100,13 +105,13 @@
 #' uncertainty ratio maps (in which case a good midpoint is 1) and probability maps
 #' (in which case a good midpoint is 0.5).
 #' @param uncertaintyMap Logical indicating whether to use uncertainty colour scale.
-#' @return A \code{ggplot} of the spatial process.
+#' @return A \code{ggplot} object of the spatial process.
 #' @seealso \code{\link{.plot_data}}, \code{\link{.plot_all}}
 .plot_map <- function(df, col, x = "x", y = "y", 
                       lim = range(df[[col]]), 
                       diverging = FALSE,
                       low = "blue", mid = "white", high = "red", midpoint = mean(df[[col]]),
-                      uncertaintyMap = FALSE, ...){
+                      uncertaintyMap = FALSE){
   
   ## Basic ggplot() object
   p <- ggplot(df) + geom_tile(aes_string(x = x, y = y, fill = col)) +
@@ -130,36 +135,37 @@
 
 
 
-
-## Aligning ggplots
-.align_plots <- function(...) {
-  
-  if (!requireNamespace(c("grid", "gtable"), quietly = TRUE)) {
-    stop("Packages \"grid\" and \"gtable\" needed for this function to work. Please install them.",
-         call. = FALSE)
-  }
-  
-  LegendWidth <- function(x) x$grobs[[8]]$grobs[[1]]$widths[[4]]
-  
-  plots.grobs <- lapply(list(...), ggplotGrob)
-  
-  max.widths <- do.call(grid::unit.pmax, lapply(plots.grobs, "[[", "widths"))
-  plots.grobs.eq.widths <- lapply(plots.grobs, function(x) {
-    x$widths <- max.widths
-    x
-  })
-  
-  legends.widths <- lapply(plots.grobs, LegendWidth)
-  max.legends.width <- do.call(max, legends.widths)
-  plots.grobs.eq.widths.aligned <- lapply(plots.grobs.eq.widths, function(x) {
-    if (gtable::is.gtable(x$grobs[[8]])) {
-      x$grobs[[8]] <- gtable_add_cols(x$grobs[[8]],
-                                      unit(abs(diff(c(LegendWidth(x),
-                                                      max.legends.width))),
-                                           "mm"))
-    }
-    x
-  })
-  
-  plots.grobs.eq.widths.aligned
-}
+## I think it is better to use a dedicated plotting package for this purpose, 
+## such as cowplot or ggpubr.
+# ## Aligning ggplots
+# .align_plots <- function(...) {
+#   
+#   if (!requireNamespace(c("grid", "gtable"), quietly = TRUE)) {
+#     stop("Packages \"grid\" and \"gtable\" needed for this function to work. Please install them.",
+#          call. = FALSE)
+#   }
+#   
+#   LegendWidth <- function(x) x$grobs[[8]]$grobs[[1]]$widths[[4]]
+#   
+#   plots.grobs <- lapply(list(...), ggplotGrob)
+#   
+#   max.widths <- do.call(grid::unit.pmax, lapply(plots.grobs, "[[", "widths"))
+#   plots.grobs.eq.widths <- lapply(plots.grobs, function(x) {
+#     x$widths <- max.widths
+#     x
+#   })
+#   
+#   legends.widths <- lapply(plots.grobs, LegendWidth)
+#   max.legends.width <- do.call(max, legends.widths)
+#   plots.grobs.eq.widths.aligned <- lapply(plots.grobs.eq.widths, function(x) {
+#     if (gtable::is.gtable(x$grobs[[8]])) {
+#       x$grobs[[8]] <- gtable::gtable_add_cols(x$grobs[[8]],
+#                                       unit(abs(diff(c(LegendWidth(x),
+#                                                       max.legends.width))),
+#                                            "mm"))
+#     }
+#     x
+#   })
+#   
+#   plots.grobs.eq.widths.aligned
+# }

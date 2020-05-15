@@ -7,8 +7,7 @@
 .K_matrix(D_matrices, sigma2, tau)
 }
 \arguments{
-\item{D_matrices}{A list of distance matrices corresponding to each resolution
-(see \code{dist_matrices}).}
+\item{D_matrices}{A list of distance matrices corresponding to each resolution.}
 
 \item{sigma2}{The variance components: a vector with length equal to the number
 of resolutions i.e. \code{length(D_matrices)}.}
@@ -21,7 +20,4 @@ The block-diagonal (class \code{dgCmatrix}) prior covariance matrix, K.
 }
 \description{
 Construct the prior covariance matrix of the random effects (NOT-TAPERED).
-}
-\seealso{
-\code{\link{dist_matrices}}
 }

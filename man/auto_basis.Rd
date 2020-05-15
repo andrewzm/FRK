@@ -17,6 +17,7 @@ auto_basis(
   bndary = NULL,
   scale_aperture = ifelse(is(manifold, "sphere"), 1, 1.25),
   verbose = 0L,
+  buffer = 0,
   ...
 )
 }
@@ -44,6 +45,8 @@ auto_basis(
 \item{scale_aperture}{the aperture (in the case of the bisquare, but similar interpretation for other basis) width of the basis function is the minimum distance between all the basis function centroids multiplied by \code{scale_aperture}. Typically this ranges between 1 and 1.5 and is defaulted to 1 on the sphere and 1.25 on the other manifolds.}
 
 \item{verbose}{a logical variable indicating whether to output a summary of the basis functions created or not}
+
+\item{buffer}{a numeric between 0 and 0.5 indicating the size of the buffer of basis functions along the boundary. The buffer is added by computing the number of basis functions in each dimension, and increasing this number by a factor of \code{buffer}. A buffer may be needed when the prior of the basis function random weights, eta,  is formulated in terms of a precision matrix}
 
 \item{...}{unused}
 }

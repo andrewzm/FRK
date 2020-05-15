@@ -83,8 +83,8 @@
 #'
 #' @param X An array like object (with a dim-attribute).
 #' @return A vector containing the row-wise variances of the matrix \code{X}.
-.rowVars <- function(X, ...) {
-  rowSums((X - rowMeans(X, ...))^2, ...)/(dim(X)[2] - 1)
+.rowVars <- function(X) {
+  rowSums((X - rowMeans(X))^2)/(dim(X)[2] - 1)
 }
 
 

@@ -36,8 +36,5 @@ This function also makes the slots \code{K_type}, \code{response}, and \code{lin
 \description{
 Performs model fitting using \code{TMB}.
 Prepares an object of class \code{SRE} for the prediction stage
-(which is performed via the function \code{\link{FRKTMB_pred}}).
-}
-\seealso{
-\code{\link{.FRKTMB_pred}}
+(performed internally with \code{\link{.FRKTMB_pred}}).
 }

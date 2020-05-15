@@ -10,6 +10,8 @@
 \item{x}{\code{R} object.}
 
 \item{y}{\code{R} object we wish to compare to \code{x}.}
+
+\item{tol}{Tolerance.}
 }
 \value{
 If \code{x} and \code{y} are single numbers, then the function
@@ -24,13 +26,4 @@ by some very tiny amount due to floating point inaccuracies.
 Of particular note is that the function can accept a matrix argument for \code{x} and a single numeric
 for \code{y}, and the output will be a matrix with elements 1 and 0 if elements of \code{x} are equal to
 \code{y} or not, respectively; i.e., it does elementwise comparisons.
-}
-\examples{
-.equal_within_tol(2, 2 + 0.00000000000001)
-.equal_within_tol(2, 2 + 0.1)
-
-A <- matrix(1:4, ncol = 2, byrow = TRUE)
-B <- matrix(c(1:3, 5), ncol = 2, byrow = TRUE)
-.equal_within_tol(A, B)
-.equal_within_tol(A, 3)
 }

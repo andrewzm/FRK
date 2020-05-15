@@ -42,6 +42,7 @@
 #' @param response A character string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "bernoulli", "gamma","inverse-gaussian", "negative-binomial", or "binomial".
 #' @param link A character string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted. 
 #' @param taper A positive numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "block-exponential"} and \code{TMB} is used to fit the data)
+#' @inheritParams .FRKTMB_pred
 #' @param ... other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling the function \code{FRK}
 #' @details \code{SRE()} is the main function in the package: It constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of Basic Areal Units (BAUs). The function first takes each object in the list \code{data} and maps it to the BAUs -- this entails binning the point-referenced data into the BAUs (and averaging within the BAU) if \code{average_in_BAU = TRUE}, and finding which BAUs are influenced by the polygon datasets. Following this, the incidence matrix \code{Cmat} is constructed, which appears in the observation model \eqn{Z = CY + C\delta + e}, where \eqn{C} is the incidence matrix and \eqn{\delta} is systematic error at the BAU level.
 #'
@@ -112,10 +113,18 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                 fs_model = "ind", vgm_model = NULL, K_type = "block-exponential", normalise_basis = TRUE, 
                 response = "gaussian", link = "identity", taper = 4, ...) {
 
-    ## Strings that must be lower-case
+    ## Strings that must be lower-case (this allows users to enter 
+    ## response = "Gaussian", for example, without causing issues)
     response  <- tolower(response)
     link      <- tolower(link)
     K_type    <- tolower(K_type)
+    
+    ## FIXME: Could add:
+    # K_type <- match.arg(K_type)
+    # response <- match.arg(response)
+    # link <- match.arg(link)
+    ## This requires use to add all the options into SRE (which I think we should do anyway)
+    
     
     ## Produce a warning if the response is non-Gaussian and user has specified 
     ## the block-exponential covariance formulation
@@ -1610,13 +1619,21 @@ print.summary.SRE <- function(x, ...) {
              please supply a field 'std' in the data objects")
     
     #### TMB section
-    if (!missing(K_type)) match.arg(K_type)
+    if (!missing(K_type)) {
+        if(!(K_type %in% c("block-exponential", "neighbour", "unstructured", "separable", "precision_exp", "latticekrig"))) {
+            stop("Invalid K_type argument")
+        }
+    }
     
     ## Check that a valid response-link combination has been chosen
     if (!missing(response) & !missing(link)) {
         
-        match.arg(response)
-        match.arg(link)
+        if (!(response %in% c("gaussian", "poisson", "bernoulli", "gamma",
+                              "inverse-gaussian", "negative-binomial", "binomial")))
+            stop("Invalid response argument")
+        
+        if (!(link %in% c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared")))
+            stop("Invalid link argument")
         
         if (response == "gaussian" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "square-root")) ||
             response == "poisson" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "square-root")) ||
@@ -1654,7 +1671,7 @@ print.summary.SRE <- function(x, ...) {
     if (K_type == "separable") {
         for (i in unique(basis@df$res)) {
             temp <- basis@df[basis@df$res == i, ]
-            if (! FRK:::.test_regular_rect_grid(temp$loc1, temp$loc2) ) {
+            if (!.test_regular_rect_grid(temp$loc1, temp$loc2) ) {
                 stop("Basis functions are not in a regular rectangular lattice.")
             }
         }

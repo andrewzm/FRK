@@ -2,40 +2,40 @@
 #include <cmath>
 #include "FRK-init.h"
 
-// Define a function to take the logarithm of the diagonal entries of a sparse 
-// matrix, and compute their sum. Just testing having functions here.
-template<class Type>
-Type diaglnSum(Eigen::SparseMatrix<Type> mat){
-  Type x = mat.diagonal().array().log().sum();
-  return x;
-}
-
-// Function to construct the (lower) Cholesky factor of an AR1 precision matrix
-template<class Type>
-Type choleskyAR1(Type sigma2, Type rho, int n){
-  
-  // typedef's:
-  typedef Eigen::SparseMatrix<Type> SpMat;    // Sparse matrices called 'SpMat'
-  typedef Eigen::Triplet<Type> T;             // Triplet lists called 'T'
-  
-  std::vector< T > tripletList;
-  tripletList.reserve(2 * n - 1);
-  Type common_term = 1 / sqrt(sigma2 * (1 - rho * rho));
-  
-  // Diagonal entries (except last diagonal entry), lower diagonal entries
-  for (int j = 0; j < (n - 1); j++) {
-    tripletList.push_back(T(j, j, 1));
-    tripletList.push_back(T(j + 1, j, -rho * common_term));
-  }
-  // Final diagonal entry
-  tripletList.push_back(T(n - 1, n - 1, 1 / sqrt(sigma2)));
-  
-  // Convert triplet list of non-zero entries to a true SparseMatrix.
-  SpMat L(n, n);
-  L.setFromTriplets(tripletList.begin(), tripletList.end());
-  
-  return L;
-}
+// // Define a function to take the logarithm of the diagonal entries of a sparse 
+// // matrix, and compute their sum. Just testing having functions here.
+// template<class Type>
+// Type diaglnSum(Eigen::SparseMatrix<Type> mat){
+//   Type x = mat.diagonal().array().log().sum();
+//   return x;
+// }
+// 
+// // Function to construct the (lower) Cholesky factor of an AR1 precision matrix
+// template<class Type>
+// Type choleskyAR1(Type sigma2, Type rho, int n){
+//   
+//   // typedef's:
+//   typedef Eigen::SparseMatrix<Type> SpMat;    // Sparse matrices called 'SpMat'
+//   typedef Eigen::Triplet<Type> T;             // Triplet lists called 'T'
+//   
+//   std::vector< T > tripletList;
+//   tripletList.reserve(2 * n - 1);
+//   Type common_term = 1 / sqrt(sigma2 * (1 - rho * rho));
+//   
+//   // Diagonal entries (except last diagonal entry), lower diagonal entries
+//   for (int j = 0; j < (n - 1); j++) {
+//     tripletList.push_back(T(j, j, 1));
+//     tripletList.push_back(T(j + 1, j, -rho * common_term));
+//   }
+//   // Final diagonal entry
+//   tripletList.push_back(T(n - 1, n - 1, 1 / sqrt(sigma2)));
+//   
+//   // Convert triplet list of non-zero entries to a true SparseMatrix.
+//   SpMat L(n, n);
+//   L.setFromTriplets(tripletList.begin(), tripletList.end());
+//   
+//   return L;
+// }
 
 
 
@@ -289,9 +289,6 @@ Type objective_function<Type>::operator() ()
       SpMat mat(r_si[k], r_si[k]);
       mat.setFromTriplets(tripletList.begin(), tripletList.end());
       
-      
-      // SpMat B = mat; REPORT(B);
-      
       bool constructQ = false;
       if (K_type == "latticekrig" && constructQ == true) {
         if(rhoInB == false) {
@@ -301,7 +298,6 @@ Type objective_function<Type>::operator() ()
         }
       }
       
-      // SpMat Q = mat; REPORT(Q);
       
       // Compute the (upper) Cholesky factor of mat
       Eigen::SimplicialLLT< SpMat, Eigen::Upper > llt;

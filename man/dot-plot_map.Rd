@@ -15,17 +15,22 @@
   mid = "white",
   high = "red",
   midpoint = mean(df[[col]]),
-  uncertaintyMap = FALSE,
-  ...
+  uncertaintyMap = FALSE
 )
 }
 \arguments{
 \item{df}{A \code{dataframe} containing spatial coordinates (named "x" and "y")
 and the value of the process (whose name is specified by the \code{col} argument).}
 
-\item{col}{A \code{string} indicating the name of the column containing the y-locations.}
+\item{col}{A \code{string} indicating the name of the column containing the process values.}
+
+\item{x}{A \code{string} indicating the name of the column containing x-locations.}
+
+\item{y}{A \code{string} indicating the name of the column containing the y-locations.}
 
 \item{lim}{Controls the limits of the colour scale.}
+
+\item{diverging}{\code{logical}, indicating whether a diverging palette should be used.}
 
 \item{low}{Low colour (only applicable if \code{diverging == TRUE}).}
 
@@ -40,7 +45,7 @@ uncertainty ratio maps (in which case a good midpoint is 1) and probability maps
 \item{uncertaintyMap}{Logical indicating whether to use uncertainty colour scale.}
 }
 \value{
-A \code{ggplot} of the spatial process.
+A \code{ggplot} object of the spatial process.
 }
 \description{
 Plot of spatial process.

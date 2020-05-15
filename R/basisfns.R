@@ -505,9 +505,12 @@ auto_basis <- function(manifold = plane(),
     ## First, define a function to add n_add elements separated by a units to 
     ## the head and tail of a vector x.
     .add_head_tail <- function(x, n_add, a) {
-      c(head(x, 1) - (n_add:1) * a, 
+      # c(head(x, 1) - (n_add:1) * a, 
+      #   x, 
+      #   tail(x, 1) + (1:n_add) * a)      
+      c(min(x) - (n_add:1) * a, 
         x, 
-        tail(x, 1) + (1:n_add) * a)
+        max(x) + (1:n_add) * a)
     }
     unique_locs_new <- mapply(.add_head_tail, unique_locs, n_add, dist_btwn_locs)
     

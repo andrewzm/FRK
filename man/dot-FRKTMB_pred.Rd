@@ -7,7 +7,7 @@
 .FRKTMB_pred(
   M,
   type = "mean",
-  n_MC,
+  n_MC = 400,
   seed = NULL,
   obs_fs = FALSE,
   k = NULL,

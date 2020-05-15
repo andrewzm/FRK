@@ -7,8 +7,7 @@
 .K_alpha_matrix(D_matrices, alpha)
 }
 \arguments{
-\item{D_matrices}{A list of distance matrices corresponding to each resolution
-(see \code{dist_matrices}).}
+\item{D_matrices}{A list of distance matrices corresponding to each resolution.}
 
 \item{alpha}{The taper parameters (which vary based on resolution).}
 }
