@@ -9,9 +9,11 @@ A data frame with 33,750 rows and 3 variables:
 \describe{
   \item{x}{x-coordinate}
   \item{y}{y-coordinate}
-  \item{z}{dependent variable - 1 if cloud is present, 0 if no cloud. This 
+  \item{z}{binary dependent variable - 1 if cloud is present, 0 if no cloud. This 
   variable has been thresholded from the original continuous measurement of 
   radiance supplied by the MODIS instrument.}
+  \item{z_unthresholde}{The original continuous measurement of 
+  radiance supplied by the MODIS instrument}.
 }
 }
 \usage{
