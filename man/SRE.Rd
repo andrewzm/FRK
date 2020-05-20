@@ -109,7 +109,7 @@ loglik(SRE_model)
 
 \item{tol}{convergence tolerance for the EM algorithm}
 
-\item{method}{parameter estimation method to employ. Currently only "EM" and "TMB" is supported}
+\item{method}{parameter estimation method to employ. Currently "EM" and "TMB" are supported}
 
 \item{lambda}{ridge-regression regularisation parameter for when \code{K} is unstructured (0 by default). Can be a single number, or a vector (one parameter for each resolution)}
 
