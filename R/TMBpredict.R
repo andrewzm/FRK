@@ -2,26 +2,32 @@
 #'
 #' @inheritParams .Y_var
 #' @inheritParams .MC_sampler
+#' @inheritParams .concat_percentiles_to_df
 #' @param type A character string (possibly vector) indicating the quantities for which predictions and prediction uncertainty is desired.
 #' If \code{"link"} is in \code{type}, the latent \eqn{Y} process is included; 
-#' If \code{"mean"} is in \code{type}, the conditonal mean \eqn{\mu} is included (and the probability parameter if applicable);
+#' If \code{"mean"} is in \code{type}, the conditional mean \eqn{\mu} is included (and the probability parameter if applicable);
 #' If \code{"response"} is in \code{type}, the response variable \eqn{Z} is included. 
 #' Any combination of these character strings can be provided. For example, if \code{type = c("link", "response")}, then predictions of the latent \eqn{Y} process and the response variable \eqn{Z} are provided.
 #' @return A list object containing:
 #' \describe{
-#'   \item{newdata}{A dataframe with predictions and prediction uncertainty at each prediction location of the latent \eqn{Y} process, the conditional mean of the data \eqn{\mu}, the probability of success parameter \eqn{p} (if applicable), and the response variable \eqn{Z}. The dataframe also contains percentiles of each term.}
-#'   \item{MC}{A list with each element being an \code{N * n_MC} matrix of Monte Carlo samples of the quantities specifed by \code{type} (some combination of \eqn{Y}, \eqn{\mu}, \eqn{p} (if applicable), and \eqn{Z}) at each prediction location.}
+#'   \item{newdata}{A dataframe with predictions and prediction uncertainty at each prediction location of the latent \eqn{Y} process, the conditional mean of the data \eqn{\mu}, the probability of success parameter \eqn{\pi} (if applicable), and the response variable \eqn{Z}. The dataframe also contains percentiles of each term.}
+#'   \item{MC}{A list with each element being an \code{N * n_MC} matrix of Monte Carlo samples of the quantities specified by \code{type} (some combination of \eqn{Y}, \eqn{\mu}, \eqn{p} (if applicable), and \eqn{Z}) at each prediction location.}
+#'   \item{pred_time}{A list of timings for each step in the prediction stage.}
 #' }
 #' Note that for all link functions other than the log-link and identity-link, the predictions and prediction uncertainty of \eqn{\mu} contained in \code{newdata} are computed using the Monte Carlo samples contained in \code{MC}.
 #' When the log- or identity-link functions are used the expectation and variance of the \eqn{\mu} may be computed exactly.
-.FRKTMB_pred <- function(M, type = "mean", n_MC, seed = NULL, obs_fs = FALSE, k = NULL) {
+.FRKTMB_pred <- function(M, type = "mean", n_MC = 400, seed = NULL, obs_fs = FALSE, 
+                         k = NULL, 
+                         percents = c(5, 25, 50, 75, 95)) {
+  
+  pred_time <- list()
   
   # ---- Create objects needed thoughout the function ----
   
   ## Id of observed BAUs
   obsidx <- apply(M@Cmat, 1, function(x) which(x == 1))
   
-  #### The covariate design matrix, X 
+  #### The covariate design matrix, X (at the BAU level i.e. for all BAUs)
   
   ## Retrieve the dependent variable name
   depname <- all.vars(M@f)[1]
@@ -37,11 +43,21 @@
   
   rm(depname, L)
   
+  # ---- Computed the Cholesky factor of the permuted precision matrix ----
+  
+  ## Permuted Cholesky factor
+  pred_time$compute_cholesky_factor <- system.time(
+    Q_L <- sparseinv::cholPermute(Q = M@Q_eta_xi)
+  )
+  
+
   
   # ------ Latent process Y prediction and Uncertainty ------
   
   ## Note that this does NOT depend on the response of Z.
   
+  pred_time$Y_pred_and_uncertainty <- system.time({
+    
   #### Posterior expectation E(Y|Z) at each prediction location.
   ## large- and medium-scale variation terms:
   p_Y <- as.vector(X %*% M@alphahat + M@S0 %*% M@mu_eta)
@@ -51,16 +67,19 @@
   
   #### Posterior variance of Y at each prediction location.
   ## Note that MSPE(E(Y|Z), Y) is approximated by var(Y|Z).
-  MSPE_Y  <- .Y_var(M = M) 
 
-  
+  MSPE_Y  <- .Y_var(M = M, Q_L = Q_L, obsidx = obsidx) 
+  })
   
   # ------ Conditional mean (mu) prediction and uncertainty ------
   
   ## Compute Monte Carlo samples of conditional mean at each location
-  MC <- .MC_sampler(M = M, X = X, type = type, obs_fs = obs_fs, 
-                    n_MC = n_MC, seed = seed, k = k)
+  pred_time$MC_sample_total <- system.time(
+    MC <- .MC_sampler(M = M, X = X, type = type, obs_fs = obs_fs, 
+                      n_MC = n_MC, seed = seed, k = k, Q_L = Q_L, obsidx = obsidx)
+  ) 
 
+  pred_time$MC_sample_backsolve <- MC$times$backsolve # time of backsolve specifically
   
   # ------ Create Prediction Dataframe ------
   
@@ -70,9 +89,10 @@
   
   ## Latent Y-process
   if ("link" %in% type) {
-    newdata$p_Y     <- p_Y          # Prediction
-    newdata$RMSPE_Y <- sqrt(MSPE_Y) # Uncertainty
-    newdata <- .concat_percentiles_to_df(samples = MC$Y_samples, df = newdata, "Y")
+    newdata$p_Y     <- p_Y          
+    newdata$RMSPE_Y <- sqrt(MSPE_Y) 
+    newdata <- .concat_percentiles_to_df(X = MC$Y_samples, df = newdata, 
+                                         name = "Y", percents = percents)  
   }
   
   ## If Y is the ONLY quantity of interest, exit the function.
@@ -100,7 +120,8 @@
   if ("mean" %in% type) {
     newdata$p_mu <- p_mu
     newdata$RMSPE_mu <- RMSPE_mu
-    newdata <- .concat_percentiles_to_df(samples = MC$mu_samples, df = newdata, "mu")
+    newdata <- .concat_percentiles_to_df(X = MC$mu_samples, df = newdata, 
+                                         name = "mu", percents = percents)
     
     ## For some response distributions, the probability of success parameter 
     ## was also computed (and is not equal to the conditonal mean, as is the 
@@ -108,7 +129,8 @@
     if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
       newdata$p_prob     <- rowMeans(MC$prob_samples)
       newdata$RMSPE_prob <- sqrt(.rowVars(MC$prob_samples))
-      newdata <- .concat_percentiles_to_df(samples = MC$prob_samples, df = newdata, "prob")
+      newdata <- .concat_percentiles_to_df(X = MC$prob_samples, df = newdata, 
+                                           name = "prob", percents = percents)
     }
   }
   
@@ -116,9 +138,16 @@
   if ("response" %in% type){
     newdata$p_Z <- p_mu 
     newdata$RMSPE_Z <- sqrt(.rowVars(MC$Z_samples))
-    newdata <- .concat_percentiles_to_df(samples = MC$Z_samples, df = newdata, "Z")
+    newdata <- .concat_percentiles_to_df(X = MC$Z_samples, df = newdata, 
+                                         name = "Z", percents = percents) 
   }
 
+  
+  # ---- CHECK: Add a column indicating the time point in space-time setting ----
+  
+  if (is(M@basis,"TensorP_Basis")) {
+    newdata$t <- M@BAUs@data$t
+  }
 
   # ---- Return output ----
 
@@ -126,7 +155,7 @@
   if (!("link" %in% type)) MC$Y_samples <- NULL
   if (!("mean" %in% type)) {MC$mu_samples <- NULL; MC$prob_samples <- NULL}
   
-  return(list(newdata = newdata, MC = MC))
+  return(list(newdata = newdata, MC = MC, pred_time = pred_time))
 }
 
 
@@ -147,33 +176,31 @@
 #' Note that as we are using E(\eqn{Y|Z}) to predict \eqn{Y}, the posterior variance acts as an approximation of the mean-squared prediction error (see pg. 72 of Honours thesis).
 #' 
 #' @param M An object of class SRE.
+#' @param Q_L A list containing the Cholesky factor of the permuted precision matrix (stored as \code{Q$Qpermchol}) and the associated permutationmatrix (stored as \code{Q_L$P}).
+#' @param obsidx Vector containing the observed locations.
 #' @return A vector of the posterior variance of Y at every BAU. 
-.Y_var <- function(M){
+.Y_var <- function(M, Q_L, obsidx){
   
-  Q  <- M@Q_eta_xi
-  S0 <- M@S0
-  S  <- M@S
-  obsidx <- apply(M@Cmat, 1, function(x) which(x == 1))
-  r  <- ncol(S0)
+  r  <- ncol(M@S0)
   m  <- length(obsidx)
   
   # ---- Sparse-inverse-subset of Q (acting as a proxy for the true covariance matrix) ----
-  
-  ## Permuted Cholesky factor
-  Q_L <- sparseinv:::cholPermute(Q = Q)
-  
+
   ## Sparse-inverse-subset of fixed AND random effects
   ## (a proxy for the covariance matrix)
-  Sigma <- sparseinv::Takahashi_Davis(Q = Q,
+  Sigma <- sparseinv::Takahashi_Davis(Q = M@Q_eta_xi,
                                       cholQp = Q_L$Qpermchol,
                                       P = Q_L$P)
-
+  
+  # Sigma <- chol2inv(chol(M@Q_eta_xi))
+  # warning("Removed sparse-inverse-subset and using full inverse: 
+  #         we cannot do this for large m + r.")
+  
   Sigma_eta   <- Sigma[1:r, 1:r]
   Sigma_xi    <- Sigma[(r + 1):(r + m), (r + 1):(r + m)]
   
   # Covariances between xi and eta
   Cov_eta_xi  <- Sigma[1:r, ( r+ 1):(r + m)]
-  
   
   # ----- Uncertainty: Posterior variance of Y at each BAU ------
   
@@ -183,13 +210,13 @@
   ##      diag(AB) = (A*B')1
   
   ## Only one common term for both observed and unobserved locations:
-  vY <- as.vector( (S0 %*% Sigma_eta * S0) %*% rep(1, r) )
+  vY <- as.vector( (M@S0 %*% Sigma_eta * M@S0) %*% rep(1, r) )
   
   ## UNOBSERVED locations: simply add the estimate of sigma2xi to this quantity:
   vY[-obsidx] <- vY[-obsidx] + M@sigma2fshat
   
   ## OBSERVED location: add both var(xi_O|Z) and cov(xi_O, eta | Z)
-  covar       <- (S * Matrix::t(Cov_eta_xi)) %*% rep(1, r)        # Covariance terms
+  covar       <- (M@S * Matrix::t(Cov_eta_xi)) %*% rep(1, r)        # Covariance terms
   vY[obsidx]  <- vY[obsidx] + Matrix::diag(Sigma_xi) + 2 * covar
   
   # ---- Output ----
@@ -222,10 +249,12 @@
 #' If \code{"response"} is in \code{type}, the response variable \eqn{Z} samples, and the samples of all other quantities are provided. 
 #' @param n_MC A postive integer indicating the number of MC samples at each location.
 #' @param obs_fs Logical indicating whether the fine-scale variation is included in the latent Y process. 
-#' @param k vector of known constant parameters at each BAU (applicable only for binomial and negative-binomial).
+#' @param k vector of size parameters parameters at each BAU (applicable only for binomial and negative-binomial data).
 #' If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{\xi} is included in the latent \eqn{Y} process. 
 #' If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}. 
 #' @param seed A seed for reproducibility.
+#' @param Q_L A list containing the Cholesky factor of the permuted precision matrix (stored as \code{Q$Qpermchol}) and the associated permutationmatrix (stored as \code{Q_L$P}).
+#' @param obsidx A vector containing the indices of observed locations.
 #' @return A list containing Monte Carlo samples of various quantites of interest. 
 #' The list elements are (N x n_MC) matrices, whereby the ith row of each matrix corresponds to
 #' n_MC samples of the given quantity at the ith BAU. The available quantities are:
@@ -235,22 +264,20 @@
 #'   \item{prob_samples}{Samples of the probability of success parameter (only for the relevant response distributions).}
 #'   \item{Z_samples}{Samples of the response variable.}
 #' }
-.MC_sampler <- function(M, X, type = "mean", n_MC = 1600, obs_fs = FALSE, seed = NULL, k = NULL){
+.MC_sampler <- function(M, X, type = "mean", n_MC = 400, obs_fs = FALSE, seed = NULL, k = NULL, 
+                        Q_L, obsidx){
   
   MC <- list() # object we will return 
+  N   <- nrow(M@S0)
+  m   <- length(M@Z)
+  r   <- ncol(M@S0) # Total number of basis functions
   
-  Q   <- M@Q_eta_xi
-  S0  <- M@S0
-  S   <- M@S
-  N   <- nrow(S0)
-  obsidx <- apply(M@Cmat, 1, function(x) which(x == 1))
-  m   <- length(obsidx)
-  r   <- ncol(S0)
-  
+  MC$times <- list() # object to track timings of function components
   
   # ---- Generate samples from (eta, xi_O) ----
   
   ## Must generate samples jointly, as eta and xi_O are correlated.
+
   
   ## Construct the mean vector of (eta, xi_O).
   ## Also make an (r+m) x n_MC matrix whose columns are the mean vector of (eta, xi_O).
@@ -265,8 +292,17 @@
   ## Then, to generate samples from (eta, xi_O), 
   ## use eta_xi_O = L^{-T} z + mu = U^{-1} z + mu, 
   ## where U upper cholesky factor of Q, so that Q = U'U.
-  U           <- Matrix::chol(Q)
-  eta_xi_O    <- as.matrix(Matrix::solve(U, z) + mu_eta_xi_O_Matrix)
+  # U           <- Matrix::chol(M@Q_eta_xi)
+  # eta_xi_O    <- as.matrix(Matrix::solve(U, z) + mu_eta_xi_O_Matrix)
+  
+  ## Method 2: sparseinv package, Cholesky of permuted Q, then backsolve
+  U <- Matrix::t(Q_L$Qpermchol) # upper Cholesky factor of permuted joint precision matrix M@Q_eta_xi
+  MC$times$backsolve <- system.time(
+    x <- backsolve(U, z)          # x ~ Gau(0, A), where A is the permuted precision matrix i.e. A = P'QP
+  )
+  y <- Q_L$P %*% x              # y ~ Gau(0, Q^{-1})
+  eta_xi_O  <- as.matrix(y + mu_eta_xi_O_Matrix) # add the mean to y
+  
   
   ## Separate the eta and xi_O samples
   eta     <- eta_xi_O[1:r, ]
@@ -297,10 +333,10 @@
   X_U <- X[-obsidx, ]
   
   ## Observed Samples
-  Y_smooth_O <- X_O %*% M@alphahat + S %*% eta
+  Y_smooth_O <- X_O %*% M@alphahat + M@S %*% eta
   
   ## Unobserved Samples
-  S_U          <- S0[-obsidx, ] # Unobserved random effect 'design' matrix
+  S_U          <- M@S0[-obsidx, ] # Unobserved random effect 'design' matrix
   Y_smooth_U  <- X_U %*% M@alphahat + S_U %*% eta
   
   ## Combine samples
@@ -308,6 +344,7 @@
   xi_samples        <- rbind(xi_O, xi_U) 
   
   ## Use permutation matrix to get the correct (original) ordering
+  ## FIXME: could just use row indexing to avoid matrix multiplication here
   unobsidx         <- (1:N)[-obsidx]       # Unobserved BAUs indices
   ids              <- c(obsidx, unobsidx)  # All indices (observed and unobserved)
   P                <- Matrix::sparseMatrix(i = 1:N, j = 1:N, x = 1)[ids, ]
@@ -402,6 +439,8 @@
   
   ## Add Z_samples to list object
   MC$Z_samples <- Z_samples
+  
+
   
   return(MC)
 }

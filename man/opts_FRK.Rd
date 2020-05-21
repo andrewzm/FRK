@@ -4,11 +4,13 @@
 \name{opts_FRK}
 \alias{opts_FRK}
 \title{FRK options}
-\format{List of 2
+\format{
+List of 2
 \itemize{
   \item{\code{$}  }{\code{set:function(opt,value)}}
   \item{\code{$}  }{\code{get:function(opt)}}
-}}
+}
+}
 \usage{
 opts_FRK
 }

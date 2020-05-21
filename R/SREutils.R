@@ -24,12 +24,12 @@
 #' @param average_in_BAU if \code{TRUE}, then multiple data points falling in the same BAU are averaged; the measurement error of the averaged data point is taken as the average of the individual measurement errors
 #' @param fs_model if "ind" then the fine-scale variation is independent at the BAU level. If "ICAR", then an ICAR model for the fine-scale variation is placed on the BAUs
 #' @param vgm_model an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm}. This object contains the variogram model that will be fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified, the variogram used is \code{gstat::vgm(1, "Lin", d, 1)}, where \code{d} is approximately one third of the maximum distance between any two data points
-#' @param K_type the parameterisation used for the \code{K} matrix. Currently this can be "unstructured" or "block-exponential" (default)
+#' @param K_type the parameterisation used for the \code{K} matrix. If the EM algorithm is used for model fitting, \code{K_type} can be "unstructured" or "block-exponential". If TMB is used for model fitting, \code{K_type} can be "neighbour" or "block-exponential". The default is "block-exponential"
 #' @param normalise_basis flag indicating whether to normalise the basis functions so that they reproduce a stochastic process with approximately constant variance spatially
 #' @param SRE_model object returned from the constructor \code{SRE()} containing all the parameters and information on the SRE model
 #' @param n_EM maximum number of iterations for the EM algorithm
 #' @param tol convergence tolerance for the EM algorithm
-#' @param method parameter estimation method to employ. Currently only ``EM'' and ``TMB'' is supported
+#' @param method parameter estimation method to employ. Currently "EM" and "TMB" are supported
 #' @param lambda ridge-regression regularisation parameter for when \code{K} is unstructured (0 by default). Can be a single number, or a vector (one parameter for each resolution)
 #' @param print_lik flag indicating whether likelihood value should be printed or not after convergence of the EM estimation algorithm
 # #' @param use_centroid flag indicating whether the basis functions are averaged over the BAU, or whether the basis functions are evaluated at the BAUs centroid in order to construct the matrix \eqn{S}. The flag can safely be set when the basis functions are approximately constant over the BAUs in order to reduce computational time
@@ -39,6 +39,10 @@
 #' @param pred_polys deprecated. Please use \code{newdata} instead
 #' @param pred_time vector of time indices at which prediction will be carried out. All time points are used if this option is not specified
 #' @param covariances logical variable indicating whether prediction covariances should be returned or not. If set to \code{TRUE}, a maximum of 4000 prediction locations or polygons are allowed.
+#' @param response A character string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "bernoulli", "gamma","inverse-gaussian", "negative-binomial", or "binomial".
+#' @param link A character string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted. 
+#' @param taper A positive numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "block-exponential"} and \code{TMB} is used to fit the data)
+#' @inheritParams .FRKTMB_pred
 #' @param ... other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling the function \code{FRK}
 #' @details \code{SRE()} is the main function in the package: It constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of Basic Areal Units (BAUs). The function first takes each object in the list \code{data} and maps it to the BAUs -- this entails binning the point-referenced data into the BAUs (and averaging within the BAU) if \code{average_in_BAU = TRUE}, and finding which BAUs are influenced by the polygon datasets. Following this, the incidence matrix \code{Cmat} is constructed, which appears in the observation model \eqn{Z = CY + C\delta + e}, where \eqn{C} is the incidence matrix and \eqn{\delta} is systematic error at the BAU level.
 #'
@@ -107,12 +111,27 @@
 #'  print(g1)}
 SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                 fs_model = "ind", vgm_model = NULL, K_type = "block-exponential", normalise_basis = TRUE, 
-                response = "gaussian", link = "identity", taper = 8, ...) {
+                response = "gaussian", link = "identity", taper = 4, ...) {
 
-    ## Strings that must be lower-case
+    ## Strings that must be lower-case (this allows users to enter 
+    ## response = "Gaussian", for example, without causing issues)
     response  <- tolower(response)
     link      <- tolower(link)
     K_type    <- tolower(K_type)
+    
+    ## FIXME: Could add:
+    # K_type <- match.arg(K_type)
+    # response <- match.arg(response)
+    # link <- match.arg(link)
+    ## This requires use to add all the options into SRE (which I think we should do anyway)
+    
+    
+    ## Produce a warning if the response is non-Gaussian and user has specified 
+    ## the block-exponential covariance formulation
+    if (response != "gaussian" & K_type == "block-exponential") {
+        warning("Using K_type = 'block-exponential' is computationally inefficient when response != 'gaussian' (or, in general, when method == 'TMB'). For these situations, consider using K_type = 'neighbour' or K_type = 'separable'.")
+    }
+    
     
     ## Check that the arguments are OK
     .check_args1(f = f,data = data, basis = basis, BAUs = BAUs, est_error = est_error, 
@@ -128,7 +147,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     S <- Ve <- Vfs <- X <- Z <- Cmat <- k <- list()
 
     ## Normalise basis functions for the prior process to have constant variance. This was seen to pay dividends in
-    ## LatticeKrig, however we only do it once initially
+    ## latticekrig, however we only do it once initially
     S0 <- eval_basis(basis,.polygons_to_points(BAUs))     # evaluate basis functions over BAU centroids
     if(normalise_basis) {
         cat("Normalising basis function evaluations at BAU level ...\n")
@@ -342,8 +361,10 @@ SRE.predict <- function(SRE_model, obs_fs = FALSE, newdata = NULL, pred_polys = 
 #' @export
 setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = FALSE, pred_polys = NULL,
                                               pred_time = NULL, covariances = FALSE, 
-                                              n_MC = 1600, seed = NULL, type = "mean", k = NULL) {
+                                              n_MC = 400, seed = NULL, type = "mean", k = NULL, 
+                                              percents = c(5, 25, 50, 75, 90)) {
 
+    # warning("changed n_MC default to 400 (originally was 1600)")
     SRE_model <- object
     ## Deprecation coercion
     if(!is.null(pred_polys))
@@ -368,7 +389,8 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     ## Check the arguments are OK
     .check_args3(obs_fs = obs_fs, newdata = newdata, pred_polys = pred_polys,
                  pred_time = pred_time, covariances = covariances, 
-                 response = SRE_model@response, SRE_model = SRE_model, type = type, k = k)
+                 response = SRE_model@response, SRE_model = SRE_model, type = type, 
+                 k = k, percents = percents)
 
     ## Call internal prediction function
     if (SRE_model@method == "EM") {
@@ -384,7 +406,8 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                                   seed = seed,      # seed for reproducibility (MC simulations)
                                   obs_fs = obs_fs, 
                                   type = type, 
-                                  k = k)  
+                                  k = k, 
+                                  percents = percents)  
     } 
 
     
@@ -914,7 +937,7 @@ print.summary.SRE <- function(x, ...) {
                 ## Find which bases are at this resolution
                 idx <- which(data.frame(Sm@basis)$res == i)
 
-                ## Since we're block exponential, the correlation matrix is simply the
+                ## Since we're block exponential, the correlation matrix is simply
                 ## computed from the distances using the appropriate decay parameters
                 if(is(Sm@basis,"TensorP_Basis")) {
                     ## If we have a tensor basis then construct Ki using the Kronecker product
@@ -1551,11 +1574,11 @@ print.summary.SRE <- function(x, ...) {
 
 ## Checks arguments for the SRE() function. Code is self-explanatory
 .check_args1 <- function(f,data,basis,BAUs,est_error, 
-                         K_type = c("block-exponential", "precision", "unstructured"), 
+                         K_type = c("block-exponential", "neighbour", "unstructured", "separable", "precision_exp", "latticekrig"), 
                          response = c("gaussian", "poisson", "bernoulli", "gamma",
                                       "inverse-gaussian", "negative-binomial", "binomial"), 
                          link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"), 
-                         taper = 8) {
+                         taper = 4) {
     
     if(!is(f,"formula")) stop("f needs to be a formula.")
     if(!is(data,"list"))
@@ -1596,13 +1619,21 @@ print.summary.SRE <- function(x, ...) {
              please supply a field 'std' in the data objects")
     
     #### TMB section
-    if (!missing(K_type)) match.arg(K_type)
+    if (!missing(K_type)) {
+        if(!(K_type %in% c("block-exponential", "neighbour", "unstructured", "separable", "precision_exp", "latticekrig"))) {
+            stop("Invalid K_type argument")
+        }
+    }
     
     ## Check that a valid response-link combination has been chosen
     if (!missing(response) & !missing(link)) {
         
-        match.arg(response)
-        match.arg(link)
+        if (!(response %in% c("gaussian", "poisson", "bernoulli", "gamma",
+                              "inverse-gaussian", "negative-binomial", "binomial")))
+            stop("Invalid response argument")
+        
+        if (!(link %in% c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared")))
+            stop("Invalid link argument")
         
         if (response == "gaussian" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "square-root")) ||
             response == "poisson" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "square-root")) ||
@@ -1635,7 +1666,16 @@ print.summary.SRE <- function(x, ...) {
         }
     }
     
-    
+    ## Check that, if K_type == separable, the basis functions are in a regular
+    ## rectangular lattice
+    if (K_type == "separable") {
+        for (i in unique(basis@df$res)) {
+            temp <- basis@df[basis@df$res == i, ]
+            if (!.test_regular_rect_grid(temp$loc1, temp$loc2) ) {
+                stop("Basis functions are not in a regular rectangular lattice.")
+            }
+        }
+    }
 }
 
 
@@ -1654,14 +1694,18 @@ print.summary.SRE <- function(x, ...) {
     if(!missing(SRE_model)) {
         if(method == "EM" & !(SRE_model@response == "gaussian")) stop("The EM algorithm is only available for response = 'gaussian'. Please use method = 'TMB' for all other assumed response distributions.")
         if(method == "EM" & !(SRE_model@link == "identity")) stop("The EM algorithm is only available for link = 'identity'. Please use method = 'TMB' for all other link functions.")
-        if(method == "EM" & SRE_model@K_type == "precision") stop("The precision matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
+        if(method == "EM" & SRE_model@K_type == "neighbour") stop("The neighbour matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
+        if(method == "EM" & SRE_model@K_type == "separable") stop("The separable spatial model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
+        if(method == "EM" & SRE_model@K_type == "precision_exp") stop("The exponential precision matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
+        if(method == "EM" & SRE_model@K_type == "latticekrig") stop("The LatticeKrig precision matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
     }
     
 }
 
 ## Checks arguments for the predict() function. Code is self-explanatory
 .check_args3 <- function(obs_fs = FALSE, newdata = NULL, pred_polys = NULL,
-                         pred_time = NULL, covariances = FALSE, SRE_model, type, k, ...) {
+                         pred_time = NULL, covariances = FALSE, SRE_model, type, 
+                         k, percents, ...) {
     if(!(obs_fs %in% 0:1)) stop("obs_fs needs to be logical")
 
     if(!(is(newdata,"Spatial") | (is(newdata,"ST")) | is.null(newdata)))
@@ -1694,6 +1738,16 @@ print.summary.SRE <- function(x, ...) {
             } else if (length(k) != nrow(SRE_model@S0)) {
                 stop("length(k) must equal 1 or N (the number of BAUs)." )
             }      
+        }
+        
+        ## Check requested percentiles are ok
+        if (!is.null(percents) & !(class(percents) %in% c("numeric", "integer"))) {
+            stop("percents must either be NULL or a numeric or integer vector 
+            with entries between 0 and 100.")
+        } else if (!is.null(percents)) {
+            if (min(percents) < 0 | max(percents) > 100) {
+                stop("percents must be a vector with entries between 0 and 100.")   
+            }
         }
     }
 }

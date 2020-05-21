@@ -4,7 +4,8 @@
 \name{isea3h}
 \alias{isea3h}
 \title{ISEA Aperture 3 Hexagon (ISEA3H) Discrete Global Grid}
-\format{A data frame with 284,208 rows and 5 variables:
+\format{
+A data frame with 284,208 rows and 5 variables:
 \describe{
   \item{id}{grid identification number within the given resolution}
   \item{lon}{longitude coordinate}
@@ -12,7 +13,8 @@
   \item{res}{DGGRID resolution (0 -- 6)}
   \item{centroid}{A 0-1 variable, indicating whether the point describes the centroid of the polygon,
   or whether it is a boundary point of the polygon}
-}}
+}
+}
 \usage{
 isea3h
 }

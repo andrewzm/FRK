@@ -24,6 +24,14 @@ FRK(
   method = "EM",
   lambda = 0,
   print_lik = FALSE,
+  response = "gaussian",
+  link = "identity",
+  taper = 4,
+  n_MC = 400,
+  seed = NULL,
+  type = "mean",
+  k = NULL,
+  percents = c(5, 25, 50, 75, 90),
   ...
 )
 
@@ -40,7 +48,7 @@ SRE(
   normalise_basis = TRUE,
   response = "gaussian",
   link = "identity",
-  taper = 8,
+  taper = 4,
   ...
 )
 
@@ -69,10 +77,11 @@ SRE.predict(
   pred_polys = NULL,
   pred_time = NULL,
   covariances = FALSE,
-  n_MC = 1600,
+  n_MC = 400,
   seed = NULL,
   type = "mean",
-  k = NULL
+  k = NULL,
+  percents = c(5, 25, 50, 75, 90)
 )
 
 loglik(SRE_model)
@@ -94,17 +103,41 @@ loglik(SRE_model)
 
 \item{vgm_model}{an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm}. This object contains the variogram model that will be fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified, the variogram used is \code{gstat::vgm(1, "Lin", d, 1)}, where \code{d} is approximately one third of the maximum distance between any two data points}
 
-\item{K_type}{the parameterisation used for the \code{K} matrix. Currently this can be "unstructured" or "block-exponential" (default)}
+\item{K_type}{the parameterisation used for the \code{K} matrix. If the EM algorithm is used for model fitting, \code{K_type} can be "unstructured" or "block-exponential". If TMB is used for model fitting, \code{K_type} can be "neighbour" or "block-exponential". The default is "block-exponential"}
 
 \item{n_EM}{maximum number of iterations for the EM algorithm}
 
 \item{tol}{convergence tolerance for the EM algorithm}
 
-\item{method}{parameter estimation method to employ. Currently only ``EM'' and ``TMB'' is supported}
+\item{method}{parameter estimation method to employ. Currently "EM" and "TMB" are supported}
 
 \item{lambda}{ridge-regression regularisation parameter for when \code{K} is unstructured (0 by default). Can be a single number, or a vector (one parameter for each resolution)}
 
 \item{print_lik}{flag indicating whether likelihood value should be printed or not after convergence of the EM estimation algorithm}
+
+\item{response}{A character string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "bernoulli", "gamma","inverse-gaussian", "negative-binomial", or "binomial".}
+
+\item{link}{A character string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted.}
+
+\item{taper}{A positive numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "block-exponential"} and \code{TMB} is used to fit the data)}
+
+\item{n_MC}{A postive integer indicating the number of MC samples at each location.}
+
+\item{seed}{A seed for reproducibility.}
+
+\item{type}{A character string (possibly vector) indicating the quantities for which predictions and prediction uncertainty is desired.
+If \code{"link"} is in \code{type}, the latent \eqn{Y} process is included; 
+If \code{"mean"} is in \code{type}, the conditional mean \eqn{\mu} is included (and the probability parameter if applicable);
+If \code{"response"} is in \code{type}, the response variable \eqn{Z} is included. 
+Any combination of these character strings can be provided. For example, if \code{type = c("link", "response")}, then predictions of the latent \eqn{Y} process and the response variable \eqn{Z} are provided.}
+
+\item{k}{vector of size parameters parameters at each BAU (applicable only for binomial and negative-binomial data).
+If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{\xi} is included in the latent \eqn{Y} process. 
+If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}.}
+
+\item{percents}{A vector containing the desired percentiles which will be 
+included in the prediction dataframe. If \code{NULL}, 
+no percentiles are computed.}
 
 \item{...}{other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling the function \code{FRK}}
 

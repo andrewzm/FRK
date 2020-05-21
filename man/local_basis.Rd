@@ -9,7 +9,8 @@ local_basis(
   manifold = sphere(),
   loc = matrix(c(1, 0), nrow = 1),
   scale = 1,
-  type = c("bisquare", "Gaussian", "exp", "Matern32")
+  type = c("bisquare", "Gaussian", "exp", "Matern32"),
+  res = 1
 )
 
 radial_basis(
@@ -27,6 +28,8 @@ radial_basis(
 \item{scale}{vector of length \code{n} containing the scale parameters of the basis functions; see details}
 
 \item{type}{either ``bisquare'', ``Gaussian'', ``exp'', or ``Matern32''}
+
+\item{res}{vector of length \code{n} containing the resolutions of the basis functions}
 }
 \description{
 Construct a set of local basis functions based on pre-specified location and scale parameters.
