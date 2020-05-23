@@ -110,8 +110,13 @@
 #'     geom_line(data=sim_process,aes(x=x,y=proc),col="red")
 #'  print(g1)}
 SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
-                fs_model = "ind", vgm_model = NULL, K_type = "block-exponential", normalise_basis = TRUE, 
-                response = "gaussian", link = "identity", taper = 4, ...) {
+                fs_model = "ind", vgm_model = NULL, 
+                K_type = c("block-exponential", "neighbour", "unstructured", "separable", "precision_exp", "latticekrig"), 
+                normalise_basis = TRUE, 
+                response = c("gaussian", "poisson", "bernoulli", "gamma",
+                             "inverse-gaussian", "negative-binomial", "binomial"), 
+                link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"), 
+                taper = 4, ...) {
 
     ## Strings that must be lower-case (this allows users to enter 
     ## response = "Gaussian", for example, without causing issues)
@@ -119,19 +124,16 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     link      <- tolower(link)
     K_type    <- tolower(K_type)
     
-    ## FIXME: Could add:
-    # K_type <- match.arg(K_type)
-    # response <- match.arg(response)
-    # link <- match.arg(link)
-    ## This requires use to add all the options into SRE (which I think we should do anyway)
-    
+    K_type <- match.arg(K_type)
+    response <- match.arg(response)
+    link <- match.arg(link)
+
     
     ## Produce a warning if the response is non-Gaussian and user has specified 
     ## the block-exponential covariance formulation
     if (response != "gaussian" & K_type == "block-exponential") {
         warning("Using K_type = 'block-exponential' is computationally inefficient when response != 'gaussian' (or, in general, when method == 'TMB'). For these situations, consider using K_type = 'neighbour' or K_type = 'separable'.")
     }
-    
     
     ## Check that the arguments are OK
     .check_args1(f = f,data = data, basis = basis, BAUs = BAUs, est_error = est_error, 
@@ -335,8 +337,10 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
 
 #' @rdname SRE
 #' @export
-SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method="EM", lambda = 0, print_lik=FALSE) {
+SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"), lambda = 0, print_lik = FALSE) {
 
+    method <- match.arg(method)
+    
     ## Check the arguments are OK
     .check_args2(n_EM = n_EM, tol = tol, method = method, print_lik = print_lik, 
                  SRE_model = SRE_model) # need SRE_model to test method with response, link, and K_type
@@ -362,9 +366,9 @@ SRE.predict <- function(SRE_model, obs_fs = FALSE, newdata = NULL, pred_polys = 
 setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = FALSE, pred_polys = NULL,
                                               pred_time = NULL, covariances = FALSE, 
                                               n_MC = 400, type = "mean", k = NULL, 
-                                              percents = c(5, 25, 50, 75, 90)) {
+                                              percents = c(5, 25, 50, 75, 95)) {
 
-    # warning("changed n_MC default to 400 (originally was 1600)")
+    
     SRE_model <- object
     ## Deprecation coercion
     if(!is.null(pred_polys))
@@ -1724,7 +1728,7 @@ print.summary.SRE <- function(x, ...) {
     if(!missing(SRE_model)){
         
         ## Check type is not used with EM
-        if (SRE_model@method == "EM" && type != "mean") warning("type argument does nothing when the EM algorithm was used for model fitting.")
+        if (SRE_model@method == "EM" & type != "mean") warning("type argument does nothing when the EM algorithm was used for model fitting.")
 
         ## Check k (for predictions)
         if (SRE_model@response %in% c("binomial", "negative-binomial")) {

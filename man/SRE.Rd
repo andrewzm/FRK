@@ -43,10 +43,13 @@ SRE(
   average_in_BAU = TRUE,
   fs_model = "ind",
   vgm_model = NULL,
-  K_type = "block-exponential",
+  K_type = c("block-exponential", "neighbour", "unstructured", "separable",
+    "precision_exp", "latticekrig"),
   normalise_basis = TRUE,
-  response = "gaussian",
-  link = "identity",
+  response = c("gaussian", "poisson", "bernoulli", "gamma", "inverse-gaussian",
+    "negative-binomial", "binomial"),
+  link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse",
+    "inverse-squared"),
   taper = 4,
   ...
 )
@@ -55,7 +58,7 @@ SRE.fit(
   SRE_model,
   n_EM = 100L,
   tol = 0.01,
-  method = "EM",
+  method = c("EM", "TMB"),
   lambda = 0,
   print_lik = FALSE
 )
@@ -79,7 +82,7 @@ SRE.predict(
   n_MC = 400,
   type = "mean",
   k = NULL,
-  percents = c(5, 25, 50, 75, 90)
+  percents = c(5, 25, 50, 75, 95)
 )
 
 loglik(SRE_model)
