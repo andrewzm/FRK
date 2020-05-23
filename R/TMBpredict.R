@@ -16,7 +16,7 @@
 #' }
 #' Note that for all link functions other than the log-link and identity-link, the predictions and prediction uncertainty of \eqn{\mu} contained in \code{newdata} are computed using the Monte Carlo samples contained in \code{MC}.
 #' When the log- or identity-link functions are used the expectation and variance of the \eqn{\mu} may be computed exactly.
-.FRKTMB_pred <- function(M, type = "mean", n_MC = 400, seed = NULL, obs_fs = FALSE, 
+.FRKTMB_pred <- function(M, type = "mean", n_MC = 400, obs_fs = FALSE, 
                          k = NULL, 
                          percents = c(5, 25, 50, 75, 95)) {
   
@@ -76,7 +76,7 @@
   ## Compute Monte Carlo samples of conditional mean at each location
   pred_time$MC_sample_total <- system.time(
     MC <- .MC_sampler(M = M, X = X, type = type, obs_fs = obs_fs, 
-                      n_MC = n_MC, seed = seed, k = k, Q_L = Q_L, obsidx = obsidx)
+                      n_MC = n_MC, k = k, Q_L = Q_L, obsidx = obsidx)
   ) 
 
   pred_time$MC_sample_backsolve <- MC$times$backsolve # time of backsolve specifically
@@ -252,7 +252,6 @@
 #' @param k vector of size parameters parameters at each BAU (applicable only for binomial and negative-binomial data).
 #' If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{\xi} is included in the latent \eqn{Y} process. 
 #' If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}. 
-#' @param seed A seed for reproducibility.
 #' @param Q_L A list containing the Cholesky factor of the permuted precision matrix (stored as \code{Q$Qpermchol}) and the associated permutationmatrix (stored as \code{Q_L$P}).
 #' @param obsidx A vector containing the indices of observed locations.
 #' @return A list containing Monte Carlo samples of various quantites of interest. 
@@ -264,7 +263,7 @@
 #'   \item{prob_samples}{Samples of the probability of success parameter (only for the relevant response distributions).}
 #'   \item{Z_samples}{Samples of the response variable.}
 #' }
-.MC_sampler <- function(M, X, type = "mean", n_MC = 400, obs_fs = FALSE, seed = NULL, k = NULL, 
+.MC_sampler <- function(M, X, type = "mean", n_MC = 400, obs_fs = FALSE, k = NULL, 
                         Q_L, obsidx){
   
   MC <- list() # object we will return 
@@ -285,7 +284,6 @@
   mu_eta_xi_O_Matrix  <- matrix(rep(mu_eta_xi_O, times = n_MC), ncol = n_MC)
   
   ## Generate (r+m) x n_MC samples from Gau(0, 1) distribution
-  set.seed(seed)
   z <- matrix(rnorm((r + m) * n_MC), nrow = r + m, ncol = n_MC)
   
   ## Compute the Cholesky factor of  Q (the joint precision matrix of (eta', xi_O')').

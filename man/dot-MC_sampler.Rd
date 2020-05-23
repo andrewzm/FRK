@@ -11,7 +11,6 @@ latent process Y).}
   type = "mean",
   n_MC = 400,
   obs_fs = FALSE,
-  seed = NULL,
   k = NULL,
   Q_L,
   obsidx
@@ -31,8 +30,6 @@ If \code{"response"} is in \code{type}, the response variable \eqn{Z} samples, a
 \item{n_MC}{A postive integer indicating the number of MC samples at each location.}
 
 \item{obs_fs}{Logical indicating whether the fine-scale variation is included in the latent Y process.}
-
-\item{seed}{A seed for reproducibility.}
 
 \item{k}{vector of size parameters parameters at each BAU (applicable only for binomial and negative-binomial data).
 If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{\xi} is included in the latent \eqn{Y} process. 

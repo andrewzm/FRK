@@ -8,7 +8,6 @@
   M,
   type = "mean",
   n_MC = 400,
-  seed = NULL,
   obs_fs = FALSE,
   k = NULL,
   percents = c(5, 25, 50, 75, 95)
@@ -24,8 +23,6 @@ If \code{"response"} is in \code{type}, the response variable \eqn{Z} is include
 Any combination of these character strings can be provided. For example, if \code{type = c("link", "response")}, then predictions of the latent \eqn{Y} process and the response variable \eqn{Z} are provided.}
 
 \item{n_MC}{A postive integer indicating the number of MC samples at each location.}
-
-\item{seed}{A seed for reproducibility.}
 
 \item{obs_fs}{Logical indicating whether the fine-scale variation is included in the latent Y process.}
 

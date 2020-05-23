@@ -28,7 +28,6 @@ FRK(
   link = "identity",
   taper = 4,
   n_MC = 400,
-  seed = NULL,
   type = "mean",
   k = NULL,
   percents = c(5, 25, 50, 75, 90),
@@ -78,7 +77,6 @@ SRE.predict(
   pred_time = NULL,
   covariances = FALSE,
   n_MC = 400,
-  seed = NULL,
   type = "mean",
   k = NULL,
   percents = c(5, 25, 50, 75, 90)
@@ -122,8 +120,6 @@ loglik(SRE_model)
 \item{taper}{A positive numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "block-exponential"} and \code{TMB} is used to fit the data)}
 
 \item{n_MC}{A postive integer indicating the number of MC samples at each location.}
-
-\item{seed}{A seed for reproducibility.}
 
 \item{type}{A character string (possibly vector) indicating the quantities for which predictions and prediction uncertainty is desired.
 If \code{"link"} is in \code{type}, the latent \eqn{Y} process is included; 

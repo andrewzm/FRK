@@ -361,7 +361,7 @@ SRE.predict <- function(SRE_model, obs_fs = FALSE, newdata = NULL, pred_polys = 
 #' @export
 setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = FALSE, pred_polys = NULL,
                                               pred_time = NULL, covariances = FALSE, 
-                                              n_MC = 400, seed = NULL, type = "mean", k = NULL, 
+                                              n_MC = 400, type = "mean", k = NULL, 
                                               percents = c(5, 25, 50, 75, 90)) {
 
     # warning("changed n_MC default to 400 (originally was 1600)")
@@ -403,7 +403,6 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     } else if (SRE_model@method == "TMB") {
         pred_locs <- .FRKTMB_pred(M = SRE_model,    # Fitted SRE model
                                   n_MC = n_MC,      # Number of MC simulations
-                                  seed = seed,      # seed for reproducibility (MC simulations)
                                   obs_fs = obs_fs, 
                                   type = type, 
                                   k = k, 
