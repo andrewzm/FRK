@@ -1727,9 +1727,6 @@ print.summary.SRE <- function(x, ...) {
     
     if(!missing(SRE_model)){
         
-        ## Check type is not used with EM
-        if (SRE_model@method == "EM" & type != "mean") warning("type argument does nothing when the EM algorithm was used for model fitting.")
-
         ## Check k (for predictions)
         if (SRE_model@response %in% c("binomial", "negative-binomial")) {
             if(length(k) == 1){
