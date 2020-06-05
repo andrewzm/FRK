@@ -18,7 +18,7 @@
 #' When the log- or identity-link functions are used the expectation and variance of the \eqn{\mu} may be computed exactly.
 .FRKTMB_pred <- function(M, type = "mean", n_MC = 400, obs_fs = FALSE, 
                          k = NULL, 
-                         percents = c(5, 25, 50, 75, 95)) {
+                         percentiles = c(5, 25, 50, 75, 95)) {
   
   pred_time <- list()
   
@@ -92,7 +92,7 @@
     newdata$p_Y     <- p_Y          
     newdata$RMSPE_Y <- sqrt(MSPE_Y) 
     newdata <- .concat_percentiles_to_df(X = MC$Y_samples, df = newdata, 
-                                         name = "Y", percents = percents)  
+                                         name = "Y", percentiles = percentiles)  
   }
   
   ## If Y is the ONLY quantity of interest, exit the function.
@@ -121,7 +121,7 @@
     newdata$p_mu <- p_mu
     newdata$RMSPE_mu <- RMSPE_mu
     newdata <- .concat_percentiles_to_df(X = MC$mu_samples, df = newdata, 
-                                         name = "mu", percents = percents)
+                                         name = "mu", percentiles = percentiles)
     
     ## For some response distributions, the probability of success parameter 
     ## was also computed (and is not equal to the conditonal mean, as is the 
@@ -130,7 +130,7 @@
       newdata$p_prob     <- rowMeans(MC$prob_samples)
       newdata$RMSPE_prob <- sqrt(.rowVars(MC$prob_samples))
       newdata <- .concat_percentiles_to_df(X = MC$prob_samples, df = newdata, 
-                                           name = "prob", percents = percents)
+                                           name = "prob", percentiles = percentiles)
     }
   }
   
@@ -139,7 +139,7 @@
     newdata$p_Z <- p_mu 
     newdata$RMSPE_Z <- sqrt(.rowVars(MC$Z_samples))
     newdata <- .concat_percentiles_to_df(X = MC$Z_samples, df = newdata, 
-                                         name = "Z", percents = percents) 
+                                         name = "Z", percentiles = percentiles) 
   }
 
   

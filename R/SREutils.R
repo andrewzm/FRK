@@ -366,7 +366,7 @@ SRE.predict <- function(SRE_model, obs_fs = FALSE, newdata = NULL, pred_polys = 
 setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = FALSE, pred_polys = NULL,
                                               pred_time = NULL, covariances = FALSE, 
                                               n_MC = 400, type = "mean", k = NULL, 
-                                              percents = c(5, 25, 50, 75, 95)) {
+                                              percentiles = c(5, 25, 50, 75, 95)) {
 
     
     SRE_model <- object
@@ -394,7 +394,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     .check_args3(obs_fs = obs_fs, newdata = newdata, pred_polys = pred_polys,
                  pred_time = pred_time, covariances = covariances, 
                  response = SRE_model@response, SRE_model = SRE_model, type = type, 
-                 k = k, percents = percents)
+                 k = k, percentiles = percentiles)
 
     ## Call internal prediction function
     if (SRE_model@method == "EM") {
@@ -410,7 +410,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                                   obs_fs = obs_fs, 
                                   type = type, 
                                   k = k, 
-                                  percents = percents)  
+                                  percentiles = percentiles)  
     } 
 
     
@@ -1708,7 +1708,7 @@ print.summary.SRE <- function(x, ...) {
 ## Checks arguments for the predict() function. Code is self-explanatory
 .check_args3 <- function(obs_fs = FALSE, newdata = NULL, pred_polys = NULL,
                          pred_time = NULL, covariances = FALSE, SRE_model, type, 
-                         k, percents, ...) {
+                         k, percentiles, ...) {
     if(!(obs_fs %in% 0:1)) stop("obs_fs needs to be logical")
 
     if(!(is(newdata,"Spatial") | (is(newdata,"ST")) | is.null(newdata)))
@@ -1741,12 +1741,12 @@ print.summary.SRE <- function(x, ...) {
         }
         
         ## Check requested percentiles are ok
-        if (!is.null(percents) & !(class(percents) %in% c("numeric", "integer"))) {
-            stop("percents must either be NULL or a numeric or integer vector 
+        if (!is.null(percentiles) & !(class(percentiles) %in% c("numeric", "integer"))) {
+            stop("percentiles must either be NULL or a numeric or integer vector 
             with entries between 0 and 100.")
-        } else if (!is.null(percents)) {
-            if (min(percents) < 0 | max(percents) > 100) {
-                stop("percents must be a vector with entries between 0 and 100.")   
+        } else if (!is.null(percentiles)) {
+            if (min(percentiles) < 0 | max(percentiles) > 100) {
+                stop("percentiles must be a vector with entries between 0 and 100.")   
             }
         }
     }

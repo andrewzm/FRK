@@ -100,16 +100,16 @@
 #' samples).
 #' @param df The prediction dataframe, with the same number of rows as \code{X}.
 #' @param name The name of the quantity of interest. The names of the percentile
-#' columns are "name_percentile_percents". In \code{FRK} it will be Y, mu, or Z. 
-#' @param percents A vector containing the desired percentiles which will be 
+#' columns are "name_percentile_percentiles". In \code{FRK} it will be Y, mu, or Z. 
+#' @param percentiles A vector containing the desired percentiles which will be 
 #' included in the prediction dataframe. If \code{NULL}, 
 #' no percentiles are computed.
 #' @return The dataframe \code{df} with appended percentiles.
 .concat_percentiles_to_df <- function (X, df, name, 
-                                       percents = c(5, 25, 50, 75, 95)) {
-  if (is.null(percents)) return(df)
-  temp           <- t(apply(X, 1, quantile, percents/100))
-  colnames(temp) <- paste(name, "percentile", as.character(percents), sep = "_")
+                                       percentiles = c(5, 25, 50, 75, 95)) {
+  if (is.null(percentiles)) return(df)
+  temp           <- t(apply(X, 1, quantile, percentiles/100))
+  colnames(temp) <- paste(name, "percentile", as.character(percentiles), sep = "_")
   df             <- cbind(df, temp)
   return(df)
 }
