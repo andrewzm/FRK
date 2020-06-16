@@ -368,8 +368,8 @@ Type objective_function<Type>::operator() ()
   
   // ln[eta|K] and ln[xi|sigma2xi]:
   // (These quantities are invariant to the link function/response distribution)
-  Type ld_eta =  -0.5 * r * log(2 * M_PI) - 0.5 * logdetQ_inv - 0.5 * quadform_eta;
-  Type ld_xi  =  -0.5 * m * log(2 * M_PI) - 0.5 * m * log(sigma2xi) - 0.5 * quadform_xi;
+  Type ld_eta =  -0.5 * r * log(2.0 * M_PI) - 0.5 * logdetQ_inv - 0.5 * quadform_eta;
+  Type ld_xi  =  -0.5 * m * log(2.0 * M_PI) - 0.5 * m * log(sigma2xi) - 0.5 * quadform_xi;
   
   
   // -------- 4. Construct ln[Z|Y_O]  -------- //
@@ -422,28 +422,37 @@ Type objective_function<Type>::operator() ()
     if (link == "probit")           mu_O = pnorm(Y_O);
     if (link == "cloglog")          mu_O = 1.0 - exp(-exp(Y_O));
     
-    // Adjust the mean by k for binomial and negative-binomial
-    if (response == "negative-binomial" || response == "binomial") mu_O *= k_Z;
-    
-    // Compute the cumulant function based on the mean
-    if (response == "gaussian")           blambda = (mu_O * mu_O) / 2.0;
-    if (response == "gamma")              blambda =  -log(mu_O + epsilon);
-    if (response == "inverse-gaussian")   blambda =  2.0 / (mu_O + epsilon);
-    if (response == "poisson")            blambda =  mu_O;
-    if (response == "negative-binomial")  blambda = k_Z * log(1 + mu_O / k_Z);
-    if (response == "binomial")           blambda = -k_Z * log(1.0 - (mu_O - epsilon) / k_Z);
-    if (response == "bernoulli")          blambda =  -log(1 - mu_O + epsilon);
-    
+    // Compute the canonical parameter and cumulant function using the mean
+    if (response == "gaussian") {
+        lambda = mu_O;
+        blambda = (mu_O * mu_O) / 2.0;
+    } else if (response == "gamma") {
+        lambda = 1.0 / (mu_O + epsilon);
+        blambda =  -log(mu_O + epsilon);
+    } else if (response == "inverse-gaussian") {
+        lambda = 1.0 / (mu_O * mu_O + epsilon);
+        blambda =  2.0 / (mu_O + epsilon);
+    } else if (response == "poisson") {
+        lambda  =   log(mu_O + epsilon);
+        blambda =  mu_O;
+    } else if (response == "negative-binomial") {
+        lambda = -log(1.0 + k_Z/(mu_O + epsilon));
+        blambda = k_Z * log(1 + mu_O / k_Z);
+    } else if (response == "binomial") {
+        lambda = log((mu_O + epsilon) / (k_Z - mu_O + epsilon));
+        blambda = -k_Z * log(1.0 - (mu_O - epsilon) / k_Z);
+    } else if (response == "bernoulli") {
+        lambda = log((mu_O + epsilon) / (1.0 - mu_O + epsilon));
+        blambda =  -log(1.0 - mu_O + epsilon);
+    }
   }
 
   
   
   // 4.3. Construct a(phi) and c(Z, phi).
-  phi = 1.0; // Set to 1.0 by default, only change for two-parameter exponential families
-  vector<Type> aphi(m);
-  aphi = 1.0; // Set to 1.0 by default, only change for two-parameter exponential families
+  Type aphi{1.0}; // initialise to 1.0, only change for two-parameter exponential families
   vector<Type> cZphi(m);
-  // NB: set cZphi = 0.0; if I ever remove computation of cZphi into R for one-parameter exponential family members.
+  // NB: set cZphi = 0.0 if I ever move computation of cZphi into R for one-parameter exponential family members.
   
   if (response == "gaussian") {
     phi = sigma2e;
@@ -456,22 +465,26 @@ Type objective_function<Type>::operator() ()
     aphi    =   - 2.0 * phi;
     cZphi   =   - 0.5 / (phi * Z) - 0.5 * log(2.0 * M_PI * phi * Z * Z * Z);
   } else if (response == "poisson") {
+    phi = 1.0;
     // cZphi   =   -lfactorial(Z);           
     for (int i = 0; i < m; i++) {
       cZphi[i] = -lfactorial(Z[i]);
     }
   } else if (response == "negative-binomial") {
+    phi = 1.0;
     // cZphi   = lfactorial(Z + k_Z - 1.0) - lfactorial(Z) - lfactorial(k_Z - 1.0);  
     for (int i = 0; i < m; i++) {
       cZphi[i] = lfactorial(Z[i] + k_Z[i] - 1.0) - lfactorial(Z[i]) - lfactorial(k_Z[i] - 1.0);
     }
   } else if (response == "binomial") {
+    phi = 1.0;
     // cZphi   = lfactorial(k_Z) - lfactorial(Z) - lfactorial(k_Z - Z);     
     for (int i = 0; i < m; i++) {
       cZphi[i] = lfactorial(k_Z[i]) - lfactorial(Z[i]) - lfactorial(k_Z[i] - Z[i]);  
     }
   } else if (response == "bernoulli") {
-    cZphi   =   0.0;     
+    phi = 1.0;
+    cZphi = 0.0;
   } 
 
   
@@ -491,28 +504,17 @@ Type objective_function<Type>::operator() ()
 }
 
 
+// Some notes:
 
-// Defining variables inside loops: https://stackoverflow.com/questions/7959573/declaring-variables-inside-loops-good-practice-or-bad-practice
-
-// NOTE: 
 // We cannot declare objects inside if() statements if those objects are 
 // also used outside the if() statement. 
 // We ARE allowed to declare objects inside if() statements if they are not 
 // used outside of this if() statement at any other point in the template.
 // This is because, in C++, each set of braces defines a scope, so all variables
-// defined in loops and if statements are not accessible outside of them. 
+// defined in loops and if statements are not accessible outside of them.
+// Defining variables inside loops: https://stackoverflow.com/questions/7959573/declaring-variables-inside-loops-good-practice-or-bad-practice
 
-// PARAMETER_VECTOR(eta) defines eta as an ARRAY object in Eigen i.e. vector<type> 
+// PARAMETER_VECTOR(eta) defines eta as an ARRAY object in Eigen i.e. vector<type>
 // is equivalent to an array.  - be careful,  as matrices/vectors cannot be mixed 
 // with arrays! 
 // PARAMETER_MATRIX() casts as matrix<type>, which is indeed a matrix.
-
-
-
-// Alternative computation of Hk:
-// matrix<Type> Hk(n_c[k], n_r[k]);
-// int start_n_c = 0;
-// for (int j = 0; j < n_r[k]; j++) {
-//   Hi.col(j) = eta.segment(start_eta + start_n_c, n_c[k]); 
-//   start_n_c += n_c[k];
-// }
