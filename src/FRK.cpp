@@ -125,7 +125,7 @@ Type objective_function<Type>::operator() ()
     // Construct the temporal Cholesky factor, L_t.
     std::vector<T> tripletList_L_t;
     tripletList_L_t.reserve(2 * r_t - 1);
-    Type common_term = 1 / sqrt(sigma2_t * (1 - rho_t * rho_t));
+    Type common_term = 1.0 / sqrt(sigma2_t * (1.0 - rho_t * rho_t));
     
     // Diagonal entries (except last diagonal entry), lower diagonal entries
     for (int j = 0; j < (r_t - 1); j++) {
@@ -133,7 +133,7 @@ Type objective_function<Type>::operator() ()
       tripletList_L_t.push_back(T(j + 1, j, -rho_t * common_term));
     }
     // Final diagonal entry
-    tripletList_L_t.push_back(T(r_t - 1, r_t - 1, 1 / sqrt(sigma2_t)));
+    tripletList_L_t.push_back(T(r_t - 1, r_t - 1, 1.0 / sqrt(sigma2_t)));
     
     // Convert triplet list of non-zero entries to a true SparseMatrix.
     SpMat L_t(r_t, r_t);
@@ -175,8 +175,8 @@ Type objective_function<Type>::operator() ()
       std::vector<T> tripletList_M_c;
       tripletList_M_r.reserve(2 * n_r[k] - 1);
       tripletList_M_c.reserve(2 * n_c[k] - 1);
-      Type common_term_c = 1 / sqrt(sigma2_c[k] * (1 - rho_c[k] * rho_c[k]));
-      Type common_term_r = 1 / sqrt(sigma2_r[k] * (1 - rho_r[k] * rho_r[k]));
+      Type common_term_c = 1.0 / sqrt(sigma2_c[k] * (1.0 - rho_c[k] * rho_c[k]));
+      Type common_term_r = 1.0 / sqrt(sigma2_r[k] * (1.0 - rho_r[k] * rho_r[k]));
       
       // Diagonal entries (except last diagonal entry) AND lower diagonal entries
       for (int j = 0; j < (n_r[k] - 1); j++) {
@@ -188,8 +188,8 @@ Type objective_function<Type>::operator() ()
         tripletList_M_c.push_back(T(j + 1, j, -rho_c[k] * common_term_c));
       }
       // Last diagonal entry
-      tripletList_M_r.push_back(T(n_r[k] - 1, n_r[k] - 1, 1 / sqrt(sigma2_r[k])));
-      tripletList_M_c.push_back(T(n_c[k] - 1, n_c[k] - 1, 1 / sqrt(sigma2_c[k])));
+      tripletList_M_r.push_back(T(n_r[k] - 1, n_r[k] - 1, 1.0 / sqrt(sigma2_r[k])));
+      tripletList_M_c.push_back(T(n_c[k] - 1, n_c[k] - 1, 1.0 / sqrt(sigma2_c[k])));
       
       // Convert triplet list of non-zero entries to a true SparseMatrix.
       SpMat M_r(n_r[k], n_r[k]);
@@ -255,9 +255,9 @@ Type objective_function<Type>::operator() ()
       if (K_type == "latticekrig" && rhoInB == true) {
         for (int j = start_x; j < start_x + nnz[k]; j++){  // For each non-zero entry within resolution k
           if (row_indices[j] == col_indices[j]) {
-            coef = (x[j] + sigma2[k]) / sqrt(tau[k] + 1e-10);
+            coef = (x[j] + sigma2[k]) / sqrt(tau[k] + 1.0e-10);
           } else {
-            coef = x[j] / sqrt(tau[k] + 1e-10); // The "neighbour matrix" in R is responsible for setting the weights
+            coef = x[j] / sqrt(tau[k] + 1.0e-10); // The "neighbour matrix" in R is responsible for setting the weights
           }
           tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
         }
@@ -292,7 +292,7 @@ Type objective_function<Type>::operator() ()
       bool constructQ = false;
       if (K_type == "latticekrig" && constructQ == true) {
         if(rhoInB == false) {
-          mat = mat * mat / (tau[k] + Type(1e-10));
+          mat = mat * mat / (tau[k] + Type(1.0e-10));
         } else if (rhoInB == true) {
           mat = mat * mat;
         }
@@ -308,7 +308,7 @@ Type objective_function<Type>::operator() ()
       if (K_type == "latticekrig" && constructQ == false && rhoInB == true) {
         logdetQ_inv += -4.0 * r_t * Uk.diagonal().array().log().sum();
       } else if (K_type == "latticekrig" && constructQ == false && rhoInB == false) {
-        logdetQ_inv += r_si[k] * log(tau[k] + 1e-10) - 4.0 * r_t * Uk.diagonal().array().log().sum();
+        logdetQ_inv += r_si[k] * log(tau[k] + 1.0e-10) - 4.0 * r_t * Uk.diagonal().array().log().sum();
       } else if (K_type == "block-exponential") {
         logdetQ_inv += 2.0 * r_t * Uk.diagonal().array().log().sum();
       } else {
@@ -323,7 +323,7 @@ Type objective_function<Type>::operator() ()
       if (K_type == "latticekrig" && constructQ == false && rhoInB == true) {
         Mk = mat;
       } else if (K_type == "latticekrig" && constructQ == false && rhoInB == false) {
-        Mk = mat / sqrt(tau[k] + 1e-10);
+        Mk = mat / sqrt(tau[k] + 1.0e-10);
       } else if (K_type == "block-exponential") {
         // Don't construct Mk explicitly with block-exponential
       } else {
@@ -374,118 +374,109 @@ Type objective_function<Type>::operator() ()
   
   // -------- 4. Construct ln[Z|Y_O]  -------- //
   
+  // Small, positive constant used to avoid division and logarithm of zero:
+  Type epsilon = 10.0e-8;
+  
   // 4.1. Construct Y_O, the latent spatial process at observed locations
   vector<Type> Y_O  = X * beta + S * eta + xi_O;
   
-  // 4.2. Link the conditional mean mu_O to the Gaussian scale predictor Y_O
+  // 4.2 Compute the canonical parameter and cumulant function
   
-  vector<Type> mu_O(m);
-  vector<Type> p_O(m);
-  
-  if (link == "identity") {
-    mu_O = Y_O;
-  } else if (link == "inverse") {
-    mu_O = 1 / Y_O;
-  } else if (link == "inverse-squared") {
-    mu_O = 1 / sqrt(Y_O);
-  } else if (link == "log") {
-    mu_O = exp(Y_O);
-  } else if (link == "square-root"){
-    mu_O = Y_O * Y_O;
-  } else if (link == "logit") {
-    p_O = 1 / (1 + exp(-1 * Y_O));
-  } else if (link == "probit") {
-    p_O = pnorm(Y_O);
-  } else if (link == "cloglog") {
-    p_O = 1 - exp(-exp(Y_O));
-  } else {
-    error("Unknown link function");
+  // Determine whether the canonincal link function is used:
+  // (Note that we do not consider canonical link for binomial or negative-binomial data.)
+  bool canonical_link{false};
+  if (    (response == "gaussian" && link == "identity") ||
+          (response == "gamma" && link == "inverse") ||
+          (response == "inverse-gaussian" && link == "inverse-squared") ||
+          (response == "poisson" && link == "log") ||
+          (response == "bernoulli" && link == "logit")   ){
+    canonical_link = true;
   }
   
-  Type epsilon_1 = 10e-8;
-  Type epsilon_2 = 2 * (1 - 1/(1 + epsilon_1));
   
-  if (link == "logit" || link == "probit" || link == "cloglog") {
-    if (response == "bernoulli") {
-      mu_O = p_O;
-    } else if (response == "binomial")  {
-      mu_O = k_Z * p_O;
-    } else if (response == "negative-binomial") {
-      mu_O = k_Z * (1 / (p_O + epsilon_1) - 1 + epsilon_2);
-    }
-  } else if (response == "negative-binomial" && (link == "log" || link == "square-root")) {
-    mu_O *= k_Z;
-  } 
-  
-  // 4.3. Create the canonical parameter lambda,
-  //      a function of the conditional mean mu_O.
-  //      Also create vectors containing a(phi), b(lambda), and c(Z, phi).
+  // Compute the canonical parameter and the cumulant function.
   vector<Type> lambda(m);
   vector<Type> blambda(m);
+  
+  if (canonical_link == true){
+    // Compute canonical parameter (simply equal to Y when g is canonical)
+    lambda = Y_O;
+
+    // Compute the cumulant function using the canonical parameter
+    if (response == "gaussian")           blambda = (lambda * lambda) / 2.0;
+    if (response == "gamma")              blambda =  log(lambda);
+    if (response == "inverse-gaussian")   blambda =  2.0 * sqrt(lambda);
+    if (response == "poisson")            blambda =  exp(lambda);
+    if (response == "bernoulli")          blambda =  log(1.0 + exp(lambda));
+    
+  } else if (canonical_link == false){
+    
+    // Compute the mean
+    vector<Type> mu_O(m);
+    if (link == "identity")         mu_O = Y_O;
+    if (link == "inverse")          mu_O = 1.0 / Y_O;
+    if (link == "inverse-squared")  mu_O = 1.0 / sqrt(Y_O);
+    if (link == "log")              mu_O = exp(Y_O) + epsilon;
+    if (link == "square-root")      mu_O = Y_O * Y_O + epsilon;
+    if (link == "logit")            mu_O = 1.0 / (1.0 + exp(-1.0 * Y_O));
+    if (link == "probit")           mu_O = pnorm(Y_O);
+    if (link == "cloglog")          mu_O = 1.0 - exp(-exp(Y_O));
+    
+    // Adjust the mean by k for binomial and negative-binomial
+    if (response == "negative-binomial" || response == "binomial") mu_O *= k_Z;
+    
+    // Compute the cumulant function based on the mean
+    if (response == "gaussian")           blambda = (mu_O * mu_O) / 2.0;
+    if (response == "gamma")              blambda =  -log(mu_O + epsilon);
+    if (response == "inverse-gaussian")   blambda =  2.0 / (mu_O + epsilon);
+    if (response == "poisson")            blambda =  mu_O;
+    if (response == "negative-binomial")  blambda = k_Z * log(1 + mu_O / k_Z);
+    if (response == "binomial")           blambda = -k_Z * log(1.0 - (mu_O - epsilon) / k_Z);
+    if (response == "bernoulli")          blambda =  -log(1 - mu_O + epsilon);
+    
+  }
+
+  
+  
+  // 4.3. Construct a(phi) and c(Z, phi).
+  phi = 1.0; // Set to 1.0 by default, only change for two-parameter exponential families
   vector<Type> aphi(m);
+  aphi = 1.0; // Set to 1.0 by default, only change for two-parameter exponential families
   vector<Type> cZphi(m);
+  // NB: set cZphi = 0.0; if I ever remove computation of cZphi into R for one-parameter exponential family members.
   
   if (response == "gaussian") {
-    phi     =   sigma2e;
-    lambda  =   mu_O;
-    aphi    =   phi;
-    blambda =   (lambda * lambda) / 2;
-    cZphi   =   -0.5 * (Z * Z / phi + log(2 * M_PI * phi));
+    phi = sigma2e;
+    aphi = phi;
+    cZphi = -0.5 * (Z * Z / phi + log(2.0 * M_PI * phi));
+  } else if (response == "gamma") {
+    aphi    =   -phi;
+    cZphi   =   log(Z/phi)/phi - log(Z) - lgamma(1.0/phi);
+  } else if (response == "inverse-gaussian") {
+    aphi    =   - 2.0 * phi;
+    cZphi   =   - 0.5 / (phi * Z) - 0.5 * log(2.0 * M_PI * phi * Z * Z * Z);
   } else if (response == "poisson") {
-    phi     =   1;
-    lambda  =   log(mu_O);
-    blambda =   exp(lambda);
-    aphi    =   1;
-    // Only need c(Z, phi) here to provide exact density function to the user
     // cZphi   =   -lfactorial(Z);           
     for (int i = 0; i < m; i++) {
       cZphi[i] = -lfactorial(Z[i]);
     }
-    // cZphi   = 0;
-  } else if (response == "bernoulli") {
-    phi     =   1;
-    lambda  =   log((mu_O + 1e-10) / (1 - mu_O + 1e-10));
-    blambda =   log(1 + exp(lambda));
-    aphi    =   1;
-    cZphi   =   0;    // c(Z, phi) is indeed equal to zero for bernoulli 
-  } else if (response == "gamma") {
-    lambda  =   1 / mu_O;
-    blambda =   log(lambda);
-    aphi    =   -phi;
-    cZphi   =   log(Z/phi)/phi - log(Z) - lgamma(1/phi);
-  } else if (response == "inverse-gaussian") {
-    lambda  =   1 / (mu_O * mu_O);
-    blambda =   2 * sqrt(lambda);
-    aphi    =   - 2 * phi;
-    cZphi   =   - 0.5 / (phi * Z) - 0.5 * log(2 * M_PI * phi * Z * Z * Z);
   } else if (response == "negative-binomial") {
-    phi     = 1;
-    lambda  = log(mu_O / (mu_O + k_Z));
-    blambda = -k_Z * log(1 - exp(lambda));
-    aphi    = 1;
-    // Only need c(Z, phi) here to provide exact density function to the user
-    // cZphi   = lfactorial(Z + k_Z - 1) - lfactorial(Z) - lfactorial(k_Z - 1);  
+    // cZphi   = lfactorial(Z + k_Z - 1.0) - lfactorial(Z) - lfactorial(k_Z - 1.0);  
     for (int i = 0; i < m; i++) {
-      cZphi[i] = lfactorial(Z[i] + k_Z[i] - 1) - lfactorial(Z[i]) - lfactorial(k_Z[i] - 1);
+      cZphi[i] = lfactorial(Z[i] + k_Z[i] - 1.0) - lfactorial(Z[i]) - lfactorial(k_Z[i] - 1.0);
     }
-    // cZphi   = 0;
   } else if (response == "binomial") {
-    phi     = 1;
-    lambda  = log((mu_O + 1e-10) / (k_Z - mu_O + 1e-10));
-    blambda = k_Z * log(1 + exp(lambda));
-    aphi    = 1;
-    // Only need c(Z, phi) here to provide exact density function to the user
     // cZphi   = lfactorial(k_Z) - lfactorial(Z) - lfactorial(k_Z - Z);     
     for (int i = 0; i < m; i++) {
       cZphi[i] = lfactorial(k_Z[i]) - lfactorial(Z[i]) - lfactorial(k_Z[i] - Z[i]);  
     }
-    // cZphi   = 0;
-  } else {
-    error("Unknown response distribution");
-  }
+  } else if (response == "bernoulli") {
+    cZphi   =   0.0;     
+  } 
+
   
   // 4.4. Construct ln[Z|Y_O]
-  Type ld_Z  =  ((Z*lambda - blambda)/aphi).sum() + cZphi.sum();
+  Type ld_Z  =  ((Z * lambda - blambda)/aphi).sum() + cZphi.sum();
   
   
   // -------- 5. Define Objective function -------- //
