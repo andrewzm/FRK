@@ -412,15 +412,17 @@ Type objective_function<Type>::operator() ()
   } else if (canonical_link == false){
     
     // Compute the mean
+    // (or probability parameter if a lgoit, probit, or cloglog link is used)
     vector<Type> mu_O(m);
+    vector<Type> p_O(m);
     if (link == "identity")         mu_O = Y_O;
     if (link == "inverse")          mu_O = 1.0 / Y_O;
     if (link == "inverse-squared")  mu_O = 1.0 / sqrt(Y_O);
     if (link == "log")              mu_O = exp(Y_O) + epsilon;
     if (link == "square-root")      mu_O = Y_O * Y_O + epsilon;
-    if (link == "logit")            mu_O = 1.0 / (1.0 + exp(-1.0 * Y_O));
-    if (link == "probit")           mu_O = pnorm(Y_O);
-    if (link == "cloglog")          mu_O = 1.0 - exp(-exp(Y_O));
+    if (link == "logit")            p_O = 1.0 / (1.0 + exp(-1.0 * Y_O));
+    if (link == "probit")           p_O = pnorm(Y_O);
+    if (link == "cloglog")          p_O = 1.0 - exp(-exp(Y_O));
     
     // Compute the canonical parameter and cumulant function using the mean
     if (response == "gaussian") {
@@ -436,12 +438,15 @@ Type objective_function<Type>::operator() ()
         lambda  =   log(mu_O + epsilon);
         blambda =  mu_O;
     } else if (response == "negative-binomial") {
+        if (link == "logit" || link == "probit" || link == "cloglog") mu_O = k_Z * (1.0 / (p_O + epsilon) - 1);
         lambda = -log(1.0 + k_Z/(mu_O + epsilon));
         blambda = k_Z * log(1 + mu_O / k_Z);
     } else if (response == "binomial") {
+        mu_O = k_Z * p_O;
         lambda = log((mu_O + epsilon) / (k_Z - mu_O + epsilon));
         blambda = -k_Z * log(1.0 - (mu_O - epsilon) / k_Z);
     } else if (response == "bernoulli") {
+        mu_O = p_O;
         lambda = log((mu_O + epsilon) / (1.0 - mu_O + epsilon));
         blambda =  -log(1.0 - mu_O + epsilon);
     }
