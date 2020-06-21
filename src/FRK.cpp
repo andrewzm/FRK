@@ -103,6 +103,8 @@ Type objective_function<Type>::operator() ()
   PARAMETER_VECTOR(eta);
   PARAMETER_VECTOR(xi_O);
   
+  // Small, positive constant used to avoid division and logarithm of zero:
+  Type epsilon = 10.0e-8;
   
   // ---- 1. Construct prior covariance matrix K or precision matrix Q  ---- //
   
@@ -250,20 +252,20 @@ Type objective_function<Type>::operator() ()
         }
       }
       
-      bool rhoInB = true;
+      bool rhoInB{true};
       
-      if (K_type == "latticekrig" && rhoInB == true) {
+      if (K_type == "latticekrig" && rhoInB) {
         for (int j = start_x; j < start_x + nnz[k]; j++){  // For each non-zero entry within resolution k
           if (row_indices[j] == col_indices[j]) {
-            coef = (x[j] + sigma2[k]) / sqrt(tau[k] + 1.0e-10);
+            coef = (x[j] + sigma2[k]) / sqrt(tau[k] + epsilon);
           } else {
-            coef = x[j] / sqrt(tau[k] + 1.0e-10); // The "neighbour matrix" in R is responsible for setting the weights
+            coef = x[j] / sqrt(tau[k] + epsilon); // The "neighbour matrix" in R is responsible for setting the weights
           }
           tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
         }
       }
       
-      if (K_type == "latticekrig" && rhoInB == false) {
+      if (K_type == "latticekrig" && !rhoInB) {
         for (int j = start_x; j < start_x + nnz[k]; j++){  // For each non-zero entry within resolution k
           if (row_indices[j] == col_indices[j]) {
             coef = x[j] + sigma2[k];
@@ -289,13 +291,9 @@ Type objective_function<Type>::operator() ()
       SpMat mat(r_si[k], r_si[k]);
       mat.setFromTriplets(tripletList.begin(), tripletList.end());
       
-      bool constructQ = false;
-      if (K_type == "latticekrig" && constructQ == true) {
-        if(rhoInB == false) {
-          mat = mat * mat / (tau[k] + Type(1.0e-10));
-        } else if (rhoInB == true) {
-          mat = mat * mat;
-        }
+      bool constructQ{false};
+      if (K_type == "latticekrig" && !constructQ) {
+        rhoInB ? mat = mat * mat :  mat = mat * mat / (tau[k] + epsilon);
       }
       
       
@@ -305,10 +303,10 @@ Type objective_function<Type>::operator() ()
       SpMat Uk = llt.matrixU();
       
       // Log-determinant
-      if (K_type == "latticekrig" && constructQ == false && rhoInB == true) {
+      if (K_type == "latticekrig" && !constructQ && rhoInB) {
         logdetQ_inv += -4.0 * r_t * Uk.diagonal().array().log().sum();
-      } else if (K_type == "latticekrig" && constructQ == false && rhoInB == false) {
-        logdetQ_inv += r_si[k] * log(tau[k] + 1.0e-10) - 4.0 * r_t * Uk.diagonal().array().log().sum();
+      } else if (K_type == "latticekrig" && !constructQ && !rhoInB) {
+        logdetQ_inv += r_si[k] * log(tau[k] + epsilon) - 4.0 * r_t * Uk.diagonal().array().log().sum();
       } else if (K_type == "block-exponential") {
         logdetQ_inv += 2.0 * r_t * Uk.diagonal().array().log().sum();
       } else {
@@ -320,10 +318,10 @@ Type objective_function<Type>::operator() ()
       
       // Construct the matrix Mk such that Qk = Mk' Mk.
       SpMat Mk(r_si[k], r_si[k]);
-      if (K_type == "latticekrig" && constructQ == false && rhoInB == true) {
+      if (K_type == "latticekrig" && !constructQ && rhoInB) {
         Mk = mat;
-      } else if (K_type == "latticekrig" && constructQ == false && rhoInB == false) {
-        Mk = mat / sqrt(tau[k] + 1.0e-10);
+      } else if (K_type == "latticekrig" && !constructQ && !rhoInB) {
+        Mk = mat / sqrt(tau[k] + epsilon);
       } else if (K_type == "block-exponential") {
         // Don't construct Mk explicitly with block-exponential
       } else {
@@ -374,9 +372,6 @@ Type objective_function<Type>::operator() ()
   
   // -------- 4. Construct ln[Z|Y_O]  -------- //
   
-  // Small, positive constant used to avoid division and logarithm of zero:
-  Type epsilon = 10.0e-8;
-  
   // 4.1. Construct Y_O, the latent spatial process at observed locations
   vector<Type> Y_O  = X * beta + S * eta + xi_O;
   
@@ -398,10 +393,10 @@ Type objective_function<Type>::operator() ()
   vector<Type> lambda(m);
   vector<Type> blambda(m);
   
-  if (canonical_link == true){
+  if (canonical_link){
     // Compute canonical parameter (simply equal to Y when g is canonical)
     lambda = Y_O;
-
+    
     // Compute the cumulant function using the canonical parameter
     if (response == "gaussian")           blambda = (lambda * lambda) / 2.0;
     if (response == "gamma")              blambda =  log(lambda);
@@ -409,7 +404,7 @@ Type objective_function<Type>::operator() ()
     if (response == "poisson")            blambda =  exp(lambda);
     if (response == "bernoulli")          blambda =  log(1.0 + exp(lambda));
     
-  } else if (canonical_link == false){
+  } else if (!canonical_link){
     
     // Compute the mean
     // (or probability parameter if a lgoit, probit, or cloglog link is used)
@@ -426,32 +421,32 @@ Type objective_function<Type>::operator() ()
     
     // Compute the canonical parameter and cumulant function using the mean
     if (response == "gaussian") {
-        lambda = mu_O;
-        blambda = (mu_O * mu_O) / 2.0;
+      lambda = mu_O;
+      blambda = (mu_O * mu_O) / 2.0;
     } else if (response == "gamma") {
-        lambda = 1.0 / (mu_O + epsilon);
-        blambda =  -log(mu_O + epsilon);
+      lambda = 1.0 / (mu_O + epsilon);
+      blambda =  -log(mu_O + epsilon);
     } else if (response == "inverse-gaussian") {
-        lambda = 1.0 / (mu_O * mu_O + epsilon);
-        blambda =  2.0 / (mu_O + epsilon);
+      lambda = 1.0 / (mu_O * mu_O + epsilon);
+      blambda =  2.0 / (mu_O + epsilon);
     } else if (response == "poisson") {
-        lambda  =   log(mu_O + epsilon);
-        blambda =  mu_O;
+      lambda  =   log(mu_O + epsilon);
+      blambda =  mu_O;
     } else if (response == "negative-binomial") {
-        if (link == "logit" || link == "probit" || link == "cloglog") mu_O = k_Z * (1.0 / (p_O + epsilon) - 1);
-        lambda = -log(1.0 + k_Z/(mu_O + epsilon));
-        blambda = k_Z * log(1 + mu_O / k_Z);
+      if (link == "logit" || link == "probit" || link == "cloglog") mu_O = k_Z * (1.0 / (p_O + epsilon) - 1);
+      lambda = -log(1.0 + k_Z/(mu_O + epsilon));
+      blambda = k_Z * log(1 + mu_O / k_Z);
     } else if (response == "binomial") {
-        mu_O = k_Z * p_O;
-        lambda = log((mu_O + epsilon) / (k_Z - mu_O + epsilon));
-        blambda = -k_Z * log(1.0 - (mu_O - epsilon) / k_Z);
+      mu_O = k_Z * p_O;
+      lambda = log((mu_O + epsilon) / (k_Z - mu_O + epsilon));
+      blambda = -k_Z * log(1.0 - (mu_O - epsilon) / k_Z);
     } else if (response == "bernoulli") {
-        mu_O = p_O;
-        lambda = log((mu_O + epsilon) / (1.0 - mu_O + epsilon));
-        blambda =  -log(1.0 - mu_O + epsilon);
+      mu_O = p_O;
+      lambda = log((mu_O + epsilon) / (1.0 - mu_O + epsilon));
+      blambda =  -log(1.0 - mu_O + epsilon);
     }
   }
-
+  
   
   
   // 4.3. Construct a(phi) and c(Z, phi).
@@ -491,7 +486,7 @@ Type objective_function<Type>::operator() ()
     phi = 1.0;
     cZphi = 0.0;
   } 
-
+  
   
   // 4.4. Construct ln[Z|Y_O]
   Type ld_Z  =  ((Z * lambda - blambda)/aphi).sum() + cZphi.sum();
@@ -510,14 +505,6 @@ Type objective_function<Type>::operator() ()
 
 
 // Some notes:
-
-// We cannot declare objects inside if() statements if those objects are 
-// also used outside the if() statement. 
-// We ARE allowed to declare objects inside if() statements if they are not 
-// used outside of this if() statement at any other point in the template.
-// This is because, in C++, each set of braces defines a scope, so all variables
-// defined in loops and if statements are not accessible outside of them.
-// Defining variables inside loops: https://stackoverflow.com/questions/7959573/declaring-variables-inside-loops-good-practice-or-bad-practice
 
 // PARAMETER_VECTOR(eta) defines eta as an ARRAY object in Eigen i.e. vector<type>
 // is equivalent to an array.  - be careful,  as matrices/vectors cannot be mixed 

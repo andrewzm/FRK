@@ -127,7 +127,6 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     K_type <- match.arg(K_type)
     response <- match.arg(response)
     link <- match.arg(link)
-
     
     ## Produce a warning if the response is non-Gaussian and user has specified 
     ## the block-exponential covariance formulation
