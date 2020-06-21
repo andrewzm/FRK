@@ -2,41 +2,86 @@
 #include <cmath>
 #include "FRK-init.h"
 
-// // Define a function to take the logarithm of the diagonal entries of a sparse 
-// // matrix, and compute their sum. Just testing having functions here.
-// template<class Type>
-// Type diaglnSum(Eigen::SparseMatrix<Type> mat){
-//   Type x = mat.diagonal().array().log().sum();
-//   return x;
-// }
-// 
-// // Function to construct the (lower) Cholesky factor of an AR1 precision matrix
-// template<class Type>
-// Type choleskyAR1(Type sigma2, Type rho, int n){
-//   
-//   // typedef's:
-//   typedef Eigen::SparseMatrix<Type> SpMat;    // Sparse matrices called 'SpMat'
-//   typedef Eigen::Triplet<Type> T;             // Triplet lists called 'T'
-//   
-//   std::vector< T > tripletList;
-//   tripletList.reserve(2 * n - 1);
-//   Type common_term = 1 / sqrt(sigma2 * (1 - rho * rho));
-//   
-//   // Diagonal entries (except last diagonal entry), lower diagonal entries
-//   for (int j = 0; j < (n - 1); j++) {
-//     tripletList.push_back(T(j, j, 1));
-//     tripletList.push_back(T(j + 1, j, -rho * common_term));
-//   }
-//   // Final diagonal entry
-//   tripletList.push_back(T(n - 1, n - 1, 1 / sqrt(sigma2)));
-//   
-//   // Convert triplet list of non-zero entries to a true SparseMatrix.
-//   SpMat L(n, n);
-//   L.setFromTriplets(tripletList.begin(), tripletList.end());
-//   
-//   return L;
-// }
+// forward decleration of functions defined after objective_function template:
+bool isCanonicalLink(std::string response, std::string link);
 
+// FIXME: 
+//  - Forward declerations for templates
+//  - epsilon as an argument rather than created in the function
+
+
+// Logarithm of the diagonal entries of a sparse matrix, and compute their sum.
+template<class Type>
+Type diaglnSum(Eigen::SparseMatrix<Type> mat){
+  Type x = mat.diagonal().array().log().sum();
+  return x;
+}
+
+
+// Computes the mean (i.e., applies the inverse-link function)
+template<class Type>
+Type inverseLinkFunction(Type Y_O, std::string link) {
+  double epsilon{10e-8};
+  Type mu_O;
+  if (link == "identity")         mu_O = Y_O;
+  if (link == "inverse")          mu_O = 1.0 / Y_O;
+  if (link == "inverse-squared")  mu_O = 1.0 / sqrt(Y_O);
+  if (link == "log")              mu_O = exp(Y_O) + epsilon;
+  if (link == "square-root")      mu_O = Y_O * Y_O + epsilon;
+  if (link == "logit")            mu_O = 1.0 / (1.0 + exp(-1.0 * Y_O));
+  if (link == "probit")           mu_O = pnorm(Y_O);
+  if (link == "cloglog")          mu_O = 1.0 - exp(-exp(Y_O));
+  return mu_O;
+}
+
+// Canonical parameter, lambda, as a function of the mean, mu
+template<class Type>
+Type canonicalParameter(Type mu_O, Type k_Z, std::string response) {
+  double epsilon{10e-8};
+  Type lambda;
+  if (response == "gaussian") { 
+    lambda = mu_O;
+  } else if (response == "gamma") {
+    lambda = 1.0 / (mu_O + epsilon);
+  } else if (response == "inverse-gaussian") {
+    lambda = 1.0 / (mu_O * mu_O + epsilon);
+  } else if (response == "poisson") {
+    lambda  =   log(mu_O + epsilon);
+  } else if (response == "negative-binomial") {
+    lambda = -log(1.0 + k_Z/(mu_O + epsilon));
+  } else if (response == "binomial") {
+    lambda = log((mu_O + epsilon) / (k_Z - mu_O + epsilon));
+  } else if (response == "bernoulli") {
+    lambda = log((mu_O + epsilon) / (1.0 - mu_O + epsilon));
+  }
+  return lambda;
+}
+
+// FIXME: Change this function to if-elseif statements (more efficient, as it can break the chain)
+template<class Type>
+Type cumulantFunction(Type x, Type k_Z, std::string response, std::string parameterisation) {
+  
+  // NB: if the parameterisation is lambda, the canonical parameter should be passed in for x.
+  // if the parameterisation is lambda, the mean should be passed in for x.
+  double epsilon{10e-8};
+  Type b;
+  if (parameterisation == "lambda") {
+    if (response == "gaussian")           b = (x * x) / 2.0;
+    if (response == "gamma")              b =  log(x);
+    if (response == "inverse-gaussian")   b =  2.0 * sqrt(x);
+    if (response == "poisson")            b =  exp(x);
+    if (response == "bernoulli")          b =  log(1.0 + exp(x));
+  } else if (parameterisation == "mu") {
+    if (response == "gaussian") b = (x * x) / 2.0;
+    if (response == "gamma") b =  -log(x + epsilon);
+    if (response == "inverse-gaussian") b =  2.0 / (x + epsilon);
+    if (response == "poisson") b =  x;
+    if (response == "negative-binomial") b = k_Z * log(1 + x / k_Z);
+    if (response == "binomial") b = -k_Z * log(1.0 - (x - epsilon) / k_Z);
+    if (response == "bernoulli") b =  -log(1.0 - x + epsilon);
+  }
+  return b;
+}
 
 
 
@@ -44,17 +89,12 @@ template<class Type>
 Type objective_function<Type>::operator() ()
 {
   
-  // Changes:
-  // - Changed parameters to be only int terms of sigma2, tau, and delta (delta is the precision_exp parameter).
-  
   // To do:
   // - I want to change sigma2 to kappa
   // - Change the latticeKrig formulation to match how I describe it in the report
   // - Add spatio-temporal separable K_type
   // - Change r_si to r_sk
-  // - See if we can use our defined functions within the template
-  //    * could add a function which creates an AR1 matrix (requires three params; sigma, rho, and n)
-  
+
   
   // typedef's:
   typedef Eigen::SparseMatrix<Type> SpMat;    // Sparse matrices called 'SpMat'
@@ -363,9 +403,7 @@ Type objective_function<Type>::operator() ()
   // -------- 3. Construct ln[eta|Q] and ln[xi|sigma2xi].  -------- //
   
   Type quadform_xi = pow(sigma2xi, -1.0) * (xi_O * xi_O).sum();
-  
-  // ln[eta|K] and ln[xi|sigma2xi]:
-  // (These quantities are invariant to the link function/response distribution)
+
   Type ld_eta =  -0.5 * r * log(2.0 * M_PI) - 0.5 * logdetQ_inv - 0.5 * quadform_eta;
   Type ld_xi  =  -0.5 * m * log(2.0 * M_PI) - 0.5 * m * log(sigma2xi) - 0.5 * quadform_xi;
   
@@ -376,85 +414,46 @@ Type objective_function<Type>::operator() ()
   vector<Type> Y_O  = X * beta + S * eta + xi_O;
   
   // 4.2 Compute the canonical parameter and cumulant function
-  
-  // Determine whether the canonincal link function is used:
-  // (Note that we do not consider canonical link for binomial or negative-binomial data.)
-  bool canonical_link{false};
-  if (    (response == "gaussian" && link == "identity") ||
-          (response == "gamma" && link == "inverse") ||
-          (response == "inverse-gaussian" && link == "inverse-squared") ||
-          (response == "poisson" && link == "log") ||
-          (response == "bernoulli" && link == "logit")   ){
-    canonical_link = true;
-  }
-  
-  
-  // Compute the canonical parameter and the cumulant function.
   vector<Type> lambda(m);
   vector<Type> blambda(m);
   
-  if (canonical_link){
+  if (isCanonicalLink(response, link)){
     // Compute canonical parameter (simply equal to Y when g is canonical)
     lambda = Y_O;
     
     // Compute the cumulant function using the canonical parameter
-    if (response == "gaussian")           blambda = (lambda * lambda) / 2.0;
-    if (response == "gamma")              blambda =  log(lambda);
-    if (response == "inverse-gaussian")   blambda =  2.0 * sqrt(lambda);
-    if (response == "poisson")            blambda =  exp(lambda);
-    if (response == "bernoulli")          blambda =  log(1.0 + exp(lambda));
+    blambda = cumulantFunction(lambda, k_Z, response, "lambda");
     
-  } else if (!canonical_link){
+  } else {
     
-    // Compute the mean
-    // (or probability parameter if a lgoit, probit, or cloglog link is used)
+    // Compute the mean (or probability parameter if a logit, probit, or cloglog link is used)
     vector<Type> mu_O(m);
-    vector<Type> p_O(m);
-    if (link == "identity")         mu_O = Y_O;
-    if (link == "inverse")          mu_O = 1.0 / Y_O;
-    if (link == "inverse-squared")  mu_O = 1.0 / sqrt(Y_O);
-    if (link == "log")              mu_O = exp(Y_O) + epsilon;
-    if (link == "square-root")      mu_O = Y_O * Y_O + epsilon;
-    if (link == "logit")            p_O = 1.0 / (1.0 + exp(-1.0 * Y_O));
-    if (link == "probit")           p_O = pnorm(Y_O);
-    if (link == "cloglog")          p_O = 1.0 - exp(-exp(Y_O));
+    mu_O = inverseLinkFunction(Y_O, link);
+    
+    // If response is negative-binomial or binomial, link the probability parameter to the mean:
+    if (link == "logit" || link == "probit" || link == "cloglog") {
+      if (response == "negative-binomial"){
+        mu_O = k_Z * (1.0 / (mu_O + epsilon) - 1);
+      } else if (response == "binomial") {
+        mu_O *= k_Z; 
+      }
+    } 
     
     // Compute the canonical parameter and cumulant function using the mean
-    if (response == "gaussian") {
-      lambda = mu_O;
-      blambda = (mu_O * mu_O) / 2.0;
-    } else if (response == "gamma") {
-      lambda = 1.0 / (mu_O + epsilon);
-      blambda =  -log(mu_O + epsilon);
-    } else if (response == "inverse-gaussian") {
-      lambda = 1.0 / (mu_O * mu_O + epsilon);
-      blambda =  2.0 / (mu_O + epsilon);
-    } else if (response == "poisson") {
-      lambda  =   log(mu_O + epsilon);
-      blambda =  mu_O;
-    } else if (response == "negative-binomial") {
-      if (link == "logit" || link == "probit" || link == "cloglog") mu_O = k_Z * (1.0 / (p_O + epsilon) - 1);
-      lambda = -log(1.0 + k_Z/(mu_O + epsilon));
-      blambda = k_Z * log(1 + mu_O / k_Z);
-    } else if (response == "binomial") {
-      mu_O = k_Z * p_O;
-      lambda = log((mu_O + epsilon) / (k_Z - mu_O + epsilon));
-      blambda = -k_Z * log(1.0 - (mu_O - epsilon) / k_Z);
-    } else if (response == "bernoulli") {
-      mu_O = p_O;
-      lambda = log((mu_O + epsilon) / (1.0 - mu_O + epsilon));
-      blambda =  -log(1.0 - mu_O + epsilon);
-    }
+    lambda = canonicalParameter(mu_O, k_Z, response); 
+    blambda = cumulantFunction(mu_O, k_Z, response, "mu");
   }
   
-  
-  
   // 4.3. Construct a(phi) and c(Z, phi).
+  // NB: computation of C(Z, phi) for one-parameter exponential family is done within R
   Type aphi{1.0}; // initialise to 1.0, only change for two-parameter exponential families
   vector<Type> cZphi(m);
-  // NB: set cZphi = 0.0 if I ever move computation of cZphi into R for one-parameter exponential family members.
   
-  if (response == "gaussian") {
+  if (response == "poisson" || response == "negative-binomial" ||
+      response == "binomial" || response == "bernoulli") {
+    phi = 1.0;
+    cZphi = 0.0;
+  } else if (response == "gaussian") {
     phi = sigma2e;
     aphi = phi;
     cZphi = -0.5 * (Z * Z / phi + log(2.0 * M_PI * phi));
@@ -464,30 +463,8 @@ Type objective_function<Type>::operator() ()
   } else if (response == "inverse-gaussian") {
     aphi    =   - 2.0 * phi;
     cZphi   =   - 0.5 / (phi * Z) - 0.5 * log(2.0 * M_PI * phi * Z * Z * Z);
-  } else if (response == "poisson") {
-    phi = 1.0;
-    // cZphi   =   -lfactorial(Z);           
-    for (int i = 0; i < m; i++) {
-      cZphi[i] = -lfactorial(Z[i]);
-    }
-  } else if (response == "negative-binomial") {
-    phi = 1.0;
-    // cZphi   = lfactorial(Z + k_Z - 1.0) - lfactorial(Z) - lfactorial(k_Z - 1.0);  
-    for (int i = 0; i < m; i++) {
-      cZphi[i] = lfactorial(Z[i] + k_Z[i] - 1.0) - lfactorial(Z[i]) - lfactorial(k_Z[i] - 1.0);
-    }
-  } else if (response == "binomial") {
-    phi = 1.0;
-    // cZphi   = lfactorial(k_Z) - lfactorial(Z) - lfactorial(k_Z - Z);     
-    for (int i = 0; i < m; i++) {
-      cZphi[i] = lfactorial(k_Z[i]) - lfactorial(Z[i]) - lfactorial(k_Z[i] - Z[i]);  
-    }
-  } else if (response == "bernoulli") {
-    phi = 1.0;
-    cZphi = 0.0;
   } 
-  
-  
+
   // 4.4. Construct ln[Z|Y_O]
   Type ld_Z  =  ((Z * lambda - blambda)/aphi).sum() + cZphi.sum();
   
@@ -495,7 +472,7 @@ Type objective_function<Type>::operator() ()
   // -------- 5. Define Objective function -------- //
   
   // ln[Z, eta, xi | ...] =  ln[Z|Y_O] + ln[eta|K] + ln[xi|sigma2xi]
-  // Specify the NEGATIVE joint log-likelihood function,
+  // Specify the negative joint log-likelihood function,
   // as R optimisation routines minimise by default.
   
   Type nld = -(ld_Z  + ld_xi + ld_eta);
@@ -510,3 +487,47 @@ Type objective_function<Type>::operator() ()
 // is equivalent to an array.  - be careful,  as matrices/vectors cannot be mixed 
 // with arrays! 
 // PARAMETER_MATRIX() casts as matrix<type>, which is indeed a matrix.
+
+// Check whether the link is canonical
+bool isCanonicalLink(std::string response, std::string link) {
+  bool canonical_link{false};
+  if ((response == "gaussian"         && link == "identity") ||
+      (response == "gamma"            && link == "inverse") ||
+      (response == "inverse-gaussian" && link == "inverse-squared") ||
+      (response == "poisson"          && link == "log") ||
+      (response == "bernoulli"        && link == "logit")){
+    canonical_link = true;
+  }
+  return canonical_link;
+}
+
+
+// // Function to construct the (lower) Cholesky factor of an AR1 precision matrix
+// template<class Type>
+// Type choleskyAR1(Type sigma2, Type rho, int n){
+// 
+//   // typedef's:
+//   typedef Eigen::SparseMatrix<Type> SpMat;    // Sparse matrices called 'SpMat'
+//   typedef Eigen::Triplet<Type> T;             // Triplet lists called 'T'
+// 
+//   std::vector< T > tripletList;
+//   tripletList.reserve(2 * n - 1);
+//   Type common_term = 1 / sqrt(sigma2 * (1 - rho * rho));
+// 
+//   // Diagonal entries (except last diagonal entry), lower diagonal entries
+//   for (int j = 0; j < (n - 1); j++) {
+//     tripletList.push_back(T(j, j, 1));
+//     tripletList.push_back(T(j + 1, j, -rho * common_term));
+//   }
+//   // Final diagonal entry
+//   tripletList.push_back(T(n - 1, n - 1, 1 / sqrt(sigma2)));
+// 
+//   // Convert triplet list of non-zero entries to a true SparseMatrix.
+//   SpMat L(n, n);
+//   L.setFromTriplets(tripletList.begin(), tripletList.end());
+// 
+//   return L;
+// }
+
+
+

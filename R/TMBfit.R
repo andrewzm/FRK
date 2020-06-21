@@ -90,6 +90,20 @@
   
   ## Log-likeihood
   log_likelihood <- -obj$fn() # could also use - fit$objective
+  
+  ## Add the C(Z, phi) terms for one-parameter exponential families
+  ## (We do this here rather than in the C++ template because it only need to 
+  ## be done once, as C(Z, phi) depends only on Z for one-parameter exponential families)
+  Z <- data_params_init$data$Z
+  k_Z <- data_params_init$data$k_Z
+  if(M@response == "poisson") {
+    cZphi = -lfactorial(Z)
+  } else if (M@response == "negative-binomial") {
+    cZphi   = lfactorial(Z + k_Z - 1.0) - lfactorial(Z) - lfactorial(k_Z - 1.0)
+  } else if (M@response == "binomial") {
+    cZphi   = lfactorial(k_Z) - lfactorial(Z) - lfactorial(k_Z - Z)
+  } 
+  
 
   ## Extract parameter and random effect estimates
   par <- obj$env$last.par.best
