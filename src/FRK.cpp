@@ -2,86 +2,32 @@
 #include <cmath>
 #include "FRK-init.h"
 
-// forward decleration of functions defined after objective_function template:
+
+// Forward declarations of functions defined after objective_function template
+// (function definitions are after the objective_function template)
+
+// Determine whether the link is canonical for this distribution
 bool isCanonicalLink(std::string response, std::string link);
 
-// FIXME: 
-//  - Forward declerations for templates
-//  - epsilon as an argument rather than created in the function
-
+// Constructs the (lower) Cholesky factor of an AR1 precision matrix
+template<class Type>
+Eigen::SparseMatrix<Type> choleskyAR1(Type sigma2, Type rho, int n);
 
 // Logarithm of the diagonal entries of a sparse matrix, and compute their sum.
-template<class Type>
-Type diaglnSum(Eigen::SparseMatrix<Type> mat){
-  Type x = mat.diagonal().array().log().sum();
-  return x;
-}
+template<class Type> 
+Type diagLogSum(Eigen::SparseMatrix<Type> mat);
 
-
-// Computes the mean (i.e., applies the inverse-link function)
+// Computes the mean given the latent process (i.e., applies the inverse-link function)
 template<class Type>
-Type inverseLinkFunction(Type Y_O, std::string link) {
-  double epsilon{10e-8};
-  Type mu_O;
-  if (link == "identity")         mu_O = Y_O;
-  if (link == "inverse")          mu_O = 1.0 / Y_O;
-  if (link == "inverse-squared")  mu_O = 1.0 / sqrt(Y_O);
-  if (link == "log")              mu_O = exp(Y_O) + epsilon;
-  if (link == "square-root")      mu_O = Y_O * Y_O + epsilon;
-  if (link == "logit")            mu_O = 1.0 / (1.0 + exp(-1.0 * Y_O));
-  if (link == "probit")           mu_O = pnorm(Y_O);
-  if (link == "cloglog")          mu_O = 1.0 - exp(-exp(Y_O));
-  return mu_O;
-}
+Type inverseLinkFunction(Type Y_O, std::string link);
 
 // Canonical parameter, lambda, as a function of the mean, mu
 template<class Type>
-Type canonicalParameter(Type mu_O, Type k_Z, std::string response) {
-  double epsilon{10e-8};
-  Type lambda;
-  if (response == "gaussian") { 
-    lambda = mu_O;
-  } else if (response == "gamma") {
-    lambda = 1.0 / (mu_O + epsilon);
-  } else if (response == "inverse-gaussian") {
-    lambda = 1.0 / (mu_O * mu_O + epsilon);
-  } else if (response == "poisson") {
-    lambda  =   log(mu_O + epsilon);
-  } else if (response == "negative-binomial") {
-    lambda = -log(1.0 + k_Z/(mu_O + epsilon));
-  } else if (response == "binomial") {
-    lambda = log((mu_O + epsilon) / (k_Z - mu_O + epsilon));
-  } else if (response == "bernoulli") {
-    lambda = log((mu_O + epsilon) / (1.0 - mu_O + epsilon));
-  }
-  return lambda;
-}
+Type canonicalParameter(Type mu_O, Type k_Z, std::string response); 
 
-// FIXME: Change this function to if-elseif statements (more efficient, as it can break the chain)
+// Computes the cumulant function
 template<class Type>
-Type cumulantFunction(Type x, Type k_Z, std::string response, std::string parameterisation) {
-  
-  // NB: if the parameterisation is lambda, the canonical parameter should be passed in for x.
-  // if the parameterisation is lambda, the mean should be passed in for x.
-  double epsilon{10e-8};
-  Type b;
-  if (parameterisation == "lambda") {
-    if (response == "gaussian")           b = (x * x) / 2.0;
-    if (response == "gamma")              b =  log(x);
-    if (response == "inverse-gaussian")   b =  2.0 * sqrt(x);
-    if (response == "poisson")            b =  exp(x);
-    if (response == "bernoulli")          b =  log(1.0 + exp(x));
-  } else if (parameterisation == "mu") {
-    if (response == "gaussian") b = (x * x) / 2.0;
-    if (response == "gamma") b =  -log(x + epsilon);
-    if (response == "inverse-gaussian") b =  2.0 / (x + epsilon);
-    if (response == "poisson") b =  x;
-    if (response == "negative-binomial") b = k_Z * log(1 + x / k_Z);
-    if (response == "binomial") b = -k_Z * log(1.0 - (x - epsilon) / k_Z);
-    if (response == "bernoulli") b =  -log(1.0 - x + epsilon);
-  }
-  return b;
-}
+Type cumulantFunction(Type x, Type k_Z, std::string response, std::string parameterisation);
 
 
 
@@ -89,16 +35,9 @@ template<class Type>
 Type objective_function<Type>::operator() ()
 {
   
-  // To do:
-  // - I want to change sigma2 to kappa
-  // - Change the latticeKrig formulation to match how I describe it in the report
-  // - Add spatio-temporal separable K_type
-  // - Change r_si to r_sk
-
-  
   // typedef's:
-  typedef Eigen::SparseMatrix<Type> SpMat;    // Sparse matrices called 'SpMat'
-  typedef Eigen::Triplet<Type> T;             // Triplet lists called 'T'
+  typedef Eigen::SparseMatrix<Type> SpMat;    
+  typedef Eigen::Triplet<Type> T;             
   
   // ---- 0. Data and Parameters ----
   
@@ -127,12 +66,12 @@ Type objective_function<Type>::operator() ()
   DATA_IVECTOR(n_r);          // Integer vector indicating the number of rows at each resolution (applicable only if K-type == separable)
   DATA_IVECTOR(n_c);          // Integer vector indicating the number of columns at each resolution (applicable only if K-type == separable)
   
-  // Parameters/basis function variance components/latent random effects 
+  // Fixed effects and variance components relating to fine scale and data
   PARAMETER_VECTOR(beta);
   PARAMETER(logsigma2xi);     Type sigma2xi = exp(logsigma2xi);
   PARAMETER(logphi);          Type phi      = exp(logphi);
   
-  // Variance components
+  // Variance components relating to eta
   PARAMETER_VECTOR(logsigma2);  vector<Type> sigma2 = exp(logsigma2);
   PARAMETER_VECTOR(logtau);     vector<Type> tau    = exp(logtau);
   PARAMETER(logsigma2_t);       Type sigma2_t       = exp(logsigma2_t);
@@ -146,10 +85,11 @@ Type objective_function<Type>::operator() ()
   // Small, positive constant used to avoid division and logarithm of zero:
   Type epsilon = 10.0e-8;
   
+  
   // ---- 1. Construct prior covariance matrix K or precision matrix Q  ---- //
   
-  Type logdetQ_inv = 0; 
-  Type quadform_eta = 0; 
+  Type logdetQ_inv{0}; 
+  Type quadform_eta{0}; 
   
   
   // ---- Temporal precision matrix (if relevant) ----
@@ -162,29 +102,14 @@ Type objective_function<Type>::operator() ()
   // variable will not be used if temporal == 0. This matrix, J, will store 
   // the various products of L_sk, H_k, and L_t needed for the quadratic form. 
   matrix<Type> J; 
-  
   if (temporal == 1) {
-    // Construct the temporal Cholesky factor, L_t.
-    std::vector<T> tripletList_L_t;
-    tripletList_L_t.reserve(2 * r_t - 1);
-    Type common_term = 1.0 / sqrt(sigma2_t * (1.0 - rho_t * rho_t));
+    // Construct the temporal Cholesky factor, L_t:
+    Eigen::SparseMatrix<Type> L_t = choleskyAR1(sigma2_t, rho_t, r_t);
     
-    // Diagonal entries (except last diagonal entry), lower diagonal entries
-    for (int j = 0; j < (r_t - 1); j++) {
-      tripletList_L_t.push_back(T(j, j, 1));
-      tripletList_L_t.push_back(T(j + 1, j, -rho_t * common_term));
-    }
-    // Final diagonal entry
-    tripletList_L_t.push_back(T(r_t - 1, r_t - 1, 1.0 / sqrt(sigma2_t)));
+    // Log-determinant:
+    logdetQ_inv -= 2.0 * r_s * diagLogSum(L_t);
     
-    // Convert triplet list of non-zero entries to a true SparseMatrix.
-    SpMat L_t(r_t, r_t);
-    L_t.setFromTriplets(tripletList_L_t.begin(), tripletList_L_t.end());
-    
-    // Log-determinant
-    logdetQ_inv -= 2.0 * r_s * L_t.diagonal().array().log().sum();
-    
-    // Quadratic form
+    // Quadratic form:
     J = eta;
     J.resize(r_s, r_t);
     J *= L_t; 
@@ -193,55 +118,32 @@ Type objective_function<Type>::operator() ()
   
   // ---- Spatial variance/precision matrix ----
   
-  int start_x = 0;    // Keep track of starting point in x (the vector of non-zero coefficients)
-  int start_eta = 0;  // Keep track of starting point in eta
-  Type coef = 0;      // Variable to store the current element (coefficient) of the matrix
+  int start_x{0};    // Keep track of starting point in x (the vector of non-zero coefficients)
+  int start_eta{0};  // Keep track of starting point in eta
+  Type coef{0};      // Variable to store the current element (coefficient) of the matrix
   
   for (int k = 0; k < nres; k++) { // For each resolution of spatial basis functions
     
     // Separable is very different, so treat it as a special case
     if (K_type == "separable") {
       
+      // NB: "separable" has only been implemented for spatial
+      
       // Variance components associated with row and column direction
       // The first half of the sigma2 vector corresponds to row direction variances
       // and second half the column variances. Same for rho.
-      // FIX: Check that tail() gives the correct order (I want n-3, n-2, n-1, n, NOT n, n-1, n-2, n-3)
       vector<Type> sigma2_r = sigma2.head(nres);
       vector<Type> sigma2_c = sigma2.tail(nres);
       vector<Type> rho_r    = tau.head(nres);
       vector<Type> rho_c    = tau.tail(nres);
       
       // First construct M_r and M_c
-      // Look into this for possible better alternative: https://eigen.tuxfamily.org/dox/group__TutorialAdvancedInitialization.html
-      std::vector<T> tripletList_M_r;
-      std::vector<T> tripletList_M_c;
-      tripletList_M_r.reserve(2 * n_r[k] - 1);
-      tripletList_M_c.reserve(2 * n_c[k] - 1);
-      Type common_term_c = 1.0 / sqrt(sigma2_c[k] * (1.0 - rho_c[k] * rho_c[k]));
-      Type common_term_r = 1.0 / sqrt(sigma2_r[k] * (1.0 - rho_r[k] * rho_r[k]));
-      
-      // Diagonal entries (except last diagonal entry) AND lower diagonal entries
-      for (int j = 0; j < (n_r[k] - 1); j++) {
-        tripletList_M_r.push_back(T(j, j, 1));
-        tripletList_M_r.push_back(T(j + 1, j, -rho_r[k] * common_term_r));
-      }
-      for (int j = 0; j < (n_c[k] - 1); j++) {
-        tripletList_M_c.push_back(T(j, j, 1));
-        tripletList_M_c.push_back(T(j + 1, j, -rho_c[k] * common_term_c));
-      }
-      // Last diagonal entry
-      tripletList_M_r.push_back(T(n_r[k] - 1, n_r[k] - 1, 1.0 / sqrt(sigma2_r[k])));
-      tripletList_M_c.push_back(T(n_c[k] - 1, n_c[k] - 1, 1.0 / sqrt(sigma2_c[k])));
-      
-      // Convert triplet list of non-zero entries to a true SparseMatrix.
-      SpMat M_r(n_r[k], n_r[k]);
-      SpMat M_c(n_c[k], n_c[k]);
-      M_r.setFromTriplets(tripletList_M_r.begin(), tripletList_M_r.end());
-      M_c.setFromTriplets(tripletList_M_c.begin(), tripletList_M_c.end());
+      Eigen::SparseMatrix<Type> M_r = choleskyAR1(sigma2_r[k], rho_r[k], n_r[k]);
+      Eigen::SparseMatrix<Type> M_c = choleskyAR1(sigma2_c[k], rho_c[k], n_c[k]);
       
       // Log-determinant
-      logdetQ_inv += -2.0 * n_c[k] * M_r.diagonal().array().log().sum();
-      logdetQ_inv += -2.0 * n_r[k] * M_c.diagonal().array().log().sum();
+      logdetQ_inv += -2.0 * n_c[k] * diagLogSum(M_r);
+      logdetQ_inv += -2.0 * n_r[k] * diagLogSum(M_c);
       
       // Quadratic form
       matrix<Type> Hi = eta.segment(start_eta, r_si[k]);
@@ -249,8 +151,6 @@ Type objective_function<Type>::operator() ()
       matrix<Type> vi = M_c.transpose() * Hi * M_r;
       vi.resize(r_si[k], 1); // vec() operator
       quadform_eta += (vi.array() * vi.array()).sum();
-      
-      
       
     } else {
       
@@ -261,9 +161,6 @@ Type objective_function<Type>::operator() ()
       // Vector to store the row sums
       vector<Type> rowSums(r_si[k]);
       rowSums.fill(0);
-      
-      // make a quantity which is between 0 and 1 (for the correlation parameters)
-      // vector<Type> rho = 1 / (1 + exp(-1 * logtau));
       
       // Compute the matrix coefficients and store them in the triplet list.
       if (K_type == "precision_exp") {
@@ -344,13 +241,13 @@ Type objective_function<Type>::operator() ()
       
       // Log-determinant
       if (K_type == "latticekrig" && !constructQ && rhoInB) {
-        logdetQ_inv += -4.0 * r_t * Uk.diagonal().array().log().sum();
+        logdetQ_inv += -4.0 * r_t * diagLogSum(Uk);
       } else if (K_type == "latticekrig" && !constructQ && !rhoInB) {
-        logdetQ_inv += r_si[k] * log(tau[k] + epsilon) - 4.0 * r_t * Uk.diagonal().array().log().sum();
+        logdetQ_inv += r_si[k] * log(tau[k] + epsilon) - 4.0 * r_t * diagLogSum(Uk);
       } else if (K_type == "block-exponential") {
-        logdetQ_inv += 2.0 * r_t * Uk.diagonal().array().log().sum();
+        logdetQ_inv += 2.0 * r_t * diagLogSum(Uk);
       } else {
-        logdetQ_inv += -2.0 * r_t * Uk.diagonal().array().log().sum();
+        logdetQ_inv += -2.0 * r_t * diagLogSum(Uk);
       }
       
       // P (the permutation matrix)
@@ -416,8 +313,8 @@ Type objective_function<Type>::operator() ()
   // 4.2 Compute the canonical parameter and cumulant function
   vector<Type> lambda(m);
   vector<Type> blambda(m);
-  
-  if (isCanonicalLink(response, link)){
+  if (isCanonicalLink(response, link)) {
+    
     // Compute canonical parameter (simply equal to Y when g is canonical)
     lambda = Y_O;
     
@@ -432,7 +329,7 @@ Type objective_function<Type>::operator() ()
     
     // If response is negative-binomial or binomial, link the probability parameter to the mean:
     if (link == "logit" || link == "probit" || link == "cloglog") {
-      if (response == "negative-binomial"){
+      if (response == "negative-binomial") {
         mu_O = k_Z * (1.0 / (mu_O + epsilon) - 1);
       } else if (response == "binomial") {
         mu_O *= k_Z; 
@@ -481,12 +378,38 @@ Type objective_function<Type>::operator() ()
 }
 
 
-// Some notes:
+// Logarithm of the diagonal entries of a sparse matrix, and compute their sum.
+template<class Type> 
+Type diagLogSum(Eigen::SparseMatrix<Type> mat){
+  Type x = mat.diagonal().array().log().sum();
+  return x;
+}
 
-// PARAMETER_VECTOR(eta) defines eta as an ARRAY object in Eigen i.e. vector<type>
-// is equivalent to an array.  - be careful,  as matrices/vectors cannot be mixed 
-// with arrays! 
-// PARAMETER_MATRIX() casts as matrix<type>, which is indeed a matrix.
+
+// Function to construct the (lower) Cholesky factor of an AR1 precision matrix
+template<class Type>
+Eigen::SparseMatrix<Type> choleskyAR1(Type sigma2, Type rho, int n){
+  
+  typedef Eigen::Triplet<Type> T;   // typedef: Triplet lists called 'T'
+  
+  std::vector< T > tripletList;
+  tripletList.reserve(2 * n - 1);
+  Type common_term = 1 / sqrt(sigma2 * (1 - rho * rho));
+  
+  // Diagonal entries (except last diagonal entry), lower diagonal entries
+  for (int j = 0; j < (n - 1); j++) {
+    tripletList.push_back(T(j, j, 1));
+    tripletList.push_back(T(j + 1, j, -rho * common_term));
+  }
+  // Final diagonal entry
+  tripletList.push_back(T(n - 1, n - 1, 1 / sqrt(sigma2)));
+  
+  // Convert triplet list of non-zero entries to a true SparseMatrix.
+  Eigen::SparseMatrix<Type> L(n, n);
+  L.setFromTriplets(tripletList.begin(), tripletList.end());
+  
+  return L;
+}
 
 // Check whether the link is canonical
 bool isCanonicalLink(std::string response, std::string link) {
@@ -501,33 +424,79 @@ bool isCanonicalLink(std::string response, std::string link) {
   return canonical_link;
 }
 
+// Computes the mean (i.e., applies the inverse-link function)
+template<class Type>
+Type inverseLinkFunction(Type Y_O, std::string link) {
+  double epsilon{10e-8};
+  Type mu_O;
+  if       (link == "identity"){         mu_O = Y_O;
+  }else if (link == "inverse"){          mu_O = 1.0 / Y_O;
+  }else if (link == "inverse-squared"){  mu_O = 1.0 / sqrt(Y_O);
+  }else if (link == "log"){              mu_O = exp(Y_O) + epsilon;
+  }else if (link == "square-root"){      mu_O = Y_O * Y_O + epsilon;
+  }else if (link == "logit"){            mu_O = 1.0 / (1.0 + exp(-1.0 * Y_O));
+  }else if (link == "probit"){           mu_O = pnorm(Y_O);
+  }else if (link == "cloglog"){          mu_O = 1.0 - exp(-exp(Y_O));
+  }
+  return mu_O;
+}
 
-// // Function to construct the (lower) Cholesky factor of an AR1 precision matrix
-// template<class Type>
-// Type choleskyAR1(Type sigma2, Type rho, int n){
-// 
-//   // typedef's:
-//   typedef Eigen::SparseMatrix<Type> SpMat;    // Sparse matrices called 'SpMat'
-//   typedef Eigen::Triplet<Type> T;             // Triplet lists called 'T'
-// 
-//   std::vector< T > tripletList;
-//   tripletList.reserve(2 * n - 1);
-//   Type common_term = 1 / sqrt(sigma2 * (1 - rho * rho));
-// 
-//   // Diagonal entries (except last diagonal entry), lower diagonal entries
-//   for (int j = 0; j < (n - 1); j++) {
-//     tripletList.push_back(T(j, j, 1));
-//     tripletList.push_back(T(j + 1, j, -rho * common_term));
-//   }
-//   // Final diagonal entry
-//   tripletList.push_back(T(n - 1, n - 1, 1 / sqrt(sigma2)));
-// 
-//   // Convert triplet list of non-zero entries to a true SparseMatrix.
-//   SpMat L(n, n);
-//   L.setFromTriplets(tripletList.begin(), tripletList.end());
-// 
-//   return L;
-// }
+// Canonical parameter, lambda, as a function of the mean, mu
+template<class Type>
+Type canonicalParameter(Type mu_O, Type k_Z, std::string response) {
+  double epsilon{10e-8};
+  Type lambda;
+  if (response == "gaussian") { 
+    lambda = mu_O;
+  } else if (response == "gamma") {
+    lambda = 1.0 / (mu_O + epsilon);
+  } else if (response == "inverse-gaussian") {
+    lambda = 1.0 / (mu_O * mu_O + epsilon);
+  } else if (response == "poisson") {
+    lambda  =   log(mu_O + epsilon);
+  } else if (response == "negative-binomial") {
+    lambda = -log(1.0 + k_Z/(mu_O + epsilon));
+  } else if (response == "binomial") {
+    lambda = log((mu_O + epsilon) / (k_Z - mu_O + epsilon));
+  } else if (response == "bernoulli") {
+    lambda = log((mu_O + epsilon) / (1.0 - mu_O + epsilon));
+  }
+  return lambda;
+}
 
 
+// Computes the cumulant function
+template<class Type>
+Type cumulantFunction(Type x, Type k_Z, std::string response, std::string parameterisation) {
+  
+  // NB: if the parameterisation is lambda, the canonical parameter should be passed in for x.
+  // if the parameterisation is lambda, the mean should be passed in for x.
+  double epsilon{10e-8};
+  Type b;
+  if (parameterisation == "lambda") {
+    if       (response == "bernoulli") {        b =  log(1.0 + exp(x));
+    }else if (response == "gaussian") {         b = (x * x) / 2.0;
+    }else if (response == "gamma"){             b =  log(x);
+    }else if (response == "inverse-gaussian"){  b =  2.0 * sqrt(x);
+    }else if (response == "poisson"){           b =  exp(x);
+    }
+  } 
+  
+  if (parameterisation == "mu") {
+    if       (response == "bernoulli"){           b =  -log(1.0 - x + epsilon);
+    }else if (response == "gaussian"){            b = (x * x) / 2.0;
+    }else if (response == "gamma"){               b =  -log(x + epsilon);
+    }else if (response == "inverse-gaussian"){    b =  2.0 / (x + epsilon);
+    }else if (response == "poisson"){             b =  x;
+    }else if (response == "negative-binomial"){   b = k_Z * log(1 + x / k_Z);
+    }else if (response == "binomial")             b = -k_Z * log(1.0 - (x - epsilon) / k_Z);
+  }
+  
+  return b;
+}
 
+
+// PARAMETER_VECTOR(eta) defines eta as an ARRAY object in Eigen i.e. vector<type>
+// is equivalent to an array.  - be careful,  as matrices/vectors cannot be mixed 
+// with arrays! 
+// PARAMETER_MATRIX() casts as matrix<type>, which is indeed a matrix.
