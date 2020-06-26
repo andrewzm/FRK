@@ -42,7 +42,7 @@ Type objective_function<Type>::operator() ()
   // ---- 0. Data and Parameters ----
   
   DATA_VECTOR(Z);             // Vector of observations
-  int m    = Z.size();        // Sample size
+  int m = Z.size();           // Sample size
   DATA_MATRIX(X);             // Design matrix of fixed effects
   DATA_SPARSE_MATRIX(S);      // Design matrix for basis function random weights
   DATA_SCALAR(sigma2e);       // Measurement error estimate (relevant to Gaussian case only)
@@ -50,7 +50,7 @@ Type objective_function<Type>::operator() ()
   DATA_STRING(response);      // String specifying the response distribution
   DATA_STRING(link);          // String specifying the link function
   DATA_VECTOR(k_Z);           // "Known-constant" parameter (only relevant for negative-binomial and binomial)
-  DATA_INTEGER(temporal);     // Boolean indicating whether we are in space-time or not
+  DATA_INTEGER(temporal);     // Boolean indicating whether we are in space-time or not (1 if true, 0 if false)
   
   DATA_INTEGER(r_t);         // Total number of temporal basis functions
   DATA_IVECTOR(r_si);        // Vector containing the number of spatial basis functions at each resolution
@@ -102,7 +102,7 @@ Type objective_function<Type>::operator() ()
   // variable will not be used if temporal == 0. This matrix, J, will store 
   // the various products of L_sk, H_k, and L_t needed for the quadratic form. 
   matrix<Type> J; 
-  if (temporal == 1) {
+  if (temporal) {
     // Construct the temporal Cholesky factor, L_t:
     Eigen::SparseMatrix<Type> L_t = choleskyAR1(sigma2_t, rho_t, r_t);
     
@@ -145,12 +145,20 @@ Type objective_function<Type>::operator() ()
       logdetQ_inv += -2.0 * n_c[k] * diagLogSum(M_r);
       logdetQ_inv += -2.0 * n_r[k] * diagLogSum(M_c);
       
+      
       // Quadratic form
-      matrix<Type> Hi = eta.segment(start_eta, r_si[k]);
-      Hi.resize(n_c[k], n_r[k]);
-      matrix<Type> vi = M_c.transpose() * Hi * M_r;
-      vi.resize(r_si[k], 1); // vec() operator
-      quadform_eta += (vi.array() * vi.array()).sum();
+      if (temporal) {
+        // First compute L_{s, k}' H_k
+        // FIXME: HAVENT IMPLEMENTED SPATIO-TEMPORAL WITH SEPARABLE YET
+        // J.block(start_eta, 0, r_si[k], r_t) = Mk * J.block(start_eta, 0, r_si[k], r_t);
+        
+      } else {
+        matrix<Type> Hi = eta.segment(start_eta, r_si[k]);
+        Hi.resize(n_c[k], n_r[k]);
+        matrix<Type> vi = M_c.transpose() * Hi * M_r;
+        vi.resize(r_si[k], 1); // vec() operator
+        quadform_eta += (vi.array() * vi.array()).sum();
+      }
       
     } else {
       
@@ -162,7 +170,24 @@ Type objective_function<Type>::operator() ()
       vector<Type> rowSums(r_si[k]);
       rowSums.fill(0);
       
+      
       // Compute the matrix coefficients and store them in the triplet list.
+      // FIXME: I COULD DO THIS IN A FUNCTION
+      
+      if (K_type == "neighbour") {
+        for (int j = start_x; j < start_x + nnz[k]; j++) {  
+          (row_indices[j] == col_indices[j]) ? coef = tau[k] * (x[j] + sigma2[k]) : coef = tau[k] * x[j];
+          tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
+        }
+      } 
+      
+      if (K_type == "block-exponential") {
+        for (int j = start_x; j < start_x + nnz[k]; j++) {  
+          coef = sigma2[k] * exp( -x[j] / tau[k] ) * pow( 1.0 - x[j] / alpha[k], 2.0) * ( 1.0 + x[j] / (2.0 * alpha[k]));
+          tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
+        }
+      }
+      
       if (K_type == "precision_exp") {
         
         for (int j = start_x; j < start_x + nnz[k]; j++){ // For each non-zero entry within resolution k
@@ -178,72 +203,38 @@ Type objective_function<Type>::operator() ()
         }
       }
       
-      if (K_type == "neighbour") {
-        for (int j = start_x; j < start_x + nnz[k]; j++){  // For each non-zero entry within resolution k
-          if (row_indices[j] == col_indices[j]) {
-            coef = tau[k] * (x[j] + sigma2[k]);
-          } else {
-            coef = tau[k] * x[j]; // The "neighbour matrix" in R is responsible for setting the weights
-          }
-          tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
-        }
-      }
-      
-      bool rhoInB{true};
-      
-      if (K_type == "latticekrig" && rhoInB) {
-        for (int j = start_x; j < start_x + nnz[k]; j++){  // For each non-zero entry within resolution k
+      if (K_type == "latticekrig") {
+        for (int j = start_x; j < start_x + nnz[k]; j++){  
           if (row_indices[j] == col_indices[j]) {
             coef = (x[j] + sigma2[k]) / sqrt(tau[k] + epsilon);
           } else {
-            coef = x[j] / sqrt(tau[k] + epsilon); // The "neighbour matrix" in R is responsible for setting the weights
+            coef = x[j] / sqrt(tau[k] + epsilon); 
           }
-          tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
-        }
-      }
-      
-      if (K_type == "latticekrig" && !rhoInB) {
-        for (int j = start_x; j < start_x + nnz[k]; j++){  // For each non-zero entry within resolution k
-          if (row_indices[j] == col_indices[j]) {
-            coef = x[j] + sigma2[k];
-          } else {
-            coef = x[j];
-          }
-          tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
-        }
-      }
-      
-      if (K_type == "block-exponential") {
-        
-        for (int j = start_x; j < start_x + nnz[k]; j++){   // For each non-zero entry within resolution i
-          coef = sigma2[k] * exp( -x[j] / tau[k] ) * pow( 1.0 - x[j] / alpha[k], 2.0) * ( 1.0 + x[j] / (2.0 * alpha[k]));
           tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
         }
       }
       
       // Convert triplet list of non-zero entries to a true SparseMatrix.
-      // NB: this is "Kk" the variance matrix if K_type == "block-exponential",
-      // the "Bk" matrix if K_type == "latticekrig" (and rhoInB == false),
+      // NB: mat is "Kk" the variance matrix if K_type == "block-exponential",
+      // the "Bk" matrix if K_type == "latticekrig", 
       // and the precision matrix "Qk" for all other formulations.
       SpMat mat(r_si[k], r_si[k]);
       mat.setFromTriplets(tripletList.begin(), tripletList.end());
+
       
-      bool constructQ{false};
-      if (K_type == "latticekrig" && !constructQ) {
-        rhoInB ? mat = mat * mat :  mat = mat * mat / (tau[k] + epsilon);
+      if (K_type == "latticekrig") {
+        mat = mat * mat;
       }
-      
       
       // Compute the (upper) Cholesky factor of mat
       Eigen::SimplicialLLT< SpMat, Eigen::Upper > llt;
       llt.compute(mat);
       SpMat Uk = llt.matrixU();
       
+      
       // Log-determinant
-      if (K_type == "latticekrig" && !constructQ && rhoInB) {
+      if (K_type == "latticekrig") {
         logdetQ_inv += -4.0 * r_t * diagLogSum(Uk);
-      } else if (K_type == "latticekrig" && !constructQ && !rhoInB) {
-        logdetQ_inv += r_si[k] * log(tau[k] + epsilon) - 4.0 * r_t * diagLogSum(Uk);
       } else if (K_type == "block-exponential") {
         logdetQ_inv += 2.0 * r_t * diagLogSum(Uk);
       } else {
@@ -255,18 +246,14 @@ Type objective_function<Type>::operator() ()
       
       // Construct the matrix Mk such that Qk = Mk' Mk.
       SpMat Mk(r_si[k], r_si[k]);
-      if (K_type == "latticekrig" && !constructQ && rhoInB) {
+      if (K_type == "latticekrig") {
         Mk = mat;
-      } else if (K_type == "latticekrig" && !constructQ && !rhoInB) {
-        Mk = mat / sqrt(tau[k] + epsilon);
-      } else if (K_type == "block-exponential") {
-        // Don't construct Mk explicitly with block-exponential
-      } else {
-        Mk = Uk * P;
-      }
+      } else if (K_type != "block-exponential") { // We don't explicitly construct Mk with block-exponential
+        Mk = Uk * P; 
+      } 
       
       // Quadratic form
-      if (temporal == 1) {
+      if (temporal) {
         if (K_type == "block-exponential") {
           J.block(start_eta, 0, r_si[k], r_t) = (Uk.transpose()).template triangularView<Eigen::Lower>().solve(P * J.block(start_eta, 0, r_si[k], r_t));
         } else {
@@ -291,7 +278,7 @@ Type objective_function<Type>::operator() ()
   
   
   // ---- Quadratic form in the case of space-time ----
-  if (temporal == 1) { 
+  if (temporal) { 
     J.resize(r_s * r_t, 1); // apply the vec operator
     quadform_eta += (J.array() * J.array()).sum();
   }

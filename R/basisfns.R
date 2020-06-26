@@ -96,7 +96,7 @@ local_basis <- function(manifold=sphere(),          # default manifold is sphere
                         scale = 1,                    # std = 1, and Gaussian RBF
                         type=c("bisquare","Gaussian","exp","Matern32"), 
                         res = 1) {
-
+  
     ## Basic checks
     if(!is.matrix(loc)) stop("loc needs to be a matrix")
     if(!(dimensions(manifold) == ncol(loc))) stop("number of columns in loc needs to be the
