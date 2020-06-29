@@ -1146,23 +1146,25 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
                   ## element of the vector (so, e.g., the below does not crash when averages over
                   ## BAU names are sought)
                   if(average_in_BAU) {
-                      ## Sum specified columns; if(is.null(sum_variables)), then tmp1 will just be the BAU_name column. 
-                      tmp1 <- select(data_over_sp, c(sum_variables, BAU_name)) %>% # Need BAU_name in order to summarise by group; BAU_name is a string, so safe.sum() will just return the first element
+                      
+                      ## Average the columns which will not be summed
+                      tmp1 <- data_over_sp[, !names(data_over_sp) %in% sum_variables] %>%
+                          group_by(BAU_name) %>%             # group by BAU
+                          summarise_all(.safe_mean) %>%      # apply safe mean to each column BAU
+                          as.data.frame()                    # convert to data frame
+                      
+                      ## Sum specified columns; if(is.null(sum_variables)), 
+                      ## then tmp1 will just be the BAU_name column (which will be dropped once we merge afterwards). 
+                      tmp2 <- select(data_over_sp, c(sum_variables, BAU_name)) %>% # Need BAU_name in order to summarise by group; BAU_name is a string, so safe.sum() will just return the first element
                           group_by(BAU_name) %>%                       # group by BAU
                           summarise_all(.safe_sum) %>%                 # apply safe mean to each column BAU
                           as.data.frame()                              # convert to data frame 
                       
-                      ## Average the remaining columns
-                      tmp2 <- data_over_sp[, !names(data_over_sp) %in% sum_variables] %>%
-                          group_by(BAU_name) %>%    # group by BAU
-                          summarise_all(.safe_mean) %>%                         # apply safe mean to each column BAU
-                          as.data.frame()                                       # convert to data frame 
-                      
                       ## merge the dataframes (removes duplicate columns automatically)
                       Data_in_BAU <- merge(tmp1, tmp2)
                   } else 
-                      Data_in_BAU <- data_over_sp                        # otherwise don't average
-                  })                                                          # end timer
+                      Data_in_BAU <- data_over_sp                       # otherwise don't average
+                  })                                                    # end timer
 
 
               ## We now create a new SpatialPointsDataFrame but this time the data
