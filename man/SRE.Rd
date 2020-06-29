@@ -16,6 +16,7 @@ FRK(
   BAUs = NULL,
   est_error = TRUE,
   average_in_BAU = TRUE,
+  sum_variables = NULL,
   fs_model = "ind",
   vgm_model = NULL,
   K_type = "block-exponential",
@@ -30,7 +31,7 @@ FRK(
   n_MC = 400,
   type = "mean",
   k = NULL,
-  percents = c(5, 25, 50, 75, 90),
+  percentiles = c(5, 25, 50, 75, 90),
   ...
 )
 
@@ -41,6 +42,7 @@ SRE(
   BAUs,
   est_error = TRUE,
   average_in_BAU = TRUE,
+  sum_variables = NULL,
   fs_model = "ind",
   vgm_model = NULL,
   K_type = c("block-exponential", "neighbour", "unstructured", "separable",
@@ -82,7 +84,7 @@ SRE.predict(
   n_MC = 400,
   type = "mean",
   k = NULL,
-  percents = c(5, 25, 50, 75, 95)
+  percentiles = c(5, 25, 50, 75, 95)
 )
 
 loglik(SRE_model)
@@ -99,6 +101,8 @@ loglik(SRE_model)
 \item{est_error}{flag indicating whether the measurement-error variance should be estimated from variogram techniques. If this is set to 0, then \code{data} must contain a field \code{std}. Measurement-error estimation is currently not implemented for spatio-temporal datasets}
 
 \item{average_in_BAU}{if \code{TRUE}, then multiple data points falling in the same BAU are averaged; the measurement error of the averaged data point is taken as the average of the individual measurement errors}
+
+\item{sum_variables}{vector of strings indicating which variables are to be summed rather than averaged. Only applicable if \code{average_in_BAU = TRUE}.}
 
 \item{fs_model}{if "ind" then the fine-scale variation is independent at the BAU level. If "ICAR", then an ICAR model for the fine-scale variation is placed on the BAUs}
 
@@ -134,7 +138,7 @@ Any combination of these character strings can be provided. For example, if \cod
 If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{\xi} is included in the latent \eqn{Y} process. 
 If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}.}
 
-\item{percents}{A vector containing the desired percentiles which will be 
+\item{percentiles}{A vector containing the desired percentiles which will be 
 included in the prediction dataframe. If \code{NULL}, 
 no percentiles are computed.}
 

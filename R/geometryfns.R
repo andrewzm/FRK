@@ -1087,7 +1087,7 @@ setMethod("show",signature(object="manifold"),function(object) print(object))
 ## Returns a SpatialPointsDataFrame with the points aligned at the BAU centroids
 #' @aliases map_data_to_BAUs,Spatial-method
 setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
-          function(data_sp,sp_pols,average_in_BAU = TRUE) {
+          function(data_sp,sp_pols, average_in_BAU = TRUE, sum_variables = NULL) {
 
               ## Suppress bindings warnings
               . <- BAU_name <- NULL
@@ -1145,11 +1145,23 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
                   ## take averages over quantities that are not numeric, it just returns the first
                   ## element of the vector (so, e.g., the below does not crash when averages over
                   ## BAU names are sought)
-                  if(average_in_BAU)
-                      Data_in_BAU <- group_by(data_over_sp,BAU_name) %>%  # group by BAU
-                      summarise_all(.safe_mean) %>%             # apply safe mean to each column BAU
-                      as.data.frame()                                     # convert to data frame
-                  else Data_in_BAU <- data_over_sp                        # otherwise don't average
+                  if(average_in_BAU) {
+                      ## Sum specified columns; if(is.null(sum_variables)), then tmp1 will just be the BAU_name column. 
+                      tmp1 <- select(data_over_sp, c(sum_variables, BAU_name)) %>% # Need BAU_name in order to summarise by group; BAU_name is a string, so safe.sum() will just return the first element
+                          group_by(BAU_name) %>%                       # group by BAU
+                          summarise_all(.safe_sum) %>%                 # apply safe mean to each column BAU
+                          as.data.frame()                              # convert to data frame 
+                      
+                      ## Average the remaining columns
+                      tmp2 <- data_over_sp[, !names(data_over_sp) %in% sum_variables] %>%
+                          group_by(BAU_name) %>%    # group by BAU
+                          summarise_all(.safe_mean) %>%                         # apply safe mean to each column BAU
+                          as.data.frame()                                       # convert to data frame 
+                      
+                      ## merge the dataframes (removes duplicate columns automatically)
+                      Data_in_BAU <- merge(tmp1, tmp2)
+                  } else 
+                      Data_in_BAU <- data_over_sp                        # otherwise don't average
                   })                                                          # end timer
 
 
@@ -1173,7 +1185,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
 ## average_in_BAU: flag indicating whether we want to average data/standard errors in BAUs
 #' @aliases map_data_to_BAUs,Spatial-method
 setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
-          function(data_sp,sp_pols,average_in_BAU = TRUE)
+          function(data_sp,sp_pols, average_in_BAU = TRUE, sum_variables = NULL)
           {
               ## Suppress bindings warnings
               . <- BAU_name <- NULL
@@ -1228,9 +1240,10 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
 ## data_sp: data (SpatialPixels object)
 ## sp_pols: BAUs (SpatialPolygonsDataFrame or SpatialPixelsDataFrame)
 ## average_in_BAU: flag indicating whether we want to average data/standard errors in BAUs
+## sum_variables: vector of strings indicating which variables are to be summed rather than averaged.
 #' @aliases map_data_to_BAUs,Spatial-method
 setMethod("map_data_to_BAUs",signature(data_sp="SpatialPixels"),
-          function(data_sp,sp_pols,average_in_BAU = TRUE) {
+          function(data_sp,sp_pols, average_in_BAU = TRUE, sum_variables = NULL) {
               coordlabels <- coordnames(data_sp)
               if(is(data_sp, "SpatialPixelsDataFrame")) {
                   data_sp <- as(data_sp, "SpatialPolygonsDataFrame")
@@ -1238,14 +1251,14 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPixels"),
                   data_sp <- as(data_sp, "SpatialPolygons")
               }
               coordnames(data_sp) <- coordlabels
-              map_data_to_BAUs(data_sp, sp_pols, average_in_BAU = average_in_BAU)
+              map_data_to_BAUs(data_sp, sp_pols, average_in_BAU = average_in_BAU, sum_variables = sum_variables)
           })
 
 ## Returns either a STIDF with the data at the BAU centroids (if data_sp is STIDF)
 ## Or else an STFDF with the original data shifted to the BAU time points and with BAU
 ## features averaged over the ST data polygons
 setMethod("map_data_to_BAUs",signature(data_sp="ST"),
-          function(data_sp,sp_pols,average_in_BAU = TRUE) {
+          function(data_sp,sp_pols,average_in_BAU = TRUE, sum_variables = NULL) {
 
               ## Initialise to no spatial field
               sp_fields <- NULL
@@ -1298,7 +1311,8 @@ setMethod("map_data_to_BAUs",signature(data_sp="ST"),
                                           ## Map the now spatial data the now spatial BAUs
                                           map_data_to_BAUs(data_spatial,
                                                            BAU_spatial,
-                                                           average_in_BAU = average_in_BAU)
+                                                           average_in_BAU = average_in_BAU, 
+                                                           sum_variables = sum_variables)
                                       } else {
                                           NULL
                                       }})
@@ -1817,6 +1831,14 @@ process_isea3h <- function(isea3h,resl) {
 .safe_mean <- function(x) {
     if(is(x,"logical") | is(x,"numeric")) {
         mean(x)
+    } else { x[1] }
+}
+
+## Replica of the .safe_mean function but for summation rather than averaging. 
+## Used for summing within BAUs when the data is a count.
+.safe_sum <- function(x) {
+    if(is(x,"logical") | is(x,"numeric")) {
+        sum(x)
     } else { x[1] }
 }
 

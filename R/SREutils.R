@@ -22,6 +22,7 @@
 #' @param BAUs object of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame}, \code{STIDF}, or \code{STFDF}. The object's data frame must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality. If the function \code{FRK} is used directly, then BAUs are created automatically, but only coordinates can then be used as covariates
 #' @param est_error flag indicating whether the measurement-error variance should be estimated from variogram techniques. If this is set to 0, then \code{data} must contain a field \code{std}. Measurement-error estimation is currently not implemented for spatio-temporal datasets
 #' @param average_in_BAU if \code{TRUE}, then multiple data points falling in the same BAU are averaged; the measurement error of the averaged data point is taken as the average of the individual measurement errors
+#' @param sum_variables vector of strings indicating which variables are to be summed rather than averaged. Only applicable if \code{average_in_BAU = TRUE}.
 #' @param fs_model if "ind" then the fine-scale variation is independent at the BAU level. If "ICAR", then an ICAR model for the fine-scale variation is placed on the BAUs
 #' @param vgm_model an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm}. This object contains the variogram model that will be fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified, the variogram used is \code{gstat::vgm(1, "Lin", d, 1)}, where \code{d} is approximately one third of the maximum distance between any two data points
 #' @param K_type the parameterisation used for the \code{K} matrix. If the EM algorithm is used for model fitting, \code{K_type} can be "unstructured" or "block-exponential". If TMB is used for model fitting, \code{K_type} can be "neighbour" or "block-exponential". The default is "block-exponential"
@@ -110,6 +111,7 @@
 #'     geom_line(data=sim_process,aes(x=x,y=proc),col="red")
 #'  print(g1)}
 SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
+                sum_variables = NULL,
                 fs_model = "ind", vgm_model = NULL, 
                 K_type = c("block-exponential", "neighbour", "unstructured", "separable", "precision_exp", "latticekrig"), 
                 normalise_basis = TRUE, 
@@ -130,9 +132,15 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     
     ## Produce a warning if the response is non-Gaussian and user has specified 
     ## the block-exponential covariance formulation
-    if (response != "gaussian" & K_type == "block-exponential") {
+    if (response != "gaussian" & K_type == "block-exponential")
         warning("Using K_type = 'block-exponential' is computationally inefficient when response != 'gaussian' (or, in general, when method == 'TMB'). For these situations, consider using K_type = 'neighbour' or K_type = 'separable'.")
-    }
+    
+    if ("n" %in% sum_variables) 
+        stop("Summing the BAU indices will result in out of bounds errors and hence NAs in the incidence matrix C; please remove 'n' from sum_variables.") 
+    
+    if (!is.null(sum_variables) && !average_in_BAU) 
+        warning("sum_variables argument does nothing when average_in_BAU = FALSE.")
+    
     
     ## Check that the arguments are OK
     .check_args1(f = f,data = data, basis = basis, BAUs = BAUs, est_error = est_error, 
@@ -182,9 +190,11 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
 
         ## the same BAU (average_in_BAU == TRUE) or not (average_in_BAU == FALSE)
         cat("Binning data ...\n")
+        
         data_proc <- map_data_to_BAUs(data[[i]],       # data object
                                       BAUs,            # BAUs
-                                      average_in_BAU = average_in_BAU)   # average in BAU?
+                                      average_in_BAU = average_in_BAU, # average in BAU?
+                                      sum_variables = sum_variables)   # variables to sum rather than average
 
         
         ## The mapping can fail if not all data are covered by BAUs. Throw an error message if this is the case
@@ -206,10 +216,39 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
 
 
 
+
         ## Construct the incidence matrix mapping data to BAUs. This just returns indices and values which then need to be
         ## assembled into a sparse matrix
         C_idx <- BuildC(data_proc,BAUs)
+        
+        # browser()
+        
+        # head(data_proc@data)
+        # sum(data_proc@data$count)
+        # BAUs$n[data_proc@data$n]
+        # length(BAUs$n)
+        # range(data_proc@data$n)
+        # head(data_proc@data)
+        
+        # ## Row indices:
+        # C_idx$i_idx
+        # length(C_idx$i_idx)
+        # length(unique(C_idx$i_idx))
+        # range(C_idx$i_idx)
+        # sum(is.na(C_idx$i_idx))
+        
+        # ## Column indices:
+        # C_idx$j_idx
+        # length(C_idx$j_idx)
+        # length(unique(C_idx$j_idx))
+        # range(C_idx$j_idx)
+        # sum(is.na(C_idx$j_idx))
 
+        # 
+        # head(data_proc@data)
+        # BAUs
+
+        
         ## Construct the sparse incidence Matrix from above indices. This is the matrix C_Z in the vignette
         Cmat[[i]] <- sparseMatrix(i=C_idx$i_idx,
                                   j=C_idx$j_idx,
@@ -1165,6 +1204,7 @@ print.summary.SRE <- function(x, ...) {
         ## Based on these polygons construct the C matrix
         newdata2 <- map_data_to_BAUs(newdata, BAUs,
                                      average_in_BAU = FALSE,
+                                     sum_variables = NULL,
                                      est_error = FALSE)
         C_idx <- BuildC(newdata2, BAUs)
         CP <- sparseMatrix(i=C_idx$i_idx,

@@ -10,7 +10,7 @@
   n_MC = 400,
   obs_fs = FALSE,
   k = NULL,
-  percents = c(5, 25, 50, 75, 95)
+  percentiles = c(5, 25, 50, 75, 95)
 )
 }
 \arguments{
@@ -30,7 +30,7 @@ Any combination of these character strings can be provided. For example, if \cod
 If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{\xi} is included in the latent \eqn{Y} process. 
 If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}.}
 
-\item{percents}{A vector containing the desired percentiles which will be 
+\item{percentiles}{A vector containing the desired percentiles which will be 
 included in the prediction dataframe. If \code{NULL}, 
 no percentiles are computed.}
 }

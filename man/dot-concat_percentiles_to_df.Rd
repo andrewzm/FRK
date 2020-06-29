@@ -4,7 +4,7 @@
 \alias{.concat_percentiles_to_df}
 \title{Computation and concatenation of percentiles to a dataframe.}
 \usage{
-.concat_percentiles_to_df(X, df, name, percents = c(5, 25, 50, 75, 95))
+.concat_percentiles_to_df(X, df, name, percentiles = c(5, 25, 50, 75, 95))
 }
 \arguments{
 \item{X}{A matrix of Monte Carlo samples (rows are observation, columns are 
@@ -13,9 +13,9 @@ samples).}
 \item{df}{The prediction dataframe, with the same number of rows as \code{X}.}
 
 \item{name}{The name of the quantity of interest. The names of the percentile
-columns are "name_percentile_percents". In \code{FRK} it will be Y, mu, or Z.}
+columns are "name_percentile_percentiles". In \code{FRK} it will be Y, mu, or Z.}
 
-\item{percents}{A vector containing the desired percentiles which will be 
+\item{percentiles}{A vector containing the desired percentiles which will be 
 included in the prediction dataframe. If \code{NULL}, 
 no percentiles are computed.}
 }

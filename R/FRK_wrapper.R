@@ -21,6 +21,7 @@ FRK <- function(f,                     # formula (compulsory)
                 BAUs = NULL,           # BAUs
                 est_error = TRUE,      # estimate measurement error
                 average_in_BAU = TRUE, # average data into BAUs
+                sum_variables = NULL,  # variables to sum rather than average
                 fs_model = "ind",      # fine-scale variation component
                 vgm_model = NULL,      # variogram model for error estimation
                 K_type = "block-exponential", # type of K matrix
@@ -156,6 +157,7 @@ FRK <- function(f,                     # formula (compulsory)
              BAUs = BAUs,                      # BAUs
              est_error=est_error,              # estimate measurement error?
              average_in_BAU = average_in_BAU,  # do not average data over BAUs
+             sum_variables = sum_variables,  
              fs_model = fs_model,              # fs model (only "ind" for now)
              vgm_model = vgm_model,            # vgm model for error estimation
              K_type = K_type)                  # "block-exponential" or "unstructured"

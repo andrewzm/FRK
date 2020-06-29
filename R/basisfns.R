@@ -99,8 +99,7 @@ local_basis <- function(manifold=sphere(),          # default manifold is sphere
   
     ## Basic checks
     if(!is.matrix(loc)) stop("loc needs to be a matrix")
-    if(!(dimensions(manifold) == ncol(loc))) stop("number of columns in loc needs to be the
-                                                  same as the number of manifold dimensions")
+    if(!(dimensions(manifold) == ncol(loc))) stop("number of columns in loc needs to be thesame as the number of manifold dimensions")
     if(!(length(scale) == nrow(loc))) stop("need to have as many scale parameters as centroids")
     type <- match.arg(type)
 
@@ -479,6 +478,7 @@ auto_basis <- function(manifold = plane(),
   basis_locs_list <- list()
   scale <- res <- c()
   
+  
   for (k in 1:L) { # for each resolution
     
     ## Extract basis function dataframe for the kth resolution
@@ -529,12 +529,21 @@ auto_basis <- function(manifold = plane(),
   ## Convert to matrix
   basis_locs <- do.call(rbind, basis_locs_list)
   
+  ## FIXME: Error when passing into local_basis
+  # browser()
+  
+  ncol(basis_locs)
+  dimensions(basis@manifold)
+  
   ## Convert to a basis 
   basis_buffer <- local_basis(manifold = basis@manifold, 
                               loc = basis_locs, 
                               scale = scale, 
                               type = type, 
                               res = res)
+  
+
+  
   
   return(basis_buffer)
 }
