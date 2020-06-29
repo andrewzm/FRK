@@ -97,9 +97,10 @@ local_basis <- function(manifold=sphere(),          # default manifold is sphere
                         type=c("bisquare","Gaussian","exp","Matern32"), 
                         res = 1) {
   
+    
     ## Basic checks
     if(!is.matrix(loc)) stop("loc needs to be a matrix")
-    if(!(dimensions(manifold) == ncol(loc))) stop("number of columns in loc needs to be thesame as the number of manifold dimensions")
+    if(!(dimensions(manifold) == ncol(loc))) stop("number of columns in loc needs to be the same as the number of manifold dimensions")
     if(!(length(scale) == nrow(loc))) stop("need to have as many scale parameters as centroids")
     type <- match.arg(type)
 
@@ -478,26 +479,21 @@ auto_basis <- function(manifold = plane(),
   basis_locs_list <- list()
   scale <- res <- c()
   
-  
   for (k in 1:L) { # for each resolution
-    
+  
     ## Extract basis function dataframe for the kth resolution
-    temp <- basis@df[basis@df$res == k, ]
+    basis_df <- basis@df[basis@df$res == k, ]
     
     ## unique locations for all dimensions
-    unique_locs <- apply(temp[, dim_names, drop = FALSE], 2, function(x) sort(unique(x)))  
-    
-    ## in the case of dimens == 1, apply() creates a matrix. So, force to a list. 
-    if (dimens == 1) {
-      unique_locs <- list(unique_locs)  
-    } 
+    ## NB: need to consider rectangular domains too
+    unique_locs <- lapply(basis_df[, dim_names, drop = FALSE], function(x) sort(unique(x)))  
     
     ## Compute the distance between locations 
-    ## (assumes equally spaced basis functions in each dimension)
+    ## (assumes equally spaced basis functions in each dimension, i.e., regular = TRUE)
     dist_btwn_locs <- sapply(unique_locs, function(x) diff(x)[1])
     
     ## Compute number of extra terms to add in each direction of each dimension
-    ## (divide buffer by 2 because we add locations to in both directions of a 
+    ## (divide buffer by 2 because we add locations in both directions of a 
     ## given dimension)
     n_add <- sapply(unique_locs, function(x) ceiling(buffer/2 * length(x)))
     
@@ -505,35 +501,30 @@ auto_basis <- function(manifold = plane(),
     ## First, define a function to add n_add elements separated by a units to 
     ## the head and tail of a vector x.
     .add_head_tail <- function(x, n_add, a) {
-      # c(head(x, 1) - (n_add:1) * a, 
-      #   x, 
-      #   tail(x, 1) + (1:n_add) * a)      
       c(min(x) - (n_add:1) * a, 
         x, 
         max(x) + (1:n_add) * a)
     }
-    unique_locs_new <- mapply(.add_head_tail, unique_locs, n_add, dist_btwn_locs)
+
+    ## Now generate new unique locations in each dimension
+    tmp <- names(unique_locs)
+    names(tmp) <- names(unique_locs)
+    unique_locs_new <- lapply(tmp, 
+                              function(id, x, n, a) .add_head_tail(x[[id]], n[id], a[id]), 
+                              x = unique_locs, n = n_add, a = dist_btwn_locs)
     
     ## Now create new basis function locations, and append to previously 
     ## computed basis function locations. Conveniently, expand.grid() allows 
     ## lists to be passed as arguments.
     basis_locs_list[[k]] <- as.matrix(expand.grid(unique_locs_new))
     
-    scale <- c(scale, 
-               rep(temp$scale[1], nrow(basis_locs_list[[k]])))
+    scale <- c(scale, rep(basis_df$scale[1], nrow(basis_locs_list[[k]])))
     
-    res <- c(res, 
-             rep(k, nrow(basis_locs_list[[k]])))
+    res <- c(res, rep(k, nrow(basis_locs_list[[k]])))
   }
   
   ## Convert to matrix
   basis_locs <- do.call(rbind, basis_locs_list)
-  
-  ## FIXME: Error when passing into local_basis
-  # browser()
-  
-  ncol(basis_locs)
-  dimensions(basis@manifold)
   
   ## Convert to a basis 
   basis_buffer <- local_basis(manifold = basis@manifold, 
@@ -541,10 +532,6 @@ auto_basis <- function(manifold = plane(),
                               scale = scale, 
                               type = type, 
                               res = res)
-  
-
-  
-  
   return(basis_buffer)
 }
 
