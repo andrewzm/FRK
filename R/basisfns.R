@@ -694,7 +694,7 @@ setMethod("eval_basis",signature(basis="TensorP_Basis",s="matrix"),
               n1 <- dimensions(basis@Basis1) # spatial dimensions
               S1 <- eval_basis(basis@Basis1,s[,1:n1,drop=FALSE])    # evaluate at spatial locations
               S2 <- eval_basis(basis@Basis2,s[,-(1:n1),drop=FALSE]) # evaluate at temporal locations
-
+              
               ## Order: Construct S matrix over space and time
               ## This is ordered as first space then time, therefore we take S2[,1]*S1 as our first block
               ## Then S2[,2]*S1 as our second block etc.
@@ -755,6 +755,9 @@ setMethod("remove_basis",signature(Basis="Basis"),function(Basis,rmidx) {
     Basis@n <- nrow(Basis@df)         # reduce n as appropriate
     Basis                             # return basis object
 })
+
+
+
 
 
 #' @rdname local_basis

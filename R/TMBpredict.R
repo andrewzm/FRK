@@ -50,8 +50,6 @@
     Q_L <- sparseinv::cholPermute(Q = M@Q_eta_xi)
   )
   
-
-  
   # ------ Latent process Y prediction and Uncertainty ------
   
   ## Note that this does NOT depend on the response of Z.

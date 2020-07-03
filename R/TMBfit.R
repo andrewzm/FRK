@@ -46,7 +46,7 @@
   # image(temp)
   # length(temp@x) # number of non-zeros
 
-
+  
   # ------ Fitting and Parameter Estimates/Random Effect Predictions ------
 
   ## the following means we want toprint every parameter passed to obj$fn.

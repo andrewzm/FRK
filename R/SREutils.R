@@ -158,6 +158,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     ## Normalise basis functions for the prior process to have constant variance. This was seen to pay dividends in
     ## latticekrig, however we only do it once initially
     S0 <- eval_basis(basis,.polygons_to_points(BAUs))     # evaluate basis functions over BAU centroids
+    
     if(normalise_basis) {
         cat("Normalising basis function evaluations at BAU level ...\n")
         xx <- sqrt(rowSums((S0) * S0))                        # Find the standard deviation (assuming unit basis function weight)
@@ -559,6 +560,85 @@ print.summary.SRE <- function(x, ...) {
     cat("For object properties use show().\n")
     invisible(x)
 }
+
+
+
+#' @rdname reverse_BAU_coords
+#' @export
+setMethod("reverse_BAU_coords",signature(BAUs="SpatialPixelsDataFrame"),function(BAUs) {
+    
+    ## FIXME: perhaps BAUs can be more general (i.e., SpatialPointsDataFrame, etc.)
+    
+    ## Number of dimensions of the BAUs
+    n_coord <- dimensions(BAUs)
+    
+    ## FIXME: Might be able to replace the following lines with:
+    ## BAUs <- BAUs[, n_coord:1]
+    BAUs@data   <- BAUs@data[, n_coord:1]
+    BAUs@coords <- BAUs@coords[, n_coord:1]
+    BAUs@bbox   <- BAUs@bbox[n_coord:1, ]
+    
+    ## Note that we cannot subset BAUs@grid (S4 method). 
+    ## Instead, we will manipulate the slots directly.
+    tmp <- BAUs@grid
+    tmp@cellcentre.offset <- tmp@cellcentre.offset[n_coord:1]
+    tmp@cellsize <- tmp@cellsize[n_coord:1]
+    tmp@cells.dim <- tmp@cells.dim[n_coord:1]
+    ## NB: note sure how to access the coordinate names of tmp directly as of now (GridTopology
+    ## objects have only an assignment method for coordnames, not a retrieval method). 
+    ## For now I will just use the coordinate names of the BAUs.
+    ## It doesn't seem to matter anyway, though, as it adjusts automatically.
+    coordnames(tmp) <- coordnames(BAUs)[n_coord:1]
+    
+    BAUs@grid <- tmp
+    
+    ## Return updated BAUs object
+    return(BAUs)
+})
+
+
+#' @rdname remove_BAUs
+#' @export
+setMethod("remove_BAUs",signature(BAUs="SpatialPixelsDataFrame"),function(BAUs, rmidx) {
+    
+    ntot <- nrow(BAUs@data)
+    if(!all(rmidx %in% 1:ntot))
+        stop("Please make sure indices are numeric and within
+             1 and the number of BAUs.")
+    
+    BAUs <- BAUs[rmidx, ]
+    
+    ## Return updated BAUs object
+    return(BAUs)
+})
+
+
+#' @rdname remove_BAUs
+#' @export
+setMethod("remove_BAUs",signature(BAUs="STFDF"),function(BAUs, rmidx) {
+    
+    ntot <- nrow(BAUs@sp)
+    if(!all(rmidx %in% 1:ntot))
+        stop("Please make sure indices are numeric and within
+             1 and the number of spatial BAUs (accessed with BAUs@sp).")
+    
+    ## FIXME: this is not general enough; figure out how to accomodate for different fs values
+    if(!.zero_range(BAUs@data$fs))
+        stop("When BAUs is of class 'STFDF', the remove_BAUs method requires the fine-scale column, BAUs@data@fs, to be constant.")
+    
+    BAUs@sp  <- BAUs@sp[rmidx, ]
+    ## Alter the data to adjust for the new spatial BAUs:
+    
+    ## FIXME: once I figure out how to accomodate different fs values, will also need to change this:
+    BAUs@data <- data.frame(n = 1:(nrow(BAUs@sp) * length(BAUs@time)), 
+                            t = rep(1:length(unique(BAUs@data$t)), each = nrow(BAUs@sp)), 
+                            fs = BAUs@data$fs[1])
+    
+    
+    ## Return updated BAUs object
+    return(BAUs)
+})
+
 
 ##################################
 #### NOT EXPORTED ################
@@ -1632,10 +1712,19 @@ print.summary.SRE <- function(x, ...) {
     if(is(BAUs,"STFDF")) if(!(is(BAUs@sp,"SpatialPointsDataFrame") | is(BAUs@sp,"SpatialPolygonsDataFrame") | is(BAUs@sp,"SpatialPixelsDataFrame")))
         stop("The spatial component of the BAUs should be a SpatialPolygonsDataFrame or SpatialPixelsDataFrame")
 
+    if(is(BAUs,"STFDF") && nrow(BAUs@data) != nrow(BAUs@sp) * length(BAUs@time))
+        stop("The number of rows in BAUs@data should be equal to the number of spatial BAUs, nrow(BAUs@sp), multiplied by the number of time indices, length(BAUs@time)")
+        
+    
+    
     # if(is(BAUs,"SpatialPointsDataFrame"))
     #     stop("Implementation with Point BAUs is currently in progress")
     # if(is(BAUs,"STFDF")) if(is(BAUs@sp,"SpatialPointsDataFrame"))
     #     stop("Implementation with Point BAUs is currently in progress")
+    
+    
+
+    
 
     if(!all(all.vars(f)[-1] %in% c(names(BAUs@data),coordnames(BAUs))))
         stop("All covariates need to be in the SpatialPolygons BAU object")

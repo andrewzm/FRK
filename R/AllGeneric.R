@@ -191,7 +191,7 @@ setGeneric("BAUs_from_points", function(obj,offset = 1e-10)
     standardGeneric("BAUs_from_points"))
 
 #' @title Removes basis functions
-#' @description Takes a an object of class \code{Basis} and returns an object of class \code{Basis} with selected basis functions removed.
+#' @description Takes an object of class \code{Basis} and returns an object of class \code{Basis} with selected basis functions removed.
 #' @param Basis object of class \code{Basis}
 #' @param rmidx indices of basis functions to remove
 #' @export
@@ -207,6 +207,46 @@ setGeneric("BAUs_from_points", function(obj,offset = 1e-10)
 #' data.frame(G)
 setGeneric("remove_basis", function(Basis,rmidx)
     standardGeneric("remove_basis"))
+
+
+#' @title Reverses BAU coordinates 
+#' @description Reverses the coordinate order (and all relevant slots) of a spatial BAU object (an object of class \code{SpatialPixelsDataFrame}). This is useful when comparing BAU objects to \code{SpatialPolygon} objects, for instance, when one wishes to trim BAUs based on some polygon. 
+#' @param BAUs An object of class \code{SpatialPixelsDataFrame}.
+#' @export
+#' @return \code{BAUs} with the reversed coordinate order.
+#' @examples
+#' library(sp)
+#' RNGversion("3.6.0")
+#' set.seed(1)
+#' data <- data.frame(lon = runif(10, 0, 10), 
+#'                    lat = runif(10, 0, 40), 
+#'                    z= rnorm(10))
+#' coordinates(data) <- ~ lon + lat
+#' BAUs <- auto_BAUs(manifold = plane(), 
+#'                   cellsize = 0.5, 
+#'                   data=data)
+#' \dontrun{plot(BAUs)}
+#' BAUs <- reverse_BAU_coords(BAUs)
+#' \dontrun{plot(BAUs)}
+setGeneric("reverse_BAU_coords", function(BAUs)
+    standardGeneric("reverse_BAU_coords"))
+
+
+#' @title Remove BAUs 
+#' @description Takes a \code{BAU} object returns the \code{BAU} object with selected BAUs removed specified by \code{rmidx}.
+#' For spatio-temporal BAUs, the indices of the spatial BAUs (\code{BAUs@sp}) must be provided, and the spatio-temporal BAUs corresponding to these spatial BAUs will be removed.
+#' @param BAUs BAU object.
+#' @param rmidx indices of spatial basis functions to remove. For spatio-temporal BAUs, the indices of the spatial BAUs (\code{BAUs@sp}) must be provided.
+#' @return \code{BAUs} with specified BAUs removed.
+#' @export
+
+setGeneric("remove_BAUs", function(BAUs,rmidx)
+    standardGeneric("remove_BAUs"))
+
+
+
+
+
 
 #' @title Retrieve fit information for SRE model
 #' @description Takes a an object of class \code{SRE} and returns a list containing all the relevant information on parameter estimation

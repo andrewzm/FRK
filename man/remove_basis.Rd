@@ -15,7 +15,7 @@ remove_basis(Basis, rmidx)
 \item{rmidx}{indices of basis functions to remove}
 }
 \description{
-Takes a an object of class \code{Basis} and returns an object of class \code{Basis} with selected basis functions removed.
+Takes an object of class \code{Basis} and returns an object of class \code{Basis} with selected basis functions removed.
 }
 \examples{
 library(sp)

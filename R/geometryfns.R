@@ -350,7 +350,7 @@ auto_BAUs <- function(manifold, type=NULL,cellsize = NULL,
     ## Basic checks and setting of defaults
     if(!(is(data,"Spatial") | is(data,"ST") | is(data,"Date") | is.null(data)))
         stop("Data needs to be of class 'Spatial', 'ST', 'Date', or NULL")
-    if(is(data,"Spatial") | is(data,"ST"))           # if data is not NULL
+    if(is(data,"Spatial") | is(data,"ST"))           # if data is not NULL or "Data"
         if((class(coordnames(data)) == "NULL"))
             stop("data needs to have coordinate names")
     if(!is(manifold,"manifold"))
