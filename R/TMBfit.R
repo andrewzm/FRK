@@ -300,7 +300,7 @@
   parameters$logsigma2      <- log(exp(parameters$logsigma2xi) * (0.1)^(0:(nres - 1)))
   parameters$logtau         <- log((1 / 3)^(1:nres))
   parameters$logsigma2_t    <- log(5)  
-  parameters$logrho_t       <- log(0.4)
+  parameters$frho_t         <- 0
 
   
   

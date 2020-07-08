@@ -3,6 +3,14 @@
 #include "FRK-init.h"
 
 
+// Transform correlation parameter to 
+template <class Type>
+Type transform_minus_one_to_one(Type x){
+  double epsilon1{10e-8};
+  double epsilon2{2 / (2 - epsilon1) - 1 + 10e-8};
+  return Type(2)/(Type(1) + exp(-Type(2) * x) + epsilon2) - Type(1) + epsilon1;
+}
+
 // Forward declarations of functions defined after objective_function template
 // (function definitions are after the objective_function template)
 
@@ -73,9 +81,9 @@ Type objective_function<Type>::operator() ()
   
   // Variance components relating to eta
   PARAMETER_VECTOR(logsigma2);  vector<Type> sigma2 = exp(logsigma2);
-  PARAMETER_VECTOR(logtau);     vector<Type> tau    = exp(logtau);
+  PARAMETER_VECTOR(logtau);     // The transformation we apply to tau depends on which K_type is used
   PARAMETER(logsigma2_t);       Type sigma2_t       = exp(logsigma2_t);
-  PARAMETER(logrho_t);          Type rho_t          = exp(logrho_t);
+  PARAMETER(frho_t);            Type rho_t          = transform_minus_one_to_one(frho_t);
   PARAMETER_VECTOR(logdelta);   vector<Type> delta  = exp(logdelta);
   
   // Latent random effects (will be integrated out)
@@ -134,7 +142,9 @@ Type objective_function<Type>::operator() ()
       // and second half the column variances. Same for rho.
       vector<Type> sigma2_r = sigma2.head(nres);
       vector<Type> sigma2_c = sigma2.tail(nres);
-      vector<Type> rho_r    = tau.head(nres);
+      // The correlation parameter in an AR1 must be between -1 and 1. 
+      vector<Type> tau      = transform_minus_one_to_one(logtau);
+      vector<Type> rho_r    = tau.head(nres); 
       vector<Type> rho_c    = tau.tail(nres);
       
       // First construct M_r and M_c
@@ -161,6 +171,9 @@ Type objective_function<Type>::operator() ()
       }
       
     } else {
+      
+      // For all K_type != "separable", we only require tau > 0, rather than -1 < tau < 1.
+      vector<Type> tau = exp(logtau);
       
       // Construct kth block as a sparse matrix: use triplet list (row, column, value)
       std::vector<T> tripletList;    // Create a vector of triplet lists, called 'tripletList'
@@ -377,10 +390,13 @@ Type diagLogSum(Eigen::SparseMatrix<Type> mat){
 template<class Type>
 Eigen::SparseMatrix<Type> choleskyAR1(Type sigma2, Type rho, int n){
   
+  double epsilon{10e-8};
+  sigma2 += epsilon;
   typedef Eigen::Triplet<Type> T;   // typedef: Triplet lists called 'T'
   
   std::vector< T > tripletList;
   tripletList.reserve(2 * n - 1);
+  // NB: Must have -1 < rho < 1
   Type common_term = 1 / sqrt(sigma2 * (1 - rho * rho));
   
   // Diagonal entries (except last diagonal entry), lower diagonal entries

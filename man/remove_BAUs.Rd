@@ -15,11 +15,12 @@ remove_BAUs(BAUs, rmidx)
 \arguments{
 \item{BAUs}{BAU object.}
 
-\item{rmidx}{indices of basis functions to remove.}
+\item{rmidx}{indices of spatial basis functions to remove. For spatio-temporal BAUs, the indices of the spatial BAUs (\code{BAUs@sp}) must be provided.}
 }
 \value{
 \code{BAUs} with specified BAUs removed.
 }
 \description{
-Takes a \code{BAU} object returns the \code{BAU} object with selected BAUs removed.
+Takes a \code{BAU} object returns the \code{BAU} object with selected BAUs removed specified by \code{rmidx}.
+For spatio-temporal BAUs, the indices of the spatial BAUs (\code{BAUs@sp}) must be provided, and the spatio-temporal BAUs corresponding to these spatial BAUs will be removed.
 }
