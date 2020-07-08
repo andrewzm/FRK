@@ -346,7 +346,7 @@ setMethod("coordnames",signature(x="STIDF"),function(x) {
 auto_BAUs <- function(manifold, type=NULL,cellsize = NULL,
                       isea3h_res=NULL,data=NULL,nonconvex_hull=TRUE,
                       convex=-0.05,tunit=NULL,xlims=NULL,ylims=NULL,...) {
-
+    
     ## Basic checks and setting of defaults
     if(!(is(data,"Spatial") | is(data,"ST") | is(data,"Date") | is.null(data)))
         stop("Data needs to be of class 'Spatial', 'ST', 'Date', or NULL")
@@ -431,6 +431,7 @@ auto_BAUs <- function(manifold, type=NULL,cellsize = NULL,
     if(grepl("ST",class(manifold)) & is.null(tunit))
         tunit <- .choose_BAU_tunit_from_data(data)
 
+    
     ## Call the internal function with checked arguments
     auto_BAU(manifold=manifold,type=type,cellsize=cellsize,resl=resl,d=data,
              nonconvex_hull=nonconvex_hull,convex=convex,tunit=tunit,xlims=xlims,ylims=ylims)
@@ -567,6 +568,7 @@ setMethod("auto_BAU",signature(manifold="plane"),
 
               X1 <- X2 <- NULL             # Suppress bindings warning
 
+              
               if(is(d,"SpatialPoints")){    # If data are spatial points
                   coords <- coordinates(d)  # extract coordinates
               } else if(is(d,"SpatialPolygons")){ # if polygons
@@ -583,7 +585,7 @@ setMethod("auto_BAU",signature(manifold="plane"),
 
               if(is.null(ylims))             # if ylims not specified
                   yrange <- range(coords[,2])  # y-range of coordinates
-              else yrange = ylims            # else just allocate
+              else yrange <- ylims            # else just allocate
 
               ## Increase convex until domain is contiguous and smooth
               ## (i.e., the distance betweeen successive points is small)
@@ -884,12 +886,14 @@ setMethod("auto_BAU",signature(manifold = c("STmanifold")),
                   cellsize_temp <- cellsize[3]
               }
 
+              
 
               ## Construct the spatial BAUs
               spatial_BAUs <- auto_BAU(manifold=spat_manifold,cellsize=cellsize_spat,
                                        resl=resl,type=type,d=space_part,nonconvex_hull=nonconvex_hull,
                                        convex=convex,xlims=xlims,ylims=ylims,...)
-
+              
+              
               ## Construct the temporal BAUs
               temporal_BAUs <- auto_BAU(manifold=real_line(), cellsize=cellsize_temp,
                                         resl=resl,type=type,d=time_part,convex=convex,...)

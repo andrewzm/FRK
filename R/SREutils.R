@@ -563,9 +563,9 @@ print.summary.SRE <- function(x, ...) {
 
 
 
-#' @rdname reverse_BAU_coords
+#' @rdname reverse_spatial_coords
 #' @export
-setMethod("reverse_BAU_coords",signature(BAUs="SpatialPixelsDataFrame"),function(BAUs) {
+setMethod("reverse_spatial_coords",signature(BAUs="SpatialPixelsDataFrame"),function(BAUs) {
     
     ## FIXME: perhaps BAUs can be more general (i.e., SpatialPointsDataFrame, etc.)
     

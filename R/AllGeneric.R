@@ -209,7 +209,7 @@ setGeneric("remove_basis", function(Basis,rmidx)
     standardGeneric("remove_basis"))
 
 
-#' @title Reverses BAU coordinates 
+#' @title Reverses spatial coordinates 
 #' @description Reverses the coordinate order (and all relevant slots) of a spatial BAU object (an object of class \code{SpatialPixelsDataFrame}). This is useful when comparing BAU objects to \code{SpatialPolygon} objects, for instance, when one wishes to trim BAUs based on some polygon. 
 #' @param BAUs An object of class \code{SpatialPixelsDataFrame}.
 #' @export
@@ -220,16 +220,19 @@ setGeneric("remove_basis", function(Basis,rmidx)
 #' set.seed(1)
 #' data <- data.frame(lon = runif(10, 0, 10), 
 #'                    lat = runif(10, 0, 40), 
-#'                    z= rnorm(10))
+#'                    z   = rnorm(10))
+#' ## Create SpatialPixelsDataFrame:
 #' coordinates(data) <- ~ lon + lat
 #' BAUs <- auto_BAUs(manifold = plane(), 
 #'                   cellsize = 0.5, 
 #'                   data=data)
+#' BAUs@bbox # lon comes before lat
 #' \dontrun{plot(BAUs)}
-#' BAUs <- reverse_BAU_coords(BAUs)
+#' BAUs <- reverse_spatial_coords(BAUs)
+#' BAUs@bbox # lat comes before lon
 #' \dontrun{plot(BAUs)}
-setGeneric("reverse_BAU_coords", function(BAUs)
-    standardGeneric("reverse_BAU_coords"))
+setGeneric("reverse_spatial_coords", function(BAUs)
+    standardGeneric("reverse_spatial_coords"))
 
 
 #' @title Remove BAUs 
