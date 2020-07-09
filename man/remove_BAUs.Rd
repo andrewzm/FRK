@@ -2,25 +2,92 @@
 % Please edit documentation in R/AllGeneric.R, R/SREutils.R
 \name{remove_BAUs}
 \alias{remove_BAUs}
+\alias{remove_BAUs,SpatialPoints-method}
+\alias{remove_BAUs,SpatialPointsDataFrame-method}
 \alias{remove_BAUs,SpatialPixelsDataFrame-method}
 \alias{remove_BAUs,STFDF-method}
+\alias{remove_BAUs,STIDF-method}
 \title{Remove BAUs}
 \usage{
-remove_BAUs(BAUs, rmidx)
+remove_BAUs(BAUs, rmidx, redefine_index = FALSE)
 
-\S4method{remove_BAUs}{SpatialPixelsDataFrame}(BAUs, rmidx)
+\S4method{remove_BAUs}{SpatialPoints}(BAUs, rmidx, redefine_index = FALSE)
 
-\S4method{remove_BAUs}{STFDF}(BAUs, rmidx)
+\S4method{remove_BAUs}{SpatialPointsDataFrame}(BAUs, rmidx, redefine_index = FALSE)
+
+\S4method{remove_BAUs}{SpatialPixelsDataFrame}(BAUs, rmidx, redefine_index = FALSE)
+
+\S4method{remove_BAUs}{STFDF}(BAUs, rmidx, redefine_index = FALSE)
+
+\S4method{remove_BAUs}{STIDF}(BAUs, rmidx, redefine_index = FALSE)
 }
 \arguments{
 \item{BAUs}{BAU object.}
 
 \item{rmidx}{indices of spatial basis functions to remove. For spatio-temporal BAUs, the indices of the spatial BAUs (\code{BAUs@sp}) must be provided.}
+
+\item{redefine_index}{Logical indicating whether indexing columns (columns with every element equal to their corresponding row number) of the \code{@data} slot should be redefined post BAU removal to remain as indexing columns. 
+That is, if \code{redefine_index = TRUE}, then indexing columns will be redefined post BAU removal to index the newly created BAUs. Otherwise, the original values of detected indexing columns will be left unchanged.}
 }
 \value{
-\code{BAUs} with specified BAUs removed.
+\code{BAUs} with specified spatial BAUs removed.
 }
 \description{
 Takes a \code{BAU} object returns the \code{BAU} object with selected BAUs removed specified by \code{rmidx}.
 For spatio-temporal BAUs, the indices of the spatial BAUs (\code{BAUs@sp}) must be provided, and the spatio-temporal BAUs corresponding to these spatial BAUs will be removed.
+}
+\examples{
+library("sp")
+library("spacetime")
+df <- data.frame(n = c(1, 2, 3), lon = c(1, 4, 3), 
+                 lat = c(9, 7, 8), z = rnorm(3))
+row.names(df) <- paste("point", 1:nrow(df), sep="")
+
+## SpatialPoints:
+(sp <- SpatialPoints(df))
+remove_BAUs(sp, 1:2) # remove the first two points
+
+## SpatialPointsDataFrame:
+SPointsDF <- df
+coordinates(SPointsDF) <- ~ lon + lat
+SPointsDF
+remove_BAUs(SPointsDF, 1:2)
+remove_BAUs(SPointsDF, 1:2, redefine_index = TRUE)
+
+## SpatialPixelsDataFrame:
+SPixelsDF <- auto_BAUs(manifold = plane(), 
+                       cellsize = 0.5, 
+                       data = SPointsDF)
+## Add a toy data column
+SPixelsDF@data$z <- rnorm(nrow(SPixelsDF))
+head(SPixelsDF@data)
+head(remove_BAUs(SPixelsDF, 1:2)@data)
+
+# ## SpatialPolygonsDataFrame
+# ## FIXME: Haven't finished this yet
+# SPolygonsDF <- BAUs_from_points(SPointsDF)
+# SPolygonsDF
+# remove_BAUs(SPolygonsDF)
+
+## STIDF:
+df$year <- 2001:2003
+df <- within(df, {time = as.Date(paste(year, 06,01,sep="-"))}) 
+STIDF <- stConstruct(x = df, 
+                     space = c("lon", "lat"), 
+                     time = "time", 
+                     interval = TRUE) 
+STIDF@data
+remove_BAUs(STIDF, 1:2)@data
+remove_BAUs(STIDF, 1:2, redefine_index = TRUE)@data
+## STFDF:
+STFDF <- auto_BAUs(manifold = STplane(),   
+                   data = STIDF,         
+                   cellsize = c(0.05, 0.05, 1),    
+                   type = "grid",          
+                   convex = -0.1,          
+                   tunit = "years",        
+                   nonconvex_hull = FALSE) 
+head(STFDF@data)
+head(remove_BAUs(STFDF, 1:2)@data)
+head(remove_BAUs(STFDF, 1:2, redefine_index = TRUE)@data)
 }

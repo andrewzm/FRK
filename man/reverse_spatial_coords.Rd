@@ -3,11 +3,26 @@
 \name{reverse_spatial_coords}
 \alias{reverse_spatial_coords}
 \alias{reverse_spatial_coords,SpatialPixelsDataFrame-method}
+\alias{reverse_spatial_coords,SpatialPointsDataFrame-method}
+\alias{reverse_spatial_coords,SpatialPoints-method}
+\alias{reverse_spatial_coords,SpatialPolygonsDataFrame-method}
+\alias{reverse_spatial_coords,STFDF-method}
+\alias{reverse_spatial_coords,STIDF-method}
 \title{Reverses spatial coordinates}
 \usage{
 reverse_spatial_coords(BAUs)
 
 \S4method{reverse_spatial_coords}{SpatialPixelsDataFrame}(BAUs)
+
+\S4method{reverse_spatial_coords}{SpatialPointsDataFrame}(BAUs)
+
+\S4method{reverse_spatial_coords}{SpatialPoints}(BAUs)
+
+\S4method{reverse_spatial_coords}{SpatialPolygonsDataFrame}(BAUs)
+
+\S4method{reverse_spatial_coords}{STFDF}(BAUs)
+
+\S4method{reverse_spatial_coords}{STIDF}(BAUs)
 }
 \arguments{
 \item{BAUs}{An object of class \code{SpatialPixelsDataFrame}.}
