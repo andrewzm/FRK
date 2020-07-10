@@ -4,11 +4,11 @@
 \alias{.FRKTMB_fit}
 \title{Fitting stage of non-Gaussian FRK.}
 \usage{
-.FRKTMB_fit(M)
+.FRKTMB_fit(M, optimiser, ...)
 }
 \arguments{
 \item{M}{An object of class \code{SRE}.
-The slots of an \code{SRE} object particularly relevant to \code{FRKTMB_fit} are
+The \code{SRE} object slots particularly relevant to \code{FRKTMB_fit} are
 \describe{
   \item{\code{K_type}}{A string indicating the desired formulation of the prior variance/precision matrix of eta.}
   \item{\code{response}}{A string indicating the assumed distribution of the response variable.}
@@ -19,6 +19,10 @@ Furthermore in the case of binomial or negative-binomial response variables,
 the \code{data} slot of \code{M} must contain a column named \code{k}
 which contains the 'known-constant' parameters for each observation
 (the number of trials for binomial data, or the target number of successes for negative-binomial data).}
+
+\item{optimiser}{the optimising function used for model fitting when \code{method = 'TMB'} (default is \code{nlminb}). Users may pass in a function object or a string corresponding to a named function. Optional parameters may be passed to \code{optimiser} via \code{...}. The only requirement of \code{optimiser} is that the first three arguments correspond to the initial parameters, the obejctive function, and the gradient, respectively (note that this may be achieved by rearranging the order of arguments before passing into \code{optimiser})}
+
+\item{...}{other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling \code{FRK}, or the user specified \code{optimiser} function when calling \code{FRK} or \code{SRE.fit}}
 }
 \value{
 This function updates the following slots of \code{M}:
@@ -31,7 +35,6 @@ This function updates the following slots of \code{M}:
   \item{phi}{Estimate of the dispersion parameter (only for applicable response distributions).}
   \item{log_likelihood}{The log-likelihood of the model evaluated at the final parameter estimates. Can be obtained by calling loglik(M).}
 }
-This function also makes the slots \code{K_type}, \code{response}, and \code{link} lower case.
 }
 \description{
 Performs model fitting using \code{TMB}.

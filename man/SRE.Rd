@@ -32,6 +32,7 @@ FRK(
   type = "mean",
   k = NULL,
   percentiles = c(5, 25, 50, 75, 90),
+  optimiser = nlminb,
   ...
 )
 
@@ -62,7 +63,9 @@ SRE.fit(
   tol = 0.01,
   method = c("EM", "TMB"),
   lambda = 0,
-  print_lik = FALSE
+  print_lik = FALSE,
+  optimiser = nlminb,
+  ...
 )
 
 SRE.predict(
@@ -142,7 +145,9 @@ If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are r
 included in the prediction dataframe. If \code{NULL}, 
 no percentiles are computed.}
 
-\item{...}{other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling the function \code{FRK}}
+\item{optimiser}{the optimising function used for model fitting when \code{method = 'TMB'} (default is \code{nlminb}). Users may pass in a function object or a string corresponding to a named function. Optional parameters may be passed to \code{optimiser} via \code{...}. The only requirement of \code{optimiser} is that the first three arguments correspond to the initial parameters, the obejctive function, and the gradient, respectively (note that this may be achieved by rearranging the order of arguments before passing into \code{optimiser})}
+
+\item{...}{other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling \code{FRK}, or the user specified \code{optimiser} function when calling \code{FRK} or \code{SRE.fit}}
 
 \item{normalise_basis}{flag indicating whether to normalise the basis functions so that they reproduce a stochastic process with approximately constant variance spatially}
 

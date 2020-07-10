@@ -37,7 +37,8 @@ FRK <- function(f,                     # formula (compulsory)
                 type = "mean",         
                 k = NULL,              # k used for prediction
                 percentiles = c(5, 25, 50, 75, 90),  # Desired percentiles of the quantitity of interest
-                ...)                   # other arguments for BAUs/basis-function construction
+                optimiser = nlminb,    # Optimiser for fitting (applicable only if method = 'TMB')
+                ...)                   # other arguments for BAUs/basis-function construction, or 
 {
 
     if(!is.list(data))          # Allow for user to supply data as a single object
@@ -160,19 +161,23 @@ FRK <- function(f,                     # formula (compulsory)
              sum_variables = sum_variables,  
              fs_model = fs_model,              # fs model (only "ind" for now)
              vgm_model = vgm_model,            # vgm model for error estimation
-             K_type = K_type)                  # "block-exponential" or "unstructured"
+             K_type = K_type,                  # "block-exponential", "unstructured", "neighbour", "separable"
+             response = response, 
+             link = link)                  
 
     ## After constructing SRE model, fit it
     cat("Fitting SRE model...\n")
     S <- SRE.fit(SRE_model = S,       # SRE model
                  n_EM = n_EM,         # max. no. of EM iterations
                  tol = tol,           # tolerance at which EM is assumed to have converged
-                 method = method,     # method (only "EM" for now)
+                 method = method,     # method ("EM" or "TMB")
                  lambda = lambda,     # regularisation parameter
-                 print_lik=print_lik) # print log-likelihood at each iteration
+                 print_lik = print_lik, # print log-likelihood at each iteration
+                 optimiser = optimiser, 
+                 ...) 
 
     ## Return fitted SRE model
-    S
+    return(S)
 }
 
 

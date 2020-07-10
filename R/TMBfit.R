@@ -5,7 +5,7 @@
 #' (performed internally with \code{\link{.FRKTMB_pred}}).
 #'
 #' @param M An object of class \code{SRE}.
-#' The slots of an \code{SRE} object particularly relevant to \code{FRKTMB_fit} are
+#' The \code{SRE} object slots particularly relevant to \code{FRKTMB_fit} are
 #' \describe{
 #'   \item{\code{K_type}}{A string indicating the desired formulation of the prior variance/precision matrix of eta.}
 #'   \item{\code{response}}{A string indicating the assumed distribution of the response variable.}
@@ -16,6 +16,8 @@
 #' the \code{data} slot of \code{M} must contain a column named \code{k}
 #' which contains the 'known-constant' parameters for each observation
 #' (the number of trials for binomial data, or the target number of successes for negative-binomial data).
+#' @param optimiser the optimising function used for model fitting when \code{method = 'TMB'} (default is \code{nlminb}). Users may pass in a function object or a string corresponding to a named function. Optional parameters may be passed to \code{optimiser} via \code{...}. The only requirement of \code{optimiser} is that the first three arguments correspond to the initial parameters, the obejctive function, and the gradient, respectively (note that this may be achieved by rearranging the order of arguments before passing into \code{optimiser}) 
+#' @param ... other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling \code{FRK}, or the user specified \code{optimiser} function when calling \code{FRK} or \code{SRE.fit}
 #' @return This function updates the following slots of \code{M}:
 #' \describe{
 #'   \item{Q_eta_xi}{An estimate of the joint precision matrix of all random effects in the model (the random weights \eqn{\eta} and observed fine-scale variation \eqn{\xi_O}).}
@@ -26,8 +28,7 @@
 #'   \item{phi}{Estimate of the dispersion parameter (only for applicable response distributions).}
 #'   \item{log_likelihood}{The log-likelihood of the model evaluated at the final parameter estimates. Can be obtained by calling loglik(M).}
 #' }
-#' This function also makes the slots \code{K_type}, \code{response}, and \code{link} lower case.
-.FRKTMB_fit <- function(M) {
+.FRKTMB_fit <- function(M, optimiser, ...) {
 
   # ------ Data preparation ------
 
@@ -46,45 +47,29 @@
   # image(temp)
   # length(temp@x) # number of non-zeros
 
+
   
   # ------ Fitting and Parameter Estimates/Random Effect Predictions ------
 
-  ## the following means we want toprint every parameter passed to obj$fn.
+  ## the following means we want to print every parameter passed to obj$fn.
   obj$env$tracepar <- TRUE
 
   
-  ## Fit the model. We can choose between optim and nlminb. 
-  ## See https://stackoverflow.com/a/53201414 for a small comparison.
-  ## Note that each function has a lower and upper bound argument, which
-  ## may be used to constrain parameter values. This could be useful to 
-  ## prevent NAN and Inf evaluations.
-  ## FIXME: Need to add control.list as an optional argument to the user for 
-  ## controlling fitting. See here for details:
+  ## Fit the model. 
+
+  ## See here for details on nlminb control parameters:
   ## https://www.uni-muenster.de/IT.BennoSueselbeck/s-html/helpfiles/nlminb.control.html
   ## We could simply allow users to specify a list as control.list, then use the nlminb()
   ## function to check that these arguments are valid. 
   
-  # optimiser <- list()
-  # optimiser$functn <- "optim"
-  # optimiser$method <- "L-BFGS-B"
-  # optimiser$control <- list()
+  ## Original fitting code:
+  # fit <- nlminb(obj$par, obj$fn, obj$gr,
+  #               control = list(eval.max = 100, iter.max = 50,
+  #                              abs.tol = 0.01, rel.tol = 0.0001, x.tol = 0.0001))
   
-  # optimiser$functn <- "nlminb"
-  # optimiser$control <- list(eval.max = 100, iter.max = 50,
-  #                           abs.tol = 0.01, rel.tol = 0.0001, x.tol = 0.0001)
-  
-  
-  # if (optimiser$functn == "optim") {
-  #   fit <- optim(obj$par, obj$fn, obj$gr)
-  #   
-  # } else if (optimiser$functn == "nlminb") {
-  #   fit <- nlminb(obj$par, obj$fn, obj$gr,
-  #                 control = optimiser$control)
-  # }
-  
-    fit <- nlminb(obj$par, obj$fn, obj$gr,
-                  control = list(eval.max = 100, iter.max = 50,
-                                 abs.tol = 0.01, rel.tol = 0.0001, x.tol = 0.0001))
+  ## The optimiser should have arguments: start, objective, gradient. 
+  ## The remaining arguments can be control parameters.
+  fit <- optimiser(obj$par, obj$fn, obj$gr, ...)
     
 
   
