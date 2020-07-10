@@ -239,7 +239,7 @@ setGeneric("reverse_spatial_coords", function(BAUs)
 #' @description Takes a \code{BAU} object returns the \code{BAU} object with selected BAUs removed specified by \code{rmidx}.
 #' For spatio-temporal BAUs, the indices of the spatial BAUs (\code{BAUs@sp}) must be provided, and the spatio-temporal BAUs corresponding to these spatial BAUs will be removed.
 #' @param BAUs BAU object.
-#' @param rmidx indices of spatial basis functions to remove. For spatio-temporal BAUs, the indices of the spatial BAUs (\code{BAUs@sp}) must be provided.
+#' @param rmidx indices of spatial basis functions to remove. If the BAUs are of class \code{STFDF}, the indices of the spatial BAUs (\code{BAUs@sp}) must be provided.
 #' @param redefine_index Logical indicating whether indexing columns (columns with every element equal to their corresponding row number) of the \code{@data} slot should be redefined post BAU removal to remain as indexing columns. 
 #' That is, if \code{redefine_index = TRUE}, then indexing columns will be redefined post BAU removal to index the newly created BAUs. Otherwise, the original values of detected indexing columns will be left unchanged.
 #' @export

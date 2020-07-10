@@ -785,10 +785,11 @@ setMethod("reverse_spatial_coords",signature(BAUs="STIDF"),function(BAUs) {
 ## Function to check if columns are "indexing variables".
 ## Returns the indices of these variables in the column names of df.
 .redefine_indexing_variables <- function(data_orig, data_new) {
-
+    
     ## Find the column indices of the indexing variables (if present)
     indexing_variables_idx <- apply(data_orig, 2, function(x) all(x == 1:nrow(data_orig))) %>%
         which()
+    
     
     ## if indexing variables are present, redefine the corresponding column.
     if (length(indexing_variables_idx)) { 
@@ -836,17 +837,42 @@ setMethod("remove_BAUs",signature(BAUs="STFDF"),function(BAUs, rmidx, redefine_i
     ## Hence, we should be able to remove the rows which correspond to rmidx
     ## by adding time to rmidx. 
     ## Also need to maintain space index cycling first. Achieve this by sorting the indcies.
-    n_time     <- length(unique(BAUs@time)) # number of temporal frames
-    n_spat     <- nrow(BAUs@sp@coords)      # number of spatial BAUs
+    n_time     <- length(BAUs@time) # number of temporal frames
+    n_spat     <- nrow(BAUs_orig@sp)      # ORIGINAL number of spatial BAUs
     time_add   <- n_spat * (unique(BAUs@time) - 1) # Terms to add to each rmidx
-    data_rmidx <- (rep(rmidx, each = n_time) + rep(time_add, times = length(rmidx))) %>%
-        sort()
+    data_rmidx<- sort(c(outer(rmidx, time_add, "+")))
     
     BAUs@data <- BAUs@data[-data_rmidx, ]
     
     ## Check for indexing columns in @data slot of BAU object
     ## Note that the first check is for SpatialPoints and SpatialPolygons, each of which 
     ## do not have a @data slot.
+
+    
+    # ## Let's see if its the spatial object
+    # ## Check correct number of BAUs removed:
+    # length(rmidx) == nrow(BAUs_orig@sp@coords) - nrow(BAUs@sp@coords)
+    # 
+    # ## So number of spatial BAUs is ok. Assuming number of time indices is correct, 
+    # ## the number of ST BAUs we should have is:
+    # nrow(BAUs@sp) * length(BAUs@time)
+    # 
+    # ## However, we have:
+    # nrow(BAUs@data)
+    # ## Hence, we have too many (not enough BAUs are being removed). 
+    # 
+    # ## Number of ST BAUs we should have removed:
+    # nrow(BAUs_orig@data) - nrow(BAUs@sp) * length(BAUs@time)
+    # 
+    # 
+    # ## Number of ST BAUs actually removed:
+    # nrow(BAUs_orig@data) - nrow(BAUs@data)
+    # 
+    # ## Interesting: the number of removed indices is correct. 
+    # length(data_rmidx)
+    # 
+    # ## This suggests there are duplicates. 
+    # length(unique(data_rmidx))
     
     if ("data" %in% slotNames(class(BAUs_orig)) & redefine_index)
         BAUs@data <- .redefine_indexing_variables(BAUs_orig@data, BAUs@data)
