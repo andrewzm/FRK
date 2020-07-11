@@ -24,14 +24,15 @@ FRK <- function(f,                     # formula (compulsory)
                 sum_variables = NULL,  # variables to sum rather than average
                 fs_model = "ind",      # fine-scale variation component
                 vgm_model = NULL,      # variogram model for error estimation
-                K_type = "block-exponential", # type of K matrix
+                K_type = c("block-exponential", "neighbour", "unstructured", "separable"), # type of K matrix
                 n_EM = 100,            # max. no. of EM iterations
                 tol = 0.01,            # tolerance at which EM is assumed to have converged
-                method = "EM",         # method for parameter estimation
+                method = c("EM", "TMB"),         # method for parameter estimation
                 lambda = 0,            # regularisation parameter
                 print_lik = FALSE,     # print log-likelihood at each iteration
-                response = "gaussian", 
-                link = "identity", 
+                response = c("gaussian", "poisson", "bernoulli", "gamma",
+                             "inverse-gaussian", "negative-binomial", "binomial"), 
+                link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"),
                 taper = 4,
                 n_MC = 400, 
                 type = "mean",         
@@ -44,13 +45,32 @@ FRK <- function(f,                     # formula (compulsory)
     if(!is.list(data))          # Allow for user to supply data as a single object
         data <- list(data)      # If he/she does then put it into a list
 
+    
+    ## Strings that must be lower-case (this allows users to enter 
+    ## response = "Gaussian", for example, without causing issues)
+    response  <- tolower(response)
+    link      <- tolower(link)
+    K_type    <- tolower(K_type)
+
+    ## Match arguments/function
+    K_type    <- match.arg(K_type)
+    response  <- match.arg(response)
+    link      <- match.arg(link)
+    method    <- match.arg(method)
+    optimiser <- match.fun(optimiser)
+    
     .check_args_wrapper(f = f,              # check that the arguments are OK for SRE
                         data = data,
                         basis = basis,
                         BAUs = BAUs,
                         est_error = est_error)
-    .check_args2(...)                      # check that the arguments are OK for SRE.fit
-    .check_args3(...)                      # check that the arguments are OK for prediction
+    
+    # check that the arguments are OK for SRE.fit
+    .check_args2(n_EM = n_EM, tol = tol, method = method, print_lik = print_lik, 
+                 response = response, link = link, K_type = K_type, optimiser = optimiser, ...)                      
+    
+    # check that the arguments are OK for prediction
+    .check_args3(...)                      
 
     ## if there is a measurement error declared in all datasets then
     ## don't estimate it

@@ -54,25 +54,16 @@
   ## the following means we want to print every parameter passed to obj$fn.
   obj$env$tracepar <- TRUE
 
-  
   ## Fit the model. 
 
   ## See here for details on nlminb control parameters:
   ## https://www.uni-muenster.de/IT.BennoSueselbeck/s-html/helpfiles/nlminb.control.html
-  ## We could simply allow users to specify a list as control.list, then use the nlminb()
-  ## function to check that these arguments are valid. 
-  
-  ## Original fitting code:
-  # fit <- nlminb(obj$par, obj$fn, obj$gr,
-  #               control = list(eval.max = 100, iter.max = 50,
-  #                              abs.tol = 0.01, rel.tol = 0.0001, x.tol = 0.0001))
   
   ## The optimiser should have arguments: start, objective, gradient. 
-  ## The remaining arguments can be control parameters.
+  ## The remaining arguments can be whatever.
   fit <- optimiser(obj$par, obj$fn, obj$gr, ...)
     
 
-  
   ## Log-likeihood
   log_likelihood <- -obj$fn() # could also use - fit$objective
   

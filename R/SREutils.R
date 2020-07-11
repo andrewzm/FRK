@@ -114,7 +114,7 @@
 SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                 sum_variables = NULL,
                 fs_model = "ind", vgm_model = NULL, 
-                K_type = c("block-exponential", "neighbour", "unstructured", "separable", "precision_exp", "latticekrig"), 
+                K_type = c("block-exponential", "neighbour", "unstructured", "separable"), 
                 normalise_basis = TRUE, 
                 response = c("gaussian", "poisson", "bernoulli", "gamma",
                              "inverse-gaussian", "negative-binomial", "binomial"), 
@@ -385,39 +385,9 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     
     ## Check the arguments are OK
     .check_args2(n_EM = n_EM, tol = tol, method = method, print_lik = print_lik, 
-                 SRE_model = SRE_model) # need SRE_model to test method with response, link, and K_type
+                 response = SRE_model@response, link = SRE_model@link, K_type = SRE_model@K_type,
+                 optimiser = optimiser, ...) # control parameters to optimiser() 
 
-    ## Check optional parameters to optimiser function are ok:
-    l <- list(...)
-    
-    # The ellipsis argument in the wrapper FRK() allows users to pass in
-    # optional parameters to auto_BAUs() and auto_basis(). This means that
-    # we must check whether the parameters in ... match the formal parameters
-    # of optimiser, auto_BAUs, and auto_basis.
-    # This is not ideal, as the ... argument in SRE.fit() is present solely
-    # for optimiser(), and so when SRE.fit() is called, we should really only
-    # try to match with the parameters of optimiser.
-    # FIXME: check with Andrew if it is possible to determine whether the user
-    # has called FRK() or SRE.fit() directly.
-    
-    valid_param_names <- c(names(formals(auto_BAUs)), 
-                           names(formals(auto_basis)), 
-                           names(formals(optimiser)))
-    
-    if(!all(names(l) %in% valid_param_names)) {
-        stop(cat("Optional arguments for optimiser function not matching declared arguments.
-             It is also possible that you have misspelt an argument to SRE.fit() or FRK().
-             Offending arguments:", names(l)[!(names(l) %in% valid_param_names)]))
-    }
-    
-    
-    
-    # if(!all(names(l) %in% names(formals(optimiser)))) {
-    #     stop(cat("Optional arguments for optimiser function not matching declared arguments.
-    #          It is also possible that you have misspelt an argument to SRE.fit().
-    #          Offending arguments:", names(l)[!(names(l) %in% names(formals(optimiser)))]))
-    # }
-    
     
     ## Check if control argument is set. If not, add some default values:
     ## Note that this solution is not finished, it is only the start.
@@ -457,7 +427,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     if(!is.null(pred_polys))
         newdata <- pred_polys
     
-    ## The user can either provide k in M@BAUs$k or in the predict call. 
+    ## The user can either provide k in M@BAUs$k or in the predict call.
     ## This is so that the user can change k without having to call SRE() and SRE.fit() again.
     ## The k supplied in predict() will take precedence over the k stored in M@BAUs$k.
     if (SRE_model@response %in% c("binomial", "negative-binomial")){
@@ -469,9 +439,8 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                 k <- 1
                 warning("k not provided for prediction: assuming k is equal to 1 for all BAUs.")
             }
-        } 
+        }
     }
-    
 
     ## Check the arguments are OK
     .check_args3(obs_fs = obs_fs, newdata = newdata, pred_polys = pred_polys,
@@ -2076,7 +2045,9 @@ setMethod("remove_BAUs",signature(BAUs="STIDF"),function(BAUs, rmidx, redefine_i
 
 
 ## Checks arguments for the SRE.fit() function. Code is self-explanatory
-.check_args2 <- function(n_EM = 100L, tol = 0.01, lambda = 0, method = "EM", print_lik = FALSE, SRE_model, ...) {
+.check_args2 <- function(n_EM = 100L, tol = 0.01, lambda = 0, method = "EM", print_lik = FALSE, 
+                         response = "gaussian", link = "identity", K_type = "block-exponential",
+                         optimiser, ...) {
     if(!is.numeric(n_EM)) stop("n_EM needs to be an integer")
     if(!(n_EM <- round(n_EM)) > 0) stop("n_EM needs to be greater than 0")
     if(!is.numeric(tol)) stop("tol needs to be a number greater than zero")
@@ -2087,21 +2058,38 @@ setMethod("remove_BAUs",signature(BAUs="STIDF"),function(BAUs, rmidx, redefine_i
     
     if(!(method %in% c("EM", "TMB"))) stop("Currently only the EM algorithm or TMB are implemented for parameter estimation.")
     
-    if(!missing(SRE_model)) {
-        if(method == "EM" & !(SRE_model@response == "gaussian")) stop("The EM algorithm is only available for response = 'gaussian'. Please use method = 'TMB' for all other assumed response distributions.")
-        if(method == "EM" & !(SRE_model@link == "identity")) stop("The EM algorithm is only available for link = 'identity'. Please use method = 'TMB' for all other link functions.")
-        if(method == "EM" & SRE_model@K_type == "neighbour") stop("The neighbour matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
-        if(method == "EM" & SRE_model@K_type == "separable") stop("The separable spatial model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
-        if(method == "EM" & SRE_model@K_type == "precision_exp") stop("The exponential precision matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
-        if(method == "EM" & SRE_model@K_type == "latticekrig") stop("The LatticeKrig precision matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
-    }
+    if(method == "EM" & !(response == "gaussian")) stop("The EM algorithm is only available for response = 'gaussian'. Please use method = 'TMB' for all other assumed response distributions.")
+    if(method == "EM" & !(link == "identity")) stop("The EM algorithm is only available for link = 'identity'. Please use method = 'TMB' for all other link functions.")
+    if(method == "EM" & K_type == "neighbour") stop("The neighbour matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
+    if(method == "EM" & K_type == "separable") stop("The separable spatial model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
+
+    ## Check optional parameters to optimiser function are ok:
+    l <- list(...)
     
+    # The ellipsis argument in the wrapper FRK() allows users to pass in
+    # optional parameters to auto_BAUs() and auto_basis(). This means that
+    # we must check whether the parameters in ... match the formal parameters
+    # of optimiser, auto_BAUs, and auto_basis.
+    # This is not ideal, as the ... argument in SRE.fit() is present solely
+    # for optimiser(), and so when SRE.fit() is called, we should really only
+    # try to match with the parameters of optimiser.
+    
+    valid_param_names <- c(names(formals(auto_BAUs)), 
+                           names(formals(auto_basis)), 
+                           names(formals(optimiser)))
+
+    if(!all(names(l) %in% valid_param_names)) {
+        msg1 <- "Optional arguments for auto_BAUs(), auto_basis(), or optimiser function not matching declared arguments. It is also possible that you have misspelt an argument to SRE.fit() or FRK(). Offending arguments:"
+        msg2 <- names(l)[!(names(l) %in% valid_param_names)]
+        stop(paste(c(msg1, msg2), collapse = " "))
+    }
 }
 
 ## Checks arguments for the predict() function. Code is self-explanatory
 .check_args3 <- function(obs_fs = FALSE, newdata = NULL, pred_polys = NULL,
                          pred_time = NULL, covariances = FALSE, SRE_model, type, 
                          k, percentiles, ...) {
+    
     if(!(obs_fs %in% 0:1)) stop("obs_fs needs to be logical")
 
     if(!(is(newdata,"Spatial") | (is(newdata,"ST")) | is.null(newdata)))
@@ -2116,8 +2104,7 @@ setMethod("remove_BAUs",signature(BAUs="STIDF"),function(BAUs, rmidx, redefine_i
     if(!(is.integer(pred_time) | is.null(pred_time))) stop("pred_time needs to be of class integer")
     if(!is.logical(covariances)) stop("covariances needs to be TRUE or FALSE")
     
-    
-    
+
     if(!missing(SRE_model)){
         
         ## Check k (for predictions)

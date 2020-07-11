@@ -24,7 +24,7 @@ remove_BAUs(BAUs, rmidx, redefine_index = FALSE)
 \arguments{
 \item{BAUs}{BAU object.}
 
-\item{rmidx}{indices of spatial basis functions to remove. For spatio-temporal BAUs, the indices of the spatial BAUs (\code{BAUs@sp}) must be provided.}
+\item{rmidx}{indices of spatial basis functions to remove. If the BAUs are of class \code{STFDF}, the indices of the spatial BAUs (\code{BAUs@sp}) must be provided.}
 
 \item{redefine_index}{Logical indicating whether indexing columns (columns with every element equal to their corresponding row number) of the \code{@data} slot should be redefined post BAU removal to remain as indexing columns. 
 That is, if \code{redefine_index = TRUE}, then indexing columns will be redefined post BAU removal to index the newly created BAUs. Otherwise, the original values of detected indexing columns will be left unchanged.}
