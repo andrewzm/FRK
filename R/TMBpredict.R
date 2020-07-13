@@ -25,7 +25,7 @@
   # ---- Create objects needed thoughout the function ----
   
   ## Id of observed BAUs
-  obsidx <- apply(M@Cmat, 1, function(x) which(x == 1))
+  obsidx <- observed_BAUs(M)
   
   #### The covariate design matrix, X (at the BAU level i.e. for all BAUs)
   
@@ -141,7 +141,7 @@
   }
 
   
-  # ---- CHECK: Add a column indicating the time point in space-time setting ----
+  # ---- CHECK WITH ANDREW: Add a column indicating the time point in space-time setting ----
   
   if (is(M@basis,"TensorP_Basis")) {
     newdata$t <- M@BAUs@data$t
@@ -410,8 +410,8 @@
   if (M@response == "poisson") {
     Z_samples <- rpois(n = N * n_MC, lambda = c(t(mu_samples)))
   } else if (M@response == "gaussian") {
-    sigma_e <- sqrt(M@Ve[1, 1]) # measurement error variance
-    Z_samples <- rnorm(n = N * n_MC, mean = c(t(mu_samples)), sd = sigma_e)
+    sigma2e <- M@Ve[1, 1] # measurement error standard deviation
+    Z_samples <- rnorm(n = N * n_MC, mean = c(t(mu_samples)), sd = sqrt(sigma2e))
   } else if (M@response == "bernoulli") {
     Z_samples <- rbinom(n = N * n_MC, size = 1, prob = c(t(mu_samples)))
   } else if (M@response == "gamma") {

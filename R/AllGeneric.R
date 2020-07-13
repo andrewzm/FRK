@@ -303,12 +303,29 @@ setGeneric("remove_BAUs", function(BAUs,rmidx,redefine_index = FALSE)
     standardGeneric("remove_BAUs"))
 
 
+#' @title Indices of observed BAUs
+#' @description Takes an object of class \code{SRE} and returns the indices of the observed BAUs 
+#' @param SRE_model object of class \code{SRE}
+#' @return The indices (a numeric vector) of the observed BAUs
+#' @export
+#' @seealso See \code{\link{unobserved_BAUs}}.
+setGeneric("observed_BAUs", function(SRE_model)
+    standardGeneric("observed_BAUs"))
 
 
+
+#' @title Indices of unobserved BAUs
+#' @description Takes an object of class \code{SRE} and returns the indices of the unobserved BAUs 
+#' @param SRE_model object of class \code{SRE}
+#' @return The indices (a numeric vector) of the unobserved BAUs
+#' @export
+#' @seealso See \code{\link{observed_BAUs}}.
+setGeneric("unobserved_BAUs", function(SRE_model)
+    standardGeneric("unobserved_BAUs"))
 
 
 #' @title Retrieve fit information for SRE model
-#' @description Takes a an object of class \code{SRE} and returns a list containing all the relevant information on parameter estimation
+#' @description Takes an object of class \code{SRE} and returns a list containing all the relevant information on parameter estimation
 #' @param SRE_model object of class \code{SRE}
 #' @export
 #' @seealso See \code{\link{SRE}} for more information on the SRE model and available fitting methods.

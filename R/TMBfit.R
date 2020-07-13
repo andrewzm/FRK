@@ -154,12 +154,15 @@
 
   ## Common to all
   data    <- list(Z = Z, X = X, S = M@S,
-                  sigma2e = M@Ve[1, 1], 
+                  sigma2e = 1, # FIXME: may be able to remove this
                   K_type = M@K_type,
                   response = M@response, 
                   link = M@link,
                   k_Z = k_Z, 
                   temporal = as.integer(is(M@basis,"TensorP_Basis")))
+  
+  if (M@response == "gaussian") 
+    data$sigma2e <- M@Ve[1, 1] # FIXME: may have to change this from simply getting the first element of Ve
 
   ## The location of the stored spatial basis functions depend on whether the 
   ## data is spatio-temporal or not. Here, we also define the number of temporal
@@ -269,8 +272,12 @@
   ## Dispersion parameter depends on response; some require that it is 1. 
   if (M@response %in% c("poisson", "bernoulli", "binomial", "negative-binomial")) {
     parameters$logphi <- log(1)
-  } else {
+  } else if (M@reponse == "gaussian") {
     parameters$logphi <- log(data$sigma2e)
+  } else {
+    ## we may not estimate sigma2e when the data is non-Gaussian, so use the 
+    ## variance of the data as our estimate of the dispersion parameter.
+    parameters$logphi <- log(var(Z0))
   }
   
   parameters$logsigma2      <- log(exp(parameters$logsigma2xi) * (0.1)^(0:(nres - 1)))
@@ -298,7 +305,7 @@
   ## FIXME: Add a check if nres == 4. If so, then it is wise to avoid a solve() here. 
   ## FIXME: perhaps change solve() to chol2inv(chol()). However, this requires positive definite matrix.
   ## FIXME: maybe change this intialisation to be only in terms of Qinit. Currently leave as is because the theory I wrote is in terms of Kinit and the block-exponential.
-  temp  <- data$sigma2e + exp(parameters$logsigma2xi)
+  temp  <- exp(parameters$logphi) + exp(parameters$logsigma2xi) # note that in the Gaussian case, we have parameters$logphi <- log(data$sigma2e)
   if (M@K_type == "block-exponential") {
     KInit <- .K_tap_matrix(M@D_basis,
                            alpha = data$alpha,
@@ -331,8 +338,6 @@
     }
     
   }
-  
-  ## Check that initialisations are equal. 
     
   return(list(data = data, parameters = parameters))
 }

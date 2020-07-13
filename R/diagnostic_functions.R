@@ -58,7 +58,7 @@
 # 
 #   ## If we are interested in out of sample diagnostics, focus on unobserved locations only.
 #   if (out_sample == TRUE) {
-#     obsidx   <- apply(M@Cmat, 1, function(x) which(x == 1)) # Observed BAUs indices
+#     obsidx   <- observed_BAUs(M) # Observed BAUs indices
 #     newdata <- newdata[-obsidx, ]
 #     MC <- lapply(MC, function(x)x[-obsidx,])
 #     true_value <- lapply(true_value, function(x) x[-obsidx])

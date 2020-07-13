@@ -13,7 +13,7 @@ info_fit(SRE_model)
 \item{SRE_model}{object of class \code{SRE}}
 }
 \description{
-Takes a an object of class \code{SRE} and returns a list containing all the relevant information on parameter estimation
+Takes an object of class \code{SRE} and returns a list containing all the relevant information on parameter estimation
 }
 \examples{
 # See example in the help file for SRE

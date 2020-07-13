@@ -215,42 +215,10 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         Z[[i]] <- Matrix(L$y)                     # data values
         Ve[[i]] <- Diagonal(x=data_proc$std^2)    # measurement-error variance
         
-
-
-
-
         ## Construct the incidence matrix mapping data to BAUs. This just returns indices and values which then need to be
         ## assembled into a sparse matrix
         C_idx <- BuildC(data_proc,BAUs)
-        
-        # browser()
-        
-        # head(data_proc@data)
-        # sum(data_proc@data$count)
-        # BAUs$n[data_proc@data$n]
-        # length(BAUs$n)
-        # range(data_proc@data$n)
-        # head(data_proc@data)
-        
-        # ## Row indices:
-        # C_idx$i_idx
-        # length(C_idx$i_idx)
-        # length(unique(C_idx$i_idx))
-        # range(C_idx$i_idx)
-        # sum(is.na(C_idx$i_idx))
-        
-        # ## Column indices:
-        # C_idx$j_idx
-        # length(C_idx$j_idx)
-        # length(unique(C_idx$j_idx))
-        # range(C_idx$j_idx)
-        # sum(is.na(C_idx$j_idx))
 
-        # 
-        # head(data_proc@data)
-        # BAUs
-
-        
         ## Construct the sparse incidence Matrix from above indices. This is the matrix C_Z in the vignette
         Cmat[[i]] <- sparseMatrix(i=C_idx$i_idx,
                                   j=C_idx$j_idx,
@@ -427,9 +395,9 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     if(!is.null(pred_polys))
         newdata <- pred_polys
     
-    ## The user can either provide k in M@BAUs$k or in the predict call.
+    ## The user can either provide k in SRE_model@BAUs$k or in the predict call.
     ## This is so that the user can change k without having to call SRE() and SRE.fit() again.
-    ## The k supplied in predict() will take precedence over the k stored in M@BAUs$k.
+    ## The k supplied in predict() will take precedence over the k stored in SRE_model@BAUs$k.
     if (SRE_model@response %in% c("binomial", "negative-binomial")){
         if (is.null(k)) {
             if (!is.null(SRE_model@BAUs$k)) {
@@ -789,6 +757,34 @@ setMethod("remove_BAUs",signature(BAUs="SpatialPixelsDataFrame"),function(BAUs, 
     return(.remove_spatial_BAUs(BAUs, rmidx, redefine_index))
 })
 
+#' @rdname observed_BAUs
+#' @export
+setMethod("observed_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
+    
+    ## Note that Cmat maps BAUs to the observations. The dimension of SRE_model@Cmat is
+    ## (number of observations) * (number of BAUs).
+    ## CHECK: is x always 1? Or can it be a fraction?
+    obsidx <- apply(SRE_model@Cmat, 1, function(x) which(x == 1))
+    
+    return(obsidx)
+})
+
+
+#' @rdname unobserved_BAUs
+#' @export
+setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
+    
+    ## Id of observed BAUs:
+    obsidx <- observed_BAUs(M)
+    
+    ## Id of unobserved BAUs (ncol(SRE_model@Cmat) is the total number of BAUs):
+    unobsidx <- (1:ncol(SRE_model@Cmat))[-obsidx]
+    
+    return(unobsidx)
+})
+
+
+
 
 
 #' @rdname remove_BAUs
@@ -808,41 +804,14 @@ setMethod("remove_BAUs",signature(BAUs="STFDF"),function(BAUs, rmidx, redefine_i
     ## Also need to maintain space index cycling first. Achieve this by sorting the indcies.
     n_time     <- length(BAUs@time) # number of temporal frames
     n_spat     <- nrow(BAUs_orig@sp)      # ORIGINAL number of spatial BAUs
-    time_add   <- n_spat * (unique(BAUs@time) - 1) # Terms to add to each rmidx
-    data_rmidx<- sort(c(outer(rmidx, time_add, "+")))
+    increment   <- n_spat * 0:(n_time - 1) # Terms to add to each rmidx
+    data_rmidx<- sort(c(outer(rmidx, increment, "+")))
     
     BAUs@data <- BAUs@data[-data_rmidx, ]
     
     ## Check for indexing columns in @data slot of BAU object
     ## Note that the first check is for SpatialPoints and SpatialPolygons, each of which 
     ## do not have a @data slot.
-
-    
-    # ## Let's see if its the spatial object
-    # ## Check correct number of BAUs removed:
-    # length(rmidx) == nrow(BAUs_orig@sp@coords) - nrow(BAUs@sp@coords)
-    # 
-    # ## So number of spatial BAUs is ok. Assuming number of time indices is correct, 
-    # ## the number of ST BAUs we should have is:
-    # nrow(BAUs@sp) * length(BAUs@time)
-    # 
-    # ## However, we have:
-    # nrow(BAUs@data)
-    # ## Hence, we have too many (not enough BAUs are being removed). 
-    # 
-    # ## Number of ST BAUs we should have removed:
-    # nrow(BAUs_orig@data) - nrow(BAUs@sp) * length(BAUs@time)
-    # 
-    # 
-    # ## Number of ST BAUs actually removed:
-    # nrow(BAUs_orig@data) - nrow(BAUs@data)
-    # 
-    # ## Interesting: the number of removed indices is correct. 
-    # length(data_rmidx)
-    # 
-    # ## This suggests there are duplicates. 
-    # length(unique(data_rmidx))
-    
     if ("data" %in% slotNames(class(BAUs_orig)) & redefine_index)
         BAUs@data <- .redefine_indexing_variables(BAUs_orig@data, BAUs@data)
     
@@ -1979,8 +1948,8 @@ setMethod("remove_BAUs",signature(BAUs="STIDF"),function(BAUs, rmidx, redefine_i
     if((is(manifold(basis),"sphere")) & !all((coordnames(BAUs) %in% c("lon","lat"))))
         stop("Since a sphere is being used, please ensure that
              all coordinates (including those of BAUs) are in (lon,lat)")
-    if(!est_error & !all(sapply(data,function(x) "std" %in% names(x@data))))
-        stop("If observational error is not going to be estimated,
+    if(response == "gaussian" & !est_error & !all(sapply(data,function(x) "std" %in% names(x@data))))
+        stop("If the response is Gaussian and observational error is not going to be estimated,
              please supply a field 'std' in the data objects")
     
     #### TMB section
