@@ -1921,12 +1921,13 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
     #     stop("Implementation with Point BAUs is currently in progress")
     
     
-
-    
+    ## When checking for overlapping names, we need to allow the size 
+    ## parameter "k" to be present in the data and the BAUs.
+    BAUs_cov_names_not_k <- names(BAUs@data)[names(BAUs@data) != "k"]
 
     if(!all(all.vars(f)[-1] %in% c(names(BAUs@data),coordnames(BAUs))))
         stop("All covariates need to be in the SpatialPolygons BAU object")
-    if(any(sapply(data,function(x) any(names(x@data) %in% names(BAUs@data)))))
+    if(any(sapply(data,function(x) any(names(x@data) %in% BAUs_cov_names_not_k))))
         stop("Please don't have overlapping variable names in data and BAUs. All covariates need to be in the BAUs")
     if(!all(sapply(data,function(x) all.vars(f)[1] %in% names(x@data))))
         stop("All data list elements to have values for the dependent variable")
