@@ -1091,8 +1091,27 @@ setMethod("show",signature(object="manifold"),function(object) print(object))
 ## Returns a SpatialPointsDataFrame with the points aligned at the BAU centroids
 #' @aliases map_data_to_BAUs,Spatial-method
 setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
-          function(data_sp,sp_pols, average_in_BAU = TRUE, sum_variables = NULL) {
+          function(data_sp, sp_pols, average_in_BAU = TRUE, sum_variables = NULL) {
 
+              # browser()
+              # 
+              # ## Check for NAs in the input arguments
+              # apply(data_sp@data, 2, function(x) any(is.na(x)))
+              # data_sp@coords.nrs
+              # data_sp@bbox
+              # data_sp@proj4string # NA here, but I believe this is standard and not an issue.
+              # 
+              # apply(sp_pols@data, 2, function(x) any(is.na(x)))
+              # apply(sp_pols@data, 2, function(x) sum(is.na(x)))
+              # glimpse(sp_pols@data)
+              # tail(sp_pols@data)
+              # 13734 - 13495 # number of non-NAs
+              # 
+              # ## The vast majority of data in sp_pols is NA.
+              # ## it doesn't seem like the actual polygons have NAs:
+              # sp_pols@polygons[[5000]]
+              
+              
               ## Suppress bindings warnings
               . <- BAU_name <- NULL
 
@@ -1169,7 +1188,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
                   } else 
                       Data_in_BAU <- data_over_sp                       # otherwise don't average
                   })                                                    # end timer
-
+             
 
               ## We now create a new SpatialPointsDataFrame but this time the data
               ## is averaged over the BAUs, and we have at most one data point per BAU

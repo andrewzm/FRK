@@ -68,9 +68,6 @@ FRK <- function(f,                     # formula (compulsory)
     # check that the arguments are OK for SRE.fit
     .check_args2(n_EM = n_EM, tol = tol, method = method, print_lik = print_lik, 
                  response = response, link = link, K_type = K_type, optimiser = optimiser, ...)                      
-    
-    # check that the arguments are OK for prediction
-    .check_args3(...)                      
 
     ## if there is a measurement error declared in all datasets then
     ## don't estimate it

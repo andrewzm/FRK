@@ -193,6 +193,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         ## the same BAU (average_in_BAU == TRUE) or not (average_in_BAU == FALSE)
         cat("Binning data ...\n")
         
+        # browser()
         data_proc <- map_data_to_BAUs(data[[i]],       # data object
                                       BAUs,            # BAUs
                                       average_in_BAU = average_in_BAU, # average in BAU?
@@ -757,36 +758,6 @@ setMethod("remove_BAUs",signature(BAUs="SpatialPixelsDataFrame"),function(BAUs, 
     return(.remove_spatial_BAUs(BAUs, rmidx, redefine_index))
 })
 
-#' @rdname observed_BAUs
-#' @export
-setMethod("observed_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
-    
-    ## Note that Cmat maps BAUs to the observations. The dimension of SRE_model@Cmat is
-    ## (number of observations) * (number of BAUs).
-    ## CHECK: is x always 1? Or can it be a fraction?
-    obsidx <- apply(SRE_model@Cmat, 1, function(x) which(x == 1))
-    
-    return(obsidx)
-})
-
-
-#' @rdname unobserved_BAUs
-#' @export
-setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
-    
-    ## Id of observed BAUs:
-    obsidx <- observed_BAUs(M)
-    
-    ## Id of unobserved BAUs (ncol(SRE_model@Cmat) is the total number of BAUs):
-    unobsidx <- (1:ncol(SRE_model@Cmat))[-obsidx]
-    
-    return(unobsidx)
-})
-
-
-
-
-
 #' @rdname remove_BAUs
 #' @export
 setMethod("remove_BAUs",signature(BAUs="STFDF"),function(BAUs, rmidx, redefine_index = FALSE) {
@@ -839,7 +810,31 @@ setMethod("remove_BAUs",signature(BAUs="STIDF"),function(BAUs, rmidx, redefine_i
 })
 
 
+#' @rdname observed_BAUs
+#' @export
+setMethod("observed_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
+    
+    ## Note that Cmat maps BAUs to the observations. The dimension of SRE_model@Cmat is
+    ## (number of observations) * (number of BAUs).
+    ## CHECK: is x always 1? Or can it be a fraction?
+    obsidx <- apply(SRE_model@Cmat, 1, function(x) which(x == 1))
+    
+    return(obsidx)
+})
 
+
+#' @rdname unobserved_BAUs
+#' @export
+setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
+    
+    ## Id of observed BAUs:
+    obsidx <- observed_BAUs(M)
+    
+    ## Id of unobserved BAUs (ncol(SRE_model@Cmat) is the total number of BAUs):
+    unobsidx <- (1:ncol(SRE_model@Cmat))[-obsidx]
+    
+    return(unobsidx)
+})
 
 
 ##################################
@@ -2047,6 +2042,16 @@ setMethod("remove_BAUs",signature(BAUs="STIDF"),function(BAUs, rmidx, redefine_i
                            names(formals(auto_basis)), 
                            names(formals(optimiser)))
 
+    
+    ## If any of the formals have the same argument - omit the ellipsis "..." from this check
+    optimiser_arg_in_other_functions <- names(formals(optimiser))[names(formals(optimiser)) != "..."] %in% c(names(formals(auto_BAUs)), names(formals(auto_basis)))
+    if(any(optimiser_arg_in_other_functions)) {
+        msg1 <- "The optimiser cannot have arguments which overlap with those of auto_basis() or auto_BAUs(). Offending arguments:"
+        msg2 <- (names(formals(optimiser))[names(formals(optimiser)) != "..."])[which(optimiser_arg_in_other_functions)]
+        stop(paste(c(msg1, msg2), collapse = " "))
+    }
+        
+    
     if(!all(names(l) %in% valid_param_names)) {
         msg1 <- "Optional arguments for auto_BAUs(), auto_basis(), or optimiser function not matching declared arguments. It is also possible that you have misspelt an argument to SRE.fit() or FRK(). Offending arguments:"
         msg2 <- names(l)[!(names(l) %in% valid_param_names)]

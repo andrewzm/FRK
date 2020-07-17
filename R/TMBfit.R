@@ -55,9 +55,6 @@
   obj$env$tracepar <- TRUE
 
   ## Fit the model. 
-
-  ## See here for details on nlminb control parameters:
-  ## https://www.uni-muenster.de/IT.BennoSueselbeck/s-html/helpfiles/nlminb.control.html
   
   ## The optimiser should have arguments: start, objective, gradient. 
   ## The remaining arguments can be whatever.
@@ -65,7 +62,7 @@
     
 
   ## Log-likeihood
-  log_likelihood <- -obj$fn() # could also use - fit$objective
+  log_likelihood <- -obj$fn() # could also use -fit$objective
   
   ## Add the C(Z, phi) terms for one-parameter exponential families
   ## (We do this here rather than in the C++ template because it only need to 
