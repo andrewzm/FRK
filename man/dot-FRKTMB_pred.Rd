@@ -6,6 +6,10 @@
 \usage{
 .FRKTMB_pred(
   M,
+  newdata,
+  CP,
+  predict_BAUs,
+  pred_time,
   type = "mean",
   n_MC = 400,
   obs_fs = FALSE,
@@ -15,6 +19,14 @@
 }
 \arguments{
 \item{M}{An object of class SRE.}
+
+\item{newdata}{object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified}
+
+\item{CP}{Polygon prediction matrix}
+
+\item{predict_BAUs}{Logical indicating whether or not we are predicting over the BAUs.}
+
+\item{pred_time}{Not sure what this does yet! Ask Andrew.}
 
 \item{type}{A character string (possibly vector) indicating the quantities for which predictions and prediction uncertainty is desired.
 If \code{"link"} is in \code{type}, the latent \eqn{Y} process is included; 
@@ -31,15 +43,13 @@ If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{
 If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}.}
 
 \item{percentiles}{A vector containing the desired percentiles which will be 
-included in the prediction dataframe. If \code{NULL}, 
-no percentiles are computed.}
+included in the prediction dataframe. If \code{NULL}, no percentiles are computed.}
 }
 \value{
 A list object containing:
 \describe{
   \item{newdata}{A dataframe with predictions and prediction uncertainty at each prediction location of the latent \eqn{Y} process, the conditional mean of the data \eqn{\mu}, the probability of success parameter \eqn{\pi} (if applicable), and the response variable \eqn{Z}. The dataframe also contains percentiles of each term.}
   \item{MC}{A list with each element being an \code{N * n_MC} matrix of Monte Carlo samples of the quantities specified by \code{type} (some combination of \eqn{Y}, \eqn{\mu}, \eqn{p} (if applicable), and \eqn{Z}) at each prediction location.}
-  \item{pred_time}{A list of timings for each step in the prediction stage.}
 }
 Note that for all link functions other than the log-link and identity-link, the predictions and prediction uncertainty of \eqn{\mu} contained in \code{newdata} are computed using the Monte Carlo samples contained in \code{MC}.
 When the log- or identity-link functions are used the expectation and variance of the \eqn{\mu} may be computed exactly.

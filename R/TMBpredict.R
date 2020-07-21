@@ -3,6 +3,10 @@
 #' @inheritParams .Y_var
 #' @inheritParams .MC_sampler
 #' @inheritParams .concat_percentiles_to_df
+#' @param newdata object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified
+#' @param CP Polygon prediction matrix
+#' @param predict_BAUs Logical indicating whether or not we are predicting over the BAUs.
+#' @param pred_time Not sure what this does yet! Ask Andrew.
 #' @param type A character string (possibly vector) indicating the quantities for which predictions and prediction uncertainty is desired.
 #' If \code{"link"} is in \code{type}, the latent \eqn{Y} process is included; 
 #' If \code{"mean"} is in \code{type}, the conditional mean \eqn{\mu} is included (and the probability parameter if applicable);
@@ -12,16 +16,34 @@
 #' \describe{
 #'   \item{newdata}{A dataframe with predictions and prediction uncertainty at each prediction location of the latent \eqn{Y} process, the conditional mean of the data \eqn{\mu}, the probability of success parameter \eqn{\pi} (if applicable), and the response variable \eqn{Z}. The dataframe also contains percentiles of each term.}
 #'   \item{MC}{A list with each element being an \code{N * n_MC} matrix of Monte Carlo samples of the quantities specified by \code{type} (some combination of \eqn{Y}, \eqn{\mu}, \eqn{p} (if applicable), and \eqn{Z}) at each prediction location.}
-#'   \item{pred_time}{A list of timings for each step in the prediction stage.}
 #' }
 #' Note that for all link functions other than the log-link and identity-link, the predictions and prediction uncertainty of \eqn{\mu} contained in \code{newdata} are computed using the Monte Carlo samples contained in \code{MC}.
 #' When the log- or identity-link functions are used the expectation and variance of the \eqn{\mu} may be computed exactly.
-.FRKTMB_pred <- function(M, type = "mean", n_MC = 400, obs_fs = FALSE, 
+.FRKTMB_pred <- function(M, 
+                         newdata, CP, predict_BAUs, pred_time,
+                         type = "mean", n_MC = 400, obs_fs = FALSE, 
                          k = NULL, 
                          percentiles = c(5, 25, 50, 75, 95)) {
   
-  pred_time <- list()
+
+  #  ## FIXME: drop unneeded BAUs if predict_BAUs == FALSE
   
+  # ## If the user has specified which polygons he wants we can remove the ones we don't need
+  # ## We only need those BAUs that are influenced by observations and prediction locations
+  # ## For ST use all BAUs as it gets complicated
+  # if(is(newdata,"Spatial")) {
+  #   
+  #   ## The needed BAUs are the nonzero column indices of CZ and CP
+  #   needed_BAUs <- as(CP,"dgTMatrix")@j
+  #   
+  #   ## Filter the BAUs and the matrices
+  #   ## (Note that we do not update the SRE object so this is safe to do)
+  #   M@BAUs <- M@BAUs[needed_BAUs, ]
+  #   CP <- CP[, needed_BAUs]
+  #   # CZ <- CZ[, needed_BAUs]
+  #   M@S0 <- M@S0[needed_BAUs, ]
+  # }
+
   # ---- Create objects needed thoughout the function ----
   
   ## Id of observed BAUs
@@ -41,20 +63,18 @@
   X <- as(L$X,"Matrix")
   M@BAUs[[depname]] <- NULL
   
+  ## Clean environment
   rm(depname, L)
   
-  # ---- Computed the Cholesky factor of the permuted precision matrix ----
+  # ---- Compute the Cholesky factor of the permuted precision matrix ----
   
   ## Permuted Cholesky factor
-  pred_time$compute_cholesky_factor <- system.time(
-    Q_L <- sparseinv::cholPermute(Q = M@Q_eta_xi)
-  )
+  Q_L <- sparseinv::cholPermute(Q = M@Q_eta_xi)
+  
   
   # ------ Latent process Y prediction and Uncertainty ------
   
   ## Note that this does NOT depend on the response of Z.
-  
-  pred_time$Y_pred_and_uncertainty <- system.time({
     
   #### Posterior expectation E(Y|Z) at each prediction location.
   ## large- and medium-scale variation terms:
@@ -67,93 +87,182 @@
   ## Note that MSPE(E(Y|Z), Y) is approximated by var(Y|Z).
 
   MSPE_Y  <- .Y_var(M = M, Q_L = Q_L, obsidx = obsidx) 
-  })
   
-  # ------ Conditional mean (mu) prediction and uncertainty ------
+  # ------ Monte Carlo sampling ------
   
-  ## Compute Monte Carlo samples of conditional mean at each location
-  pred_time$MC_sample_total <- system.time(
-    MC <- .MC_sampler(M = M, X = X, type = type, obs_fs = obs_fs, 
-                      n_MC = n_MC, k = k, Q_L = Q_L, obsidx = obsidx)
-  ) 
+  ## Generate Monte Carlo samples at all BAUs
+  MC <- .MC_sampler(M = M, X = X, type = type, obs_fs = obs_fs, 
+                    n_MC = n_MC, k = k, Q_L = Q_L, obsidx = obsidx)
 
-  pred_time$MC_sample_backsolve <- MC$times$backsolve # time of backsolve specifically
-  
-  # ------ Create Prediction Dataframe ------
-  
-  ## This dataframe contains x and y, the spatial locations, of every BAU. 
-  newdata <- as.data.frame(coordinates(M@BAUs)) 
-  rownames(newdata) <- NULL
-  
-  ## Latent Y-process
-  if ("link" %in% type) {
-    newdata$p_Y     <- p_Y          
-    newdata$RMSPE_Y <- sqrt(MSPE_Y) 
-    newdata <- .concat_percentiles_to_df(X = MC$Y_samples, df = newdata, 
-                                         name = "Y", percentiles = percentiles)  
-  }
-  
-  ## If Y is the ONLY quantity of interest, exit the function.
-  if (!("mean" %in% type) && !("response" %in% type)) return(list(newdata = newdata, MC = MC)) 
-  
-  ## Conditional mean of the data, mu
-  ## If a log- or identity-link function is used, then expectations and variance
-  ## of the conditional mean may be evaluated analytically.
-  ## Otherwise, use the Monte Carlo simulations for prediction.
-  if (M@link == "log" & M@response != "negative-binomial") {
-    p_mu         <- exp(p_Y + MSPE_Y / 2)
-    RMSPE_mu     <- sqrt((exp(MSPE_Y) - 1) * exp(2 * p_Y + MSPE_Y))
-  } else if (M@link == "log" & M@response == "negative-binomial") {
-    p_mu         <- M@BAUs$k * exp(p_Y + MSPE_Y / 2)
-    RMSPE_mu     <- M@BAUs$k * sqrt((exp(MSPE_Y) - 1) * exp(2 * p_Y + MSPE_Y))
-  } else if (M@link == "identity") {
-    p_mu <- p_Y
-    RMSPE_mu <- sqrt(MSPE_Y)
-  } else {
-    p_mu         <- rowMeans(MC$mu_samples)
-    RMSPE_mu     <- sqrt(.rowVars(MC$mu_samples))
-  }
-  
-  ## Output mu (and prob) predictions if it is requested
-  if ("mean" %in% type) {
-    newdata$p_mu <- p_mu
-    newdata$RMSPE_mu <- RMSPE_mu
-    newdata <- .concat_percentiles_to_df(X = MC$mu_samples, df = newdata, 
-                                         name = "mu", percentiles = percentiles)
+
+  # ---- Predicting over arbitrary polygons ----
+
+  if (!predict_BAUs) {
+    CP_dgT <- as(CP, "dgTMatrix")
     
-    ## For some response distributions, the probability of success parameter 
-    ## was also computed (and is not equal to the conditonal mean, as is the 
-    ## case for the Bernoulli distribution). 
-    if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
-      newdata$p_prob     <- rowMeans(MC$prob_samples)
-      newdata$RMSPE_prob <- sqrt(.rowVars(MC$prob_samples))
-      newdata <- .concat_percentiles_to_df(X = MC$prob_samples, df = newdata, 
-                                           name = "prob", percentiles = percentiles)
+    ## Make a list where the ith element contains the vector of indices 
+    ## indicating the BAUs which overlap the ith prediction polygon.
+    row_indices <- CP_dgT@i + 1
+    col_indices <- CP_dgT@j + 1
+    polygon_MC_samples <- list()
+    for (i in 1:nrow(CP_dgT)) {
+      ## Find the BAUs corresponding to the ith polygon
+      ## FIXME: i think there is a more efficient way to do this (perhaps by not converting to dgTmatrix and using the other format)
+      polygon_BAU_idx <- col_indices[row_indices == i] 
+      
+      ## Now subset the MC samples to include only those BAUs in the ith polygon
+      ## We make a list of lists of matrices 
+      ## (each sub list corresponds to a prediction polygon, 
+      ## and each matrix corresponds to Y, mu, or Z Monte Carlo samples)
+      polygon_MC_samples[[i]] <- lapply(MC, function(X) X[polygon_BAU_idx, ])
     }
-  }
   
-  ## Response variable, Z
-  if ("response" %in% type){
-    newdata$p_Z <- p_mu 
-    newdata$RMSPE_Z <- sqrt(.rowVars(MC$Z_samples))
-    newdata <- .concat_percentiles_to_df(X = MC$Z_samples, df = newdata, 
-                                         name = "Z", percentiles = percentiles) 
+    ## The structure of this object is:
+    ##                        -- Y
+    ##       -- Polygon 1 --| -- mu
+    ##     |                  -- Z
+    ## L --|
+    ##     |                  -- Y
+    ##       -- Polygon 2 --| -- mu
+    ##                        -- Z
+    
+    ## Convert from a list of lists of matrices to a list of lists of vectors. 
+    ## Note that the lengths of the vectors are different (because each polygon
+    ## may overlap a different number of BAUs), so we cannot compact further into 
+    ## simply a list of matrices.
+    polygon_MC_samples <- lapply(polygon_MC_samples, function(L) lapply(L, c))
+    
+    ## The above object is grouped by polygon. That is, each element of the list corresponds to a polygon, 
+    ## and each sub element corresponds to either the Y, mu, or Z samples. 
+    ## Now we will reverse this order so that we first group by the type of MC samples, and THEN by polygon. 
+    ## This new ordering is more aligned with how we are storing the MC samples when we predict over BAUs.
+    ##                 -- Polygon 1
+    ##       -- Y  --| -- Polygon 2
+    ##     |           -- Polygon 3
+    ## L --|
+    ##     |           -- Polygon 1
+    ##       -- mu --| -- Polygon 2
+    ##                 -- Polygon 3
+    MC <- do.call(function(...) Map(list, ...), polygon_MC_samples)
+    ## FIXME: it seems inefficient to go from one hierarchy structure, reverse it, and then reverse again.
+    ## Surely I can just go straight from the original BAU MC object to this MC object without the change of hierarchy in between. 
+
   }
 
   
-  # ---- CHECK WITH ANDREW: Add a column indicating the time point in space-time setting ----
+  # ------ Create Prediction data ------
+
+  ## Idea: if we are predicting at BAUs, CP will simply be the identity matrix, 
+  ## so multiplying by CP will be inconsequential. 
   
+  ## Produce prediction and RMSPE matrices. 
+  ## The columns are the quantity of interest (Y, mu, prob, or Z) and the rows are prediction locations.
+  ## If we are predicting over the BAUs, the Monte Carlo samples are easy to 
+  ## store as matrices. Otherwise, MC will be a list of lists.
+  if (predict_BAUs) {
+    predictions <- sapply(MC, rowMeans)
+    RMSPE <- sapply(MC, apply, 1, sd)
+  } else {
+    predictions <- sapply(MC, function(L) sapply(L, mean))
+    RMSPE <- sapply(MC, function(L) sapply(L, sd))
+  }
+  
+  ## If we are predicting over BAUs, newdata is NULL, so set it to the BAUs
+  if (predict_BAUs)
+    newdata <- M@BAUs 
+  
+  ## Now update newdata with the predictions, RMSPE, and percentiles. 
+  ## Note that I do them separately as I think it is easier to read if they are in order 
+  ## (i.e., have all predictions together, all RMSPE together, all percentiles together). 
+  ## We may change this later.
+  if ("link" %in% type) newdata$p_Y <- predictions[, "Y_samples"]
+  if ("mean" %in% type) newdata$p_mu <- predictions[, "mu_samples"]
+  if ("mean" %in% type & "prob_samples" %in% colnames(predictions)) newdata$p_prob <- predictions[, "prob_samples"]
+  if ("response" %in% type) newdata$p_Z <- predictions[, "Z_samples"]
+  
+
+  if ("link" %in% type) newdata$RMSPE_Y <- RMSPE[, "Y_samples"]
+  if ("mean" %in% type) newdata$RMSPE_mu <- RMSPE[, "mu_samples"]
+  if ("mean" %in% type & "prob_samples" %in% colnames(predictions)) newdata$RMSPE_prob <- RMSPE[, "prob_samples"]
+  if ("response" %in% type) newdata$RMSPE_Z <- RMSPE[, "Z_samples"]
+  
+  
+  if ("link" %in% type) 
+    newdata@data <-  .concat_percentiles_to_df(data = newdata@data, X = MC$Y_samples, 
+                                               name = "Y", percentiles = percentiles)
+  
+  if ("mean" %in% type) 
+    newdata@data <-  .concat_percentiles_to_df(data = newdata@data, X = MC$mu_samples, 
+                                               name = "mu", percentiles = percentiles)
+  
+  if ("mean" %in% type & "prob_samples" %in% colnames(predictions)) 
+    newdata@data <-  .concat_percentiles_to_df(data = newdata@data, X = MC$prob_samples, 
+                                               name = "prob", percentiles = percentiles)
+  
+  if ("response" %in% type) 
+    newdata@data <-  .concat_percentiles_to_df(data = newdata@data, X = MC$Z_samples, 
+                                               name = "Z", percentiles = percentiles)
+  
+  
+
+  ## Previous code: The main difference is that here we use p_Y and MSPE_Y 
+  ## rather than the Y_samples in MC, and that for some link functions (namely
+  ## the identity and lok link functions), we can analytically compute the mean. 
+  ## It would be good to retain these optimisations, but I will come back to this later.
+  ## Note that we always need to compute the MC samples, so we won't really save any time by doing this.
+  ## I suppose if percentiles = NULL we do not actually need to compute the MC samples.
+  # if (predict_BAUs) {
+  # 
+  #   ## The latent Y process
+  #   if ("link" %in% type) {
+  #     newdata$p_Y     <- p_Y   
+  #     newdata$RMSPE_Y <- sqrt(MSPE_Y)
+  #     newdata@data <- .concat_percentiles_to_df(X = MC$Y_samples, data = newdata@data,
+  #                                          name = "Y", percentiles = percentiles)
+  #   }
+  #   
+  #   ## If Y is the only quantity of interest, exit the function.
+  #   if (!("mean" %in% type) & !("response" %in% type)) 
+  #     return(list(newdata = newdata, MC = MC)) 
+  #   
+  #   ## Conditional mean of the data, mu
+  #   ## If a log- or identity-link function is used, then expectations and variance
+  #   ## of the conditional mean may be evaluated analytically.
+  #   ## Otherwise, use the Monte Carlo simulations for prediction.
+  #   if (M@link == "log" & M@response != "negative-binomial") {
+  #     p_mu         <- exp(p_Y + MSPE_Y / 2)
+  #     RMSPE_mu     <- sqrt((exp(MSPE_Y) - 1) * exp(2 * p_Y + MSPE_Y))
+  #   } else if (M@link == "log" & M@response == "negative-binomial") {
+  #     p_mu         <- k * exp(p_Y + MSPE_Y / 2)
+  #     RMSPE_mu     <- k * sqrt((exp(MSPE_Y) - 1) * exp(2 * p_Y + MSPE_Y))
+  #   } else if (M@link == "identity") {
+  #     p_mu <- p_Y
+  #     RMSPE_mu <- sqrt(MSPE_Y)
+  #   } else {
+  #     ## USE THE SAMPLES.
+  #   }
+  #   
+  #   ## Output mu (and prob) predictions if it is requested
+  #   if ("mean" %in% type) {
+  #     newdata$p_mu <- p_mu
+  #     newdata$RMSPE_mu <- RMSPE_mu
+  #     newdata@data <- .concat_percentiles_to_df(X = MC$mu_samples, data = newdata@data,
+  #                                               name = "mu", percentiles = percentiles)
+  #   }
+  # } 
+  
+  # ---- Add a column indicating the time point in space-time setting ----
+  
+  ## FIXME: check this with Andrew
+  ## FIXME: how does pred_time come into play? I think that when newdata is not 
+  ## NULL, pred_time will give the time indicies to use.
   if (is(M@basis,"TensorP_Basis")) {
     newdata$t <- M@BAUs@data$t
   }
-
-  # ---- Return output ----
-
-  ## Remove MC samples that were not asked for
-  if (!("link" %in% type)) MC$Y_samples <- NULL
-  if (!("mean" %in% type)) {MC$mu_samples <- NULL; MC$prob_samples <- NULL}
   
-  return(list(newdata = newdata, MC = MC, pred_time = pred_time))
+  ## Return the predictions, and the MC samples at either the BAUs (if we are 
+  ## predicting over BAUs) or over the user specified arbitrary polygons.
+  return(list(newdata = newdata, MC = MC))
 }
 
 
@@ -269,7 +378,6 @@
   m   <- length(M@Z)
   r   <- ncol(M@S0) # Total number of basis functions
   
-  MC$times <- list() # object to track timings of function components
   
   # ---- Generate samples from (eta, xi_O) ----
   
@@ -293,9 +401,8 @@
   
   ## Method 2: sparseinv package, Cholesky of permuted Q, then backsolve
   U <- Matrix::t(Q_L$Qpermchol) # upper Cholesky factor of permuted joint precision matrix M@Q_eta_xi
-  MC$times$backsolve <- system.time(
-    x <- backsolve(U, z)          # x ~ Gau(0, A), where A is the permuted precision matrix i.e. A = P'QP
-  )
+  x <- backsolve(U, z)          # x ~ Gau(0, A), where A is the permuted precision matrix i.e. A = P'QP
+  
   y <- Q_L$P %*% x              # y ~ Gau(0, Q^{-1})
   eta_xi_O  <- as.matrix(y + mu_eta_xi_O_Matrix) # add the mean to y
   

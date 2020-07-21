@@ -4,28 +4,30 @@
 \alias{.concat_percentiles_to_df}
 \title{Computation and concatenation of percentiles to a dataframe.}
 \usage{
-.concat_percentiles_to_df(X, df, name, percentiles = c(5, 25, 50, 75, 95))
+.concat_percentiles_to_df(data, X, name, percentiles = c(5, 25, 50, 75, 95))
 }
 \arguments{
-\item{X}{A matrix of Monte Carlo samples (rows are observation, columns are 
-samples).}
+\item{data}{The dataframe we will append percentiles to.}
 
-\item{df}{The prediction dataframe, with the same number of rows as \code{X}.}
+\item{X}{A matrix (wherein rows are location, columns are 
+samples)  or list (each element contains a vector of samples corresponding 
+to a particular location) of Monte Carlo samples. The 
+number of rows (if matrix) or the length (if list) of \code{X} must equal
+the number of rows in \code{data}.}
 
 \item{name}{The name of the quantity of interest. The names of the percentile
-columns are "name_percentile_percentiles". In \code{FRK} it will be Y, mu, or Z.}
+columns are "name_percentile". In \code{FRK} it will be Y, mu, prob, or Z.}
 
 \item{percentiles}{A vector containing the desired percentiles which will be 
-included in the prediction dataframe. If \code{NULL}, 
-no percentiles are computed.}
+included in the prediction dataframe. If \code{NULL}, no percentiles are computed.}
 }
 \value{
-The dataframe \code{df} with appended percentiles.
+The dataframe \code{data} with appended percentiles.
 }
 \description{
 Given a matrix of MC samples \code{X} (where rows correspond to locations and 
 columns correspond to samples), this function computes the percentiles at 
-each location and appends the result to \code{df} (which must have the same 
+each location and appends the result to \code{data} (which must have the same 
 number of rows as \code{X}). Note that we use percentiles rather than quantiles
 because we including a "dot" in the dataframe column name may cause issues.
 }

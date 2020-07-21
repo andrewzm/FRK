@@ -190,26 +190,24 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
             data[[i]]$std <- this_data$std
         }
 
+
+        ## The next step is to allocate all data (both point and polygon referenced) to BAUs. We can either average data points falling in
         ## the same BAU (average_in_BAU == TRUE) or not (average_in_BAU == FALSE)
         cat("Binning data ...\n")
-        
-        # browser()
+        head(data[[i]])
         data_proc <- map_data_to_BAUs(data[[i]],       # data object
                                       BAUs,            # BAUs
                                       average_in_BAU = average_in_BAU, # average in BAU?
                                       sum_variables = sum_variables)   # variables to sum rather than average
 
+        head(data_proc)
         
         ## The mapping can fail if not all data are covered by BAUs. Throw an error message if this is the case
         if(any(is.na(data_proc@data[av_var])))
             stop("NAs found when mapping data to BAUs. Do you have NAs in your data?
                  If not, are you sure all your data are covered by BAUs?")
 
-
-
-
-        ## The next step is to allocate all data (both point and polygon referenced) to BAUs. We can either average data points falling in
-
+        
         ## Extract information from the data using the .extract.from.formula internal function
         L <- .extract.from.formula(f,data=data_proc)
         X[[i]] <- as(L$X,"Matrix")                # covariate information
@@ -251,6 +249,8 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         
         ## Construct k the same way Z is constructed when response is binomial
         ## or negative binomial
+        # browser()
+        # glimpse(data_proc)
         if(response %in% c("binomial", "negative-binomial")) {
             k[[i]] <- Matrix(data_proc$k)
         } else {
@@ -273,15 +273,16 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     if(response %in% c("binomial", "negative-binomial")) {
         k <- do.call("rbind",k)
         
+        ## I THINK THE FOLLOWING CAN BE REMOVED AS I HAVE IMPLEMENTED THE SUMMING OPTION IN map_data_to_BAUs()
         ## Also round the observations and k parameter.
         ## The approach of averaging observations and constant parameters which
         ## fell in the same BAU is not ideal, as we lose information. 
-        ## Preferably, we should add both the Z values  and k values of 
+        ## Preferably, we should add both the Z values and k values of 
         ## observations which fell into the same BAU. 
         Z <- round(Z)
         k <- round(k)
     } else if (response == "poisson") {
-        Z <- round(Z)
+       Z <- round(Z)
     }
     
     
@@ -399,45 +400,102 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     ## The user can either provide k in SRE_model@BAUs$k or in the predict call.
     ## This is so that the user can change k without having to call SRE() and SRE.fit() again.
     ## The k supplied in predict() will take precedence over the k stored in SRE_model@BAUs$k.
-    if (SRE_model@response %in% c("binomial", "negative-binomial")){
+    if (SRE_model@response %in% c("binomial", "negative-binomial"))
         if (is.null(k)) {
-            if (!is.null(SRE_model@BAUs$k)) {
-                k <- SRE_model@BAUs$k
-                warning("Prespecified BAU level k being used for prediction i.e. SRE_object@BAUs$k.")
-            } else {
-                k <- 1
-                warning("k not provided for prediction: assuming k is equal to 1 for all BAUs.")
+            k <- 1
+            warning("k not provided for prediction: assuming k is equal to 1 for all prediction polygons.")
             }
-        }
-    }
+
 
     ## Check the arguments are OK
     .check_args3(obs_fs = obs_fs, newdata = newdata, pred_polys = pred_polys,
                  pred_time = pred_time, covariances = covariances, 
                  response = SRE_model@response, SRE_model = SRE_model, type = type, 
                  k = k, percentiles = percentiles)
+    
+    
+    ## Do the stuff which is common to both methods ("EM" and "TMB")
 
-    ## Call internal prediction function
+    ## If the user does not specify time points to predict at when in space-time
+    ## Then predict at every time point
+    if(is.null(pred_time) & is(SRE_model@BAUs,"ST"))
+        pred_time <- 1:length(SRE_model@BAUs@time)
+    
+    ## Construct the CP matrix (Polygon prediction matrix)
+    CP <- .make_CP(newdata = newdata, SRE_model = SRE_model)
+    
+    ## We start by assuming that we will predict at BAUs
+    predict_BAUs <- TRUE
+    
+    ## If even one polygon encompasses more than one BAU, then we need to
+    ## predict over linear combinations of BAUs, and hence need to
+    ## compute the full covariance matrix. Note this by setting
+    ## predict_BAUs to be FALSE
+    # if(!all(table(C_idx$i_idx) == 1))
+    if (!is.null(newdata))
+        if (!all(table(CP@i) == 1))
+            predict_BAUs <- FALSE
+    
+    
+    ## Call internal prediction functions depending on which method is used
     if (SRE_model@method == "EM") {
-        pred_locs <- .SRE.predict(Sm = SRE_model,            # Fitted SRE model
-                                  obs_fs = obs_fs,           # Case 1 or Case 2?
-                                  newdata = newdata,         # Prediction polygons
-                                  pred_time = pred_time,     # Prediction time points
-                                  covariances = covariances) # Compute covariances?
+        pred_locs <- .SRE.predict(Sm = SRE_model,              # Fitted SRE model
+                                  obs_fs = obs_fs,             # Case 1 or Case 2?
+                                  newdata = newdata,           # Prediction polygons
+                                  pred_time = pred_time,       # Prediction time points
+                                  covariances = covariances,   # Compute covariances?
+                                  CP = CP,                     # Polygon prediction matrix
+                                  predict_BAUs = predict_BAUs) # Are we predicting at BAUs?                   
         
     } else if (SRE_model@method == "TMB") {
-        pred_locs <- .FRKTMB_pred(M = SRE_model,    # Fitted SRE model
-                                  n_MC = n_MC,      # Number of MC simulations
-                                  obs_fs = obs_fs, 
-                                  type = type, 
-                                  k = k, 
-                                  percentiles = percentiles)  
+        pred_locs <- .FRKTMB_pred(M = SRE_model,               # Fitted SRE model
+                                  newdata = newdata,           # Prediction polygons
+                                  CP = CP,                     # Polygon prediction matrix
+                                  predict_BAUs = predict_BAUs, # Are we predicting at BAUs?
+                                  pred_time = pred_time,       # Prediction time points
+                                  n_MC = n_MC,                 # Desired number of MC simulations
+                                  obs_fs = obs_fs,             # Case 1 or Case 2?
+                                  type = type,                 # Whether we are interested in the "link" (Y-scale), "mean", "response"
+                                  k = k,                       # Size parameter
+                                  percentiles = percentiles)   # Desired percentiles of MC samples        
     } 
 
     
     ## Return predictions
-    pred_locs
+    return(pred_locs)
 })
+
+
+
+## unexported function to construct CP (the prediction polygon matrix)
+## I made this into a function because it is common for the methods ("TMB" and
+## "EM"), so it should be done before splitting. 
+.make_CP <- function (newdata = NULL, SRE_model) {
+    
+    ## If the user has not specified polygons over which to predict, then CP is
+    ## just the diagonal matrix and we predict over all the BAUs
+    if(is.null(newdata)) {
+        CP <- Diagonal(length(SRE_model@BAUs))
+    } else {
+        ## The user has specified arbitrary polygons
+        ## Based on these polygons construct the C matrix
+        newdata2 <- map_data_to_BAUs(newdata, SRE_model@BAUs,
+                                     average_in_BAU = FALSE,
+                                     sum_variables = NULL,
+                                     est_error = FALSE)
+        C_idx <- BuildC(newdata2, SRE_model@BAUs)
+        CP <- sparseMatrix(i = C_idx$i_idx,
+                           j = C_idx$j_idx,
+                           x = 1,
+                           dims = c(length(newdata),
+                                    length(SRE_model@BAUs)))
+        
+        ## As in SRE(), make sure the polgons are averages (not sums)
+        CP <- CP / rowSums(CP)
+    }
+    return(CP)
+}
+
 
 #' @rdname SRE
 #' @export
@@ -1460,48 +1518,13 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 }
 
 .SRE.predict <- function(Sm, obs_fs = FALSE, newdata = NULL,
-                         pred_time = NULL, covariances = FALSE) {
+                         pred_time = NULL, covariances = FALSE, 
+                         CP, predict_BAUs) {
 
-    ## If the user does not specify time points to predict at when in space-time
-    ## Then predict at every time point
-    if(is.null(pred_time) & is(Sm@BAUs,"ST"))
-        pred_time <- 1:length(Sm@BAUs@time)
 
-    ## We start by assuming that we will predict at BAUs
-    predict_BAUs <- TRUE
-
+    
     ## Get BAUs from the SRE model
     BAUs <- Sm@BAUs
-
-    ## If the user has not specified polygons over which to predict, then CP is
-    ## just the diagonal matrix and we predict over all the BAUs
-    if(is.null(newdata)) {
-        CP <- Diagonal(length(BAUs))
-    } else {
-        ## The user has specified arbitrary polygons
-        ## Based on these polygons construct the C matrix
-        newdata2 <- map_data_to_BAUs(newdata, BAUs,
-                                     average_in_BAU = FALSE,
-                                     sum_variables = NULL,
-                                     est_error = FALSE)
-        C_idx <- BuildC(newdata2, BAUs)
-        CP <- sparseMatrix(i=C_idx$i_idx,
-                           j=C_idx$j_idx,
-                           x=1,
-                           dims=c(length(newdata),
-                                  length(BAUs)))
-
-        ## As in SRE(), make sure the polgons are averages (not sums)
-        CP <- CP / rowSums(CP)
-
-        ## If even one polygon encompasses more than one BAU, then we need to
-        ## predict over linear combinations of BAUs, and hence need to
-        ## compute the full covariance matrix. Note this by setting
-        ## predict_BAUs <- FALSE
-        if(!all(table(C_idx$i_idx) == 1))
-            predict_BAUs <- FALSE   ## Need to compute full covariance matrix
-    }
-
 
     ## If we have to compute too many covariances then stop and give error
     if(covariances & nrow(CP) > 4000)
@@ -1511,7 +1534,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
     ## Get the CZ matrix
     CZ <- Sm@Cmat
 
-    ## If the user has specified which polygons he want we can remove the ones we don't need
+    ## If the user has specified which polygons he wants we can remove the ones we don't need
     ## We only need those BAUs that are influenced by observations and prediction locations
     ## For ST use all BAUs as it gets complicated
     if(is(newdata,"Spatial")) {
@@ -1644,7 +1667,8 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
         }
         if(!is.null(pred_time))
             BAUs <- BAUs[,pred_time]  # return only specified time points
-        BAUs
+        
+        return(BAUs)
 
     } else {
         ## Otherwise we need to find the mean and variance of linear combinations of these BAUs
@@ -1687,7 +1711,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
             newdata <- list(newdata = newdata,
                             Cov = Covariances)
         }
-        newdata
+        return(newdata)
     }
 }
 
@@ -1919,15 +1943,10 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
     #     stop("Implementation with Point BAUs is currently in progress")
     # if(is(BAUs,"STFDF")) if(is(BAUs@sp,"SpatialPointsDataFrame"))
     #     stop("Implementation with Point BAUs is currently in progress")
-    
-    
-    ## When checking for overlapping names, we need to allow the size 
-    ## parameter "k" to be present in the data and the BAUs.
-    BAUs_cov_names_not_k <- names(BAUs@data)[names(BAUs@data) != "k"]
 
     if(!all(all.vars(f)[-1] %in% c(names(BAUs@data),coordnames(BAUs))))
         stop("All covariates need to be in the SpatialPolygons BAU object")
-    if(any(sapply(data,function(x) any(names(x@data) %in% BAUs_cov_names_not_k))))
+    if(any(sapply(data,function(x) any(names(x@data) %in% names(BAUs@data)))))
         stop("Please don't have overlapping variable names in data and BAUs. All covariates need to be in the BAUs")
     if(!all(sapply(data,function(x) all.vars(f)[1] %in% names(x@data))))
         stop("All data list elements to have values for the dependent variable")
@@ -2088,21 +2107,22 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
                 warning("Single number k provided for all BAUs: assuming k is invariant over the whole spatial domain.")
             } else if (!(class(k) %in% c("numeric", "integer"))) {
                 stop("k must contain only positive integers.")
-            } else if (any(k <= 0) | any(k != round (k))) {
+            } else if (any(k < 0) | any(k != round (k))) {
                 stop("k must contain only positive integers.")
             } else if (length(k) != nrow(SRE_model@S0)) {
+                ## FIXME: If we are allowing the user to predict over arbitrary polygons specified
+                ## by the argument "newdata", then k will not be equal to the number of BAUs. Perhaps
+                ## we should check to see if newdata is null, and then test if k equals its length. 
                 stop("length(k) must equal 1 or N (the number of BAUs)." )
             }      
         }
         
         ## Check requested percentiles are ok
-        if (!is.null(percentiles) & !(class(percentiles) %in% c("numeric", "integer"))) {
-            stop("percentiles must either be NULL or a numeric or integer vector 
-            with entries between 0 and 100.")
-        } else if (!is.null(percentiles)) {
-            if (min(percentiles) < 0 | max(percentiles) > 100) {
+        if (!is.null(percentiles) & !(class(percentiles) %in% c("numeric", "integer"))) 
+            stop("percentiles must either be NULL or a numeric or integer vector with entries between 0 and 100.")
+        else if (!is.null(percentiles)) {
+            if (min(percentiles) < 0 | max(percentiles) > 100) 
                 stop("percentiles must be a vector with entries between 0 and 100.")   
-            }
         }
     }
 }

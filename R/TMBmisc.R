@@ -77,41 +77,41 @@
   stop("Invalid arguments.")
 }
 
-#' Variance by rows.
-#'
-#' Computes the row-wise variance of a matrix.
-#'
-#' @param X An array like object (with a dim-attribute).
-#' @return A vector containing the row-wise variances of the matrix \code{X}.
-.rowVars <- function(X) {
-  rowSums((X - rowMeans(X))^2)/(dim(X)[2] - 1)
-}
 
 
 #' Computation and concatenation of percentiles to a dataframe.
 #'
 #' Given a matrix of MC samples \code{X} (where rows correspond to locations and 
 #' columns correspond to samples), this function computes the percentiles at 
-#' each location and appends the result to \code{df} (which must have the same 
+#' each location and appends the result to \code{data} (which must have the same 
 #' number of rows as \code{X}). Note that we use percentiles rather than quantiles
 #' because we including a "dot" in the dataframe column name may cause issues. 
 #'
-#' @param X A matrix of Monte Carlo samples (rows are observation, columns are 
-#' samples).
-#' @param df The prediction dataframe, with the same number of rows as \code{X}.
+#' @param data The dataframe we will append percentiles to.
+#' @param X A matrix (wherein rows are location, columns are 
+#' samples)  or list (each element contains a vector of samples corresponding 
+#' to a particular location) of Monte Carlo samples. The 
+#' number of rows (if matrix) or the length (if list) of \code{X} must equal
+#' the number of rows in \code{data}.
 #' @param name The name of the quantity of interest. The names of the percentile
-#' columns are "name_percentile_percentiles". In \code{FRK} it will be Y, mu, or Z. 
+#' columns are "name_percentile". In \code{FRK} it will be Y, mu, prob, or Z. 
 #' @param percentiles A vector containing the desired percentiles which will be 
-#' included in the prediction dataframe. If \code{NULL}, 
-#' no percentiles are computed.
-#' @return The dataframe \code{df} with appended percentiles.
-.concat_percentiles_to_df <- function (X, df, name, 
+#' included in the prediction dataframe. If \code{NULL}, no percentiles are computed.
+#' @return The dataframe \code{data} with appended percentiles.
+.concat_percentiles_to_df <- function (data, X, name, 
                                        percentiles = c(5, 25, 50, 75, 95)) {
-  if (is.null(percentiles)) return(df)
-  temp           <- t(apply(X, 1, quantile, percentiles/100))
-  colnames(temp) <- paste(name, "percentile", as.character(percentiles), sep = "_")
-  df             <- cbind(df, temp)
-  return(df)
+  if (is.null(percentiles)) 
+    return(data)
+  
+  if (is(X, "matrix"))
+    tmp           <- t(apply(X, 1, quantile, percentiles / 100))
+  else if (is(X, "list"))
+    tmp <- t(sapply(X, quantile, percentiles / 100))
+  
+  colnames(tmp) <- paste(name, "percentile", as.character(percentiles), sep = "_")
+  data          <- cbind(data, tmp)
+  
+  return(data)
 }
 
 
@@ -131,3 +131,44 @@
   return(Q[2, ] - Q[1, ])
 }
 
+
+
+## Since we will use ggplot2 we will first convert our objects to data frames.
+## The fortify command in ggplot2 was found to not work well with the sp polys.
+## The following function converts a SpatialPolygonsDataFrame to a data.frame.
+## sp_polys: Object of class SpatialPolygonsDataFrame
+## vars: vector of characters identifying the field names to retain
+.SpatialPolygonsDataFrame_to_df <- function (sp_polys, vars = names(sp_polys))
+{
+  ## Extract the names of the polygons
+  polynames <- as.character(row.names(sp_polys))
+  
+  ## For each polygon do the following
+  list_polys <- lapply(1:length(sp_polys), function(i) {
+    ## Extract coordinates
+    coords <- sp_polys@polygons[[i]]@Polygons[[1]]@coords
+    row.names(coords) <- NULL
+    coords <- data.frame(coords)
+    
+    ## Create data frame with coordinates and with "id" as the polygon name
+    poldf <- cbind(coords, id = polynames[i], stringsAsFactors = FALSE)
+    rownames(poldf) <- NULL
+    poldf
+  })
+  
+  ## Bind all the returned data frames together
+  df_polys <- bind_rows(list_polys)
+  
+  ## Make sure the data frame and SpatialPolygonsDataFrame have the same "key" id var
+  df_polys$id <- as.character(df_polys$id)
+  sp_polys$id <- row.names(sp_polys)
+  
+  cnames <- coordnames(sp_polys)                     # coordinate names
+  vars_no_coords <- vars[which(!vars %in% cnames)]   # all selected var names
+  
+  ## Now bind the variables to the data frame
+  if (length(vars_no_coords) > 0)
+    df_polys <- left_join(df_polys, sp_polys@data[c("id",
+                                                    vars_no_coords)], by = "id")
+  df_polys
+}

@@ -143,8 +143,7 @@ If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{
 If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}.}
 
 \item{percentiles}{A vector containing the desired percentiles which will be 
-included in the prediction dataframe. If \code{NULL}, 
-no percentiles are computed.}
+included in the prediction dataframe. If \code{NULL}, no percentiles are computed.}
 
 \item{optimiser}{the optimising function used for model fitting when \code{method = 'TMB'} (default is \code{nlminb}). Users may pass in a function object or a string corresponding to a named function. Optional parameters may be passed to \code{optimiser} via \code{...}. The only requirement of \code{optimiser} is that the first three arguments correspond to the initial parameters, the obejctive function, and the gradient, respectively (note that this may be achieved by rearranging the order of arguments before passing into \code{optimiser})}
 

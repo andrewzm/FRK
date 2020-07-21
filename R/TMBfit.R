@@ -269,7 +269,7 @@
   ## Dispersion parameter depends on response; some require that it is 1. 
   if (M@response %in% c("poisson", "bernoulli", "binomial", "negative-binomial")) {
     parameters$logphi <- log(1)
-  } else if (M@reponse == "gaussian") {
+  } else if (M@response == "gaussian") {
     parameters$logphi <- log(data$sigma2e)
   } else {
     ## we may not estimate sigma2e when the data is non-Gaussian, so use the 
