@@ -1092,25 +1092,6 @@ setMethod("show",signature(object="manifold"),function(object) print(object))
 #' @aliases map_data_to_BAUs,Spatial-method
 setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
           function(data_sp, sp_pols, average_in_BAU = TRUE, sum_variables = NULL) {
-
-              # browser()
-              # 
-              # ## Check for NAs in the input arguments
-              # apply(data_sp@data, 2, function(x) any(is.na(x)))
-              # data_sp@coords.nrs
-              # data_sp@bbox
-              # data_sp@proj4string # NA here, but I believe this is standard and not an issue.
-              # 
-              # apply(sp_pols@data, 2, function(x) any(is.na(x)))
-              # apply(sp_pols@data, 2, function(x) sum(is.na(x)))
-              # glimpse(sp_pols@data)
-              # tail(sp_pols@data)
-              # 13734 - 13495 # number of non-NAs
-              # 
-              # ## The vast majority of data in sp_pols is NA.
-              # ## it doesn't seem like the actual polygons have NAs:
-              # sp_pols@polygons[[5000]]
-              
               
               ## Suppress bindings warnings
               . <- BAU_name <- NULL
@@ -1193,7 +1174,9 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
               ## We now create a new SpatialPointsDataFrame but this time the data
               ## is averaged over the BAUs, and we have at most one data point per BAU
               new_sp_pts <- SpatialPointsDataFrame(
-                  coords=Data_in_BAU[coordnames(data_sp)],         # coordinates of summarised data
+                  ## FIXME: check with Andrew that the following is ok. I think these should be focused on sp_pols (the BAUs) because we construct the coordinate columns based on the sp_pols 
+                  # coords=Data_in_BAU[coordnames(data_sp)],         # coordinates of summarised data
+                  coords=Data_in_BAU[coordnames(sp_pols)],         # coordinates of summarised data
                   data=Data_in_BAU,                                # data frame
                   proj4string = CRS(proj4string(data_sp)))         # CRS of original data
 
@@ -1208,6 +1191,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
 ## data_sp: data (SpatialPolygons object)
 ## sp_pols: BAUs (SpatialPolygonsDataFrame or SpatialPixelsDataFrame)
 ## average_in_BAU: flag indicating whether we want to average data/standard errors in BAUs
+## sum_variables: string indicating the variables which are to be summed in a BAU rather than averaged
 #' @aliases map_data_to_BAUs,Spatial-method
 setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
           function(data_sp,sp_pols, average_in_BAU = TRUE, sum_variables = NULL)
@@ -1226,39 +1210,42 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
                           Please report this issue to the package maintainer.")
 
               ## Attach the ID of the data polygon to the data frame
-              data_sp$id <- row.names(data_sp)
-              data_sp$id <- as.character(data_sp$id)
-
+              data_sp$id <- as.character(row.names(data_sp))
+              
               ## Assume the BAUs are so small that it is sufficient to see whether the
               ## BAU centroid falls in the data polygon. To do this we first make
               ## A SpatialPointsDataFrame from the BAUs reflecting the BAU centroids
               BAU_as_points <- SpatialPointsDataFrame(coordinates(sp_pols),
                                                       sp_pols@data,
                                                       proj4string = CRS(proj4string(sp_pols)))
-
+              
+              
               ## Now see which centroids fall into the BAUs
               ## The following returns a data frame equal in number of rows to
               ## the data polygons, with all the BAU features averaged (hence if
               ## BAU_as_points$xx = c(1,2,3) for those BAUs inside the data polygon
-              ## BAUs_aux_data$xx = 3.
+              ## BAUs_aux_data$xx = 3. # FIXME: shouldn't this be 2?
+              
+              ## FIXME: I changed this to .safe_mean temporarily
               BAUs_aux_data <- .parallel_over(data_sp,BAU_as_points,fn=.safe_mean)
-
+              
               ## Now include the ID in the table so we merge by it later
               BAUs_aux_data$id <- as.character(row.names(BAUs_aux_data))
-
+              
               ## Do the merging
               updated_df <- left_join(data_sp@data,
                                       BAUs_aux_data,
                                       by="id")
-
+              
               ## Make sure the rownames are OK
               row.names(updated_df) <- data_sp$id
-
+              
               ## Allocated data frame to SpatialPolygons object
               data_sp@data <- updated_df
-
+              
               ## Return Spatial object
-              data_sp
+              return(data_sp) 
+              
           })
 
 ## Map the data to the BAUs. This is done after BAU construction

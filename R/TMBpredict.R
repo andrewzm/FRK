@@ -79,7 +79,7 @@
   #### Posterior expectation E(Y|Z) at each prediction location.
   ## large- and medium-scale variation terms:
   p_Y <- as.vector(X %*% M@alphahat + M@S0 %*% M@mu_eta)
-
+  
   ## Add posterior estimate of xi_O at observed BAUs
   p_Y[obsidx]   <-  p_Y[obsidx] + as.vector(M@mu_xi_O)
   
@@ -171,6 +171,8 @@
   if (predict_BAUs)
     newdata <- M@BAUs 
   
+
+  
   ## Now update newdata with the predictions, RMSPE, and percentiles. 
   ## Note that I do them separately as I think it is easier to read if they are in order 
   ## (i.e., have all predictions together, all RMSPE together, all percentiles together). 
@@ -260,6 +262,15 @@
     newdata$t <- M@BAUs@data$t
   }
   
+  
+  ## It is convenient to have the spatial coordinates in the @data slot of the
+  ## return newdata object. Only add those coordinates not already in the data.
+  tmp <- which(!(colnames(coordinates(newdata)) %in% names(newdata@data)))
+  if (length(tmp))
+    newdata@data <- cbind(newdata@data, coordinates(newdata)[, tmp])  
+  
+  
+  
   ## Return the predictions, and the MC samples at either the BAUs (if we are 
   ## predicting over BAUs) or over the user specified arbitrary polygons.
   return(list(newdata = newdata, MC = MC))
@@ -302,12 +313,11 @@
   # Sigma <- chol2inv(chol(M@Q_eta_xi))
   # warning("Removed sparse-inverse-subset and using full inverse: 
   #         we cannot do this for large m + r.")
-  
   Sigma_eta   <- Sigma[1:r, 1:r]
   Sigma_xi    <- Sigma[(r + 1):(r + m), (r + 1):(r + m)]
   
   # Covariances between xi and eta
-  Cov_eta_xi  <- Sigma[1:r, ( r+ 1):(r + m)]
+  Cov_eta_xi  <- Sigma[1:r, (r + 1):(r + m)]
   
   # ----- Uncertainty: Posterior variance of Y at each BAU ------
   

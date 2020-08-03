@@ -194,13 +194,11 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         ## The next step is to allocate all data (both point and polygon referenced) to BAUs. We can either average data points falling in
         ## the same BAU (average_in_BAU == TRUE) or not (average_in_BAU == FALSE)
         cat("Binning data ...\n")
-        head(data[[i]])
         data_proc <- map_data_to_BAUs(data[[i]],       # data object
                                       BAUs,            # BAUs
                                       average_in_BAU = average_in_BAU, # average in BAU?
                                       sum_variables = sum_variables)   # variables to sum rather than average
 
-        head(data_proc)
         
         ## The mapping can fail if not all data are covered by BAUs. Throw an error message if this is the case
         if(any(is.na(data_proc@data[av_var])))
@@ -432,9 +430,13 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     ## compute the full covariance matrix. Note this by setting
     ## predict_BAUs to be FALSE
     # if(!all(table(C_idx$i_idx) == 1))
-    if (!is.null(newdata))
-        if (!all(table(CP@i) == 1))
+    if (!is.null(newdata)) {
+        tmp <- as(CP, "dgTMatrix")
+        if (!all(table(tmp@i) == 1))
             predict_BAUs <- FALSE
+    }
+
+
     
     
     ## Call internal prediction functions depending on which method is used
@@ -696,8 +698,6 @@ setMethod("reverse_spatial_coords",signature(BAUs="SpatialPoints"),function(BAUs
 setMethod("reverse_spatial_coords",signature(BAUs="SpatialPolygonsDataFrame"),function(BAUs) {
     
     
-    browser()
-    
     ## First, the @data slot:
     ## (Note that both coordinate and data columns may be present - we will just reverse all)
     new_coord_order <- 
@@ -874,8 +874,9 @@ setMethod("observed_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
     
     ## Note that Cmat maps BAUs to the observations. The dimension of SRE_model@Cmat is
     ## (number of observations) * (number of BAUs).
-    ## CHECK: is x always 1? Or can it be a fraction?
     obsidx <- apply(SRE_model@Cmat, 1, function(x) which(x == 1))
+    # Cmat <- as(SRE_model@Cmat, "dgTMatrix")
+    # obsidx <- unique(Cmat@j) # unique() probably not necessary but want to be safe
     
     return(obsidx)
 })
