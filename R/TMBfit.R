@@ -30,43 +30,37 @@
 #' }
 .FRKTMB_fit <- function(M, optimiser, ...) {
 
-  # ------ Data preparation ------
-
+  ## Data and parameter preparation for TMB
   data_params_init <- .TMB_prep(M)
-  
 
-  # ------- Model Compilation -------
-  
+  ## TMB model compilation
   obj <- MakeADFun(data = data_params_init$data,
                    parameters = data_params_init$parameters,
                    random = c("eta", "xi_O"),
                    DLL = "FRK")
+  
   ## View the sparsity pattern.
   ## Note that this can be done before model fitting.
-  # temp <- obj$env$spHess(random = TRUE)
-  # image(temp)
-  # length(temp@x) # number of non-zeros
-
-
-  
-  # ------ Fitting and Parameter Estimates/Random Effect Predictions ------
+  # tmp <- obj$env$spHess(random = TRUE)
+  # image(tmp)
+  # length(tmp@x) # number of non-zeros
 
   ## the following means we want to print every parameter passed to obj$fn.
   obj$env$tracepar <- TRUE
-
-  ## Fit the model. 
+  
+  # ---- Model fitting ----
   
   ## The optimiser should have arguments: start, objective, gradient. 
   ## The remaining arguments can be whatever.
   fit <- optimiser(obj$par, obj$fn, obj$gr, ...)
     
-
   ## Log-likeihood
   log_likelihood <- -obj$fn() # could also use -fit$objective
   
   ## Add the C(Z, phi) terms for one-parameter exponential families
-  ## (We do this here rather than in the C++ template because it only need to 
-  ## be done once, as C(Z, phi) depends only on Z for one-parameter exponential families)
+  ## (We do this here rather than in the C++ template because it only needs to 
+  ## be done once, as C(Z, phi) depends only on Z for one-parameter exponential 
+  ## families)
   Z <- data_params_init$data$Z
   k_Z <- data_params_init$data$k_Z
   if(M@response == "poisson") {
@@ -77,39 +71,35 @@
     cZphi   = lfactorial(k_Z) - lfactorial(Z) - lfactorial(k_Z - Z)
   } 
   
-
   ## Extract parameter and random effect estimates
   par <- obj$env$last.par.best
   estimates <- split(par, names(par)) # convert to named list object
 
 
-  # ------ Joint precision/covariance matrix of random effects ------
+  # ---- Joint precision/covariance matrix of random effects ----
 
   ## TMB treats all parameters (fixed effects, variance components, 
-  ## and random effects) as random quantities, and so the joint precision matrix
-  ## obtained using sdreport(obj, getJointPrecision = TRUE) contains the precision
-  ## for fixed and random effects. 
-  ## However, we assume the regression parameters and variance components are fixed 
-  ## effects, NOT random quantities, and so they should not have a precision associated
-  ## to them. We overcome this by considering the fixed effects as random during the 
-  ## fitting process, and then condition on theta = \hat{theta}, the ML estimate. 
-  
-  # ## Joint precision matrix of fixed AND random effects
-  # report <- sdreport(obj, getJointPrecision = TRUE, skip.delta.method = TRUE)
-  # Q <- report$jointPrecision
-  # ## Subset the random block
-  # Q <- Q[row.names(Q) %in% c("eta", "xi_O"), row.names(Q) %in% c("eta", "xi_O")]
+  ## and random effects) as random quantities, and so the joint precision 
+  ## matrix obtained using sdreport(obj, getJointPrecision = TRUE) contains 
+  ## the precision matrix for fixed and random effects. 
+  ## However, we assume the regression parameters and variance components are 
+  ## fixed effects, NOT random quantities, and so they should not have a 
+  ## randomness associated to them. We overcome this by considering the fixed 
+  ## effects and parameters as random during the fitting process, and then 
+  ## post-fitting we condition on theta = \hat{theta}, the ML estimate.
+  ## By conditioning on \hat{theta}, we can consider the precision matrix of  
+  ## the random effects in isolation.
 
   ## Precision matrix of the random effects only
   Q <- obj$env$spHess(par = obj$env$last.par.best, random = TRUE)
   
   ## Update the slots of M
   ## Convert to Matrix as these SRE slots require class "Matrix"
-  M@alphahat <- as(estimates$beta, "Matrix")
+  M@alphahat <- as(estimates$alpha, "Matrix")
   M@mu_eta   <- as(estimates$eta, "Matrix")
   M@mu_xi_O  <- as(estimates$xi_O, "Matrix")
   
-  M@sigma2fshat <- unname(exp(estimates$logsigma2xi))
+  M@sigma2fshat <- exp(estimates$logsigma2fs)
   M@Q_eta_xi <- Q          
   M@phi <- unname(exp(estimates$logphi))
   
@@ -151,15 +141,12 @@
 
   ## Common to all
   data    <- list(Z = Z, X = X, S = M@S,
-                  sigma2e = 1, # FIXME: may be able to remove this
                   K_type = M@K_type,
                   response = M@response, 
                   link = M@link,
                   k_Z = k_Z, 
                   temporal = as.integer(is(M@basis,"TensorP_Basis")))
   
-  if (M@response == "gaussian") 
-    data$sigma2e <- M@Ve[1, 1] # FIXME: may have to change this from simply getting the first element of Ve
 
   ## The location of the stored spatial basis functions depend on whether the 
   ## data is spatio-temporal or not. Here, we also define the number of temporal
@@ -178,41 +165,33 @@
 
   ## Data which depend on K_type:
   ## Provide dummy data, and only change the ones we actually need.
-  data$alpha <- data$nnz <- data$row_indices <- data$col_indices <- -1       
+  data$beta <- data$nnz <- data$row_indices <- data$col_indices <- -1       
   data$x <- data$n_r <- data$n_c  <- -1 
 
   if (M@K_type == "block-exponential") {
-    temp         <- .cov_tap(spatial_dist_matrix, taper = M@taper)
-    data$alpha   <- temp$alpha 
-    R            <- as(temp$D_tap, "dgTMatrix")
-    data$nnz         <- temp$nnz 
+    tmp         <- .cov_tap(spatial_dist_matrix, taper = M@taper)
+    data$beta   <- tmp$beta 
+    R            <- as(tmp$D_tap, "dgTMatrix")
+    data$nnz         <- tmp$nnz 
     data$row_indices <- R@i
     data$col_indices <- R@j
     data$x           <- R@x
     
-  } else if (M@K_type == "neighbour" || M@K_type == "latticekrig") {
-    temp <- .sparse_Q_block_diag(spatial_basis@df, kappa = 0, rho = 1)
-    R <- as(temp$Q, "dgTMatrix")
-    data$nnz         <- temp$nnz
+  } else if (M@K_type == "neighbour") {
+    tmp <- .sparse_Q_block_diag(spatial_basis@df, kappa = 0, rho = 1)
+    R <- as(tmp$Q, "dgTMatrix")
+    data$nnz         <- tmp$nnz
     data$row_indices <- R@i
     data$col_indices <- R@j
     data$x           <- R@x
     
   } else if (M@K_type == "separable") {
     for (i in unique(spatial_basis@df$res)) {
-      temp <- spatial_basis@df[spatial_basis@df$res == i, ]
-      data$n_r[i] <- length(unique(temp$loc1))
-      data$n_c[i] <- length(unique(temp$loc2))
+      tmp <- spatial_basis@df[spatial_basis@df$res == i, ]
+      data$n_r[i] <- length(unique(tmp$loc1))
+      data$n_c[i] <- length(unique(tmp$loc2))
     }
-  } else if (M@K_type == "precision_exp") {
-    temp         <- .cov_tap(spatial_dist_matrix, taper = M@taper)
-    data$alpha   <- temp$alpha 
-    R            <- as(temp$D_tap, "dgTMatrix")
-    data$nnz         <- temp$nnz 
-    data$row_indices <- R@i
-    data$col_indices <- R@j
-    data$x           <- R@x
-  }
+  } 
   
   
   # ---- Parameter and random effect initialisations. ----
@@ -260,24 +239,24 @@
 
   ## Parameter and random effect initialisations.
   parameters <- list()
-  temp       <- as.data.frame(as.matrix(M@X))
-  temp$Z0_t  <- Z0_t
-  parameters$beta         <- coef(lm(update(formula(M@f), Z0_t ~ .), temp)) 
-  parameters$logsigma2xi  <- log(var(Z0_t))
+  tmp       <- as.data.frame(as.matrix(M@X))
+  tmp$Z0_t  <- Z0_t
+  parameters$alpha         <- coef(lm(update(formula(M@f), Z0_t ~ .), tmp)) 
+  parameters$logsigma2fs  <- log(var(Z0_t))
 
   
-  ## Dispersion parameter depends on response; some require that it is 1. 
+  ## Dispersion parameter depends on response; some require it to be 1. 
   if (M@response %in% c("poisson", "bernoulli", "binomial", "negative-binomial")) {
     parameters$logphi <- log(1)
   } else if (M@response == "gaussian") {
-    parameters$logphi <- log(data$sigma2e)
+    parameters$logphi <- log(M@Ve[1, 1]) # FIXME: may have to change this from simply getting the first element of Ve
   } else {
     ## we may not estimate sigma2e when the data is non-Gaussian, so use the 
     ## variance of the data as our estimate of the dispersion parameter.
     parameters$logphi <- log(var(Z0))
   }
   
-  parameters$logsigma2      <- log(exp(parameters$logsigma2xi) * (0.1)^(0:(nres - 1)))
+  parameters$logsigma2      <- log(exp(parameters$logsigma2fs) * (0.1)^(0:(nres - 1)))
   parameters$logtau         <- log((1 / 3)^(1:nres))
   parameters$logsigma2_t    <- log(5)  
   parameters$frho_t         <- 0
@@ -302,14 +281,14 @@
   ## FIXME: Add a check if nres == 4. If so, then it is wise to avoid a solve() here. 
   ## FIXME: perhaps change solve() to chol2inv(chol()). However, this requires positive definite matrix.
   ## FIXME: maybe change this intialisation to be only in terms of Qinit. Currently leave as is because the theory I wrote is in terms of Kinit and the block-exponential.
-  temp  <- exp(parameters$logphi) + exp(parameters$logsigma2xi) # note that in the Gaussian case, we have parameters$logphi <- log(data$sigma2e)
+  tmp  <- exp(parameters$logphi) + exp(parameters$logsigma2fs) # note that in the Gaussian case, we have phi = sigma2e
   if (M@K_type == "block-exponential") {
     KInit <- .K_tap_matrix(M@D_basis,
-                           alpha = data$alpha,
+                           beta = data$beta,
                            sigma2 =  exp(parameters$logsigma2),
                            tau = exp(parameters$logtau))
-    parameters$eta  <- as.vector((1 / temp) * solve(Matrix::t(M@S) %*% M@S / temp + solve(KInit) ) %*% (Matrix::t(M@S)  %*% (Z0_t - X %*% parameters$beta)))
-    parameters$xi_O <- as.vector((exp(parameters$logsigma2xi) / temp) * (Z0_t - X %*% parameters$beta - M@S %*% parameters$eta))
+    parameters$eta  <- as.vector((1 / tmp) * solve(Matrix::t(M@S) %*% M@S / tmp + solve(KInit) ) %*% (Matrix::t(M@S)  %*% (Z0_t - X %*% parameters$alpha)))
+    parameters$xi_O <- as.vector((exp(parameters$logsigma2fs) / tmp) * (Z0_t - X %*% parameters$alpha - M@S %*% parameters$eta))
   } else {
     kappa <- exp(-parameters$logsigma2)
     rho <- exp(parameters$logtau)
@@ -317,7 +296,7 @@
     if (nres >= 4) { # Avoid full inverse if we have four resolutions (in which case r approx 10,000)
       
       ## Matrix we need to invert:
-      mat <- Matrix::t(M@S) %*% M@S / temp + QInit
+      mat <- Matrix::t(M@S) %*% M@S / tmp + QInit
       
       ## Permuted Cholesky factor
       mat_L <- sparseinv::cholPermute(Q = mat) 
@@ -327,11 +306,11 @@
                                             cholQp = mat_L$Qpermchol,
                                             P = mat_L$P)
   
-      parameters$eta  <- as.vector((1 / temp) * mat_inv %*% Matrix::t(M@S)  %*% (Z0_t - X %*% parameters$beta))
-      parameters$xi_O <- as.vector((exp(parameters$logsigma2xi) / temp) * (Z0_t - X %*% parameters$beta - M@S %*% parameters$eta))  
+      parameters$eta  <- as.vector((1 / tmp) * mat_inv %*% Matrix::t(M@S)  %*% (Z0_t - X %*% parameters$alpha))
+      parameters$xi_O <- as.vector((exp(parameters$logsigma2fs) / tmp) * (Z0_t - X %*% parameters$alpha - M@S %*% parameters$eta))  
     } else {
-      parameters$eta  <- as.vector((1 / temp) * solve(Matrix::t(M@S) %*% M@S / temp + QInit ) %*% (Matrix::t(M@S)  %*% (Z0_t - X %*% parameters$beta)))
-      parameters$xi_O <- as.vector((exp(parameters$logsigma2xi) / temp) * (Z0_t - X %*% parameters$beta - M@S %*% parameters$eta))  
+      parameters$eta  <- as.vector((1 / tmp) * solve(Matrix::t(M@S) %*% M@S / tmp + QInit ) %*% (Matrix::t(M@S)  %*% (Z0_t - X %*% parameters$alpha)))
+      parameters$xi_O <- as.vector((exp(parameters$logsigma2fs) / tmp) * (Z0_t - X %*% parameters$alpha - M@S %*% parameters$eta))  
     }
     
   }
@@ -344,14 +323,14 @@
 
 #' Covariance tapering based on distances.
 #'
-#' Computes the covariance tapering parameters \eqn{\alpha} (which are dependent
+#' Computes the covariance tapering parameters \eqn{\beta} (which are dependent
 #' on resolution), number of non-zeros in each block of the tapered
 #' covariance matrix K_tap, and the tapered distance matrix whereby some distances
 #' have been set to zero post tapering (although the remaining non-zero distances 
 #' are unchanged).
 #'
 #' \code{taper} determines how strong the covariance tapering is; the ith taper parameter
-#' \eqn{\alpha_i} is equal to \code{taper[i]} * \code{minDist[i]}, where
+#' \eqn{\beta_i} is equal to \code{taper[i]} * \code{minDist[i]}, where
 #' \code{minDist[i]} is the minimum distance between basis functions at the
 #' \code{i}th resolution.
 #'
@@ -360,7 +339,7 @@
 #'
 #' @return A list containing:
 #' \describe{
-#'   \item{alpha}{A vector of taper parameters.}
+#'   \item{beta}{A vector of taper parameters.}
 #'   \item{nnz}{A vector containing the number of non-zeros in each block of the 
 #'   tapered prior covariance matrix, K_tap.}
 #'   \item{D_tap}{A sparse block-diagonal matrix containing the distances with 
@@ -379,7 +358,7 @@
   for(i in 1:nres) minDist[i] <- min(D_matrices[[i]] + 10^8 * diag(ri[i]))
 
   ## Taper parameters
-  alpha   <- taper * minDist
+  beta   <- taper * minDist
   
   ## Construct D matrix with elements set to zero after tapering
   ## FIXME: I could also apply the taper here, whereby we compute the spherical 
@@ -389,7 +368,7 @@
   D_tap <- list()
   nnz <- c()
   for (i in 1:nres) {
-    indices    <- D_matrices[[i]] < alpha[i]
+    indices    <- D_matrices[[i]] < beta[i]
     D_tap[[i]] <- as(D_matrices[[i]] * indices, "sparseMatrix")
     
     # Add explicit zeros
@@ -401,7 +380,7 @@
 
   D_tap <- Matrix::bdiag(D_tap)
 
-  return(list("alpha" = alpha, "nnz" = nnz, "D_tap" = D_tap))
+  return(list("beta" = beta, "nnz" = nnz, "D_tap" = D_tap))
 }
 
 
@@ -442,33 +421,33 @@
 
 
 
-#' \eqn{K_\alpha} matrix, the taper matrix.
+#' \eqn{K_\beta} matrix, the taper matrix.
 #'
-#' Constructs \eqn{K_\alpha}, the taper matrix, using the Spherical taper.
+#' Constructs \eqn{K_\beta}, the taper matrix, using the Spherical taper.
 #'
 #' Denoting by \eqn{d(s,s^*)} the distance between two spatial locations,
 #' the Spherical taper is given by:
-#' \deqn{C_\alpha(s, s^*) = (1-\frac{d(s,s^*)}{\alpha})^2_{+}  (1+\frac{d(s,s^*)}{2\alpha}), }
+#' \deqn{C_\beta(s, s^*) = (1-\frac{d(s,s^*)}{\beta})^2_{+}  (1+\frac{d(s,s^*)}{2\beta}), }
 #' where \eqn{x_+ = max(x, 0)}.
 #'
 #' @param D_matrices A list of distance matrices corresponding to each resolution.
-#' @param alpha The taper parameters (which vary based on resolution).
+#' @param beta The taper parameters (which vary based on resolution).
 #' @return A taper matrix, which is block-diagonal and of class \code{dgCmatrix}.
-.K_alpha_matrix <- function(D_matrices, alpha){
+.K_beta_matrix <- function(D_matrices, beta){
 
-  spherical_taper <- function(matrix, alpha) {
-    apply(matrix, c(1,2), function(h){(1 + h / (2 * alpha)) * (max(1 - h / alpha, 0))^2})
+  spherical_taper <- function(matrix, beta) {
+    apply(matrix, c(1,2), function(h){(1 + h / (2 * beta)) * (max(1 - h / beta, 0))^2})
   }
 
   if (class(D_matrices) == "list") {
-    K_alpha <- mapply(spherical_taper, matrix = D_matrices, alpha = alpha, SIMPLIFY = FALSE)
+    K_beta <- mapply(spherical_taper, matrix = D_matrices, beta = beta, SIMPLIFY = FALSE)
   } else {
-    K_alpha <- spherical_taper(matrix = D_matrices, alpha = alpha)
+    K_beta <- spherical_taper(matrix = D_matrices, beta = beta)
   }
 
-  K_alpha <- Matrix::bdiag(K_alpha)
+  K_beta <- Matrix::bdiag(K_beta)
 
-  return(K_alpha)
+  return(K_beta)
 }
 
 
@@ -478,15 +457,15 @@
 #' Construct K_tap, the \emph{tapered} prior covariance matrix, using the Spherical taper.
 #'
 #' @inheritParams .K_matrix
-#' @inheritParams .K_alpha_matrix
+#' @inheritParams .K_beta_matrix
 #' @return The \emph{tapered} prior covariance matrix, which is
 #' block-diagonal and of class \code{dgCmatrix}.
-.K_tap_matrix <- function(D_matrices, alpha, sigma2, tau){
+.K_tap_matrix <- function(D_matrices, beta, sigma2, tau){
 
   K <- .K_matrix(D_matrices, sigma2, tau)
-  K_alpha <- .K_alpha_matrix(D_matrices, alpha)
+  K_beta <- .K_beta_matrix(D_matrices, beta)
 
-  K_tap <- K * K_alpha
+  K_tap <- K * K_beta
 
   return(K_tap)
 }

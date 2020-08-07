@@ -874,9 +874,22 @@ setMethod("observed_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
     
     ## Note that Cmat maps BAUs to the observations. The dimension of SRE_model@Cmat is
     ## (number of observations) * (number of BAUs).
-    obsidx <- apply(SRE_model@Cmat, 1, function(x) which(x == 1))
-    # Cmat <- as(SRE_model@Cmat, "dgTMatrix")
-    # obsidx <- unique(Cmat@j) # unique() probably not necessary but want to be safe
+    
+    ## Originally I used this, but it is wrong because x == 1 only if all 
+    ## observations are associated with a single BAU only (as is the case with 
+    ## point-referenced data, which is why this mistake had not caused issues 
+    ## previously)
+    # obsidx <- apply(SRE_model@Cmat, 1, function(x) which(x == 1))
+    
+    ## Updated version:
+    # obsidx <- apply(SRE_model@Cmat, 1, function(x) which(x > 0))
+
+    
+    Cmat <- as(SRE_model@Cmat, "dgTMatrix")
+    obsidx <- unique(Cmat@j) + 1 # unique() probably not necessary but want to be safe
+
+    
+    length(obsidx)
     
     return(obsidx)
 })
@@ -1919,7 +1932,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 
 ## Checks arguments for the SRE() function. Code is self-explanatory
 .check_args1 <- function(f,data,basis,BAUs,est_error, 
-                         K_type = c("block-exponential", "neighbour", "unstructured", "separable", "precision_exp", "latticekrig"), 
+                         K_type = c("block-exponential", "neighbour", "unstructured", "separable"), 
                          response = c("gaussian", "poisson", "bernoulli", "gamma",
                                       "inverse-gaussian", "negative-binomial", "binomial"), 
                          link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"), 
@@ -1970,7 +1983,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
     
     #### TMB section
     if (!missing(K_type)) {
-        if(!(K_type %in% c("block-exponential", "neighbour", "unstructured", "separable", "precision_exp", "latticekrig"))) {
+        if(!(K_type %in% c("block-exponential", "neighbour", "unstructured", "separable"))) {
             stop("Invalid K_type argument")
         }
     }

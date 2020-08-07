@@ -14,7 +14,7 @@
 \value{
 A list containing:
 \describe{
-  \item{alpha}{A vector of taper parameters.}
+  \item{beta}{A vector of taper parameters.}
   \item{nnz}{A vector containing the number of non-zeros in each block of the 
   tapered prior covariance matrix, K_tap.}
   \item{D_tap}{A sparse block-diagonal matrix containing the distances with 
@@ -22,7 +22,7 @@ A list containing:
 }
 }
 \description{
-Computes the covariance tapering parameters \eqn{\alpha} (which are dependent
+Computes the covariance tapering parameters \eqn{\beta} (which are dependent
 on resolution), number of non-zeros in each block of the tapered
 covariance matrix K_tap, and the tapered distance matrix whereby some distances
 have been set to zero post tapering (although the remaining non-zero distances 
@@ -30,7 +30,7 @@ are unchanged).
 }
 \details{
 \code{taper} determines how strong the covariance tapering is; the ith taper parameter
-\eqn{\alpha_i} is equal to \code{taper[i]} * \code{minDist[i]}, where
+\eqn{\beta_i} is equal to \code{taper[i]} * \code{minDist[i]}, where
 \code{minDist[i]} is the minimum distance between basis functions at the
 \code{i}th resolution.
 }

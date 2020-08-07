@@ -30,7 +30,7 @@ template<class Type>
 Type inverseLinkFunction(Type Y_O, std::string link);
 
 // Canonical parameter, lambda, as a function of the mean, mu
-template<class Type>
+template<class Type> 
 Type canonicalParameter(Type mu_O, Type k_Z, std::string response); 
 
 // Computes the cumulant function
@@ -39,10 +39,10 @@ Type cumulantFunction(Type x, Type k_Z, std::string response, std::string parame
 
 
 
+
 template<class Type>
 Type objective_function<Type>::operator() ()
 {
-  
   // typedef's:
   typedef Eigen::SparseMatrix<Type> SpMat;    
   typedef Eigen::Triplet<Type> T;             
@@ -53,7 +53,6 @@ Type objective_function<Type>::operator() ()
   int m = Z.size();           // Sample size
   DATA_MATRIX(X);             // Design matrix of fixed effects
   DATA_SPARSE_MATRIX(S);      // Design matrix for basis function random weights
-  DATA_SCALAR(sigma2e);       // Measurement error estimate (relevant to Gaussian case only)
   DATA_STRING(K_type);        // Indicates the desired model formulation of eta prior (K or Q)
   DATA_STRING(response);      // String specifying the response distribution
   DATA_STRING(link);          // String specifying the link function
@@ -66,7 +65,7 @@ Type objective_function<Type>::operator() ()
   int r_s  = r_si.sum();     // Total number of spatial basis functions
   int r = r_s * r_t;
   
-  DATA_VECTOR(alpha);         // Tapering parameters (only relevant for block-exponential formulation)
+  DATA_VECTOR(beta);          // Tapering parameters (only relevant for block-exponential formulation)
   DATA_IVECTOR(row_indices);
   DATA_IVECTOR(col_indices);
   DATA_VECTOR(x);             
@@ -75,8 +74,8 @@ Type objective_function<Type>::operator() ()
   DATA_IVECTOR(n_c);          // Integer vector indicating the number of columns at each resolution (applicable only if K-type == separable)
   
   // Fixed effects and variance components relating to fine scale and data
-  PARAMETER_VECTOR(beta);
-  PARAMETER(logsigma2xi);     Type sigma2xi = exp(logsigma2xi);
+  PARAMETER_VECTOR(alpha);
+  PARAMETER(logsigma2fs);     Type sigma2fs = exp(logsigma2fs);
   PARAMETER(logphi);          Type phi      = exp(logphi);
   
   // Variance components relating to eta
@@ -179,10 +178,6 @@ Type objective_function<Type>::operator() ()
       std::vector<T> tripletList;    // Create a vector of triplet lists, called 'tripletList'
       tripletList.reserve(nnz[k]);   // Reserve number of non-zeros in the matrix
       
-      // Vector to store the row sums
-      vector<Type> rowSums(r_si[k]);
-      rowSums.fill(0);
-      
       
       // Compute the matrix coefficients and store them in the triplet list.
       // FIXME: I COULD DO THIS IN A FUNCTION
@@ -192,63 +187,27 @@ Type objective_function<Type>::operator() ()
           (row_indices[j] == col_indices[j]) ? coef = tau[k] * (x[j] + sigma2[k]) : coef = tau[k] * x[j];
           tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
         }
-      } 
-      
-      if (K_type == "block-exponential") {
+      } else if (K_type == "block-exponential") {
         for (int j = start_x; j < start_x + nnz[k]; j++) {  
-          coef = sigma2[k] * exp( -x[j] / tau[k] ) * pow( 1.0 - x[j] / alpha[k], 2.0) * ( 1.0 + x[j] / (2.0 * alpha[k]));
+          coef = sigma2[k] * exp( -x[j] / tau[k] ) * pow( 1.0 - x[j] / beta[k], 2.0) * ( 1.0 + x[j] / (2.0 * beta[k]));
           tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
         }
       }
       
-      if (K_type == "precision_exp") {
-        
-        for (int j = start_x; j < start_x + nnz[k]; j++){ // For each non-zero entry within resolution k
-          if (col_indices[j] != row_indices[j]) {
-            coef = -sigma2[k] * exp( -x[j] / tau[k] ) * pow(1.0 - x[j] / alpha[k], 2.0) * ( 1.0 + x[j] / (2.0 * alpha[k]));
-            tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
-            rowSums[row_indices[j] - start_eta] += coef;
-          }
-        }
-        // Add the diagonal elements (these depend on the row sums)
-        for (int j = 0; j < r_si[k]; j++) {
-          tripletList.push_back(T(j, j, delta[k] - rowSums[j]));
-        }
-      }
-      
-      if (K_type == "latticekrig") {
-        for (int j = start_x; j < start_x + nnz[k]; j++){  
-          if (row_indices[j] == col_indices[j]) {
-            coef = (x[j] + sigma2[k]) / sqrt(tau[k] + epsilon);
-          } else {
-            coef = x[j] / sqrt(tau[k] + epsilon); 
-          }
-          tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
-        }
-      }
       
       // Convert triplet list of non-zero entries to a true SparseMatrix.
       // NB: mat is "Kk" the variance matrix if K_type == "block-exponential",
-      // the "Bk" matrix if K_type == "latticekrig", 
       // and the precision matrix "Qk" for all other formulations.
       SpMat mat(r_si[k], r_si[k]);
       mat.setFromTriplets(tripletList.begin(), tripletList.end());
-
-      
-      if (K_type == "latticekrig") {
-        mat = mat * mat;
-      }
       
       // Compute the (upper) Cholesky factor of mat
       Eigen::SimplicialLLT< SpMat, Eigen::Upper > llt;
       llt.compute(mat);
       SpMat Uk = llt.matrixU();
       
-      
       // Log-determinant
-      if (K_type == "latticekrig") {
-        logdetQ_inv += -4.0 * r_t * diagLogSum(Uk);
-      } else if (K_type == "block-exponential") {
+      if (K_type == "block-exponential") {
         logdetQ_inv += 2.0 * r_t * diagLogSum(Uk);
       } else {
         logdetQ_inv += -2.0 * r_t * diagLogSum(Uk);
@@ -259,9 +218,7 @@ Type objective_function<Type>::operator() ()
       
       // Construct the matrix Mk such that Qk = Mk' Mk.
       SpMat Mk(r_si[k], r_si[k]);
-      if (K_type == "latticekrig") {
-        Mk = mat;
-      } else if (K_type != "block-exponential") { // We don't explicitly construct Mk with block-exponential
+      if (K_type != "block-exponential") { // We don't explicitly construct Mk with block-exponential
         Mk = Uk * P; 
       } 
       
@@ -297,18 +254,18 @@ Type objective_function<Type>::operator() ()
   }
   
   
-  // -------- 3. Construct ln[eta|Q] and ln[xi|sigma2xi].  -------- //
+  // -------- 3. Construct ln[eta|Q] and ln[xi|sigma2fs].  -------- //
   
-  Type quadform_xi = pow(sigma2xi, -1.0) * (xi_O * xi_O).sum();
+  Type quadform_xi = pow(sigma2fs, -1.0) * (xi_O * xi_O).sum();
 
   Type ld_eta =  -0.5 * r * log(2.0 * M_PI) - 0.5 * logdetQ_inv - 0.5 * quadform_eta;
-  Type ld_xi  =  -0.5 * m * log(2.0 * M_PI) - 0.5 * m * log(sigma2xi) - 0.5 * quadform_xi;
+  Type ld_xi  =  -0.5 * m * log(2.0 * M_PI) - 0.5 * m * log(sigma2fs) - 0.5 * quadform_xi;
   
   
   // -------- 4. Construct ln[Z|Y_O]  -------- //
   
   // 4.1. Construct Y_O, the latent spatial process at observed locations
-  vector<Type> Y_O  = X * beta + S * eta + xi_O;
+  vector<Type> Y_O  = X * alpha + S * eta + xi_O;
   
   // 4.2 Compute the canonical parameter and cumulant function
   vector<Type> lambda(m);
@@ -351,7 +308,7 @@ Type objective_function<Type>::operator() ()
     phi = 1.0;
     cZphi = 0.0;
   } else if (response == "gaussian") {
-    phi = sigma2e;
+    // Note that phi is initialised to sigma2e, so we don't need to change it
     aphi = phi;
     cZphi = -0.5 * (Z * Z / phi + log(2.0 * M_PI * phi));
   } else if (response == "gamma") {
@@ -368,7 +325,7 @@ Type objective_function<Type>::operator() ()
   
   // -------- 5. Define Objective function -------- //
   
-  // ln[Z, eta, xi | ...] =  ln[Z|Y_O] + ln[eta|K] + ln[xi|sigma2xi]
+  // ln[Z, eta, xi | ...] =  ln[Z|Y_O] + ln[eta|K] + ln[xi|sigma2fs]
   // Specify the negative joint log-likelihood function,
   // as R optimisation routines minimise by default.
   

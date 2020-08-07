@@ -4,12 +4,12 @@
 \alias{.K_tap_matrix}
 \title{K_tap, the tapered prior covariance matrix.}
 \usage{
-.K_tap_matrix(D_matrices, alpha, sigma2, tau)
+.K_tap_matrix(D_matrices, beta, sigma2, tau)
 }
 \arguments{
 \item{D_matrices}{A list of distance matrices corresponding to each resolution.}
 
-\item{alpha}{The taper parameters (which vary based on resolution).}
+\item{beta}{The taper parameters (which vary based on resolution).}
 
 \item{sigma2}{The variance components: a vector with length equal to the number
 of resolutions i.e. \code{length(D_matrices)}.}

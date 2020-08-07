@@ -78,7 +78,7 @@
     
   #### Posterior expectation E(Y|Z) at each prediction location.
   ## large- and medium-scale variation terms:
-  p_Y <- as.vector(X %*% M@alphahat + M@S0 %*% M@mu_eta)
+  p_Y <- as.vector(X %*% M@alphahat + M@S0 %*% M@mu_eta) # see Equation (2.1.2)
   
   ## Add posterior estimate of xi_O at observed BAUs
   p_Y[obsidx]   <-  p_Y[obsidx] + as.vector(M@mu_xi_O)
@@ -329,7 +329,7 @@
   ## Only one common term for both observed and unobserved locations:
   vY <- as.vector( (M@S0 %*% Sigma_eta * M@S0) %*% rep(1, r) )
   
-  ## UNOBSERVED locations: simply add the estimate of sigma2xi to this quantity:
+  ## UNOBSERVED locations: simply add the estimate of sigma2fs to this quantity:
   vY[-obsidx] <- vY[-obsidx] + M@sigma2fshat
   
   ## OBSERVED location: add both var(xi_O|Z) and cov(xi_O, eta | Z)
