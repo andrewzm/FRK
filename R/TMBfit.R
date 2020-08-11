@@ -32,7 +32,14 @@
 
   ## Data and parameter preparation for TMB
   data_params_init <- .TMB_prep(M)
+  
+  # browser()
+  # tmp <- data_params_init$data
+  # tmp2 <- data_params_init$parameters
 
+  dim(tmp$X)
+  
+  
   ## TMB model compilation
   obj <- MakeADFun(data = data_params_init$data,
                    parameters = data_params_init$parameters,
@@ -139,6 +146,8 @@
   m    <- length(Z)                # Number of data points AFTER BINNING
   X    <- as.matrix(M@X)          
 
+  
+  
   ## Common to all
   data    <- list(Z = Z, X = X, S = M@S,
                   K_type = M@K_type,

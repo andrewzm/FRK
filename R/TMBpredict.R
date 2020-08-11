@@ -49,6 +49,8 @@
   ## Id of observed BAUs
   obsidx <- observed_BAUs(M)
   
+  
+  
   #### The covariate design matrix, X (at the BAU level i.e. for all BAUs)
   
   ## Retrieve the dependent variable name
@@ -80,8 +82,20 @@
   ## large- and medium-scale variation terms:
   p_Y <- as.vector(X %*% M@alphahat + M@S0 %*% M@mu_eta) # see Equation (2.1.2)
   
+  
+  ## number of BAUs associated to each observation:
+  tmp <- as(M@Cmat, "dgTMatrix")
+  n_BAU_assoc <- tabulate(tmp@i + 1)
+
+  ## Need to repeat each prediction of the fine-scale variation xi_O for as
+  ## many BAUs which were associated with each data observation.
+  ## repeat each element of fsvar in accordance with the number of BAUs associated to the corresponding observation
+  fsvar <- rep(M@mu_xi_O, n_BAU_assoc)
+  
+  
   ## Add posterior estimate of xi_O at observed BAUs
-  p_Y[obsidx]   <-  p_Y[obsidx] + as.vector(M@mu_xi_O)
+  # p_Y[obsidx]   <-  p_Y[obsidx] + as.vector(M@mu_xi_O)
+  p_Y[obsidx]   <-  p_Y[obsidx] + as.vector(fsvar)
   
   #### Posterior variance of Y at each prediction location.
   ## Note that MSPE(E(Y|Z), Y) is approximated by var(Y|Z).
@@ -298,9 +312,9 @@
 #' @param obsidx Vector containing the observed locations.
 #' @return A vector of the posterior variance of Y at every BAU. 
 .Y_var <- function(M, Q_L, obsidx){
-  
+
   r  <- ncol(M@S0)
-  m  <- length(obsidx)
+  m  <- length(M@Z)
   
   # ---- Sparse-inverse-subset of Q (acting as a proxy for the true covariance matrix) ----
 
@@ -328,13 +342,21 @@
   
   ## Only one common term for both observed and unobserved locations:
   vY <- as.vector( (M@S0 %*% Sigma_eta * M@S0) %*% rep(1, r) )
+
   
   ## UNOBSERVED locations: simply add the estimate of sigma2fs to this quantity:
   vY[-obsidx] <- vY[-obsidx] + M@sigma2fshat
   
   ## OBSERVED location: add both var(xi_O|Z) and cov(xi_O, eta | Z)
+  ## number of BAUs associated to each observation:
+  tmp <- as(M@Cmat, "dgTMatrix")
+  n_BAU_assoc <- tabulate(tmp@i + 1)
   covar       <- (M@S * Matrix::t(Cov_eta_xi)) %*% rep(1, r)        # Covariance terms
-  vY[obsidx]  <- vY[obsidx] + Matrix::diag(Sigma_xi) + 2 * covar
+  covar       <- rep(covar, n_BAU_assoc)
+  fsvar_variance <- Matrix::diag(Sigma_xi)
+  fsvar_variance <- rep(fsvar_variance, n_BAU_assoc)
+  vY[obsidx]  <- vY[obsidx] + fsvar_variance + 2 * covar
+  
   
   # ---- Output ----
   
@@ -432,6 +454,7 @@
   ## all other random effects in the model.
   ## All we have to do is make an (N-m) x n_MC matrix of draws from the
   ## Gaussian distribution with mean zero and variance equal to the fine-scale variance.
+  ## FIXME: I think this should be length(unobserved_BAUs(M)) rather than (N-m)
   xi_U <- matrix(rnorm((N - m) * n_MC, mean = 0, sd = sqrt(M@sigma2fshat)), 
                  nrow = N - m, ncol = n_MC)
 
@@ -441,12 +464,18 @@
   ## We break the latent process down as: Y = Y_smooth + xi, 
   ## so that we may separate the fine-scale variation. 
   
+  browser()
+  
+  dim(xi_U)
+  
   ## Split the covariate design matrix based on observed and unobserved samples
   X_O <- X[obsidx, ]
   X_U <- X[-obsidx, ]
   
+
   ## Observed Samples
-  Y_smooth_O <- X_O %*% M@alphahat + M@S %*% eta
+  # Y_smooth_O <- X_O %*% M@alphahat + M@S %*% eta
+  Y_smooth_O <- X_O %*% M@alphahat + M@S0[obsidx, ] %*% eta
   
   ## Unobserved Samples
   S_U          <- M@S0[-obsidx, ] # Unobserved random effect 'design' matrix

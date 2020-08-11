@@ -1403,9 +1403,19 @@ setMethod("BuildC",signature(data="SpatialPoints"),
 ## the BAUs to the data yet
 setMethod("BuildC",signature(data="SpatialPolygons"),
           function(data,BAUs) {
+              
+              
+              ## Check if BAUs weights are set; if not, assume equally weighted and throw a warning
+              ## FIXME: instead of setting this to one, we could set it equal to the area of the BAU.
+              if (is.null(BAUs$wts)) {
+                  BAUs$wts <- 1
+                  warning("Assuming BAUs are equally weighted; if this is not the case, set the 'wts' field in the BAUs accordingly.")
+              }
+                  
+              
               data$id <- 1:length(data)                           # polygon number
               BAU_as_points <- SpatialPoints(coordinates(BAUs))   # convert BAUs to SpatialPoints
-              i_idx <- j_idx <-  NULL                             # initialise
+              i_idx <- j_idx <- x_idx <- NULL                     # initialise
               for (i in 1L:length(data)) {                        # for each data point
 
                   this_poly <- SpatialPolygons(list(data@polygons[[i]]),1L) # extract polygon
@@ -1424,6 +1434,8 @@ setMethod("BuildC",signature(data="SpatialPolygons"),
                   
                   i_idx <- c(i_idx,rep(i,length(overlap)))                  # the row index is the data number repeated
                   j_idx <- c(j_idx,as.numeric(overlap))                     # the column index is the BAU number
+                  
+                  x_idx <- c(x_idx, BAUs$wts[overlap])
               }
 
               ## If no overlap was found it means the user generated the BAUs and that
@@ -1435,7 +1447,7 @@ setMethod("BuildC",signature(data="SpatialPolygons"),
                                          large support observations. Are you sure all
                                          observations are covered by BAUs?")
 
-              list(i_idx=i_idx,j_idx=j_idx)  # return the (i,j) indices of nonzeros
+              list(i_idx = i_idx, j_idx = j_idx, x_idx = x_idx)  # return the (i,j) indices of nonzeros
           })
 
 ## If we have an STIDF the BAUs and the data both need to have a field "n"

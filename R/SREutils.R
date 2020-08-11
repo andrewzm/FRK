@@ -120,7 +120,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                              "inverse-gaussian", "negative-binomial", "binomial"), 
                 link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"), 
                 taper = 4, ...) {
-
+    
     ## Strings that must be lower-case (this allows users to enter 
     ## response = "Gaussian", for example, without causing issues)
     response  <- tolower(response)
@@ -219,7 +219,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         ## Construct the sparse incidence Matrix from above indices. This is the matrix C_Z in the vignette
         Cmat[[i]] <- sparseMatrix(i=C_idx$i_idx,
                                   j=C_idx$j_idx,
-                                  x=1,                       # just set to unity for now
+                                  x=C_idx$x_idx,   
                                   dims=c(length(data_proc),  # ensure dimensions of C are good
                                          length(BAUs)))
 
@@ -874,22 +874,8 @@ setMethod("observed_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
     
     ## Note that Cmat maps BAUs to the observations. The dimension of SRE_model@Cmat is
     ## (number of observations) * (number of BAUs).
-    
-    ## Originally I used this, but it is wrong because x == 1 only if all 
-    ## observations are associated with a single BAU only (as is the case with 
-    ## point-referenced data, which is why this mistake had not caused issues 
-    ## previously)
-    # obsidx <- apply(SRE_model@Cmat, 1, function(x) which(x == 1))
-    
-    ## Updated version:
-    # obsidx <- apply(SRE_model@Cmat, 1, function(x) which(x > 0))
-
-    
     Cmat <- as(SRE_model@Cmat, "dgTMatrix")
     obsidx <- unique(Cmat@j) + 1 # unique() probably not necessary but want to be safe
-
-    
-    length(obsidx)
     
     return(obsidx)
 })
