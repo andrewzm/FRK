@@ -120,6 +120,7 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot method the fitting procedure used to fit the SRE model
 #' @slot phi the estimated dispersion parameter (assumed constant throughout the spatial domain)
 #' @slot k_Z vector of known size parameters at the data support (only applicable to binomial and negative-binomial response distributions) 
+#' @slot est_finescale Flag indicating whether the fine-scale variation should be include in the model
 #' @seealso \code{\link{SRE}} for details on how to construct and fit SRE models.
 #' @keywords spatial
 setClass("SRE",representation(data="list",
@@ -157,4 +158,5 @@ setClass("SRE",representation(data="list",
                               log_likelihood = "numeric", 
                               method = "character", 
                               phi = "numeric", 
-                              k_Z = "Matrix"))
+                              k_Z = "Matrix", 
+                              est_finescale = "logical"))

@@ -378,7 +378,6 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
 #' @rdname SRE
 #' @export
 SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
-                    est_finescale = TRUE,
                     lambda = 0, print_lik = FALSE, optimiser = nlminb, ...) {
 
     method <- match.arg(method)
@@ -392,7 +391,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     ## Call internal fitting function with checked arguments
     return(.SRE.fit(SRE_model = SRE_model, n_EM = n_EM, tol = tol, method = method, 
              lambda = lambda, print_lik = print_lik, optimiser = optimiser, 
-             est_finescale = est_finescale, ...))
+             ...))
 
 }
 
@@ -926,7 +925,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 
 ## Main prediction routine
 .SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method="EM", lambda = 0, 
-                     print_lik = FALSE, optimiser = nlminb, est_finescale = TRUE, ...) {
+                     print_lik = FALSE, optimiser = nlminb, ...) {
 
     info_fit <- list()      # initialise info_fit
     
@@ -995,8 +994,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 
         }
     } else if (method == "TMB") {
-        SRE_model <- .FRKTMB_fit(SRE_model, optimiser = optimiser, 
-                                 est_finescale = est_finescale, ...)
+        SRE_model <- .FRKTMB_fit(SRE_model, optimiser = optimiser, ...)
     } else {
         stop("No other estimation method implemented yet. Please use method = 'EM' or method = 'TMB'.")
     }

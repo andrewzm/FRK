@@ -288,7 +288,6 @@
 .Y_var <- function(M, Q_L, obsidx){
   
   r  <- ncol(M@S0)
-  # m  <- length(M@Z)
   mstar <- length(obsidx)
   
   # ---- Sparse-inverse-subset of Q (acting as a proxy for the true covariance matrix) ----
@@ -304,10 +303,13 @@
   }
 
   Sigma_eta   <- Sigma[1:r, 1:r]
-  Sigma_xi    <- Sigma[(r + 1):(r + mstar), (r + 1):(r + mstar)]
-  
-  # Covariances between xi_O and eta
-  Cov_eta_xi  <- Sigma[1:r, (r + 1):ncol(Sigma)]
+  if (M@est_finescale) {
+    Sigma_xi    <- Sigma[(r + 1):(r + mstar), (r + 1):(r + mstar)]
+    
+    # Covariances between xi_O and eta
+    Cov_eta_xi  <- Sigma[1:r, (r + 1):ncol(Sigma)]
+  }
+
   
   # ----- Uncertainty: Posterior variance of Y at each BAU ------
   
@@ -319,16 +321,15 @@
   ## Only one common term for both observed and unobserved locations:
   vY <- as.vector( (M@S0 %*% Sigma_eta * M@S0) %*% rep(1, r) )
 
-  ## UNOBSERVED locations: simply add the estimate of sigma2fs to the variance:
-  vY[-obsidx] <- vY[-obsidx] + M@sigma2fshat
+  if (M@est_finescale) {
+    ## UNOBSERVED locations: simply add the estimate of sigma2fs to the variance:
+    vY[-obsidx] <- vY[-obsidx] + M@sigma2fshat
+    
+    ## OBSERVED location: add both var(xi_O|Z) and cov(xi_O, eta | Z)
+    covar      <- (M@S_O * Matrix::t(Cov_eta_xi)) %*% rep(1, r)  # covariance terms
+    vY[obsidx] <- vY[obsidx] + Matrix::diag(Sigma_xi) + 2 * covar
+  }
 
-  ## OBSERVED location: add both var(xi_O|Z) and cov(xi_O, eta | Z)
-  covar      <- (M@S_O * Matrix::t(Cov_eta_xi)) %*% rep(1, r)  # covariance terms
-  vY[obsidx] <- vY[obsidx] + Matrix::diag(Sigma_xi) + 2 * covar
-  
-  
-  # covar <- (M@S0 * Matrix::t(Cov_eta_xi)) %*% rep(1, r) 
-  # vY <- as.vector( (M@S0 %*% Sigma_eta * M@S0) %*% rep(1, r)  + 2 * covar)
   
   
   # ---- Output ----
@@ -388,30 +389,48 @@
   
   ## Must generate samples jointly, as eta and xi_O are correlated.
 
+  if (M@est_finescale) {
+    ## Construct the mean vector of (eta', xi')',
+    ## then make an (r + m*) x n_MC matrix whose columns are the mean vector of (eta', xi')'.
+    ## Finally, generate (r + m*) x n_MC samples from Gau(0, 1) distribution.
+    mu_eta_xi_O         <- c(as.numeric(M@mu_eta), as.numeric(M@mu_xi))
+    mu_eta_xi_O_Matrix  <- matrix(rep(mu_eta_xi_O, times = n_MC), ncol = n_MC)
+    z <- matrix(rnorm((r + mstar) * n_MC), nrow = r + mstar, ncol = n_MC)
+    
+    ## Compute the Cholesky factor of  Q (the joint precision matrix of (eta', xi')').
+    ## Then, to generate samples from (eta, xi_O), 
+    ## use eta_xi = L^{-T} z + mu = U^{-1} z + mu, 
+    ## where U upper cholesky factor of Q, so that Q = U'U.
+    U <- Matrix::t(Q_L$Qpermchol) # upper Cholesky factor of permuted joint precision matrix M@Q_eta_xi
+    x <- backsolve(U, z)          # x ~ Gau(0, A), where A is the permuted precision matrix i.e. A = P'QP
+    
+    y <- Q_L$P %*% x              # y ~ Gau(0, Q^{-1})
+    eta_xi_O  <- as.matrix(y + mu_eta_xi_O_Matrix) # add the mean to y
+    
+    
+    ## Separate the eta and xi samples
+    eta     <- eta_xi_O[1:r, ]
+    xi_O    <- eta_xi_O[(r + 1):(r + mstar), ]
+    
+  } else {
+    
+    ## Construct the mean vector of eta,
+    ## then make an r x n_MC matrix whose columns are the mean vector of eta.
+    ## Finally, generate r x n_MC samples from Gau(0, 1) distribution.
+    mu_eta         <- as.numeric(M@mu_eta)
+    mu_eta_Matrix  <- matrix(rep(mu_eta, times = n_MC), ncol = n_MC)
+    z <- matrix(rnorm(r * n_MC), nrow = r, ncol = n_MC)
+    
+    ## Compute the Cholesky factor of  Q, where Q is the precision matrix of eta.
+    ## Then, to generate samples from eta, use eta = L^{-T} z + mu = U^{-1} z + mu, 
+    ## where U upper cholesky factor of Q, so that Q = U'U.
+    U <- Matrix::t(Q_L$Qpermchol) # upper Cholesky factor of permuted joint precision matrix M@Q_eta_xi
+    x <- backsolve(U, z)          # x ~ Gau(0, A), where A is the permuted precision matrix i.e. A = P'QP
+    y <- Q_L$P %*% x              # y ~ Gau(0, Q^{-1})
+    eta  <- as.matrix(y + mu_eta_Matrix) # add the mean to y
+  }
   
-  ## Construct the mean vector of (eta', xi')',
-  ## then make an (r + m*) x n_MC matrix whose columns are the mean vector of (eta', xi')'.
-  ## Finally, generate (r + m*) x n_MC samples from Gau(0, 1) distribution.
-  mu_eta_xi_O         <- c(as.numeric(M@mu_eta), as.numeric(M@mu_xi))
-  mu_eta_xi_O_Matrix  <- matrix(rep(mu_eta_xi_O, times = n_MC), ncol = n_MC)
-  z <- matrix(rnorm((r + mstar) * n_MC), nrow = r + mstar, ncol = n_MC)
   
-  ## Compute the Cholesky factor of  Q (the joint precision matrix of (eta', xi')').
-  ## Then, to generate samples from (eta, xi_O), 
-  ## use eta_xi = L^{-T} z + mu = U^{-1} z + mu, 
-  ## where U upper cholesky factor of Q, so that Q = U'U.
-  
-  ## Method 2: sparseinv package, Cholesky of permuted Q, then backsolve
-  U <- Matrix::t(Q_L$Qpermchol) # upper Cholesky factor of permuted joint precision matrix M@Q_eta_xi
-  x <- backsolve(U, z)          # x ~ Gau(0, A), where A is the permuted precision matrix i.e. A = P'QP
-  
-  y <- Q_L$P %*% x              # y ~ Gau(0, Q^{-1})
-  eta_xi_O  <- as.matrix(y + mu_eta_xi_O_Matrix) # add the mean to y
-  
-  
-  ## Separate the eta and xi samples
-  eta     <- eta_xi_O[1:r, ]
-  xi_O    <- eta_xi_O[(r + 1):(r + mstar), ]
   
   ## We now have two matrices, eta and xi_O:
   ## row i of eta corresponds to n_MC MC samples of eta_i,
@@ -423,9 +442,12 @@
   ## all other random effects in the model.
   ## All we have to do is make an (N-m) x n_MC matrix of draws from the
   ## Gaussian distribution with mean zero and variance equal to the fine-scale variance.
-  ## FIXME: what happens with N = mstar (e.g., for the Sydney example). I believe it will just be an empty row vector with n_MC columns, but double check this is all ok.
-  xi_U <- matrix(rnorm((N - mstar) * n_MC, mean = 0, sd = sqrt(M@sigma2fshat)),
-                 nrow = N - mstar, ncol = n_MC)
+  if (M@est_finescale) {
+    xi_U <- matrix(rnorm((N - mstar) * n_MC, mean = 0, sd = sqrt(M@sigma2fshat)),
+                   nrow = N - mstar, ncol = n_MC)
+    xi_samples <- rbind(xi_O, xi_U)
+  }
+
 
   
   # ---- Construct samples from latent process Y ----
@@ -434,12 +456,8 @@
   ## so that we may separate the fine-scale variation. 
 
   ## Split the covariate design matrix based on observed and unobserved samples
-  ## FIXME: make these slots of SRE object
   X_U <- X[-obsidx, ]   # Unobserved fixed effect 'design' matrix
   S_U <- M@S0[-obsidx, ] # Unobserved random effect 'design' matrix
-  
-  ## Samples of Y (smooth component)
-  # Y_smooth_samples <- X %*% M@alphahat + M@S0 %*% eta
 
   ## Observed Samples
   Y_smooth_O <- M@X_O %*% M@alphahat + M@S_O %*% eta
@@ -449,7 +467,6 @@
   
   ## Combine samples
   Y_smooth_samples  <- rbind(Y_smooth_O, Y_smooth_U)
-  xi_samples        <- rbind(xi_O, xi_U)
   
   
   
@@ -459,14 +476,17 @@
   ids              <- c(obsidx, unobsidx)  # All indices (observed and unobserved)
   P                <- Matrix::sparseMatrix(i = 1:N, j = 1:N, x = 1)[ids, ]
   Y_smooth_samples <- Matrix::t(P) %*% Y_smooth_samples
-  xi_samples       <- Matrix::t(P) %*% xi_samples
   
   ## Construct the samples from the latent process Y 
-  Y_samples <- Y_smooth_samples + xi_samples
-  
+  if (M@est_finescale) {
+    xi_samples       <- Matrix::t(P) %*% xi_samples
+    Y_samples <- Y_smooth_samples + xi_samples
+  } else {
+    Y_samples <- Y_smooth_samples
+  }
+    
   Y_samples        <- as.matrix(Y_samples)
   Y_smooth_samples <- as.matrix(Y_smooth_samples)
-
 
   ## Outputted Y value depend on obs_fs
   if (obs_fs == FALSE) MC$Y_samples <- Y_samples

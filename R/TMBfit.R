@@ -28,16 +28,19 @@
 #'   \item{phi}{Estimate of the dispersion parameter (only for applicable response distributions).}
 #'   \item{log_likelihood}{The log-likelihood of the model evaluated at the final parameter estimates. Can be obtained by calling loglik(M).}
 #' }
-.FRKTMB_fit <- function(M, optimiser, est_finescale, ...) {
+.FRKTMB_fit <- function(M, optimiser, ...) {
 
+  r  <- ncol(M@S0)
+  mstar <- ncol(M@C_O)
+  
   ## Data and parameter preparation for TMB
-  data_params_init <- .TMB_prep(M, est_finescale = est_finescale)
+  data_params_init <- .TMB_prep(M)
   
   
   ## TMB model compilation
   obj <- MakeADFun(data = data_params_init$data,
                    parameters = data_params_init$parameters,
-                   random = c("eta", "xi_O"),
+                   random = c("random_effects"),
                    DLL = "FRK")
   
   ## View the sparsity pattern.
@@ -102,8 +105,13 @@
   ## Update the slots of M
   ## Convert to Matrix as these SRE slots require class "Matrix"
   M@alphahat <- as(estimates$alpha, "Matrix")
-  M@mu_eta   <- as(estimates$eta, "Matrix")
-  M@mu_xi  <- as(estimates$xi, "Matrix")
+  M@mu_eta   <- as(estimates$random_effects[1:r], "Matrix")
+  if (M@est_finescale) {
+    M@mu_xi  <- as(estimates$random_effects[(r+1):(r + mstar)], "Matrix")
+  } else {
+    M@mu_xi  <- as(rep(0, mstar), "Matrix")
+  }
+  
   
   M@sigma2fshat <- unname(exp(estimates$logsigma2fs))
   M@Q_eta_xi <- Q          
@@ -115,9 +123,9 @@
   ## Posterior variance and precision matrix of eta random effects
   r <- nbasis(M)
   M@Q_eta <- Q[1:r, 1:r] # Don't need it, but this matrix is easily obtained, so provide anyway
-  M@S_eta <- Matrix()    # Don't need this matrix so set it to NA. It is also not easily obtained because to obtain it we need to invert the joint precision matrix Q_eta_xi, which may be very large.
-  
+
   ## For TMB, we do not need to compute these matrices; return an empty matrix.
+  M@S_eta <- Matrix()
   M@Khat_inv <- Matrix()
   M@Khat <- Matrix()
   
@@ -151,7 +159,7 @@
 #'   \item{data}{The data.}
 #'   \item{parameters}{The initialised parameters/fixed-effects/random-effects.}
 #' }
-.TMB_prep <- function (M, est_finescale) {
+.TMB_prep <- function (M) {
 
 
   k_Z  <- as.vector(M@k_Z)
@@ -278,15 +286,13 @@
 
   ## Create a data entry of sigma2fs_hat (one that will stay constant if we are 
   ## not estimating sigma2fs within TMB)
-  data$sigma2fs_hat <- var(parameters$xi_O)
+  data$sigma2fs_hat <- exp(parameters$logsigma2fs)
   ## Only estimate sigma2fs if all the observations are associated with exactly one BAU.
   ## Otherwise, we will fix sigma2fs with TMB.
   data$est_sigma2fs <- as.integer( all(tabulate(M@Cmat@i + 1) == 1) )
   
-  if (!est_finescale) {
-    # parameters$xi_O <- 0
-    # parameters$logsigma2fs <- 0
-  } 
+
+  data$est_finescale <- as.integer(est_finescale)
  
 
   
@@ -331,13 +337,13 @@
   ## FIXME: Not sure what to do for time yet.
   ## FIXME: haven't really though about when K_type = separable.
   parameters$logsigma2      <- log(var(as.vector(Y_O)) * (0.1)^(0:(nres - 1)))
-  # if (is.null(parameters$eta)) {
+  # if (is.null(eta)) {
   #   parameters$logsigma2      <- log(var(as.vector(Y_O)) * (0.1)^(0:(nres - 1)))
   # } else {
   #   sigma2 <- rep(0, nres)
   #   counter <- 1
   #   for (i in 1:length(r_si)) {
-  #     sigma2[i] <- var(parameters$eta[counter:r_si[i]]) 
+  #     sigma2[i] <- var(eta[counter:r_si[i]]) 
   #     counter = counter + r_si[i]
   #   }
   #   parameters$logsigma2 <- log(sigma2)
@@ -361,8 +367,10 @@
   }
   
 
-  ## iii. Basis function random-effects 
+  
   for (dummy in 1:iterations) {
+    
+    ## iii. Basis function random-effects 
     
     if (!is.null(parameters$logsigma2fs)) {
       regularising_weight <- exp(parameters$logsigma2fs) 
@@ -387,15 +395,27 @@
     }
     
     ## MAP estimate of eta
-    parameters$eta  <- as.vector((1 / regularising_weight) * mat_inv %*% Matrix::t(S_O)  %*% (Y_O - X_O %*% parameters$alpha))
+    eta  <- as.vector((1 / regularising_weight) * mat_inv %*% Matrix::t(S_O)  %*% (Y_O - X_O %*% parameters$alpha))
+    
+    if (!M@est_finescale) 
+      break()
+    
     
     ## iv. Observed fine-scale random effects xi_O
-    parameters$xi_O <- as.vector(Y_O - X_O %*% parameters$alpha - S_O %*% parameters$eta)
+    xi_O <- as.vector(Y_O - X_O %*% parameters$alpha - S_O %*% eta)
     
     ## v. Fine-scale variance, sigma2fs AKA sigma2_xi
-    parameters$logsigma2fs <- log(var(parameters$xi_O))
+    parameters$logsigma2fs <- log(var(xi_O))
     
   }
+  
+  if (M@est_finescale) {
+    parameters$random_effects <- c(eta, xi_O)
+  } else {
+    parameters$logsigma2fs <- 0
+    parameters$random_effects <- eta
+  }
+  
   
   return(parameters)
 }

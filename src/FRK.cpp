@@ -51,10 +51,10 @@ Type objective_function<Type>::operator() ()
   
   DATA_VECTOR(Z);             // Vector of observations
   int m = Z.size();           // Sample size
-  DATA_MATRIX(X_O);             // Design matrix of fixed effects
-  DATA_SPARSE_MATRIX(S_O);      // Design matrix for basis function random weights
-  DATA_SPARSE_MATRIX(C_O);      // Incidence matrix, mapping the BAUs to the observations
-  // int N = C.cols();           // The number of BAUs
+  DATA_MATRIX(X_O);           // Design matrix of fixed effects
+  DATA_SPARSE_MATRIX(S_O);    // Design matrix for observed basis function random weights
+  DATA_SPARSE_MATRIX(C_O);    // Incidence matrix, mapping the BAUs to the observations
+  int mstar = C_O.cols();     // The number of observed BAUs
   DATA_STRING(K_type);        // Indicates the desired model formulation of eta prior (K or Q)
   DATA_STRING(response);      // String specifying the response distribution
   DATA_STRING(link);          // String specifying the link function
@@ -90,19 +90,26 @@ Type objective_function<Type>::operator() ()
   PARAMETER(logsigma2_t);       Type sigma2_t       = exp(logsigma2_t);
   PARAMETER(frho_t);            Type rho_t          = transform_minus_one_to_one(frho_t);
   
-  // Latent random effects (will be integrated out)
-  PARAMETER_VECTOR(eta);
-  PARAMETER_VECTOR(xi_O);
   
   // Fine-scale variation variance parameter
   // If we are not estimating sigma2fs, fix it to the estimate. Otherwise, 
   // treat it as a parameter.
-  PARAMETER(logsigma2fs);     Type sigma2fs = exp(logsigma2fs);
+  PARAMETER(logsigma2fs);   Type sigma2fs = exp(logsigma2fs);
   if (!est_sigma2fs)
     sigma2fs = sigma2fs_hat;
   
-  if(!est_finescale)
-    xi_O = 0;
+  
+  // Latent random effects (will be integrated out).
+  // Write it this way so that we have the option to exclude xi_O from within R.
+  PARAMETER_VECTOR(random_effects);
+  vector<Type> eta = random_effects.head(r);
+  vector<Type> xi_O(mstar);
+  
+  if (est_finescale) {
+    xi_O = random_effects.tail(mstar);
+  } else {
+    xi_O.fill(0.0);
+  }
   
   // Small, positive constant used to avoid division and logarithm of zero:
   Type epsilon = 10.0e-8;

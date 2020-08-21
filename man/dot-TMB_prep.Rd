@@ -4,7 +4,7 @@
 \alias{.TMB_prep}
 \title{TMB data and parameter preparation.}
 \usage{
-.TMB_prep(M, est_finescale)
+.TMB_prep(M)
 }
 \arguments{
 \item{M}{An object of class \code{SRE}.}

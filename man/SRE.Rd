@@ -64,7 +64,6 @@ SRE.fit(
   n_EM = 100L,
   tol = 0.01,
   method = c("EM", "TMB"),
-  est_finescale = TRUE,
   lambda = 0,
   print_lik = FALSE,
   optimiser = nlminb,
