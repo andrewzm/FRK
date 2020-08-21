@@ -1481,7 +1481,7 @@ setMethod("BuildC",signature(data="STIDF"),
           function(data,BAUs) {
               i_idx <- 1:length(data)       # the row index is simple 1:ndata
               j_idx <- BAUs$n[data@data$n]  # the column index is whatever BAU the data falls in
-              list(i_idx=i_idx,j_idx=j_idx) # return the (i,j) indices of nonzeros
+              list(i_idx=i_idx,j_idx=j_idx, x_idx = 1) # return the (i,j) indices of nonzeros
           })
 
 setMethod("BuildC",signature(data="STFDF"),
@@ -1527,7 +1527,7 @@ setMethod("BuildC",signature(data="STFDF"),
                   }
                   count <- count + 1                           # increment count
               }
-              list(i_idx=i_idx,j_idx=j_idx)                     # return the (i,j) indices of nonzeros
+              list(i_idx=i_idx,j_idx=j_idx, x_idx = 1)                     # return the (i,j) indices of nonzeros
           })
 
 ## Does the over function in parallel

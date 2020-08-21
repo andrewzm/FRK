@@ -276,6 +276,9 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         }
     }
 
+    
+    
+    
     if(fs_model == "ind") {
         Qfs_BAUs <- Diagonal(x=1/BAUs$fs)
         Vfs_BAUs <- Diagonal(x=BAUs$fs)
