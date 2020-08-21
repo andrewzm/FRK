@@ -292,7 +292,7 @@
   data$est_sigma2fs <- as.integer( all(tabulate(M@Cmat@i + 1) == 1) )
   
 
-  data$est_finescale <- as.integer(est_finescale)
+  data$est_finescale <- as.integer(M@est_finescale)
  
 
   

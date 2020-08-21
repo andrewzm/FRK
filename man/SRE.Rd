@@ -56,6 +56,7 @@ SRE(
   link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse",
     "inverse-squared"),
   taper = 4,
+  est_finescale = TRUE,
   ...
 )
 

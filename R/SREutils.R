@@ -122,6 +122,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                              "inverse-gaussian", "negative-binomial", "binomial"), 
                 link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"), 
                 taper = 4, 
+                est_finescale = TRUE,
                 ...) {
     
 
@@ -371,7 +372,8 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         taper = taper, 
         mu_xi = mu_xi_init, 
         Q_eta_xi = Q_eta_xi_init,
-        k_Z = k)
+        k_Z = k, 
+        est_finescale = est_finescale)
 }
 
 
