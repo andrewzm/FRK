@@ -46,6 +46,7 @@ SRE(
   est_error = TRUE,
   average_in_BAU = TRUE,
   sum_variables = NULL,
+  sum_wts_in_data_polygon = FALSE,
   fs_model = "ind",
   vgm_model = NULL,
   K_type = c("block-exponential", "neighbour", "unstructured", "separable"),
@@ -63,6 +64,7 @@ SRE.fit(
   n_EM = 100L,
   tol = 0.01,
   method = c("EM", "TMB"),
+  est_finescale = TRUE,
   lambda = 0,
   print_lik = FALSE,
   optimiser = nlminb,
@@ -148,6 +150,8 @@ included in the prediction dataframe. If \code{NULL}, no percentiles are compute
 \item{optimiser}{the optimising function used for model fitting when \code{method = 'TMB'} (default is \code{nlminb}). Users may pass in a function object or a string corresponding to a named function. Optional parameters may be passed to \code{optimiser} via \code{...}. The only requirement of \code{optimiser} is that the first three arguments correspond to the initial parameters, the obejctive function, and the gradient, respectively (note that this may be achieved by rearranging the order of arguments before passing into \code{optimiser})}
 
 \item{...}{other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling \code{FRK}, or the user specified \code{optimiser} function when calling \code{FRK} or \code{SRE.fit}}
+
+\item{sum_wts_in_data_polygon}{if \code{TRUE}, the rows of the incidence matrix \eqn{C} represent weighted sums. Otherwise, the rows correspond to a weighted average.}
 
 \item{normalise_basis}{flag indicating whether to normalise the basis functions so that they reproduce a stochastic process with approximately constant variance spatially}
 

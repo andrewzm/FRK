@@ -20,24 +20,18 @@
 #' @param ... other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling \code{FRK}, or the user specified \code{optimiser} function when calling \code{FRK} or \code{SRE.fit}
 #' @return This function updates the following slots of \code{M}:
 #' \describe{
-#'   \item{Q_eta_xi}{An estimate of the joint precision matrix of all random effects in the model (the random weights \eqn{\eta} and observed fine-scale variation \eqn{\xi_O}).}
+#'   \item{Q_eta_xi}{An estimate of the joint precision matrix of all random effects in the model (the random weights \eqn{\eta} and fine-scale variation \eqn{\xi}).}
 #'   \item{mu_eta}{Posterior expectation of the random weights \eqn{\eta}.}
-#'   \item{mu_xi_O}{Posterior expectation of the observed-fine scale variation \eqn{\xi_O}.}
+#'   \item{mu_xi}{Posterior expectation of the fine-scale variation \eqn{\xi}.}
 #'   \item{alphahat}{Estimate of the fixed-effects.}
 #'   \item{sigma2fshat}{Estimate of the variance parameter of the fine-scale variation.}
 #'   \item{phi}{Estimate of the dispersion parameter (only for applicable response distributions).}
 #'   \item{log_likelihood}{The log-likelihood of the model evaluated at the final parameter estimates. Can be obtained by calling loglik(M).}
 #' }
-.FRKTMB_fit <- function(M, optimiser, ...) {
+.FRKTMB_fit <- function(M, optimiser, est_finescale, ...) {
 
   ## Data and parameter preparation for TMB
-  data_params_init <- .TMB_prep(M)
-  
-  # browser()
-  # tmp <- data_params_init$data
-  # tmp2 <- data_params_init$parameters
-
-  dim(tmp$X)
+  data_params_init <- .TMB_prep(M, est_finescale = est_finescale)
   
   
   ## TMB model compilation
@@ -59,8 +53,9 @@
   
   ## The optimiser should have arguments: start, objective, gradient. 
   ## The remaining arguments can be whatever.
+  
   fit <- optimiser(obj$par, obj$fn, obj$gr, ...)
-    
+  
   ## Log-likeihood
   log_likelihood <- -obj$fn() # could also use -fit$objective
   
@@ -69,14 +64,18 @@
   ## be done once, as C(Z, phi) depends only on Z for one-parameter exponential 
   ## families)
   Z <- data_params_init$data$Z
-  k_Z <- data_params_init$data$k_Z
+  k_Z <- as.vector(M@k_Z)
   if(M@response == "poisson") {
     cZphi = -lfactorial(Z)
   } else if (M@response == "negative-binomial") {
     cZphi   = lfactorial(Z + k_Z - 1.0) - lfactorial(Z) - lfactorial(k_Z - 1.0)
   } else if (M@response == "binomial") {
     cZphi   = lfactorial(k_Z) - lfactorial(Z) - lfactorial(k_Z - Z)
-  } 
+  } else {
+    cZphi = 0 # add nothing for the other distributions, because we have added cZphi in the C++ template
+  }
+  log_likelihood = log_likelihood + cZphi
+
   
   ## Extract parameter and random effect estimates
   par <- obj$env$last.par.best
@@ -104,9 +103,9 @@
   ## Convert to Matrix as these SRE slots require class "Matrix"
   M@alphahat <- as(estimates$alpha, "Matrix")
   M@mu_eta   <- as(estimates$eta, "Matrix")
-  M@mu_xi_O  <- as(estimates$xi_O, "Matrix")
+  M@mu_xi  <- as(estimates$xi, "Matrix")
   
-  M@sigma2fshat <- exp(estimates$logsigma2fs)
+  M@sigma2fshat <- unname(exp(estimates$logsigma2fs))
   M@Q_eta_xi <- Q          
   M@phi <- unname(exp(estimates$logphi))
   
@@ -125,6 +124,22 @@
   return(M)
 }
 
+## Exctracts the covariate design matrix of the fixed effects at the BAU level.
+.extract_BAU_X_matrix <- function (formula, BAUs) {
+  ## Retrieve the dependent variable name
+  depname <- all.vars(formula)[1]
+  
+  ## Set the dependent variable in BAUs to something just so that 
+  ## .extract.from.formula doesn't throw an error. We are not returning M, 
+  ## so we don't need to worry about NULL-ing afterwards.
+  BAUs[[depname]] <- 0.1
+  
+  ## Extract covariates from BAUs
+  L <- .extract.from.formula(formula, data = BAUs)
+  X <- as(L$X,"Matrix")
+  
+  return(X)
+}
 
 #' TMB data and parameter preparation.
 #'
@@ -136,26 +151,27 @@
 #'   \item{data}{The data.}
 #'   \item{parameters}{The initialised parameters/fixed-effects/random-effects.}
 #' }
-.TMB_prep <- function (M) {
+.TMB_prep <- function (M, est_finescale) {
 
-  k_Z  <- as.vector(M@k)
-  nres <- max(M@basis@df$res)      # Number of resolutions
-  r    <- M@basis@n                # Number of basis functions in total (space x time).
+
+  k_Z  <- as.vector(M@k_Z)
   N    <- nrow(M@S0)               # Number of BAUs
   Z    <- as.vector(M@Z)           # Binned data
   m    <- length(Z)                # Number of data points AFTER BINNING
-  X    <- as.matrix(M@X)          
-
+  X    <- as(.extract_BAU_X_matrix(M@f, M@BAUs), "matrix")   
   
   
+  if (is.null(M@BAUs$wts)) {
+    k <- -1
+  } else {
+    k <- M@BAUs$wts
+  }
+    
   ## Common to all
-  data    <- list(Z = Z, X = X, S = M@S,
-                  K_type = M@K_type,
-                  response = M@response, 
-                  link = M@link,
-                  k_Z = k_Z, 
+  data    <- list(Z = Z, X_O = M@X_O, S_O = M@S_O, C_O = M@C_O,
+                  K_type = M@K_type, response = M@response, link = M@link,
+                  k = k, k_Z = k_Z,
                   temporal = as.integer(is(M@basis,"TensorP_Basis")))
-  
 
   ## The location of the stored spatial basis functions depend on whether the 
   ## data is spatio-temporal or not. Here, we also define the number of temporal
@@ -203,7 +219,7 @@
   } 
   
   
-  # ---- Parameter and random effect initialisations. ----
+  # ---- Parameter and random effect initialisations ----
 
   ## Create the relevant link functions. When a probability parameter is 
   ## present in a model and the link-function is appropriate for modelling 
@@ -212,8 +228,8 @@
   ## Gaussian Y-scale, and then the probability parameter to the conditional 
   ## mean at the data scale. In other situations, we simply map from Y to the mean.
   if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
-    h     <- .link_fn(kind = "prob_to_Y", link = M@link)
-    f     <- .link_fn(kind = "mu_to_prob", response = M@response)
+    f     <- .link_fn(kind = "prob_to_Y", link = M@link)
+    h     <- .link_fn(kind = "mu_to_prob", response = M@response)
   } else {
     g     <- .link_fn(kind = "mu_to_Y", link = M@link) 
   }
@@ -221,110 +237,167 @@
   ## Create altered data to avoid the problems of applying g() to Z.
   ## This altered data is used only during the initialisation stage.
   Z0 <- Z
-  if (M@response == "gaussian" & M@link %in% c("log", "square-root")) {
+  if (M@link %in% c("log", "square-root")) {
     Z0[Z <= 0] <- 0.1      
-  } else if (M@response %in% c("poisson", "gamma", "inverse-gaussian") & M@link == "log") {
-    Z0[Z == 0] <- 0.1    
-  } else if (M@response == "negative-binomial" & M@link %in% c("logit", "probit", "cloglog", "log")) {
+  } else if (M@response == "negative-binomial" & M@link %in% c("logit", "probit", "cloglog")) {
     Z0[Z == 0]   <- 0.1
   } else if (M@response == "binomial" & M@link %in% c("logit", "probit", "cloglog")) {
-    Z0[Z == 0]   <- 0.1
-    Z0[Z == k_Z] <- k_Z[Z == k_Z] - 0.1
+    Z0 <- Z + 0.1 * (Z == 0) - 0.1 * (Z == k_Z)
   } else if (M@response == "bernoulli" & M@link %in% c("logit", "probit", "cloglog")) {
     Z0 <- Z + 0.05 * (Z == 0) - 0.05 * (Z == 1)
   } else if (M@link %in% c("inverse-squared", "inverse")) {
-    Z0 <- Z + 0.05 * (Z == 0)
+    Z0[Z == 0] <- 0.05
   } 
 
-  ## Transformed data: convert from data scale to Gaussian Y-scale.
-  if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
-    p0 <- f(Z0, k_Z) # Convert from response (mean) scale to probability scale
-    Z0_t <- h(p0)    # Convert from probability scale to Gauussian Y scale
-  } else if (M@response == "negative-binomial" & M@link %in% c("log", "square-root")) {
-    Z0_t <- g(Z0 / k_Z) # Convert from response (mean) scale to Gaussian Y-scale (accounting for k_Z)
-  } else {
-    Z0_t <- g(Z0) # Convert from response (mean) scale to Gaussian Y-scale
-  }
+
 
   ## Parameter and random effect initialisations.
-  parameters <- list()
-  tmp       <- as.data.frame(as.matrix(M@X))
-  tmp$Z0_t  <- Z0_t
-  parameters$alpha         <- coef(lm(update(formula(M@f), Z0_t ~ .), tmp)) 
-  parameters$logsigma2fs  <- log(var(Z0_t))
 
+  Cp <- t(M@C_O) %*% chol2inv(chol(M@C_O %*% t(M@C_O))) # pseduoinverse of the incidence matrix
+  mu_O <- Cp %*% Z0 # least norm solution to C.mu = mu_Z
+  ## Sanity check: M@C_O %*% mu_O == M@Z
+  
+  ## For some link functions, mu_0 = 0 causes NaNs; set these to a small positive value
+  mu_O[mu_O == 0] <- 0.05
+  
+  ## Also, the size parameter being 0 also causes NaNs:
+  k[k == 0] <- 1
+  
+  ## Transformed data: convert from data scale to Gaussian Y-scale.
+  if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
+    Y_O <- f(h(mu_O, k))
+  } else if (M@response == "negative-binomial" & M@link %in% c("log", "square-root")) {
+    Y_O <- g(mu_O / k) 
+  } else {
+    Y_O <- g(mu_O)
+  } 
+  
+  
+  parameters <- .initialise_param(M, Y_O, r_si = data$r_si)
+
+
+  ## Create a data entry of sigma2fs_hat (one that will stay constant if we are 
+  ## not estimating sigma2fs within TMB)
+  data$sigma2fs_hat <- var(parameters$xi_O)
+  ## Only estimate sigma2fs if all the observations are associated with exactly one BAU.
+  ## Otherwise, we will fix sigma2fs with TMB.
+  data$est_sigma2fs <- as.integer( all(tabulate(M@Cmat@i + 1) == 1) )
+  
+  if (!est_finescale) {
+    # parameters$xi_O <- 0
+    # parameters$logsigma2fs <- 0
+  } 
+ 
+
+  
+  return(list(data = data, parameters = parameters))
+}
+
+# params: a list containing the current initial values of the parameters/random effects
+.initialise_param <- function(M, Y_O, r_si, iterations = 5) {
+  
+  X_O  <- M@X_O
+  S_O  <- M@S_O
+  nres <- max(M@basis@df$res)   # Number of resolutions
+  r    <- M@basis@n             # Number of basis functions in total (space x time).
+
+  
+  parameters <- list()
+  
+  ## i. Fixed effects alpha (OLS solution)
+  parameters$alpha <- as.vector(chol2inv(chol(t(X_O) %*% X_O)) %*% t(X_O) %*% Y_O) # OLS solution
+  ## Equivalently:
+  # tmp       <- as.data.frame(as.matrix(M@X))
+  # tmp$Y_O  <- Y_O
+  # parameters$alpha        <- coef(lm(update(formula(M@f), Y_O ~ .), tmp))
+
+  
+  ## ii. Variance components
   
   ## Dispersion parameter depends on response; some require it to be 1. 
   if (M@response %in% c("poisson", "bernoulli", "binomial", "negative-binomial")) {
     parameters$logphi <- log(1)
   } else if (M@response == "gaussian") {
-    parameters$logphi <- log(M@Ve[1, 1]) # FIXME: may have to change this from simply getting the first element of Ve
+    ## FIXME: may have to change this from simply getting the first element of Ve
+    parameters$logphi <- log(M@Ve[1, 1]) 
   } else {
-    ## we may not estimate sigma2e when the data is non-Gaussian, so use the 
-    ## variance of the data as our estimate of the dispersion parameter.
+    ## Use the variance of the data as our estimate of the dispersion parameter.
+    ## This will almost certainly be an overestimate, as the mean-variance 
+    ## relationship is not considered.
     parameters$logphi <- log(var(Z0))
   }
   
-  parameters$logsigma2      <- log(exp(parameters$logsigma2fs) * (0.1)^(0:(nres - 1)))
-  parameters$logtau         <- log((1 / 3)^(1:nres))
+  ## variance components of the basis function random weights
+  ## FIXME: Not sure what to do for time yet.
+  ## FIXME: haven't really though about when K_type = separable.
+  parameters$logsigma2      <- log(var(as.vector(Y_O)) * (0.1)^(0:(nres - 1)))
+  # if (is.null(parameters$eta)) {
+  #   parameters$logsigma2      <- log(var(as.vector(Y_O)) * (0.1)^(0:(nres - 1)))
+  # } else {
+  #   sigma2 <- rep(0, nres)
+  #   counter <- 1
+  #   for (i in 1:length(r_si)) {
+  #     sigma2[i] <- var(parameters$eta[counter:r_si[i]]) 
+  #     counter = counter + r_si[i]
+  #   }
+  #   parameters$logsigma2 <- log(sigma2)
+  # }
+  
+  parameters$logtau <- log((1 / 3)^(1:nres))
+  
+  if (M@K_type != "block-exponential") {
+    parameters$logsigma2   <- log(1 / exp(parameters$logsigma2))
+    parameters$logtau      <- log(1 / exp(parameters$logtau))
+  }
+  
   parameters$logsigma2_t    <- log(5)  
   parameters$frho_t         <- 0
-
-  
   
   if (M@K_type == "separable") {
-    ## Separability means we have twice as many spatial basis function variance 
-    ## components. So, just replicate the already defined parameters. 
+    ## Separability means we have twice as many spatial basis function variance
+    ## components. So, just replicate the already defined parameters.
     parameters$logsigma2 <- rep(parameters$logsigma2, 2)
     parameters$logtau <- rep(parameters$logtau, 2)
-    parameters$logdelta <- log(1)
-  } else if (M@K_type == "precision_exp") {
-    ## Precision exp requires one extra parameter
-    parameters$logdelta <- rnorm(length(data$r_si))
-  } else {
-    parameters$logdelta <- log(1)
   }
-
-  ## Initialise the latent random effects
-  ## FIXME: Should the following be in terms of M@basis@df? Perhaps we could just initialise at one time point, and use the same initialisation for all times e.g. with spatial_basis@df and rep.
-  ## FIXME: Add a check if nres == 4. If so, then it is wise to avoid a solve() here. 
-  ## FIXME: perhaps change solve() to chol2inv(chol()). However, this requires positive definite matrix.
-  ## FIXME: maybe change this intialisation to be only in terms of Qinit. Currently leave as is because the theory I wrote is in terms of Kinit and the block-exponential.
-  tmp  <- exp(parameters$logphi) + exp(parameters$logsigma2fs) # note that in the Gaussian case, we have phi = sigma2e
-  if (M@K_type == "block-exponential") {
-    KInit <- .K_tap_matrix(M@D_basis,
-                           beta = data$beta,
-                           sigma2 =  exp(parameters$logsigma2),
-                           tau = exp(parameters$logtau))
-    parameters$eta  <- as.vector((1 / tmp) * solve(Matrix::t(M@S) %*% M@S / tmp + solve(KInit) ) %*% (Matrix::t(M@S)  %*% (Z0_t - X %*% parameters$alpha)))
-    parameters$xi_O <- as.vector((exp(parameters$logsigma2fs) / tmp) * (Z0_t - X %*% parameters$alpha - M@S %*% parameters$eta))
-  } else {
-    kappa <- exp(-parameters$logsigma2)
-    rho <- exp(parameters$logtau)
-    QInit <- .sparse_Q_block_diag(M@basis@df, kappa = 0.5, rho = 1)$Q
-    if (nres >= 4) { # Avoid full inverse if we have four resolutions (in which case r approx 10,000)
-      
-      ## Matrix we need to invert:
-      mat <- Matrix::t(M@S) %*% M@S / tmp + QInit
-      
-      ## Permuted Cholesky factor
-      mat_L <- sparseinv::cholPermute(Q = mat) 
-      
-      ## Sparse-inverse-subset (a proxy for the inverse)
-      mat_inv <- sparseinv::Takahashi_Davis(Q = mat,
-                                            cholQp = mat_L$Qpermchol,
-                                            P = mat_L$P)
   
-      parameters$eta  <- as.vector((1 / tmp) * mat_inv %*% Matrix::t(M@S)  %*% (Z0_t - X %*% parameters$alpha))
-      parameters$xi_O <- as.vector((exp(parameters$logsigma2fs) / tmp) * (Z0_t - X %*% parameters$alpha - M@S %*% parameters$eta))  
+
+  ## iii. Basis function random-effects 
+  for (dummy in 1:iterations) {
+    
+    if (!is.null(parameters$logsigma2fs)) {
+      regularising_weight <- exp(parameters$logsigma2fs) 
     } else {
-      parameters$eta  <- as.vector((1 / tmp) * solve(Matrix::t(M@S) %*% M@S / tmp + QInit ) %*% (Matrix::t(M@S)  %*% (Z0_t - X %*% parameters$alpha)))
-      parameters$xi_O <- as.vector((exp(parameters$logsigma2fs) / tmp) * (Z0_t - X %*% parameters$alpha - M@S %*% parameters$eta))  
+      regularising_weight <- exp(parameters$logsigma2[1]) 
     }
     
-  }
+    QInit <- .sparse_Q_block_diag(M@basis@df, 
+                                  kappa = exp(parameters$logsigma2), 
+                                  rho = exp(parameters$logtau))$Q
     
-  return(list(data = data, parameters = parameters))
+    ## Matrix we need to invert
+    mat <- Matrix::t(M@S0) %*% M@S0 / regularising_weight + QInit 
+    
+    ## Avoid full inverse if we have too many basis functions
+    if (r > 4000) { 
+      mat_L <- sparseinv::cholPermute(Q = mat) # Permuted Cholesky factor
+      ## Sparse-inverse-subset (a proxy for the inverse)
+      mat_inv <- sparseinv::Takahashi_Davis(Q = mat, cholQp = mat_L$Qpermchol, P = mat_L$P)
+    } else {
+      mat_inv <- solve(mat) # chol2inv(chol(mat)) requires positive definite, symmetric matrix.
+    }
+    
+    ## MAP estimate of eta
+    parameters$eta  <- as.vector((1 / regularising_weight) * mat_inv %*% Matrix::t(S_O)  %*% (Y_O - X_O %*% parameters$alpha))
+    
+    ## iv. Observed fine-scale random effects xi_O
+    parameters$xi_O <- as.vector(Y_O - X_O %*% parameters$alpha - S_O %*% parameters$eta)
+    
+    ## v. Fine-scale variance, sigma2fs AKA sigma2_xi
+    parameters$logsigma2fs <- log(var(parameters$xi_O))
+    
+  }
+  
+  return(parameters)
 }
 
 

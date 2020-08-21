@@ -1202,22 +1202,31 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
               ## SpatialPixels have equal area while SpatialPolygons need not.
               ## Currently we are not weighting by the different BAU area.
               ## Inform user of this
-              if(!is(sp_pols,"SpatialPixels"))
-                  message("BAUs are Polygons and not Pixels. Currently BAU of identical
-                          area are being assumed when computing the incidence matrix
-                          from observations having a large support.
-                          Handling of different areas will be catered for in a future revision.
-                          Please report this issue to the package maintainer.")
+              # if(!is(sp_pols,"SpatialPixels"))
+              #     message("BAUs are Polygons and not Pixels. Currently BAU of identical
+              #             area are being assumed when computing the incidence matrix
+              #             from observations having a large support.
+              #             Handling of different areas will be catered for in a future revision.
+              #             Please report this issue to the package maintainer.")
 
               ## Attach the ID of the data polygon to the data frame
               data_sp$id <- as.character(row.names(data_sp))
               
-              ## Assume the BAUs are so small that it is sufficient to see whether the
-              ## BAU centroid falls in the data polygon. To do this we first make
-              ## A SpatialPointsDataFrame from the BAUs reflecting the BAU centroids
-              BAU_as_points <- SpatialPointsDataFrame(coordinates(sp_pols),
-                                                      sp_pols@data,
-                                                      proj4string = CRS(proj4string(sp_pols)))
+              ## If the BAUs are SpatialPixels, assume the BAUs are so small 
+              ## that it is sufficient to see whether the BAU centroid falls in 
+              ## the data polygon. To do this we first make
+              ## A SpatialPointsDataFrame from the BAUs reflecting the BAU centroids.
+              ## If the BAUs are SpatialPolygons, it is possible for the centroid of a concave polygon to lie 
+              ## outside of the polygon. Hence, instead of using the BAU centroids, 
+              ## we sample a random point inside of the polygon.
+              if (is(sp_pols, "SpatialPolygons")) {
+                  BAU_as_points <- .sample_point_in_polygons(sp_pols) 
+              } else if (is(sp_pols, "SpatialPixels")) {
+                  BAU_as_points <- SpatialPointsDataFrame(coordinates(sp_pols),
+                                                          sp_pols@data,
+                                                          proj4string = CRS(proj4string(sp_pols)))
+              }
+
               
               
               ## Now see which centroids fall into the BAUs
@@ -1227,7 +1236,9 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
               ## BAUs_aux_data$xx = 3. # FIXME: shouldn't this be 2?
               
               ## FIXME: I changed this to .safe_mean temporarily
-              BAUs_aux_data <- .parallel_over(data_sp,BAU_as_points,fn=.safe_mean)
+              BAUs_aux_data <- .parallel_over(data_sp, BAU_as_points,fn=.safe_mean)
+              ?over
+              dim(BAUs_aux_data)
               
               ## Now include the ID in the table so we merge by it later
               BAUs_aux_data$id <- as.character(row.names(BAUs_aux_data))
@@ -1247,6 +1258,22 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
               return(data_sp) 
               
           })
+
+## Sometimes the BAUs are concave polygons, in which case the BAU centroid may
+## lie OUTSIDE of the polygon; this can cause issues when determining if one 
+## polygon overlaps another.
+## This function takes a SpatialPolygonsDataFrame and samples a point in each of
+## the polygon objects. The returned object is a SpatialPointsDataFrame.
+.sample_point_in_polygons <- function(sp_pols) {
+    BAU_as_points <- coordinates(sp_pols) # pre-allocating the matrix
+    for (i in 1:length(sp_pols)) { # for all BAUs, sample a point inside the BAU
+        BAU_as_points[i, ] <- coordinates(sp::spsample(sp_pols@polygons[[i]], type = "random", n = 1)) 
+    }
+    BAU_as_points <- SpatialPointsDataFrame(BAU_as_points,
+                                            sp_pols@data,
+                                            proj4string = CRS(proj4string(sp_pols)))
+    return(BAU_as_points)
+}
 
 ## Map the data to the BAUs. This is done after BAU construction
 ## data_sp: data (SpatialPixels object)
@@ -1396,25 +1423,23 @@ setMethod("BuildC",signature(data="SpatialPoints"),
                                       n =1:length(BAUs))          # column number of C matrix
               i_idx <- 1:length(data)                             # row number (simply 1:ndata)
               j_idx <- BAU_index[data$BAU_name,]                  # column number reflects the BAU the data falls in
-              list(i_idx=i_idx,j_idx=j_idx)                       # return the (i,j) indices of nonzeros
+              list(i_idx=i_idx,j_idx=j_idx, x_idx=1)                       # return the (i,j) indices of nonzeros
           })
 
 ## The BuildC method for when we have Polygon data. Note that in this case we haven't allocated
 ## the BAUs to the data yet
 setMethod("BuildC",signature(data="SpatialPolygons"),
           function(data,BAUs) {
-              
-              
-              ## Check if BAUs weights are set; if not, assume equally weighted and throw a warning
-              ## FIXME: instead of setting this to one, we could set it equal to the area of the BAU.
-              if (is.null(BAUs$wts)) {
-                  BAUs$wts <- 1
-                  warning("Assuming BAUs are equally weighted; if this is not the case, set the 'wts' field in the BAUs accordingly.")
-              }
-                  
-              
+      
               data$id <- 1:length(data)                           # polygon number
-              BAU_as_points <- SpatialPoints(coordinates(BAUs))   # convert BAUs to SpatialPoints
+
+              # convert BAUs to SpatialPoints
+              if (is(BAUs, "SpatialPolygons")) {
+                  BAU_as_points <- SpatialPoints(.sample_point_in_polygons(BAUs))
+              } else if (is(BAUs, "SpatialPixels")) {
+                  BAU_as_points <- SpatialPoints(coordinates(BAUs))  
+              }
+              
               i_idx <- j_idx <- x_idx <- NULL                     # initialise
               for (i in 1L:length(data)) {                        # for each data point
 
@@ -1434,7 +1459,6 @@ setMethod("BuildC",signature(data="SpatialPolygons"),
                   
                   i_idx <- c(i_idx,rep(i,length(overlap)))                  # the row index is the data number repeated
                   j_idx <- c(j_idx,as.numeric(overlap))                     # the column index is the BAU number
-                  
                   x_idx <- c(x_idx, BAUs$wts[overlap])
               }
 

@@ -89,6 +89,7 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot BAUs object of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame} of \code{STFDF} that contains the Basic Areal Units (BAUs) that are used to both (i) project the data onto a common discretisation if they are point-referenced and (ii) provide a BAU-to-data relationship if the data has a spatial footprint
 #' @slot S matrix constructed by evaluating the basis functions at all the data locations (of class \code{Matrix})
 #' @slot S0 matrix constructed by evaluating the basis functions at all BAUs (of class \code{Matrix})
+#' @slot S_O matrix constructed by evaluating the basis functions at observed BAUs (of class \code{Matrix})
 #' @slot D_basis list of distance-matrices of class \code{Matrix}, one for each basis-function resolution
 #' @slot Ve measurement-error variance-covariance matrix (typically diagonal and of class \code{Matrix})
 #' @slot Vfs fine-scale variance-covariance matrix at the data locations (typically diagonal and of class \code{Matrix}) up to a constant of proportionality estimated using the EM algorithm
@@ -96,7 +97,9 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot Qfs_BAUs fine-scale precision matrix at the BAU centroids (typically diagonal and of class \code{Matrix}) up to a constant of proportionality estimated using the EM algorithm
 #' @slot Z vector of observations (of class \code{Matrix})
 #' @slot Cmat incidence matrix mapping the observations to the BAUs
+#' @slot C_O incidence matrix mapping the observations to the OBSERVED BAUs
 #' @slot X matrix of covariates
+#' @slot X matrix of covariates at observed BAUs
 #' @slot K_type type of prior covariance matrix of random effects. Can be "block-exponential" (correlation between effects decays as a function of distance between the basis-function centroids), "unstructured" (all elements in \code{K} are unknown and need to be estimated), or "precision" (a sparse precision matrix is used).
 #' @slot mu_eta updated expectation of the basis function random effects (estimated)
 #' @slot S_eta updated covariance matrix of random effects (estimated)
@@ -111,12 +114,12 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot response A character string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "bernoulli", "gamma","inverse-gaussian", "negative-binomial", or "binomial".
 #' @slot link A character string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted. 
 #' @slot taper A positve numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "covariance"} and \code{TMB} is used to fit the data)
-#' @slot mu_xi_O updated expectation of the fine-scale random effects at observed BAUs (estimated)
+#' @slot mu_xi updated expectation of the fine-scale random effects at all BAUs (estimated)
 #' @slot Q_eta_xi updated joint precision matrix of the basis function random effects and observed fine-scale random effects (estimated)
 #' @slot log_likelihood the log likelihood of the fitted model
 #' @slot method the fitting procedure used to fit the SRE model
 #' @slot phi the estimated dispersion parameter (assumed constant throughout the spatial domain)
-#' @slot k vector of known constant parameters after binning proccess (only applicable to binomial and negative-binomial response distributions) 
+#' @slot k_Z vector of known size parameters at the data support (only applicable to binomial and negative-binomial response distributions) 
 #' @seealso \code{\link{SRE}} for details on how to construct and fit SRE models.
 #' @keywords spatial
 setClass("SRE",representation(data="list",
@@ -125,6 +128,7 @@ setClass("SRE",representation(data="list",
                               f = "formula",
                               S = "Matrix",
                               S0 = "Matrix",
+                              S_O = "Matrix",
                               D_basis = "list",
                               Ve = "Matrix",
                               Vfs = "Matrix",
@@ -132,7 +136,9 @@ setClass("SRE",representation(data="list",
                               Qfs_BAUs = "Matrix",
                               Z = "Matrix",
                               Cmat = "Matrix",
+                              C_O = "Matrix",
                               X = "Matrix",
+                              X_O = "matrix",
                               mu_eta = "Matrix",
                               S_eta = "Matrix",
                               Q_eta = "Matrix",
@@ -143,13 +149,12 @@ setClass("SRE",representation(data="list",
                               sigma2fshat = "numeric",
                               fs_model = "character",
                               info_fit = "list", 
-                              #### TMB slots
                               response = "character", 
                               link = "character", 
                               taper = "numeric", 
-                              mu_xi_O = "Matrix",
+                              mu_xi = "Matrix",
                               Q_eta_xi = "dsCMatrix",
                               log_likelihood = "numeric", 
                               method = "character", 
                               phi = "numeric", 
-                              k = "Matrix"))
+                              k_Z = "Matrix"))

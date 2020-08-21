@@ -27,11 +27,11 @@ Type diagLogSum(Eigen::SparseMatrix<Type> mat);
 
 // Computes the mean given the latent process (i.e., applies the inverse-link function)
 template<class Type>
-Type inverseLinkFunction(Type Y_O, std::string link);
+Type inverseLinkFunction(Type Y_Z, std::string link);
 
 // Canonical parameter, lambda, as a function of the mean, mu
 template<class Type> 
-Type canonicalParameter(Type mu_O, Type k_Z, std::string response); 
+Type canonicalParameter(Type mu_Z, Type k_Z, std::string response); 
 
 // Computes the cumulant function
 template<class Type>
@@ -51,12 +51,15 @@ Type objective_function<Type>::operator() ()
   
   DATA_VECTOR(Z);             // Vector of observations
   int m = Z.size();           // Sample size
-  DATA_MATRIX(X);             // Design matrix of fixed effects
-  DATA_SPARSE_MATRIX(S);      // Design matrix for basis function random weights
+  DATA_MATRIX(X_O);             // Design matrix of fixed effects
+  DATA_SPARSE_MATRIX(S_O);      // Design matrix for basis function random weights
+  DATA_SPARSE_MATRIX(C_O);      // Incidence matrix, mapping the BAUs to the observations
+  // int N = C.cols();           // The number of BAUs
   DATA_STRING(K_type);        // Indicates the desired model formulation of eta prior (K or Q)
   DATA_STRING(response);      // String specifying the response distribution
   DATA_STRING(link);          // String specifying the link function
-  DATA_VECTOR(k_Z);           // "Known-constant" parameter (only relevant for negative-binomial and binomial)
+  DATA_VECTOR(k);             // Known size parameter at the BAU level (only relevant for negative-binomial and binomial)
+  DATA_VECTOR(k_Z);           // Known size parameter at the DATA support level (only relevant for negative-binomial and binomial)
   DATA_INTEGER(temporal);     // Boolean indicating whether we are in space-time or not (1 if true, 0 if false)
   
   DATA_INTEGER(r_t);         // Total number of temporal basis functions
@@ -73,9 +76,12 @@ Type objective_function<Type>::operator() ()
   DATA_IVECTOR(n_r);          // Integer vector indicating the number of rows at each resolution (applicable only if K-type == separable)
   DATA_IVECTOR(n_c);          // Integer vector indicating the number of columns at each resolution (applicable only if K-type == separable)
   
-  // Fixed effects and variance components relating to fine scale and data
+  DATA_SCALAR(sigma2fs_hat);  // Expectation of the prior placed on sigma2fs (the fine-scale variance component)
+  DATA_INTEGER(est_sigma2fs);     // Flag indicating whether we should estimate sigma2fs or not (1 if true, 0 if false)
+  DATA_INTEGER(est_finescale);    // Flag indicating whether fine-scale variation is included in the model (1 if true, 0 if false)
+  
+  // Fixed effects and variance components relating directly to data
   PARAMETER_VECTOR(alpha);
-  PARAMETER(logsigma2fs);     Type sigma2fs = exp(logsigma2fs);
   PARAMETER(logphi);          Type phi      = exp(logphi);
   
   // Variance components relating to eta
@@ -83,11 +89,20 @@ Type objective_function<Type>::operator() ()
   PARAMETER_VECTOR(logtau);     // The transformation we apply to tau depends on which K_type is used
   PARAMETER(logsigma2_t);       Type sigma2_t       = exp(logsigma2_t);
   PARAMETER(frho_t);            Type rho_t          = transform_minus_one_to_one(frho_t);
-  PARAMETER_VECTOR(logdelta);   vector<Type> delta  = exp(logdelta);
   
   // Latent random effects (will be integrated out)
   PARAMETER_VECTOR(eta);
   PARAMETER_VECTOR(xi_O);
+  
+  // Fine-scale variation variance parameter
+  // If we are not estimating sigma2fs, fix it to the estimate. Otherwise, 
+  // treat it as a parameter.
+  PARAMETER(logsigma2fs);     Type sigma2fs = exp(logsigma2fs);
+  if (!est_sigma2fs)
+    sigma2fs = sigma2fs_hat;
+  
+  if(!est_finescale)
+    xi_O = 0;
   
   // Small, positive constant used to avoid division and logarithm of zero:
   Type epsilon = 10.0e-8;
@@ -99,7 +114,7 @@ Type objective_function<Type>::operator() ()
   Type quadform_eta{0}; 
   
   
-  // ---- Temporal precision matrix (if relevant) ----
+  // 1.1. Temporal precision matrix (if relevant) 
   
   // NB: this code assumes the temporal basis functions are at one resolution only. 
   
@@ -123,7 +138,7 @@ Type objective_function<Type>::operator() ()
   }
   
   
-  // ---- Spatial variance/precision matrix ----
+  // 1.2. Spatial variance/precision matrix 
   
   int start_x{0};    // Keep track of starting point in x (the vector of non-zero coefficients)
   int start_eta{0};  // Keep track of starting point in eta
@@ -229,7 +244,6 @@ Type objective_function<Type>::operator() ()
         } else {
           J.block(start_eta, 0, r_si[k], r_t) = Mk * J.block(start_eta, 0, r_si[k], r_t);
         }
-        
       } else {
         vector<Type> vk(r_si[k]);
         if (K_type == "block-exponential") {
@@ -239,7 +253,6 @@ Type objective_function<Type>::operator() ()
         }
         quadform_eta += (vk * vk).sum();
       }
-      
     }
     
     start_eta += r_si[k];
@@ -247,56 +260,57 @@ Type objective_function<Type>::operator() ()
   }
   
   
-  // ---- Quadratic form in the case of space-time ----
+  // 1.3. Quadratic form in the case of space-time 
   if (temporal) { 
     J.resize(r_s * r_t, 1); // apply the vec operator
     quadform_eta += (J.array() * J.array()).sum();
   }
   
   
-  // -------- 3. Construct ln[eta|Q] and ln[xi|sigma2fs].  -------- //
+  // ---- 2. Construct ln[eta|Q] and ln[xi_O|sigma2fs].  ---- //
   
-  Type quadform_xi = pow(sigma2fs, -1.0) * (xi_O * xi_O).sum();
-
   Type ld_eta =  -0.5 * r * log(2.0 * M_PI) - 0.5 * logdetQ_inv - 0.5 * quadform_eta;
-  Type ld_xi  =  -0.5 * m * log(2.0 * M_PI) - 0.5 * m * log(sigma2fs) - 0.5 * quadform_xi;
-  
-  
-  // -------- 4. Construct ln[Z|Y_O]  -------- //
-  
-  // 4.1. Construct Y_O, the latent spatial process at observed locations
-  vector<Type> Y_O  = X * alpha + S * eta + xi_O;
-  
-  // 4.2 Compute the canonical parameter and cumulant function
-  vector<Type> lambda(m);
-  vector<Type> blambda(m);
-  if (isCanonicalLink(response, link)) {
-    
-    // Compute canonical parameter (simply equal to Y when g is canonical)
-    lambda = Y_O;
-    
-    // Compute the cumulant function using the canonical parameter
-    blambda = cumulantFunction(lambda, k_Z, response, "lambda");
-    
-  } else {
-    
-    // Compute the mean (or probability parameter if a logit, probit, or cloglog link is used)
-    vector<Type> mu_O(m);
-    mu_O = inverseLinkFunction(Y_O, link);
-    
-    // If response is negative-binomial or binomial, link the probability parameter to the mean:
-    if (link == "logit" || link == "probit" || link == "cloglog") {
-      if (response == "negative-binomial") {
-        mu_O = k_Z * (1.0 / (mu_O + epsilon) - 1);
-      } else if (response == "binomial") {
-        mu_O *= k_Z; 
-      }
-    } 
-    
-    // Compute the canonical parameter and cumulant function using the mean
-    lambda = canonicalParameter(mu_O, k_Z, response); 
-    blambda = cumulantFunction(mu_O, k_Z, response, "mu");
+ 
+  Type ld_xi_O{0}; 
+  if (est_finescale) {
+    Type quadform_xi_O = pow(sigma2fs, -1.0) * (xi_O * xi_O).sum();
+    ld_xi_O += -0.5 * m * log(2.0 * M_PI) - 0.5 * m * log(sigma2fs) - 0.5 * quadform_xi_O;
   }
+    
+
+  
+  // ---- 2a. Prior for sigma^2_\xi, the fine-scale variance component ---- //
+  
+  // We assume an inverse-gamma prior distribution for the fine-scale variance, 
+  // wherein the mean and variance of the prior is equal to sigmafs_hat.
+  // Type a = sigma2fs_hat + 2.0;
+  // Type b = pow(sigma2fs_hat, 2.0) + 1.0;
+  // Type ld_sigma_xi = -(a + 1) * sigma2fs - b / sigma2fs;
+  
+  
+  // ---- 3. Construct ln[Z|Y_Z]  ---- //
+  
+  // 3.1 Construct Y, the latent process at the BAU level, and mu 
+  // (NB: mu is the probability parameter if a logit, probit, or cloglog link is used)
+  vector<Type> Y_O  = X_O * alpha + S_O * eta + xi_O;
+  vector<Type> mu_O = inverseLinkFunction(Y_O, link);
+  
+  // If response is negative-binomial or binomial, link the probability parameter to the mean:
+  if (link == "logit" || link == "probit" || link == "cloglog") {
+    if (response == "negative-binomial") {
+      mu_O = k * (1.0 / (mu_O + epsilon) - 1);
+    } else if (response == "binomial") {
+      mu_O *= k; 
+    }
+  } 
+  
+  // Compute the mean over the observed data supports:
+  vector<Type> mu_Z = C_O * mu_O;
+  
+  // Compute the canonical parameter and cumulant function using the mean
+  vector<Type> lambda = canonicalParameter(mu_Z, k_Z, response); 
+  vector<Type> blambda = cumulantFunction(mu_Z, k_Z, response, "mu");
+
   
   // 4.3. Construct a(phi) and c(Z, phi).
   // NB: computation of C(Z, phi) for one-parameter exponential family is done within R
@@ -319,17 +333,18 @@ Type objective_function<Type>::operator() ()
     cZphi   =   - 0.5 / (phi * Z) - 0.5 * log(2.0 * M_PI * phi * Z * Z * Z);
   } 
 
-  // 4.4. Construct ln[Z|Y_O]
+  // 4.4. Construct ln[Z|Y_Z]
   Type ld_Z  =  ((Z * lambda - blambda)/aphi).sum() + cZphi.sum();
   
   
   // -------- 5. Define Objective function -------- //
   
-  // ln[Z, eta, xi | ...] =  ln[Z|Y_O] + ln[eta|K] + ln[xi|sigma2fs]
+  // ln[Z, eta, xi_O | ...] =  ln[Z|Y_Z] + ln[eta|K] + ln[xi_O|sigma2fs]
   // Specify the negative joint log-likelihood function,
   // as R optimisation routines minimise by default.
   
-  Type nld = -(ld_Z  + ld_xi + ld_eta);
+  // Type nld = -(ld_Z  + ld_xi_O + ld_eta + ld_sigma_xi);
+  Type nld = -(ld_Z  + ld_xi_O + ld_eta);
   
   return nld;
 }
@@ -386,40 +401,40 @@ bool isCanonicalLink(std::string response, std::string link) {
 
 // Computes the mean (i.e., applies the inverse-link function)
 template<class Type>
-Type inverseLinkFunction(Type Y_O, std::string link) {
+Type inverseLinkFunction(Type Y_Z, std::string link) {
   double epsilon{10e-8};
-  Type mu_O;
-  if       (link == "identity"){         mu_O = Y_O;
-  }else if (link == "inverse"){          mu_O = 1.0 / Y_O;
-  }else if (link == "inverse-squared"){  mu_O = 1.0 / sqrt(Y_O);
-  }else if (link == "log"){              mu_O = exp(Y_O) + epsilon;
-  }else if (link == "square-root"){      mu_O = Y_O * Y_O + epsilon;
-  }else if (link == "logit"){            mu_O = 1.0 / (1.0 + exp(-1.0 * Y_O));
-  }else if (link == "probit"){           mu_O = pnorm(Y_O);
-  }else if (link == "cloglog"){          mu_O = 1.0 - exp(-exp(Y_O));
+  Type mu_Z;
+  if       (link == "identity"){         mu_Z = Y_Z;
+  }else if (link == "inverse"){          mu_Z = 1.0 / Y_Z;
+  }else if (link == "inverse-squared"){  mu_Z = 1.0 / sqrt(Y_Z);
+  }else if (link == "log"){              mu_Z = exp(Y_Z) + epsilon;
+  }else if (link == "square-root"){      mu_Z = Y_Z * Y_Z + epsilon;
+  }else if (link == "logit"){            mu_Z = 1.0 / (1.0 + exp(-1.0 * Y_Z));
+  }else if (link == "probit"){           mu_Z = pnorm(Y_Z);
+  }else if (link == "cloglog"){          mu_Z = 1.0 - exp(-exp(Y_Z));
   }
-  return mu_O;
+  return mu_Z;
 }
 
 // Canonical parameter, lambda, as a function of the mean, mu
 template<class Type>
-Type canonicalParameter(Type mu_O, Type k_Z, std::string response) {
+Type canonicalParameter(Type mu_Z, Type k_Z, std::string response) {
   double epsilon{10e-8};
   Type lambda;
   if (response == "gaussian") { 
-    lambda = mu_O;
+    lambda = mu_Z;
   } else if (response == "gamma") {
-    lambda = 1.0 / (mu_O + epsilon);
+    lambda = 1.0 / (mu_Z + epsilon);
   } else if (response == "inverse-gaussian") {
-    lambda = 1.0 / (mu_O * mu_O + epsilon);
+    lambda = 1.0 / (mu_Z * mu_Z + epsilon);
   } else if (response == "poisson") {
-    lambda  =   log(mu_O + epsilon);
+    lambda  =   log(mu_Z + epsilon);
   } else if (response == "negative-binomial") {
-    lambda = -log(1.0 + k_Z/(mu_O + epsilon));
+    lambda = -log(1.0 + k_Z/(mu_Z + epsilon));
   } else if (response == "binomial") {
-    lambda = log((mu_O + epsilon) / (k_Z - mu_O + epsilon));
+    lambda = log((mu_Z + epsilon) / (k_Z - mu_Z + epsilon));
   } else if (response == "bernoulli") {
-    lambda = log((mu_O + epsilon) / (1.0 - mu_O + epsilon));
+    lambda = log((mu_Z + epsilon) / (1.0 - mu_Z + epsilon));
   }
   return lambda;
 }

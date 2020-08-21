@@ -4,7 +4,7 @@
 \alias{.FRKTMB_fit}
 \title{Fitting stage of non-Gaussian FRK.}
 \usage{
-.FRKTMB_fit(M, optimiser, ...)
+.FRKTMB_fit(M, optimiser, est_finescale, ...)
 }
 \arguments{
 \item{M}{An object of class \code{SRE}.
@@ -27,9 +27,9 @@ which contains the 'known-constant' parameters for each observation
 \value{
 This function updates the following slots of \code{M}:
 \describe{
-  \item{Q_eta_xi}{An estimate of the joint precision matrix of all random effects in the model (the random weights \eqn{\eta} and observed fine-scale variation \eqn{\xi_O}).}
+  \item{Q_eta_xi}{An estimate of the joint precision matrix of all random effects in the model (the random weights \eqn{\eta} and fine-scale variation \eqn{\xi}).}
   \item{mu_eta}{Posterior expectation of the random weights \eqn{\eta}.}
-  \item{mu_xi_O}{Posterior expectation of the observed-fine scale variation \eqn{\xi_O}.}
+  \item{mu_xi}{Posterior expectation of the fine-scale variation \eqn{\xi}.}
   \item{alphahat}{Estimate of the fixed-effects.}
   \item{sigma2fshat}{Estimate of the variance parameter of the fine-scale variation.}
   \item{phi}{Estimate of the dispersion parameter (only for applicable response distributions).}

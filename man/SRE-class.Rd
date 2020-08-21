@@ -25,6 +25,8 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 
 \item{\code{S0}}{matrix constructed by evaluating the basis functions at all BAUs (of class \code{Matrix})}
 
+\item{\code{S_O}}{matrix constructed by evaluating the basis functions at observed BAUs (of class \code{Matrix})}
+
 \item{\code{D_basis}}{list of distance-matrices of class \code{Matrix}, one for each basis-function resolution}
 
 \item{\code{Ve}}{measurement-error variance-covariance matrix (typically diagonal and of class \code{Matrix})}
@@ -39,7 +41,11 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 
 \item{\code{Cmat}}{incidence matrix mapping the observations to the BAUs}
 
+\item{\code{C_O}}{incidence matrix mapping the observations to the OBSERVED BAUs}
+
 \item{\code{X}}{matrix of covariates}
+
+\item{\code{X}}{matrix of covariates at observed BAUs}
 
 \item{\code{K_type}}{type of prior covariance matrix of random effects. Can be "block-exponential" (correlation between effects decays as a function of distance between the basis-function centroids), "unstructured" (all elements in \code{K} are unknown and need to be estimated), or "precision" (a sparse precision matrix is used).}
 
@@ -67,7 +73,7 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 
 \item{\code{taper}}{A positve numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "covariance"} and \code{TMB} is used to fit the data)}
 
-\item{\code{mu_xi_O}}{updated expectation of the fine-scale random effects at observed BAUs (estimated)}
+\item{\code{mu_xi}}{updated expectation of the fine-scale random effects at all BAUs (estimated)}
 
 \item{\code{Q_eta_xi}}{updated joint precision matrix of the basis function random effects and observed fine-scale random effects (estimated)}
 
@@ -77,7 +83,7 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 
 \item{\code{phi}}{the estimated dispersion parameter (assumed constant throughout the spatial domain)}
 
-\item{\code{k}}{vector of known constant parameters after binning proccess (only applicable to binomial and negative-binomial response distributions)}
+\item{\code{k_Z}}{vector of known size parameters at the data support (only applicable to binomial and negative-binomial response distributions)}
 }}
 
 \seealso{

@@ -23,6 +23,7 @@
 #' @param est_error flag indicating whether the measurement-error variance should be estimated from variogram techniques. If this is set to 0, then \code{data} must contain a field \code{std}. Measurement-error estimation is currently not implemented for spatio-temporal datasets
 #' @param average_in_BAU if \code{TRUE}, then multiple data points falling in the same BAU are averaged; the measurement error of the averaged data point is taken as the average of the individual measurement errors
 #' @param sum_variables vector of strings indicating which variables are to be summed rather than averaged. Only applicable if \code{average_in_BAU = TRUE}.
+#' @param sum_wts_in_data_polygon if \code{TRUE}, the rows of the incidence matrix \eqn{C} represent weighted sums. Otherwise, the rows correspond to a weighted average.
 #' @param fs_model if "ind" then the fine-scale variation is independent at the BAU level. If "ICAR", then an ICAR model for the fine-scale variation is placed on the BAUs
 #' @param vgm_model an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm}. This object contains the variogram model that will be fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified, the variogram used is \code{gstat::vgm(1, "Lin", d, 1)}, where \code{d} is approximately one third of the maximum distance between any two data points
 #' @param K_type the parameterisation used for the \code{K} matrix. If the EM algorithm is used for model fitting, \code{K_type} can be "unstructured" or "block-exponential". If TMB is used for model fitting, \code{K_type} can be "neighbour" or "block-exponential". The default is "block-exponential"
@@ -113,13 +114,17 @@
 #'  print(g1)}
 SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                 sum_variables = NULL,
+                sum_wts_in_data_polygon = FALSE,
                 fs_model = "ind", vgm_model = NULL, 
                 K_type = c("block-exponential", "neighbour", "unstructured", "separable"), 
                 normalise_basis = TRUE, 
                 response = c("gaussian", "poisson", "bernoulli", "gamma",
                              "inverse-gaussian", "negative-binomial", "binomial"), 
                 link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"), 
-                taper = 4, ...) {
+                taper = 4, 
+                ...) {
+    
+
     
     ## Strings that must be lower-case (this allows users to enter 
     ## response = "Gaussian", for example, without causing issues)
@@ -142,9 +147,15 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     if (!is.null(sum_variables) && !average_in_BAU) 
         warning("sum_variables argument does nothing when average_in_BAU = FALSE.")
     
+    if (any(sapply(data, function(x) is(x, "SpatialPolygons")))) {
+        if (is.null(BAUs$wts)) {
+            BAUs$wts <- 1
+            warning("SpatialPolygons were provided for the data support. No 'wts' field was found in the BAUs, so we are assuming BAUs are equally weighted; if this is not the case, set the 'wts' field in the BAUs accordingly.")
+        }
+    }
     
     ## Check that the arguments are OK
-    .check_args1(f = f,data = data, basis = basis, BAUs = BAUs, est_error = est_error, 
+    .check_args1(f = f, data = data, basis = basis, BAUs = BAUs, est_error = est_error, 
                  response = response, link = link, taper = taper, K_type = K_type) 
     
     ## Extract the dependent variable from the formula
@@ -232,10 +243,20 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                  within the polygons. For polygon data, influence on a BAU is determined from
                  whether the BAU centroid falls within the polygon or not.")
 
-        ## Ensure the polygon observations are AVERAGES over the BAUs (and not sums). Since we set all values to unity above
-        ## this just means dividing each row by the number of ones in each row.
-        ## Future implementation may allow user to distinguish between sum or average
-        Cmat[[i]] <- Cmat[[i]] / rowSums(Cmat[[i]])
+        ## We ensure the polygon observations are a  weighted average over the 
+        ## BAUs. This just means dividing each row by its row sum, so that each 
+        ## entry is between 0 and 1, and the row sums are all equal to 1. 
+        Cmat[[i]] <- Cmat[[i]] / rowSums(Cmat[[i]]) 
+        
+        ## If sum_wts_in_data_polygon = TRUE, we change to a weighted SUM. We do 
+        ## this by taking the weighted proportions computed aboce, and multiply
+        ## each row by the number of BAUs associated with that data polygon.
+        ## Note that tabulate(Cmat[[i]]@i + 1) computes the number of non-zero
+        ## entries in each row of Cmat
+        if (sum_wts_in_data_polygon)
+            Cmat[[i]] <- Cmat[[i]] * tabulate(Cmat[[i]]@i + 1)
+        
+            
 
         ## Only the independent model is allowed for now, future implementation will include CAR/ICAR (in development)
         if(fs_model == "ind") {
@@ -247,8 +268,6 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         
         ## Construct k the same way Z is constructed when response is binomial
         ## or negative binomial
-        # browser()
-        # glimpse(data_proc)
         if(response %in% c("binomial", "negative-binomial")) {
             k[[i]] <- Matrix(data_proc$k)
         } else {
@@ -307,6 +326,17 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     mu_xi_init <- Matrix(0, nrow = 1)
     Q_eta_xi_init <- Matrix(0, nrow = 1, 1)
     
+    
+    ## Some matrices evaluated at observed BAUs only:
+    ## In R, we can just subset using obsidx. However, it's also nice to check 
+    ## that the maths I wrote using the A matrix is correct.
+    obsidx <- unique(as(Cmat, "dgTMatrix")@j) + 1 
+    # A <- sparseMatrix(i = 1:length(obsidx), j = obsidx, x = 1)
+    C_O <- Cmat[, obsidx, drop = FALSE] 
+    S_O <- S0[obsidx, , drop = FALSE]
+    X_BAU <- as(.extract_BAU_X_matrix(f, BAUs), "matrix") # fixed-effect design matrix at BAU level
+    X_O <- X_BAU[obsidx, , drop = FALSE]
+    
     ## Construct the SRE object
     new("SRE",
         data=data,
@@ -315,6 +345,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         f = f,
         S = S,
         S0 = S0,
+        S_O = S_O,
         D_basis = D_basis,
         Ve = Ve,
         Vfs = Vfs,
@@ -322,7 +353,9 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         Qfs_BAUs = Qfs_BAUs,
         Z = Z,
         Cmat = Cmat,
+        C_O = C_O,
         X = X,
+        X_O = X_O,
         mu_eta = mu_eta_init,
         S_eta = S_eta_init,
         Q_eta = Q_eta_init,
@@ -333,19 +366,19 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         sigma2fshat = sigma2fshat_init,
         fs_model = fs_model,
         info_fit = info_fit, 
-        #### TMB SLOTS
         response = response, 
         link = link, 
         taper = taper, 
-        mu_xi_O = mu_xi_init, 
+        mu_xi = mu_xi_init, 
         Q_eta_xi = Q_eta_xi_init,
-        k = k)
+        k_Z = k)
 }
 
 
 #' @rdname SRE
 #' @export
-SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"), 
+SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
+                    est_finescale = TRUE,
                     lambda = 0, print_lik = FALSE, optimiser = nlminb, ...) {
 
     method <- match.arg(method)
@@ -355,19 +388,11 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     .check_args2(n_EM = n_EM, tol = tol, method = method, print_lik = print_lik, 
                  response = SRE_model@response, link = SRE_model@link, K_type = SRE_model@K_type,
                  optimiser = optimiser, ...) # control parameters to optimiser() 
-
-    
-    ## Check if control argument is set. If not, add some default values:
-    ## Note that this solution is not finished, it is only the start.
-    # l <- list(...)
-    # if (is.null(l$control)) 
-    #     l$control <- list(eval.max = 100, iter.max = 50,
-    #                       abs.tol = 0.01, rel.tol = 0.0001, 
-    #                       x.tol = 0.0001)
     
     ## Call internal fitting function with checked arguments
     return(.SRE.fit(SRE_model = SRE_model, n_EM = n_EM, tol = tol, method = method, 
-             lambda = lambda, print_lik = print_lik, optimiser = optimiser, ...))
+             lambda = lambda, print_lik = print_lik, optimiser = optimiser, 
+             est_finescale = est_finescale, ...))
 
 }
 
@@ -554,7 +579,7 @@ summary.SRE <- function(object,...) {
         summ_Kdiag = summary(diag(object@Khat)),
         summ_mueta = summary(object@mu_eta[,1]),
         summ_vareta = summary(diag(object@S_eta)),
-        summ_muxi_O = summary(object@mu_xi_O[, 1]),
+        summ_muxi = summary(object@mu_xi[, 1]),
         finescale_var = deparse(as.vector(object@sigma2fshat)),
         reg_coeff = deparse(as.vector(object@alphahat)) 
         )
@@ -594,8 +619,8 @@ print.summary.SRE <- function(x, ...) {
     cat("Summary of Var(eta | Z) [extract using object@S_eta]: \n")
     print(x$summ_vareta)
     cat("\n")    
-    cat("Summary of E(xi_O | Z) [extract using object@mu_xi_O]: \n")
-    print(x$summ_muxi_O)
+    cat("Summary of E(xi | Z) [extract using object@mu_xi]: \n")
+    print(x$summ_muxi)
     cat("\n")    
     cat("Fine-scale variance estimate [extract using object@sigma2fshat]:", x$finescale_var, "\n")
     cat("Regression coefficients [extract using object@alpha]:",x$reg_coeff,"\n")
@@ -901,7 +926,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 
 ## Main prediction routine
 .SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method="EM", lambda = 0, 
-                     print_lik = FALSE, optimiser = nlminb, ...) {
+                     print_lik = FALSE, optimiser = nlminb, est_finescale = TRUE, ...) {
 
     info_fit <- list()      # initialise info_fit
     
@@ -970,7 +995,8 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 
         }
     } else if (method == "TMB") {
-        SRE_model <- .FRKTMB_fit(SRE_model, optimiser = optimiser, ...)
+        SRE_model <- .FRKTMB_fit(SRE_model, optimiser = optimiser, 
+                                 est_finescale = est_finescale, ...)
     } else {
         stop("No other estimation method implemented yet. Please use method = 'EM' or method = 'TMB'.")
     }
