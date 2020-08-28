@@ -521,7 +521,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                            dims = c(length(newdata),
                                     length(SRE_model@BAUs)))
         
-        ## As in SRE(), make sure the polgons are averages (not sums)
+        ## As in SRE(), make sure the polygons are averages (not sums)
         CP <- CP / rowSums(CP)
     }
     return(CP)

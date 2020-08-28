@@ -1021,6 +1021,54 @@ SpatialPolygonsDataFrame_to_df <- function(sp_polys, vars = names(sp_polys)) {
 }
 
 
+
+STFDF_to_df <- function(ST_obj, vars = names(ST_obj@sp)) {
+    
+    if(!(is(ST_obj,"STFDF")))
+        stop("sp_polys needs to be of class STFDF")
+    
+    ## The STFDF class consists of a single spatial frame @sp replicated
+    ## over a given number of time points (say, nt tim epoints). 
+    ## To create a useful dataframe for ggplot, our strategy is to construct a 
+    ## dataframe from @sp using SpatialPolygonsDataFrame_to_df(), and then 
+    ## replicate this dataframe nt times. Then, we will map the data stored in 
+    ## ST_obj@data to this dataframe.
+    ns <- length(ST_obj@sp)
+    nt <- length(ST_obj@time)
+    
+    df_polys <- SpatialPolygonsDataFrame_to_df(ST_obj@sp)
+    
+
+    ## replicate df_polys t more times
+    df_polys_all_times <- df_polys 
+    for (dummy in 1:(nt - 1)) {
+        df_polys_all_times <- rbind(df_polys_all_times, df_polys)
+    }
+    
+    ## Now replicate @data 
+    ## Number of times to repeat each observation:
+    x <- tabulate(as.numeric(df_polys$id))
+    x <- x[x != 0] 
+    
+    ## Initialise empty dataframe to store the replicated version of @data:
+    df_data <- ST_obj@data[-(1:nrow(ST_obj@data)), ] 
+    
+    
+    for (i in 1:nt) { # Over each timepoint
+        ## Get the data at current timepoint
+        df <- ST_obj@data[((i - 1) * ns + 1):(i * ns), ]  
+        
+        ## Repeat it the required number of times, and add it to the rest of the data
+        df_data <- rbind(df_data, df[rep(row.names(df), x), ])
+    }
+
+    ## Combine the polygon data and the replicated @data:
+    df_polys_all_times <- cbind(df_polys_all_times, df_data)
+    
+    return(df_polys_all_times)
+}
+
+
 ## Create very small square polygon BAUs around SpatialPoints
 #' @rdname BAUs_from_points
 #' @aliases BAUs_from_points,SpatialPoints-method

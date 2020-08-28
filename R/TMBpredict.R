@@ -511,6 +511,7 @@
   ## Note that for all cases other than type == "link", we need to compute the conditonal mean samples.
   
   ## Create the relevant link functions.
+  ## FIXME: change these names to ginv, hinv, finv
   if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
     zeta    <- .link_fn("Y_to_prob", link = M@link)
     chi     <- .link_fn("prob_to_mu", response = M@response)

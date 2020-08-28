@@ -261,8 +261,8 @@
 
   ## Parameter and random effect initialisations.
 
-  Cp <- t(M@C_O) %*% chol2inv(chol(M@C_O %*% t(M@C_O))) # pseduoinverse of the incidence matrix
-  mu_O <- Cp %*% Z0 # least norm solution to C.mu = mu_Z
+  Cpseudoinverse <- t(M@C_O) %*% chol2inv(chol(M@C_O %*% t(M@C_O))) # pseudo-inverse of the incidence matrix 
+  mu_O <- Cpseudoinverse %*% Z0 # least norm solution to C.mu = mu_Z
   ## Sanity check: M@C_O %*% mu_O == M@Z
   
   ## For some link functions, mu_0 = 0 causes NaNs; set these to a small positive value
