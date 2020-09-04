@@ -35,7 +35,10 @@
   
   ## Data and parameter preparation for TMB
   data_params_init <- .TMB_prep(M)
+
   
+  data_params_init$data$sigma2fs_hat <- 0.2127473
+  data_params_init$parameters$logsigma2fs <- log(data_params_init$data$sigma2fs_hat) 
   
   ## TMB model compilation
   obj <- MakeADFun(data = data_params_init$data,
@@ -56,6 +59,7 @@
   
   ## The optimiser should have arguments: start, objective, gradient. 
   ## The remaining arguments can be whatever.
+
   
   fit <- optimiser(obj$par, obj$fn, obj$gr, ...)
   
@@ -161,24 +165,25 @@
 #' }
 .TMB_prep <- function (M) {
 
-
   k_Z  <- as.vector(M@k_Z)
   N    <- nrow(M@S0)               # Number of BAUs
   Z    <- as.vector(M@Z)           # Binned data
   m    <- length(Z)                # Number of data points AFTER BINNING
   X    <- as(.extract_BAU_X_matrix(M@f, M@BAUs), "matrix")   
   
+  obsidx <- observed_BAUs(M) # FIXME: Use this everywhere, so could just make it into a slot of SRE object
   
-  if (is.null(M@BAUs$wts)) {
-    k <- -1
+  ## Observed k_BAU
+  if (is.null(M@BAUs$k_BAU)) {
+    k_BAU <- -1
   } else {
-    k <- M@BAUs$wts
+    k_BAU <- M@BAUs$k_BAU[obsidx]
   }
     
   ## Common to all
   data    <- list(Z = Z, X_O = M@X_O, S_O = M@S_O, C_O = M@C_O,
                   K_type = M@K_type, response = M@response, link = M@link,
-                  k = k, k_Z = k_Z,
+                  k_BAU = k_BAU, k_Z = k_Z,
                   temporal = as.integer(is(M@basis,"TensorP_Basis")))
 
   ## The location of the stored spatial basis functions depend on whether the 
@@ -258,24 +263,32 @@
   } 
 
 
+  ## FIXME: excluding k from the C_O matrix means the size parameter is no longer accounted for!! This means that some mu_O > k_BAU.
+  ## The problem is that excluding k from the C matrix makes sense when we are using C to aggregate the mean process, but NOT when 
+  ## we are trying to go the other way, because we need to account for k when splitting up mu_Z into mu.
+  ## A temporary fix:
+  C_O <- M@C_O
+  if(M@response == "binomial")
+    C_O@x <- as.numeric(k_BAU)
 
+  
   ## Parameter and random effect initialisations.
-
-  Cpseudoinverse <- t(M@C_O) %*% chol2inv(chol(M@C_O %*% t(M@C_O))) # pseudo-inverse of the incidence matrix 
+  Cpseudoinverse <- t(C_O) %*% chol2inv(chol(C_O %*% t(C_O))) # pseudo-inverse of the incidence matrix 
   mu_O <- Cpseudoinverse %*% Z0 # least norm solution to C.mu = mu_Z
-  ## Sanity check: M@C_O %*% mu_O == M@Z
+  ## Sanity check: C_O %*% mu_O == M@Z
   
   ## For some link functions, mu_0 = 0 causes NaNs; set these to a small positive value
   mu_O[mu_O == 0] <- 0.05
   
   ## Also, the size parameter being 0 also causes NaNs:
-  k[k == 0] <- 1
+  k_BAU[k_BAU == 0] <- 1
+
   
   ## Transformed data: convert from data scale to Gaussian Y-scale.
   if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
-    Y_O <- f(h(mu_O, k))
+    Y_O <- f(h(mu_O, k_BAU))
   } else if (M@response == "negative-binomial" & M@link %in% c("log", "square-root")) {
-    Y_O <- g(mu_O / k) 
+    Y_O <- g(mu_O / k_BAU) 
   } else {
     Y_O <- g(mu_O)
   } 

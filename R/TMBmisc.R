@@ -103,7 +103,7 @@
   if (is.null(percentiles)) 
     return(data)
   
-  if (is(X, "matrix"))
+  if (is(X, "matrix") || is(X, "Matrix"))
     tmp           <- t(apply(X, 1, quantile, percentiles / 100))
   else if (is(X, "list"))
     tmp <- t(sapply(X, quantile, percentiles / 100))

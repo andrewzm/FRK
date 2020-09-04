@@ -33,7 +33,7 @@
   # ## For ST use all BAUs as it gets complicated
   # if(is(newdata,"Spatial")) {
   #   
-  #   ## The needed BAUs are the nonzero column indices of CZ and CP
+  #   ## The needed BAUs are the nonzero column CP
   #   needed_BAUs <- as(CP,"dgTMatrix")@j
   #   
   #   ## Filter the BAUs and the matrices
@@ -84,64 +84,75 @@
 
   
   # ---- Predicting over arbitrary polygons ----
+  
 
   if (!predict_BAUs) {
-    CP_dgT <- as(CP, "dgTMatrix")
+    M_P <- CP %*% MC$mu_samples
+    mu_P <- rowMeans(M_P)
+    newdata$p_mu <- mu_P
+    newdata$RMSPE_mu <- apply(M_P, 1, sd)
+    newdata@data <-  .concat_percentiles_to_df(data = newdata@data, X = M_P, 
+                                               name = "mu", percentiles = percentiles)
     
-    ## Make a list where the ith element contains the vector of indices 
-    ## indicating the BAUs which overlap the ith prediction polygon.
-    row_indices <- CP_dgT@i + 1
-    col_indices <- CP_dgT@j + 1
-    polygon_MC_samples <- list()
-    for (i in 1:nrow(CP_dgT)) {
-      ## Find the BAUs corresponding to the ith polygon
-      ## FIXME: i think there is a more efficient way to do this (perhaps by not converting to dgTmatrix and using the other format)
-      polygon_BAU_idx <- col_indices[row_indices == i] 
-      
-      ## Now subset the MC samples to include only those BAUs in the ith polygon
-      ## We make a list of lists of matrices 
-      ## (each sub list corresponds to a prediction polygon, 
-      ## and each matrix corresponds to Y, mu, or Z Monte Carlo samples)
-      polygon_MC_samples[[i]] <- lapply(MC, function(X) X[polygon_BAU_idx, ])
-    }
-  
-    ## The structure of this object is:
-    ##                        -- Y
-    ##       -- Polygon 1 --| -- mu
-    ##     |                  -- Z
-    ## L --|
-    ##     |                  -- Y
-    ##       -- Polygon 2 --| -- mu
-    ##                        -- Z
-    
-    ## Convert from a list of lists of matrices to a list of lists of vectors. 
-    ## Note that the lengths of the vectors are different (because each polygon
-    ## may overlap a different number of BAUs), so we cannot compact further into 
-    ## simply a list of matrices.
-    polygon_MC_samples <- lapply(polygon_MC_samples, function(L) lapply(L, c))
-    
-    ## The above object is grouped by polygon. That is, each element of the list corresponds to a polygon, 
-    ## and each sub element corresponds to either the Y, mu, or Z samples. 
-    ## Now we will reverse this order so that we first group by the type of MC samples, and THEN by polygon. 
-    ## This new ordering is more aligned with how we are storing the MC samples when we predict over BAUs.
-    ##                 -- Polygon 1
-    ##       -- Y  --| -- Polygon 2
-    ##     |           -- Polygon 3
-    ## L --|
-    ##     |           -- Polygon 1
-    ##       -- mu --| -- Polygon 2
-    ##                 -- Polygon 3
-    MC <- do.call(function(...) Map(list, ...), polygon_MC_samples)
-    ## FIXME: it seems inefficient to go from one hierarchy structure, reverse it, and then reverse again.
-    ## Surely I can just go straight from the original BAU MC object to this MC object without the change of hierarchy in between. 
-
+    return(list(newdata = newdata, MC = M_P))
   }
+  
+  
+  
+  # if (!predict_BAUs) {
+  #   CP_dgT <- as(CP, "dgTMatrix")
+  #   
+  #   ## Make a list where the ith element contains the vector of indices 
+  #   ## indicating the BAUs which overlap the ith prediction polygon.
+  #   row_indices <- CP_dgT@i + 1
+  #   col_indices <- CP_dgT@j + 1
+  #   polygon_MC_samples <- list()
+  #   for (i in 1:nrow(CP_dgT)) {
+  #     ## Find the BAUs corresponding to the ith polygon
+  #     ## FIXME: i think there is a more efficient way to do this (perhaps by not converting to dgTmatrix and using the other format)
+  #     polygon_BAU_idx <- col_indices[row_indices == i] 
+  #     
+  #     ## Now subset the MC samples to include only those BAUs in the ith polygon
+  #     ## We make a list of lists of matrices 
+  #     ## (each sub list corresponds to a prediction polygon, 
+  #     ## and each matrix corresponds to Y, mu, or Z Monte Carlo samples)
+  #     polygon_MC_samples[[i]] <- lapply(MC, function(X) X[polygon_BAU_idx, ])
+  #   }
+  # 
+  #   ## The structure of this object is:
+  #   ##                        -- Y
+  #   ##       -- Polygon 1 --| -- mu
+  #   ##     |                  -- Z
+  #   ## L --|
+  #   ##     |                  -- Y
+  #   ##       -- Polygon 2 --| -- mu
+  #   ##                        -- Z
+  #   
+  #   ## Convert from a list of lists of matrices to a list of lists of vectors. 
+  #   ## Note that the lengths of the vectors are different (because each polygon
+  #   ## may overlap a different number of BAUs), so we cannot compact further into 
+  #   ## simply a list of matrices.
+  #   polygon_MC_samples <- lapply(polygon_MC_samples, function(L) lapply(L, c))
+  #   
+  #   ## The above object is grouped by polygon. That is, each element of the list corresponds to a polygon, 
+  #   ## and each sub element corresponds to either the Y, mu, or Z samples. 
+  #   ## Now we will reverse this order so that we first group by the type of MC samples, and THEN by polygon. 
+  #   ## This new ordering is more aligned with how we are storing the MC samples when we predict over BAUs.
+  #   ##                 -- Polygon 1
+  #   ##       -- Y  --| -- Polygon 2
+  #   ##     |           -- Polygon 3
+  #   ## L --|
+  #   ##     |           -- Polygon 1
+  #   ##       -- mu --| -- Polygon 2
+  #   ##                 -- Polygon 3
+  #   MC <- do.call(function(...) Map(list, ...), polygon_MC_samples)
+  #   ## FIXME: it seems inefficient to go from one hierarchy structure, reverse it, and then reverse again.
+  #   ## Surely I can just go straight from the original BAU MC object to this MC object without the change of hierarchy in between. 
+  # 
+  # }
 
   
   # ------ Create Prediction data ------
-
-  ## Idea: if we are predicting at BAUs, CP will simply be the identity matrix, 
-  ## so multiplying by CP will be inconsequential. 
   
   ## Produce prediction and RMSPE matrices. 
   ## The columns are the quantity of interest (Y, mu, prob, or Z) and the rows are prediction locations.
@@ -562,6 +573,10 @@
     k_vec <- rep(k, each = n_MC)
     theta <- log((c(t(mu_samples))/k_vec) / (1 - (c(t(mu_samples))/k_vec)))
     p <- 1 / (1 + exp(-theta))
+    ## NAs will occur if k = 0.
+    ## Fortunately, if k = 0, we know Z will be 0. Hence, simply replace the
+    ## NA occurences in p with 0.
+    p[is.na(p)] <- 0
     Z_samples <- rbinom(n = N * n_MC, size = k_vec, prob = p)
   }
   

@@ -46,7 +46,7 @@ SRE(
   est_error = TRUE,
   average_in_BAU = TRUE,
   sum_variables = NULL,
-  sum_wts_in_data_polygon = FALSE,
+  normalise_wts = TRUE,
   fs_model = "ind",
   vgm_model = NULL,
   K_type = c("block-exponential", "neighbour", "unstructured", "separable"),
@@ -151,7 +151,7 @@ included in the prediction dataframe. If \code{NULL}, no percentiles are compute
 
 \item{...}{other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling \code{FRK}, or the user specified \code{optimiser} function when calling \code{FRK} or \code{SRE.fit}}
 
-\item{sum_wts_in_data_polygon}{if \code{TRUE}, the rows of the incidence matrix \eqn{C} represent weighted sums. Otherwise, the rows correspond to a weighted average.}
+\item{normalise_wts}{if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represent a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)}
 
 \item{normalise_basis}{flag indicating whether to normalise the basis functions so that they reproduce a stochastic process with approximately constant variance spatially}
 

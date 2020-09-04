@@ -58,7 +58,7 @@ Type objective_function<Type>::operator() ()
   DATA_STRING(K_type);        // Indicates the desired model formulation of eta prior (K or Q)
   DATA_STRING(response);      // String specifying the response distribution
   DATA_STRING(link);          // String specifying the link function
-  DATA_VECTOR(k);             // Known size parameter at the BAU level (only relevant for negative-binomial and binomial)
+  DATA_VECTOR(k_BAU);         // Known size parameter at the BAU level (only relevant for negative-binomial and binomial)
   DATA_VECTOR(k_Z);           // Known size parameter at the DATA support level (only relevant for negative-binomial and binomial)
   DATA_INTEGER(temporal);     // Boolean indicating whether we are in space-time or not (1 if true, 0 if false)
   
@@ -76,7 +76,7 @@ Type objective_function<Type>::operator() ()
   DATA_IVECTOR(n_r);          // Integer vector indicating the number of rows at each resolution (applicable only if K-type == separable)
   DATA_IVECTOR(n_c);          // Integer vector indicating the number of columns at each resolution (applicable only if K-type == separable)
   
-  DATA_SCALAR(sigma2fs_hat);  // Expectation of the prior placed on sigma2fs (the fine-scale variance component)
+  DATA_SCALAR(sigma2fs_hat);  // estimate of sigma2fs (the fine-scale variance component)
   DATA_INTEGER(est_sigma2fs);     // Flag indicating whether we should estimate sigma2fs or not (1 if true, 0 if false)
   DATA_INTEGER(est_finescale);    // Flag indicating whether fine-scale variation is included in the model (1 if true, 0 if false)
   
@@ -278,14 +278,12 @@ Type objective_function<Type>::operator() ()
   
   Type ld_eta =  -0.5 * r * log(2.0 * M_PI) - 0.5 * logdetQ_inv - 0.5 * quadform_eta;
  
-  Type ld_xi_O{0}; 
-  if (est_finescale) {
-    Type quadform_xi_O = pow(sigma2fs, -1.0) * (xi_O * xi_O).sum();
+  Type ld_xi_O{0};
+  Type quadform_xi_O = pow(sigma2fs, -1.0) * (xi_O * xi_O).sum();
+  if (est_finescale) 
     ld_xi_O += -0.5 * m * log(2.0 * M_PI) - 0.5 * m * log(sigma2fs) - 0.5 * quadform_xi_O;
-  }
-    
-
   
+
   // ---- 2a. Prior for sigma^2_\xi, the fine-scale variance component ---- //
   
   // We assume an inverse-gamma prior distribution for the fine-scale variance, 
@@ -305,9 +303,9 @@ Type objective_function<Type>::operator() ()
   // If response is negative-binomial or binomial, link the probability parameter to the mean:
   if (link == "logit" || link == "probit" || link == "cloglog") {
     if (response == "negative-binomial") {
-      mu_O = k * (1.0 / (mu_O + epsilon) - 1);
+      mu_O = k_BAU * (1.0 / (mu_O + epsilon) - 1);
     } else if (response == "binomial") {
-      mu_O *= k; 
+      mu_O *= k_BAU; 
     }
   } 
   
@@ -352,6 +350,7 @@ Type objective_function<Type>::operator() ()
   
   // Type nld = -(ld_Z  + ld_xi_O + ld_eta + ld_sigma_xi);
   Type nld = -(ld_Z  + ld_xi_O + ld_eta);
+  
   
   return nld;
 }
