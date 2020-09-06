@@ -2065,7 +2065,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
     
     ## Check that, if K_type == separable, the basis functions are in a regular
     ## rectangular lattice
-    if (K_type == "separable") {
+    if (K_type %in% c("separable", "neighbour") ) {
         for (i in unique(basis@df$res)) {
             temp <- basis@df[basis@df$res == i, ]
             if (!.test_regular_rect_grid(temp$loc1, temp$loc2) ) {
