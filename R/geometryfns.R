@@ -1047,8 +1047,9 @@ STFDF_to_df <- function(ST_obj, vars = names(ST_obj@sp)) {
     
     ## Now replicate @data 
     ## Number of times to repeat each observation:
-    x <- tabulate(as.numeric(df_polys$id))
-    x <- x[x != 0] 
+    # x <- tabulate(as.numeric(df_polys$id))
+    # x <- x[x != 0] 
+    x <- tabulate(as.numeric(droplevels(as.factor(df_polys$id))))
     
     ## Initialise empty dataframe to store the replicated version of @data:
     df_data <- ST_obj@data[-(1:nrow(ST_obj@data)), ] 
