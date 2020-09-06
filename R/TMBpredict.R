@@ -408,17 +408,39 @@
     mu_eta_xi_O_Matrix  <- matrix(rep(mu_eta_xi_O, times = n_MC), ncol = n_MC)
     z <- matrix(rnorm((r + mstar) * n_MC), nrow = r + mstar, ncol = n_MC)
     
+    # ## If we have too many random effects, use the sparse inverse subset
+    # ## FIXME: Have to do this in Yvar as well, so should do it in the controlling function and then pass around
+    # if (r + mstar < 4000) {
+    #   ## Compute the Cholesky factor of  Q (the joint precision matrix of (eta', xi')').
+    #   ## Then, to generate samples from (eta, xi_O), 
+    #   ## use eta_xi = L^{-T} z + mu = U^{-1} z + mu, 
+    #   ## where U upper cholesky factor of Q, so that Q = U'U.
+    #   U <- Matrix::t(Q_L$Qpermchol) # upper Cholesky factor of permuted joint precision matrix M@Q_eta_xi
+    #   x <- backsolve(U, z)          # x ~ Gau(0, A), where A is the permuted precision matrix i.e. A = P'QP
+    #   y <- Q_L$P %*% x              # y ~ Gau(0, Q^{-1})
+    #   eta_xi_O  <- as.matrix(y + mu_eta_xi_O_Matrix) # add the mean to y
+    # } else {
+    #   ## Sparse-inverse-subset of random effects (eta and xi_O)
+    #   ## (a proxy for the covariance matrix)
+    #   Sigma <- sparseinv::Takahashi_Davis(Q = M@Q_eta_xi,
+    #                                       cholQp = Q_L$Qpermchol,
+    #                                       P = Q_L$P)
+    #   Ls <- sparseinv::cholPermute(Q = round(Sigma, 6))
+    # }
+    
+
+    
     ## Compute the Cholesky factor of  Q (the joint precision matrix of (eta', xi')').
     ## Then, to generate samples from (eta, xi_O), 
     ## use eta_xi = L^{-T} z + mu = U^{-1} z + mu, 
     ## where U upper cholesky factor of Q, so that Q = U'U.
     U <- Matrix::t(Q_L$Qpermchol) # upper Cholesky factor of permuted joint precision matrix M@Q_eta_xi
     x <- backsolve(U, z)          # x ~ Gau(0, A), where A is the permuted precision matrix i.e. A = P'QP
-    
     y <- Q_L$P %*% x              # y ~ Gau(0, Q^{-1})
     eta_xi_O  <- as.matrix(y + mu_eta_xi_O_Matrix) # add the mean to y
     
-    
+
+  
     ## Separate the eta and xi samples
     eta     <- eta_xi_O[1:r, ]
     xi_O    <- eta_xi_O[(r + 1):(r + mstar), ]

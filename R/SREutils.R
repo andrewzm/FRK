@@ -172,10 +172,22 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     ## Initialise list of matrices (We construct one for every data object then concatenate)
     S <- Ve <- Vfs <- X <- Z <- Cmat <- k <- list()
 
+
+
+    ## Evaluate the basis functions over the BAUs. If we have fewer BAUs than 
+    ## basis functions, then we average the basis functions over the polygons
+    ## using Monte Carlo integration with 1000 samples per polygon.
+    if(length(BAUs) < nbasis(basis)) {
+        S0 <- eval_basis(basis, BAUs)     # evaluate basis functions by averaging the basis functions over the polygons
+    } else {
+        S0 <- eval_basis(basis,.polygons_to_points(BAUs))     # evaluate basis functions over BAU centroids
+    }
+    
+
+    
+    
     ## Normalise basis functions for the prior process to have constant variance. This was seen to pay dividends in
     ## latticekrig, however we only do it once initially
-    S0 <- eval_basis(basis,.polygons_to_points(BAUs))     # evaluate basis functions over BAU centroids
-    
     if(normalise_basis) {
         cat("Normalising basis function evaluations at BAU level ...\n")
         xx <- sqrt(rowSums((S0) * S0))                        # Find the standard deviation (assuming unit basis function weight)

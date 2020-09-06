@@ -268,9 +268,9 @@
   ## we are trying to go the other way, because we need to account for k when splitting up mu_Z into mu.
   ## A temporary fix:
   C_O <- M@C_O
-  if(M@response == "binomial")
+  if(M@response %in% c("binomial", "negative-binomial"))
     C_O@x <- as.numeric(k_BAU)
-
+  
   
   ## Parameter and random effect initialisations.
   Cpseudoinverse <- t(C_O) %*% chol2inv(chol(C_O %*% t(C_O))) # pseudo-inverse of the incidence matrix 
