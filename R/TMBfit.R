@@ -630,16 +630,17 @@
 
 ## Determine if the basis functions are in a regular rectangular grid
 ## Inspired by: https://stackoverflow.com/a/32916893
-.test_regular_rect_grid <- function(x, y) {
+.test_regular_grid <- function(x, y, rectangular) {
   
   a <- sort(unique(x))
   b <- sort(unique(y))
   
-  if(
-    .zero_range(diff(a)) &
-    .zero_range(diff(b)) &
-    (length(a) * length(b)) == length(x)
-  ) {
+  condition <- .zero_range(diff(a)) & .zero_range(diff(b))
+  
+  if (rectangular)
+    condition <- condition & ((length(a) * length(b)) == length(x))
+  
+  if(condition) {
     return(TRUE)
   } else {
     return(FALSE)

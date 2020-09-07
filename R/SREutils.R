@@ -2065,14 +2065,22 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
     
     ## Check that, if K_type == separable, the basis functions are in a regular
     ## rectangular lattice
-    if (K_type %in% c("separable", "neighbour") ) {
+    if (K_type == "separable") 
         for (i in unique(basis@df$res)) {
             temp <- basis@df[basis@df$res == i, ]
-            if (!.test_regular_rect_grid(temp$loc1, temp$loc2) ) {
-                stop("Basis functions are not in a regular rectangular lattice.")
-            }
+            if (!.test_regular_grid(temp$loc1, temp$loc2, rectangular = TRUE) ) 
+                stop("Basis functions must be arranged in a regular rectangular lattice when K_type == 'separable'.")
         }
-    }
+    
+    ## If K_type == "neighbour", we jsut need basis functions to be in a regular 
+    ## lattice (does not need to be rectangular)
+    if (K_type == "neighbour") 
+        for (i in unique(basis@df$res)) {
+            temp <- basis@df[basis@df$res == i, ]
+            if (!.test_regular_grid(temp$loc1, temp$loc2, rectangular = FALSE) ) 
+                stop("Basis functions must be arranged in a regular lattice when K_type == 'neighbour'.")
+        }
+    
 }
 
 
