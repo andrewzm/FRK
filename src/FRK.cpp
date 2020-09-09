@@ -67,6 +67,7 @@ Type objective_function<Type>::operator() ()
   int nres = r_si.size();    // Number of resolutions (of spatial basis functions) 
   int r_s  = r_si.sum();     // Total number of spatial basis functions
   int r = r_s * r_t;
+  DATA_IVECTOR(sigma2fs_id);
   
   DATA_VECTOR(beta);          // Tapering parameters (only relevant for block-exponential formulation)
   DATA_IVECTOR(row_indices);
@@ -75,8 +76,9 @@ Type objective_function<Type>::operator() ()
   DATA_IVECTOR(nnz);          // Integer vector indicating the number of non-zeros at each resolution of K_tap or Q
   DATA_IVECTOR(n_r);          // Integer vector indicating the number of rows at each resolution (applicable only if K-type == separable)
   DATA_IVECTOR(n_c);          // Integer vector indicating the number of columns at each resolution (applicable only if K-type == separable)
+
   
-  DATA_SCALAR(sigma2fs_hat);  // estimate of sigma2fs (the fine-scale variance component)
+  DATA_VECTOR(sigma2fs_hat);  // estimate of sigma2fs (the fine-scale variance component)
   DATA_INTEGER(est_sigma2fs);     // Flag indicating whether we should estimate sigma2fs or not (1 if true, 0 if false)
   DATA_INTEGER(est_finescale);    // Flag indicating whether fine-scale variation is included in the model (1 if true, 0 if false)
   
@@ -94,7 +96,8 @@ Type objective_function<Type>::operator() ()
   // Fine-scale variation variance parameter
   // If we are not estimating sigma2fs, fix it to the estimate. Otherwise, 
   // treat it as a parameter.
-  PARAMETER(logsigma2fs);   Type sigma2fs = exp(logsigma2fs);
+  PARAMETER_VECTOR(logsigma2fs);   vector<Type> sigma2fs = exp(logsigma2fs);
+  DATA_INTEGER(BAUs_unique_fs);
   if (!est_sigma2fs)
     sigma2fs = sigma2fs_hat;
   
@@ -278,11 +281,27 @@ Type objective_function<Type>::operator() ()
   
   Type ld_eta =  -0.5 * r * log(2.0 * M_PI) - 0.5 * logdetQ_inv - 0.5 * quadform_eta;
  
-  Type ld_xi_O{0};
-  Type quadform_xi_O = pow(sigma2fs, -1.0) * (xi_O * xi_O).sum();
-  if (est_finescale) 
-    ld_xi_O += -0.5 * m * log(2.0 * M_PI) - 0.5 * m * log(sigma2fs) - 0.5 * quadform_xi_O;
-  
+  Type ld_xi_O{0}; 
+  if (est_finescale) {
+    
+    ld_xi_O += -0.5 * mstar * log(2.0 * M_PI); // constant term in the log-density of xi_O
+    
+    if (BAUs_unique_fs) {
+      
+      vector<Type> sigma2fs_long(mstar); 
+      for (int i = 0; i < mstar; i++) {
+        sigma2fs_long[i] = sigma2fs[sigma2fs_id[i]]; 
+      }
+      Type quadform_xi_O = ((xi_O * xi_O) / sigma2fs_long).sum();
+      ld_xi_O += -0.5 * (sigma2fs_long).log().sum() - 0.5 * quadform_xi_O;
+
+    } else {
+      Type quadform_xi_O = pow(sigma2fs[0], -1.0) * (xi_O * xi_O).sum();
+      ld_xi_O += - 0.5 * mstar * log(sigma2fs[0]) - 0.5 * quadform_xi_O;
+    }
+  }
+    
+
 
   // ---- 2a. Prior for sigma^2_\xi, the fine-scale variance component ---- //
   

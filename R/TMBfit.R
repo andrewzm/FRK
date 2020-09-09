@@ -33,12 +33,40 @@
   r  <- ncol(M@S0)
   mstar <- ncol(M@C_O)
   
+  
   ## Data and parameter preparation for TMB
   data_params_init <- .TMB_prep(M)
 
+
+  # d <- data_params_init$data
+  # p <- data_params_init$parameters
+  # 
+  # d$BAUs_unique_fs
+  # d$sigma2fs_hat
+  # d$est_finescale
+  # d$sigma2fs_id %>% range
+  # d$sigma2fs_id %>% length == ncol(d$C_O)
+  # 
+  # sigma2fs <- exp(p$logsigma2fs)
+  # 
+  # sigma2fs_long <- c()
+  # for (i in 1:mstar) {
+  #   sigma2fs_long[i] = sigma2fs[d$sigma2fs_id[i] + 1];
+  # }
+  # 
+  # browser()
+  # 
+  # d$est_sigma2fs
+  # d$est_finescale
+  # sigma2fs_long %>% length
+  # 
+  # xi_O <- p$random_effects %>% tail(mstar)
+  # 
+  # xi_O %>% length
   
-  data_params_init$data$sigma2fs_hat <- 0.2127473
-  data_params_init$parameters$logsigma2fs <- log(data_params_init$data$sigma2fs_hat) 
+  
+  # data_params_init$data$sigma2fs_hat <- 0.2127473
+  # data_params_init$parameters$logsigma2fs <- log(data_params_init$data$sigma2fs_hat) 
   
   ## TMB model compilation
   obj <- MakeADFun(data = data_params_init$data,
@@ -179,12 +207,13 @@
   } else {
     k_BAU <- M@BAUs$k_BAU[obsidx]
   }
-    
+
   ## Common to all
   data    <- list(Z = Z, X_O = M@X_O, S_O = M@S_O, C_O = M@C_O,
                   K_type = M@K_type, response = M@response, link = M@link,
                   k_BAU = k_BAU, k_Z = k_Z,
-                  temporal = as.integer(is(M@basis,"TensorP_Basis")))
+                  temporal = as.integer(is(M@basis,"TensorP_Basis")), 
+                  BAUs_unique_fs = M@BAUs_unique_fs)
 
   ## The location of the stored spatial basis functions depend on whether the 
   ## data is spatio-temporal or not. Here, we also define the number of temporal
@@ -193,11 +222,16 @@
     spatial_dist_matrix <- M@D_basis[[1]]
     spatial_basis <- M@basis@Basis1  
     data$r_t <- M@basis@Basis2@n
+    ns <- length(M@BAUs@sp)
   } else {
     spatial_dist_matrix <- M@D_basis
     spatial_basis <- M@basis 
     data$r_t <- 1
+    ns <- length(M@BAUs)
   }
+  
+  data$sigma2fs_id <-  (obsidx - 1) %% ns
+  
   
   data$r_si <- as.vector(table(spatial_basis@df$res))
 
@@ -300,15 +334,19 @@
   ## Create a data entry of sigma2fs_hat (one that will stay constant if we are 
   ## not estimating sigma2fs within TMB)
   data$sigma2fs_hat <- exp(parameters$logsigma2fs)
-  ## Only estimate sigma2fs if all the observations are associated with exactly one BAU.
-  ## Otherwise, we will fix sigma2fs with TMB.
+  ## Only estimate sigma2fs if all the observations are associated with exactly 
+  ## one BAU; otherwise, we must fix sigma2fs.
   data$est_sigma2fs <- as.integer( all(tabulate(M@Cmat@i + 1) == 1) )
-  
 
   data$est_finescale <- as.integer(M@est_finescale)
- 
-
   
+  
+  if (M@BAUs_unique_fs) {
+    data$sigma2fs_hat      <- rep(data$sigma2fs_hat, ns)
+    parameters$logsigma2fs <- rep(parameters$logsigma2fs, ns)
+  }
+    
+ 
   return(list(data = data, parameters = parameters))
 }
 

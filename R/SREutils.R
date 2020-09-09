@@ -24,6 +24,7 @@
 #' @param average_in_BAU if \code{TRUE}, then multiple data points falling in the same BAU are averaged; the measurement error of the averaged data point is taken as the average of the individual measurement errors
 #' @param sum_variables vector of strings indicating which variables are to be summed rather than averaged. Only applicable if \code{average_in_BAU = TRUE}.
 #' @param normalise_wts if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represent a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)
+#' @param BAUs_unique_fs if \code{TRUE}, and each spatial BAU is observed at least 10 times, then each BAU is given a unique fine-scale variation parameter
 #' @param fs_model if "ind" then the fine-scale variation is independent at the BAU level. If "ICAR", then an ICAR model for the fine-scale variation is placed on the BAUs
 #' @param vgm_model an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm}. This object contains the variogram model that will be fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified, the variogram used is \code{gstat::vgm(1, "Lin", d, 1)}, where \code{d} is approximately one third of the maximum distance between any two data points
 #' @param K_type the parameterisation used for the \code{K} matrix. If the EM algorithm is used for model fitting, \code{K_type} can be "unstructured" or "block-exponential". If TMB is used for model fitting, \code{K_type} can be "neighbour" or "block-exponential". The default is "block-exponential"
@@ -123,6 +124,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                 link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"), 
                 taper = 4, 
                 est_finescale = TRUE,
+                BAUs_unique_fs = FALSE,
                 ...) {
     
 
@@ -159,6 +161,12 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     #     }
     # }
     
+    ## FIXME: Check that we have a spatio-temporal problem, and that all spatial pixels are observed at least 10 times
+    if (BAUs_unique_fs) {
+        
+    } 
+    
+    
     ## Check that the arguments are OK
     .check_args1(f = f, data = data, basis = basis, BAUs = BAUs, est_error = est_error, 
                  response = response, link = link, taper = taper, K_type = K_type) 
@@ -177,7 +185,21 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     ## Evaluate the basis functions over the BAUs. If we have fewer BAUs than 
     ## basis functions, then we average the basis functions over the polygons
     ## using Monte Carlo integration with 1000 samples per polygon.
-    if(length(BAUs) < nbasis(basis)) {
+    
+    if (is(BAUs, "STFDF")) {
+        n_BAUs_spatial <- length(BAUs@sp)
+    } else {
+        n_BAUs_spatial <- length(BAUs)
+    }
+    
+    if (is(basis,"TensorP_Basis")) {
+        n_basis_spatial <- nbasis(basis@Basis1)
+    } else {
+        n_basis_spatial <- nbasis(basis)
+    }
+    
+
+    if(n_BAUs_spatial < n_basis_spatial) {
         S0 <- eval_basis(basis, BAUs)     # evaluate basis functions by averaging the basis functions over the polygons
     } else {
         S0 <- eval_basis(basis,.polygons_to_points(BAUs))     # evaluate basis functions over BAU centroids
@@ -392,7 +414,8 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         Q_eta_xi = Q_eta_xi_init,
         k_Z = k, 
         est_finescale = est_finescale, 
-        normalise_wts = normalise_wts)
+        normalise_wts = normalise_wts, 
+        BAUs_unique_fs = BAUs_unique_fs)
 }
 
 

@@ -333,12 +333,22 @@
   vY <- as.vector( (M@S0 %*% Sigma_eta * M@S0) %*% rep(1, r) )
 
   if (M@est_finescale) {
-    ## UNOBSERVED locations: simply add the estimate of sigma2fs to the variance:
-    vY[-obsidx] <- vY[-obsidx] + M@sigma2fshat
+    
+    ## UNOBSERVED locations: simply add the estimate of sigma2fs to the variance.
+    ## If we have a unique fine-scale variance at each spatial BAU (spatio-temporal 
+    ## case only), add the sigma2fs associated with that BAU.
+    if (M@BAUs_unique_fs) {
+      unobsidx <- unobserved_BAUs(M)
+      sigma2fs_id <- ((unobsidx - 1) %% ns) + 1
+      vY[unobsidx] <- vY[unobsidx] + M@sigma2fshat[sigma2fs_id]
+    } else {
+      vY[-obsidx] <- vY[-obsidx] + M@sigma2fshat
+    }
     
     ## OBSERVED location: add both var(xi_O|Z) and cov(xi_O, eta | Z)
     covar      <- (M@S_O * Matrix::t(Cov_eta_xi)) %*% rep(1, r)  # covariance terms
     vY[obsidx] <- vY[obsidx] + Matrix::diag(Sigma_xi) + 2 * covar
+    
   }
 
   
@@ -455,12 +465,23 @@
   ## All we have to do is make an (N-m) x n_MC matrix of draws from the
   ## Gaussian distribution with mean zero and variance equal to the fine-scale variance.
   if (M@est_finescale) {
-    xi_U <- matrix(rnorm((N - mstar) * n_MC, mean = 0, sd = sqrt(M@sigma2fshat)),
-                   nrow = N - mstar, ncol = n_MC)
+    
+    if (M@BAUs_unique_fs) {
+      unobsidx <- unobserved_BAUs(M)
+      sigma2fs_id <- ((unobsidx - 1) %% ns) + 1
+      sigma2fs_U <- M@sigma2fshat[sigma2fs_id]
+    } else {
+      sigma2fs_U <- M@sigma2fshat
+    }
+
+    xi_U <- rnorm((N - mstar) * n_MC, mean = 0, sd = sqrt(sigma2fs_U)) %>% 
+      matrix(nrow = N - mstar, ncol = n_MC)
+    
     xi_samples <- rbind(xi_O, xi_U)
   }
-
-
+  
+  
+  
   
   # ---- Construct samples from latent process Y ----
   
