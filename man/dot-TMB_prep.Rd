@@ -4,7 +4,7 @@
 \alias{.TMB_prep}
 \title{TMB data and parameter preparation.}
 \usage{
-.TMB_prep(M)
+.TMB_prep(M, sigma2fs)
 }
 \arguments{
 \item{M}{An object of class \code{SRE}.}

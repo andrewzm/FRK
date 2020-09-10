@@ -28,46 +28,16 @@
 #'   \item{phi}{Estimate of the dispersion parameter (only for applicable response distributions).}
 #'   \item{log_likelihood}{The log-likelihood of the model evaluated at the final parameter estimates. Can be obtained by calling loglik(M).}
 #' }
-.FRKTMB_fit <- function(M, optimiser, ...) {
+.FRKTMB_fit <- function(M, optimiser, sigma2fs, ...) {
 
-  r  <- ncol(M@S0)
-  mstar <- ncol(M@C_O)
+
   
   
   ## Data and parameter preparation for TMB
-  data_params_init <- .TMB_prep(M)
+  data_params_init <- .TMB_prep(M, sigma2fs = sigma2fs)
+  
 
 
-  # d <- data_params_init$data
-  # p <- data_params_init$parameters
-  # 
-  # d$BAUs_unique_fs
-  # d$sigma2fs_hat
-  # d$est_finescale
-  # d$sigma2fs_id %>% range
-  # d$sigma2fs_id %>% length == ncol(d$C_O)
-  # 
-  # sigma2fs <- exp(p$logsigma2fs)
-  # 
-  # sigma2fs_long <- c()
-  # for (i in 1:mstar) {
-  #   sigma2fs_long[i] = sigma2fs[d$sigma2fs_id[i] + 1];
-  # }
-  # 
-  # browser()
-  # 
-  # d$est_sigma2fs
-  # d$est_finescale
-  # sigma2fs_long %>% length
-  # 
-  # xi_O <- p$random_effects %>% tail(mstar)
-  # 
-  # xi_O %>% length
-  
-  
-  # data_params_init$data$sigma2fs_hat <- 0.2127473
-  # data_params_init$parameters$logsigma2fs <- log(data_params_init$data$sigma2fs_hat) 
-  
   ## TMB model compilation
   obj <- MakeADFun(data = data_params_init$data,
                    parameters = data_params_init$parameters,
@@ -136,6 +106,8 @@
   
   ## Update the slots of M
   ## Convert to Matrix as these SRE slots require class "Matrix"
+  r  <- nbasis(M)
+  mstar <- ncol(M@C_O)
   M@alphahat <- as(estimates$alpha, "Matrix")
   M@mu_eta   <- as(estimates$random_effects[1:r], "Matrix")
   if (M@est_finescale) {
@@ -153,7 +125,6 @@
   M@log_likelihood <- log_likelihood 
 
   ## Posterior variance and precision matrix of eta random effects
-  r <- nbasis(M)
   M@Q_eta <- Q[1:r, 1:r] # Don't need it, but this matrix is easily obtained, so provide anyway
 
   ## For TMB, we do not need to compute these matrices; return an empty matrix.
@@ -191,7 +162,7 @@
 #'   \item{data}{The data.}
 #'   \item{parameters}{The initialised parameters/fixed-effects/random-effects.}
 #' }
-.TMB_prep <- function (M) {
+.TMB_prep <- function (M, sigma2fs) {
 
   k_Z  <- as.vector(M@k_Z)
   N    <- nrow(M@S0)               # Number of BAUs
@@ -341,11 +312,20 @@
   data$est_finescale <- as.integer(M@est_finescale)
   
   
+  ## If we are estimating a unique fine-scale variance at each spatial BAU, 
+  ## simply replicate ns times. 
   if (M@BAUs_unique_fs) {
     data$sigma2fs_hat      <- rep(data$sigma2fs_hat, ns)
     parameters$logsigma2fs <- rep(parameters$logsigma2fs, ns)
   }
-    
+  
+  
+  ## Fix sigma2fs to the known value provided by the user (if provided). 
+  if (!is.null(sigma2fs)) {
+    data$sigma2fs_hat <- sigma2fs
+    parameters$logsigma2fs <- log(data$sigma2fs_hat) 
+    data$est_sigma2fs <- 0
+  }
  
   return(list(data = data, parameters = parameters))
 }

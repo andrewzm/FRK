@@ -47,6 +47,7 @@
 #' @param taper A positive numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "block-exponential"} and \code{TMB} is used to fit the data)
 #' @inheritParams .FRKTMB_pred
 #' @param optimiser the optimising function used for model fitting when \code{method = 'TMB'} (default is \code{nlminb}). Users may pass in a function object or a string corresponding to a named function. Optional parameters may be passed to \code{optimiser} via \code{...}. The only requirement of \code{optimiser} is that the first three arguments correspond to the initial parameters, the obejctive function, and the gradient, respectively (note that this may be achieved by rearranging the order of arguments before passing into \code{optimiser}) 
+#' @param sigma2fs known value of the fine-scale variance. If \code{NULL} (the default), the fine-scale variance \eqn{\sigma^2_\xi} is estimated as usual. If \code{sigma2fs} is not \code{NULL}, the fine-scale variance is fixed to the supplied value
 #' @param ... other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling \code{FRK}, or the user specified \code{optimiser} function when calling \code{FRK} or \code{SRE.fit}
 #' @details \code{SRE()} is the main function in the package: It constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of Basic Areal Units (BAUs). The function first takes each object in the list \code{data} and maps it to the BAUs -- this entails binning the point-referenced data into the BAUs (and averaging within the BAU) if \code{average_in_BAU = TRUE}, and finding which BAUs are influenced by the polygon datasets. Following this, the incidence matrix \code{Cmat} is constructed, which appears in the observation model \eqn{Z = CY + C\delta + e}, where \eqn{C} is the incidence matrix and \eqn{\delta} is systematic error at the BAU level.
 #'
@@ -422,10 +423,15 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
 #' @rdname SRE
 #' @export
 SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
-                    lambda = 0, print_lik = FALSE, optimiser = nlminb, ...) {
+                    lambda = 0, print_lik = FALSE, optimiser = nlminb, 
+                    sigma2fs = NULL, ...) {
 
     method <- match.arg(method)
     optimiser <- match.fun(optimiser)
+    
+    if (!is.null(SRE_model)) {
+        SRE_model@sigma2fshat <- sigma2fs
+    }
     
     ## Check the arguments are OK
     .check_args2(n_EM = n_EM, tol = tol, method = method, print_lik = print_lik, 
@@ -434,7 +440,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     
     ## Call internal fitting function with checked arguments
     return(.SRE.fit(SRE_model = SRE_model, n_EM = n_EM, tol = tol, method = method, 
-             lambda = lambda, print_lik = print_lik, optimiser = optimiser, 
+             lambda = lambda, print_lik = print_lik, optimiser = optimiser, sigma2fs = sigma2fs,
              ...))
 
 }
@@ -972,7 +978,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 
 ## Main prediction routine
 .SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method="EM", lambda = 0, 
-                     print_lik = FALSE, optimiser = nlminb, ...) {
+                     print_lik = FALSE, optimiser = nlminb, sigma2fs = NULL, ...) {
 
     info_fit <- list()      # initialise info_fit
     
@@ -1041,7 +1047,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 
         }
     } else if (method == "TMB") {
-        SRE_model <- .FRKTMB_fit(SRE_model, optimiser = optimiser, ...)
+        SRE_model <- .FRKTMB_fit(SRE_model, optimiser = optimiser, sigma2fs = sigma2fs, ...)
     } else {
         stop("No other estimation method implemented yet. Please use method = 'EM' or method = 'TMB'.")
     }
