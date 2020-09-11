@@ -162,9 +162,18 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     #     }
     # }
     
-    ## FIXME: Check that we have a spatio-temporal problem, and that all spatial pixels are observed at least 10 times
+    
+    ## If we wish to have unique fine-scale variance associated with each BAU, 
+    ## we need to:
+    ##              i) be in a spatio-temporal application
+    ##              ii) ensure each spatial BAU is associated with a sufficient number of observations
+    ## The second check requires the binned data and the indices of the observed 
+    ## BAUs, so we need to check this condition later.
     if (BAUs_unique_fs) {
-        
+        if(!is(BAUs, "STFDF"))
+            stop("A unique fine-scale variance can only be associated with each spatial BAU if the application is spatio-temporal (i.e., the BAUs are of class 'STFDF').
+                 Please either set BAUs_unique_fs to FALSE if yo uare not in a spatio-temporal application.")
+
     } 
     
     
@@ -379,6 +388,17 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     X_BAU <- as(.extract_BAU_X_matrix(f, BAUs), "matrix") # fixed-effect design matrix at BAU level
     X_O <- X_BAU[obsidx, , drop = FALSE]
     
+
+    if (BAUs_unique_fs) {
+        fewest_obs <-  min(table(obsidx %% ns)) # count of observations from spatial BAU with fewest observations
+        if(fewest_obs == 0) {
+            stop("A unique fine-scale variance at each spatial BAU can only be fit if all spatial BAUs are oobserved, which is not the case for the provided data and BAUs. Please set BAUs_unique_fs = FALSE.")
+        } else if(fewest_obs < 10) {
+            warning(paste0("The smallest number of observations associated with a spatial BAUs is: ", fewest_obs, 
+                           ". As you have selected to fit a unique fine-scale variance at each spatial BAU, please consider if this is a sufficient number of observations."))
+        }
+    } 
+    
     ## Construct the SRE object
     new("SRE",
         data=data,
@@ -429,7 +449,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     method <- match.arg(method)
     optimiser <- match.fun(optimiser)
     
-    if (!is.null(SRE_model)) {
+    if (!is.null(sigma2fs)) {
         SRE_model@sigma2fshat <- sigma2fs
     }
     

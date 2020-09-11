@@ -58,7 +58,6 @@
   ## The optimiser should have arguments: start, objective, gradient. 
   ## The remaining arguments can be whatever.
 
-  
   fit <- optimiser(obj$par, obj$fn, obj$gr, ...)
   
   ## Log-likeihood
@@ -70,6 +69,7 @@
   ## families)
   Z <- data_params_init$data$Z
   k_Z <- as.vector(M@k_Z)
+ 
   if(M@response == "poisson") {
     cZphi = -lfactorial(Z)
   } else if (M@response == "negative-binomial") {
@@ -79,7 +79,7 @@
   } else {
     cZphi = 0 # add nothing for the other distributions, because we have added cZphi in the C++ template
   }
-  log_likelihood = log_likelihood + cZphi
+  log_likelihood = log_likelihood + sum(cZphi)
 
   
   ## Extract parameter and random effect estimates
