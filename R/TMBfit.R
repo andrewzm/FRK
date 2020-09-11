@@ -30,13 +30,10 @@
 #' }
 .FRKTMB_fit <- function(M, optimiser, sigma2fs, ...) {
 
-
-  
   
   ## Data and parameter preparation for TMB
   data_params_init <- .TMB_prep(M, sigma2fs = sigma2fs)
   
-
 
   ## TMB model compilation
   obj <- MakeADFun(data = data_params_init$data,
@@ -69,18 +66,6 @@
   ## families)
   Z <- data_params_init$data$Z
   k_Z <- as.vector(M@k_Z)
- 
-  if(M@response == "poisson") {
-    cZphi = -lfactorial(Z)
-  } else if (M@response == "negative-binomial") {
-    cZphi   = lfactorial(Z + k_Z - 1.0) - lfactorial(Z) - lfactorial(k_Z - 1.0)
-  } else if (M@response == "binomial") {
-    cZphi   = lfactorial(k_Z) - lfactorial(Z) - lfactorial(k_Z - Z)
-  } else {
-    cZphi = 0 # add nothing for the other distributions, because we have added cZphi in the C++ template
-  }
-  log_likelihood = log_likelihood + sum(cZphi)
-
   
   ## Extract parameter and random effect estimates
   par <- obj$env$last.par.best
@@ -179,12 +164,19 @@
     k_BAU <- M@BAUs$k_BAU[obsidx]
   }
 
+  
+  if(M@response == "gaussian") {
+    sigma2e = diag(M@Ve)[1]
+  } else {
+    sigma2e = -1
+  }
+  
   ## Common to all
   data    <- list(Z = Z, X_O = M@X_O, S_O = M@S_O, C_O = M@C_O,
                   K_type = M@K_type, response = M@response, link = M@link,
                   k_BAU = k_BAU, k_Z = k_Z,
                   temporal = as.integer(is(M@basis,"TensorP_Basis")), 
-                  BAUs_unique_fs = M@BAUs_unique_fs)
+                  BAUs_unique_fs = M@BAUs_unique_fs, sigma2e = sigma2e)
 
   ## The location of the stored spatial basis functions depend on whether the 
   ## data is spatio-temporal or not. Here, we also define the number of temporal
@@ -201,7 +193,7 @@
     ns <- length(M@BAUs)
   }
   
-  data$sigma2fs_id <-  (obsidx - 1) %% ns
+  data$spatial_BAU_id <-  (obsidx - 1) %% ns
   
   
   data$r_si <- as.vector(table(spatial_basis@df$res))
@@ -326,7 +318,24 @@
     parameters$logsigma2fs <- log(data$sigma2fs_hat) 
     data$est_sigma2fs <- 0
   }
- 
+  
+  
+
+  # mstar <- data$C_O %>% ncol
+  # mstar == length(observed_BAUs(M))
+  # xi_O <- parameters$random_effects %>% tail(mstar)
+  # spatial_BAU_id <- data$spatial_BAU_id + 1
+  # length(spatial_BAU_id) == mstar
+  # sigma2fs <- parameters$logsigma2fs %>% exp
+  # sigma2fs <- rnorm(ns) # just for testing
+  # sigma2fs_long <- c()
+  # for (i in 1:mstar) {
+  #   sigma2fs_long[i] = sigma2fs[spatial_BAU_id[i]]; 
+  # }
+  # browser()
+  # 
+  # sigma2fs_long
+  
   return(list(data = data, parameters = parameters))
 }
 

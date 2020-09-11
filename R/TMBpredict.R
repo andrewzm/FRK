@@ -339,8 +339,8 @@
     ## case only), add the sigma2fs associated with that BAU.
     if (M@BAUs_unique_fs) {
       unobsidx <- unobserved_BAUs(M)
-      sigma2fs_id <- ((unobsidx - 1) %% ns) + 1
-      vY[unobsidx] <- vY[unobsidx] + M@sigma2fshat[sigma2fs_id]
+      spatial_BAU_id <- ((unobsidx - 1) %% ns) + 1
+      vY[unobsidx] <- vY[unobsidx] + M@sigma2fshat[spatial_BAU_id]
     } else {
       vY[-obsidx] <- vY[-obsidx] + M@sigma2fshat
     }
@@ -452,8 +452,7 @@
     eta  <- as.matrix(y + mu_eta_Matrix) # add the mean to y
   }
   
-  
-  
+
   ## We now have two matrices, eta and xi_O:
   ## row i of eta corresponds to n_MC MC samples of eta_i,
   ## row i of xi_O corresponds to n_MC MC samples of the fine-scale variation at the ith observed location.
@@ -468,22 +467,22 @@
     
     if (M@BAUs_unique_fs) {
       unobsidx <- unobserved_BAUs(M)
-      sigma2fs_id <- ((unobsidx - 1) %% ns) + 1
-      sigma2fs_U <- M@sigma2fshat[sigma2fs_id]
+      spatial_BAU_id <- ((unobsidx - 1) %% ns) + 1
+      sigma2fs_U <- M@sigma2fshat[spatial_BAU_id]
     } else {
       sigma2fs_U <- M@sigma2fshat
     }
-
+    
     xi_U <- rnorm((N - mstar) * n_MC, mean = 0, sd = sqrt(sigma2fs_U)) %>% 
       matrix(nrow = N - mstar, ncol = n_MC)
-    
+
     xi_samples <- rbind(xi_O, xi_U)
   }
   
   
   
   
-  # ---- Construct samples from latent process Y ----
+  # ---- Construct samples from the latent process Y ----
   
   ## We break the latent process down as: Y = Y_smooth + xi, 
   ## so that we may separate the fine-scale variation. 
@@ -501,19 +500,26 @@
   ## Combine samples
   Y_smooth_samples  <- rbind(Y_smooth_O, Y_smooth_U)
   
-  
-  
   ## Use permutation matrix to get the correct (original) ordering
-  ## FIXME: could just use row indexing to avoid matrix multiplication here
-  unobsidx         <- (1:N)[-obsidx]       # Unobserved BAUs indices
+  unobsidx         <- unobserved_BAUs(M)   # Unobserved BAUs indices
   ids              <- c(obsidx, unobsidx)  # All indices (observed and unobserved)
   P                <- Matrix::sparseMatrix(i = 1:N, j = 1:N, x = 1)[ids, ]
   Y_smooth_samples <- Matrix::t(P) %*% Y_smooth_samples
+
+  # ## Sanity check:
+  # N = 10
+  # obsidx <- sample(1:N, 6, replace = F)
+  # unobsidx <- (1:N)[-obsidx]
+  # ids              <- c(obsidx, unobsidx)  # All indices (observed and unobserved)
+  # P                <- Matrix::sparseMatrix(i = 1:N, j = 1:N, x = 1)[ids, ]
+  # n_MC <- 5
+  # (Y_smooth_samples <- rep(c(obsidx, unobsidx), each = n_MC) %>% matrix(nrow = N, byrow = T))
+  # Matrix::t(P) %*% Y_smooth_samples
   
   ## Construct the samples from the latent process Y 
   if (M@est_finescale) {
-    xi_samples       <- Matrix::t(P) %*% xi_samples
-    Y_samples <- Y_smooth_samples + xi_samples
+    xi_samples  <- Matrix::t(P) %*% xi_samples
+    Y_samples   <- Y_smooth_samples + xi_samples
   } else {
     Y_samples <- Y_smooth_samples
   }
@@ -522,8 +528,11 @@
   Y_smooth_samples <- as.matrix(Y_smooth_samples)
 
   ## Outputted Y value depend on obs_fs
-  if (obs_fs == FALSE) MC$Y_samples <- Y_samples
-  if (obs_fs == TRUE)  MC$Y_samples <- Y_smooth_samples
+  if (obs_fs) {
+    MC$Y_samples <- Y_smooth_samples
+  } else 
+    MC$Y_samples <- Y_samples
+    
   
   ## If Y is the ONLY quantity of interest, exit the function.
   if (!("mean" %in% type) && !("response" %in% type)) return(MC) 

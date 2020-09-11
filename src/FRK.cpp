@@ -67,7 +67,7 @@ Type objective_function<Type>::operator() ()
   int nres = r_si.size();    // Number of resolutions (of spatial basis functions) 
   int r_s  = r_si.sum();     // Total number of spatial basis functions
   int r = r_s * r_t;
-  DATA_IVECTOR(sigma2fs_id);
+  DATA_IVECTOR(spatial_BAU_id);
   
   DATA_VECTOR(beta);          // Tapering parameters (only relevant for block-exponential formulation)
   DATA_IVECTOR(row_indices);
@@ -77,6 +77,7 @@ Type objective_function<Type>::operator() ()
   DATA_IVECTOR(n_r);          // Integer vector indicating the number of rows at each resolution (applicable only if K-type == separable)
   DATA_IVECTOR(n_c);          // Integer vector indicating the number of columns at each resolution (applicable only if K-type == separable)
 
+  DATA_SCALAR(sigma2e);  // measurement error for Gaussian data model (fixed)
   
   DATA_VECTOR(sigma2fs_hat);  // estimate of sigma2fs (the fine-scale variance component)
   DATA_INTEGER(est_sigma2fs);     // Flag indicating whether we should estimate sigma2fs or not (1 if true, 0 if false)
@@ -290,7 +291,7 @@ Type objective_function<Type>::operator() ()
       
       vector<Type> sigma2fs_long(mstar); 
       for (int i = 0; i < mstar; i++) {
-        sigma2fs_long[i] = sigma2fs[sigma2fs_id[i]]; 
+        sigma2fs_long[i] = sigma2fs[spatial_BAU_id[i]]; 
       }
       Type quadform_xi_O = ((xi_O * xi_O) / sigma2fs_long).sum();
       ld_xi_O += -0.5 * (sigma2fs_long).log().sum() - 0.5 * quadform_xi_O;
@@ -342,11 +343,12 @@ Type objective_function<Type>::operator() ()
   vector<Type> cZphi(m);
   
   if (response == "poisson" || response == "negative-binomial" ||
-      response == "binomial" || response == "bernoulli") {
+      response == "binomial" || response == "bernoulli") 
     phi = 1.0;
-    cZphi = 0.0;
-  } else if (response == "gaussian") {
-    // Note that phi is initialised to sigma2e, so we don't need to change it
+  
+  
+  if (response == "gaussian") {
+    phi = sigma2e;
     aphi = phi;
     cZphi = -0.5 * (Z * Z / phi + log(2.0 * M_PI * phi));
   } else if (response == "gamma") {
@@ -355,7 +357,22 @@ Type objective_function<Type>::operator() ()
   } else if (response == "inverse-gaussian") {
     aphi    =   - 2.0 * phi;
     cZphi   =   - 0.5 / (phi * Z) - 0.5 * log(2.0 * M_PI * phi * Z * Z * Z);
-  } 
+  } else if (response == "poisson") {
+    for (int i = 0; i < m; i++) {
+      cZphi[i] = -lfactorial(Z[i]);
+    }
+  } else if (response == "negative-binomial") {
+    for (int i = 0; i < m; i++) {
+      cZphi[i] = lfactorial(Z[i] + k_Z[i] - 1.0) - lfactorial(Z[i]) - lfactorial(k_Z[i] - 1.0);
+    }
+  } else if (response == "binomial") {
+    for (int i = 0; i < m; i++) {
+      cZphi[i] = lfactorial(k_Z[i]) - lfactorial(Z[i]) - lfactorial(k_Z[i] - Z[i]);
+    }
+  } else if (response == "bernoulli") {
+    cZphi = 0.0;
+  }
+  
 
   // 4.4. Construct ln[Z|Y_Z]
   Type ld_Z  =  ((Z * lambda - blambda)/aphi).sum() + cZphi.sum();
