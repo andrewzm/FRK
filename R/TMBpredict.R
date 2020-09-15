@@ -16,7 +16,7 @@
 #' Note that for all link functions other than the log- and identity-link functions, the predictions and prediction uncertainty of \eqn{\mu} contained in \code{newdata} are computed using the Monte Carlo samples contained in \code{MC}.
 #' When the log- or identity-link functions are used, the expectation and variance of the \eqn{\mu} may be computed exactly.
 .FRKTMB_pred <- function(M, newdata, CP, predict_BAUs, pred_time,type, n_MC, 
-                         obs_fs, k, percentiles, interval_type, credMass) {
+                         obs_fs, k, percentiles, credMass) {
   
   
   ## FIXME: predict over only the observed BAUs needed for newdata locations
@@ -85,7 +85,6 @@
     newdata$p_mu <- mu_P
     newdata$RMSPE_mu <- apply(M_P, 1, sd)
     newdata@data <-  .concat_percentiles_to_df(data = newdata@data, X = M_P, 
-                                               interval_type = interval_type,
                                                credMass = credMass, 
                                                name = "mu", percentiles = percentiles)
     
@@ -131,25 +130,21 @@
   
   if ("link" %in% type) 
     newdata@data <-  .concat_percentiles_to_df(data = newdata@data, X = MC$Y_samples, 
-                                               interval_type = interval_type,
                                                credMass = credMass, 
                                                name = "Y", percentiles = percentiles)
   
   if ("mean" %in% type) 
     newdata@data <-  .concat_percentiles_to_df(data = newdata@data, X = MC$mu_samples, 
-                                               interval_type = interval_type,
                                                credMass = credMass, 
                                                name = "mu", percentiles = percentiles)
   
   if ("mean" %in% type & "prob_samples" %in% colnames(predictions)) 
     newdata@data <-  .concat_percentiles_to_df(data = newdata@data, X = MC$prob_samples, 
-                                               interval_type = interval_type,
                                                credMass = credMass, 
                                                name = "prob", percentiles = percentiles)
   
   if ("response" %in% type) 
     newdata@data <-  .concat_percentiles_to_df(data = newdata@data, X = MC$Z_samples, 
-                                               interval_type = interval_type,
                                                credMass = credMass, 
                                                name = "Z", percentiles = percentiles)
   

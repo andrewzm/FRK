@@ -487,8 +487,7 @@ SRE.predict <- function(SRE_model, obs_fs = FALSE, newdata = NULL, pred_polys = 
 setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = FALSE, pred_polys = NULL,
                                               pred_time = NULL, covariances = FALSE, 
                                               n_MC = 400, type = "mean", k = NULL, 
-                                              percentiles = c(5, 95), interval_type = c("HPD", "central"), 
-                                              credMass = 0.9) {
+                                              percentiles = c(5, 95), credMass = 0.9) {
 
 
     SRE_model <- object
@@ -509,8 +508,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     .check_args3(obs_fs = obs_fs, newdata = newdata, pred_polys = pred_polys,
                  pred_time = pred_time, covariances = covariances, 
                  response = SRE_model@response, SRE_model = SRE_model, type = type, 
-                 k = k, percentiles = percentiles, interval_type = interval_type, 
-                 credMass = credMass)
+                 k = k, percentiles = percentiles, credMass = credMass)
     
     
     
@@ -560,7 +558,6 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                                   type = type,                 # Whether we are interested in the "link" (Y-scale), "mean", "response"
                                   k = k,                       # Size parameter
                                   percentiles = percentiles,   # Desired percentiles of MC samples 
-                                  interval_type = interval_type, 
                                   credMass = credMass)          
     } 
 
@@ -2195,7 +2192,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 ## Checks arguments for the predict() function. Code is self-explanatory
 .check_args3 <- function(obs_fs = FALSE, newdata = NULL, pred_polys = NULL,
                          pred_time = NULL, covariances = FALSE, SRE_model, type, 
-                         k, percentiles, interval_type, credMass, ...) {
+                         k, percentiles, credMass, ...) {
     
     if(!(obs_fs %in% 0:1)) stop("obs_fs needs to be logical")
 
@@ -2242,14 +2239,12 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
         if(!all(type %in% c("link", "mean", "response")))
             stop("type must be a vector containing combinations of 'link', 'mean', and 'response'")
         
-        
-        if(!all(interval_type %in% c("central", "HPD")) & !is.null(interval_type))
-            stop("interval_type must be NULL, or a vector containing combinations of 'HPD' and 'central'")
-    
-        
-        if(credMass < 0 | credMass > 1)
-            stop("credMass should be a scalar between 0 and 1")
-        
+        if (!is.null(credMass)) {
+            if (length(credMass) != 1)
+                stop("credMass should be a single scalar, not a vector")
+            if(credMass < 0 | credMass > 1)
+                stop("credMass should be a scalar between 0 and 1")
+        }
     }
 }
 

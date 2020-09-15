@@ -10,12 +10,12 @@
   CP,
   predict_BAUs,
   pred_time,
-  type = "mean",
-  n_MC = 400,
-  obs_fs = FALSE,
-  k = NULL,
-  percentiles = c(5, 25, 50, 75, 95),
-  interval_type = "HPD"
+  type,
+  n_MC,
+  obs_fs,
+  k,
+  percentiles,
+  credMass
 )
 }
 \arguments{
@@ -37,9 +37,9 @@
 
 \item{k}{vector of size parameters at each BAU (applicable only for binomial and negative-binomial data)}
 
-\item{percentiles}{a vector of scalars in [0, 100] specifying the desired percentiles (applicable only if \code{interval_type = "central"}); if \code{percentiles = NULL}, no percentiles are computed}
+\item{percentiles}{a vector of scalars in [0, 100] specifying the desired percentiles; if \code{percentiles = NULL}, no percentiles are computed}
 
-\item{interval_type}{string indicating whether a \code{"central"} or \code{"HPD"} interval is desired}
+\item{credMass}{a scalar [0, 1] specifying the mass within the credible interval; if \code{credMass = NULL}, no HPD credible interval is computed}
 }
 \value{
 A list object containing:

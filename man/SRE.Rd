@@ -92,7 +92,8 @@ SRE.predict(
   n_MC = 400,
   type = "mean",
   k = NULL,
-  percentiles = c(5, 95)
+  percentiles = c(5, 95),
+  credMass = 0.9
 )
 
 loglik(SRE_model)
@@ -140,7 +141,7 @@ loglik(SRE_model)
 
 \item{k}{vector of size parameters at each BAU (applicable only for binomial and negative-binomial data)}
 
-\item{percentiles}{a vector of scalars in [0, 100] specifying the desired percentiles (applicable only if \code{interval_type = "central"}); if \code{percentiles = NULL}, no percentiles are computed}
+\item{percentiles}{a vector of scalars in [0, 100] specifying the desired percentiles; if \code{percentiles = NULL}, no percentiles are computed}
 
 \item{optimiser}{the optimising function used for model fitting when \code{method = 'TMB'} (default is \code{nlminb}). Users may pass in a function object or a string corresponding to a named function. Optional parameters may be passed to \code{optimiser} via \code{...}. The only requirement of \code{optimiser} is that the first three arguments correspond to the initial parameters, the obejctive function, and the gradient, respectively (note that this may be achieved by rearranging the order of arguments before passing into \code{optimiser})}
 
@@ -167,6 +168,8 @@ loglik(SRE_model)
 \item{covariances}{logical variable indicating whether prediction covariances should be returned or not. If set to \code{TRUE}, a maximum of 4000 prediction locations or polygons are allowed.}
 
 \item{object}{object of class \code{SRE}}
+
+\item{credMass}{a scalar [0, 1] specifying the mass within the credible interval; if \code{credMass = NULL}, no HPD credible interval is computed}
 }
 \description{
 The Spatial Random Effects (SRE) model is the central object in FRK. The function \code{FRK} provides a wrapper for the construction and estimation of the SRE object from data, using the functions \code{SRE} (the object constructor) and \code{SRE.fit} (for fitting it to the data). Please see \code{\link{SRE-class}} for more details on the SRE object's properties and methods.

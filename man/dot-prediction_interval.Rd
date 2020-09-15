@@ -7,15 +7,13 @@
 .prediction_interval(X, interval_type, percentiles, credMass)
 }
 \arguments{
-\item{X}{X a matrix (wherein rows correspond to prediction location, columns are samples)  or a list (wherein each element contains a vector of samples at a given prediction location) of Monte Carlo samples}
+\item{X}{a matrix (wherein rows correspond to prediction locations and columns are samples) of Monte Carlo samples}
 
 \item{interval_type}{string indicating whether a \code{"central"} or \code{"HPD"} interval is desired}
 
-\item{percentiles}{a vector of scalars in [0, 100] specifying the desired percentiles (applicable only if \code{interval_type = "central"}); if \code{percentiles = NULL}, no percentiles are computed}
+\item{percentiles}{a vector of scalars in [0, 100] specifying the desired percentiles; if \code{percentiles = NULL}, no percentiles are computed}
 
-\item{credMass}{
-a scalar [0, 1] specifying the mass within the credible interval.
-}
+\item{credMass}{a scalar [0, 1] specifying the mass within the credible interval; if \code{credMass = NULL}, no HPD credible interval is computed}
 }
 \value{
 The prediction interval at each location (or width at each location if \code{width = TRUE})

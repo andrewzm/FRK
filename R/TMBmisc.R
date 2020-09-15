@@ -90,19 +90,20 @@
 #' @param data The dataframe we will append percentiles to; the number of rows (if \code{X} is a matrix) or the length (if \code{X} is a list) of \code{X} must equal the number of rows in \code{data}
 #' @param name The name of the quantity of interest. The names of the percentile columns are "name_percentile". In \code{FRK} it will be Y, mu, prob, or Z
 #' @return The dataframe \code{data} with appended percentiles
-.concat_percentiles_to_df <- function (data, X, name, interval_type, percentiles, credMass) {
-  if (is.null(interval_type)) 
+.concat_percentiles_to_df <- function (data, X, name, percentiles, credMass) {
+  if (is.null(percentiles) & is.null(credMass)) 
     return(data)
-
-  for (type in unique(interval_type)) {
-    Q           <- .prediction_interval(X, interval_type = type, percentiles = percentiles, credMass = credMass)
-    
-    if (type == "central") {
-      colnames(Q) <- paste(name, "percentile", as.character(percentiles), sep = "_")
-    } else if (type == "HPD") {
-      colnames(Q) <- paste(colnames(Q), "HPD_bound", name, sep = "_")
-    }
-    
+  
+  
+  if (!is.null(percentiles)) {
+    Q           <- .prediction_interval(X, interval_type = "central", percentiles = percentiles, credMass = credMass)
+    colnames(Q) <- paste(name, "percentile", as.character(percentiles), sep = "_")
+    data        <- cbind(data, Q)
+  }
+  
+  if(!is.null(credMass)) {
+    Q           <- .prediction_interval(X, interval_type = "HPD", percentiles = percentiles, credMass = credMass)
+    colnames(Q) <- paste(colnames(Q), "HPD_bound", name, sep = "_")
     data        <- cbind(data, Q)
   }
   
@@ -117,28 +118,18 @@
 #' or HPD prediction intervals, and returns the prediction interval lower and 
 #' upper bound
 #' 
-#' @inheritParams HDInterval::hdi
-#' @param X X a matrix (wherein rows correspond to prediction location, columns are samples)  or a list (wherein each element contains a vector of samples at a given prediction location) of Monte Carlo samples
+#' @param X a matrix (wherein rows correspond to prediction locations and columns are samples) of Monte Carlo samples
 #' @param interval_type string indicating whether a \code{"central"} or \code{"HPD"} interval is desired
-#' @param percentiles a vector of scalars in [0, 100] specifying the desired percentiles (applicable only if \code{interval_type = "central"}); if \code{percentiles = NULL}, no percentiles are computed 
+#' @param percentiles a vector of scalars in [0, 100] specifying the desired percentiles; if \code{percentiles = NULL}, no percentiles are computed 
+#' @param credMass a scalar [0, 1] specifying the mass within the credible interval; if \code{credMass = NULL}, no HPD credible interval is computed
 #' @return The prediction interval at each location (or width at each location if \code{width = TRUE})
 .prediction_interval <- function(X, interval_type, percentiles, credMass) {
+
+  X <- as.matrix(X)
+  if (interval_type == "central") Q <- t(apply(X, 1, quantile, percentiles / 100))
+  if (interval_type == "HPD")     Q <- t(HDInterval::hdi(t(X), credMass = credMass)) # Note that hdi() expects locations in columns, samples in rows
   
-  quantiles <- percentiles / 100
-  
-  ## Note that hdi() wants variables in columns, samples in rows
-  if (is(X, "matrix") || is(X, "Matrix")) {
-    if (interval_type == "central") Q <- t(apply(X, 1, quantile, quantiles))
-    if (interval_type == "HPD")     Q <- t(HDInterval::hdi(t(X), credMass = credMass))
-  } else if (is(X, "list")) {
-    
-    if (interval_type == "central") Q  <- t(sapply(X, quantile, quantiles))
-    ## FIXME: Use the americium example to figure out how to do this
-    # if (interval_type == "HPD")     Q <- HDInterval::hdi(t(X), credMass = credMass)
-    
-  }
-  
-    return(Q)
+  return(Q)
 }
 
 
