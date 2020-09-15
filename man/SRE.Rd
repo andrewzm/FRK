@@ -30,11 +30,12 @@ FRK(
   link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse",
     "inverse-squared"),
   taper = 4,
+  optimiser = nlminb,
   n_MC = 400,
   type = "mean",
   k = NULL,
   percentiles = c(5, 95),
-  optimiser = nlminb,
+  credMass = 0.9,
   ...
 )
 
@@ -135,6 +136,8 @@ loglik(SRE_model)
 
 \item{taper}{A positive numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "block-exponential"} and \code{TMB} is used to fit the data)}
 
+\item{optimiser}{the optimising function used for model fitting when \code{method = 'TMB'} (default is \code{nlminb}). Users may pass in a function object or a string corresponding to a named function. Optional parameters may be passed to \code{optimiser} via \code{...}. The only requirement of \code{optimiser} is that the first three arguments correspond to the initial parameters, the obejctive function, and the gradient, respectively (note that this may be achieved by rearranging the order of arguments before passing into \code{optimiser})}
+
 \item{n_MC}{A postive integer indicating the number of MC samples at each location}
 
 \item{type}{A character string (possibly vector) indicating the quantities for which predictions and prediction uncertainty is desired. If \code{"link"} is in \code{type}, the latent \eqn{Y} process is included; If \code{"mean"} is in \code{type}, the conditional mean \eqn{\mu} is included (and the probability parameter if applicable); If \code{"response"} is in \code{type}, the response variable \eqn{Z} is included. Note that any combination of these character strings can be provided. For example, if \code{type = c("link", "response")}, then predictions of the latent \eqn{Y} process and the response variable \eqn{Z} are provided}
@@ -143,7 +146,7 @@ loglik(SRE_model)
 
 \item{percentiles}{a vector of scalars in [0, 100] specifying the desired percentiles; if \code{percentiles = NULL}, no percentiles are computed}
 
-\item{optimiser}{the optimising function used for model fitting when \code{method = 'TMB'} (default is \code{nlminb}). Users may pass in a function object or a string corresponding to a named function. Optional parameters may be passed to \code{optimiser} via \code{...}. The only requirement of \code{optimiser} is that the first three arguments correspond to the initial parameters, the obejctive function, and the gradient, respectively (note that this may be achieved by rearranging the order of arguments before passing into \code{optimiser})}
+\item{credMass}{a scalar [0, 1] specifying the mass within the credible interval; if \code{credMass = NULL}, no HPD credible interval is computed}
 
 \item{...}{other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling \code{FRK}, or the user specified \code{optimiser} function when calling \code{FRK} or \code{SRE.fit}}
 
@@ -168,8 +171,6 @@ loglik(SRE_model)
 \item{covariances}{logical variable indicating whether prediction covariances should be returned or not. If set to \code{TRUE}, a maximum of 4000 prediction locations or polygons are allowed.}
 
 \item{object}{object of class \code{SRE}}
-
-\item{credMass}{a scalar [0, 1] specifying the mass within the credible interval; if \code{credMass = NULL}, no HPD credible interval is computed}
 }
 \description{
 The Spatial Random Effects (SRE) model is the central object in FRK. The function \code{FRK} provides a wrapper for the construction and estimation of the SRE object from data, using the functions \code{SRE} (the object constructor) and \code{SRE.fit} (for fitting it to the data). Please see \code{\link{SRE-class}} for more details on the SRE object's properties and methods.

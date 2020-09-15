@@ -6,7 +6,7 @@
 #' @param newdata object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified
 #' @param CP Polygon prediction matrix
 #' @param predict_BAUs Logical indicating whether or not we are predicting over the BAUs
-#' @param pred_time Not sure what this does yet! Ask Andrew. FIXME
+#' @param pred_time vector of time indices at which prediction will be carried out. All time points are used if this option is not specified
 #' @param type A character string (possibly vector) indicating the quantities for which predictions and prediction uncertainty is desired. If \code{"link"} is in \code{type}, the latent \eqn{Y} process is included; If \code{"mean"} is in \code{type}, the conditional mean \eqn{\mu} is included (and the probability parameter if applicable); If \code{"response"} is in \code{type}, the response variable \eqn{Z} is included. Note that any combination of these character strings can be provided. For example, if \code{type = c("link", "response")}, then predictions of the latent \eqn{Y} process and the response variable \eqn{Z} are provided
 #' @return A list object containing:
 #' \describe{
@@ -15,7 +15,7 @@
 #' }
 #' Note that for all link functions other than the log- and identity-link functions, the predictions and prediction uncertainty of \eqn{\mu} contained in \code{newdata} are computed using the Monte Carlo samples contained in \code{MC}.
 #' When the log- or identity-link functions are used, the expectation and variance of the \eqn{\mu} may be computed exactly.
-.FRKTMB_pred <- function(M, newdata, CP, predict_BAUs, pred_time,type, n_MC, 
+.FRKTMB_pred <- function(M, newdata, CP, predict_BAUs, pred_time, type, n_MC, 
                          obs_fs, k, percentiles, credMass) {
   
   
@@ -198,9 +198,7 @@
   
   # ---- Add a column indicating the time point in space-time setting ----
   
-  ## FIXME: check this with Andrew
-  ## FIXME: how does pred_time come into play? I think that when newdata is not 
-  ## NULL, pred_time will give the time indicies to use.
+  ## FIXME: how does pred_time come into play? I think pred_time gives the time indices to predict over. Perhaps we need to simply subset the final predications based on pred_time
   if (is(M@basis,"TensorP_Basis")) {
     newdata$t <- M@BAUs@data$t
   }
@@ -260,9 +258,7 @@
   Sigma_eta   <- Sigma[1:r, 1:r]
   if (M@include_fs) {
     Sigma_xi    <- Sigma[(r + 1):(r + mstar), (r + 1):(r + mstar)]
-    
-    # Covariances between xi_O and eta
-    Cov_eta_xi  <- Sigma[1:r, (r + 1):ncol(Sigma)]
+    Cov_eta_xi  <- Sigma[1:r, (r + 1):ncol(Sigma)] # Covariances between xi_O and eta
   }
 
   

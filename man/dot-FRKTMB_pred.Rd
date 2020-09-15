@@ -27,7 +27,7 @@
 
 \item{predict_BAUs}{Logical indicating whether or not we are predicting over the BAUs}
 
-\item{pred_time}{Not sure what this does yet! Ask Andrew. FIXME}
+\item{pred_time}{vector of time indices at which prediction will be carried out. All time points are used if this option is not specified}
 
 \item{type}{A character string (possibly vector) indicating the quantities for which predictions and prediction uncertainty is desired. If \code{"link"} is in \code{type}, the latent \eqn{Y} process is included; If \code{"mean"} is in \code{type}, the conditional mean \eqn{\mu} is included (and the probability parameter if applicable); If \code{"response"} is in \code{type}, the response variable \eqn{Z} is included. Note that any combination of these character strings can be provided. For example, if \code{type = c("link", "response")}, then predictions of the latent \eqn{Y} process and the response variable \eqn{Z} are provided}
 
