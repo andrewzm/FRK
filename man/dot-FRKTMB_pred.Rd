@@ -14,7 +14,8 @@
   n_MC = 400,
   obs_fs = FALSE,
   k = NULL,
-  percentiles = c(5, 25, 50, 75, 95)
+  percentiles = c(5, 25, 50, 75, 95),
+  interval_type = "HPD"
 )
 }
 \arguments{
@@ -24,35 +25,30 @@
 
 \item{CP}{Polygon prediction matrix}
 
-\item{predict_BAUs}{Logical indicating whether or not we are predicting over the BAUs.}
+\item{predict_BAUs}{Logical indicating whether or not we are predicting over the BAUs}
 
-\item{pred_time}{Not sure what this does yet! Ask Andrew.}
+\item{pred_time}{Not sure what this does yet! Ask Andrew. FIXME}
 
-\item{type}{A character string (possibly vector) indicating the quantities for which predictions and prediction uncertainty is desired.
-If \code{"link"} is in \code{type}, the latent \eqn{Y} process is included; 
-If \code{"mean"} is in \code{type}, the conditional mean \eqn{\mu} is included (and the probability parameter if applicable);
-If \code{"response"} is in \code{type}, the response variable \eqn{Z} is included. 
-Any combination of these character strings can be provided. For example, if \code{type = c("link", "response")}, then predictions of the latent \eqn{Y} process and the response variable \eqn{Z} are provided.}
+\item{type}{A character string (possibly vector) indicating the quantities for which predictions and prediction uncertainty is desired. If \code{"link"} is in \code{type}, the latent \eqn{Y} process is included; If \code{"mean"} is in \code{type}, the conditional mean \eqn{\mu} is included (and the probability parameter if applicable); If \code{"response"} is in \code{type}, the response variable \eqn{Z} is included. Note that any combination of these character strings can be provided. For example, if \code{type = c("link", "response")}, then predictions of the latent \eqn{Y} process and the response variable \eqn{Z} are provided}
 
-\item{n_MC}{A postive integer indicating the number of MC samples at each location.}
+\item{n_MC}{A postive integer indicating the number of MC samples at each location}
 
-\item{obs_fs}{Logical indicating whether the fine-scale variation is included in the latent Y process.}
+\item{obs_fs}{Logical indicating whether the fine-scale variation is included in the latent Y process. If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{\xi} is included in the latent \eqn{Y} process. If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}}
 
-\item{k}{vector of size parameters parameters at each BAU (applicable only for binomial and negative-binomial data).
-If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{\xi} is included in the latent \eqn{Y} process. 
-If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}.}
+\item{k}{vector of size parameters at each BAU (applicable only for binomial and negative-binomial data)}
 
-\item{percentiles}{A vector containing the desired percentiles which will be 
-included in the prediction dataframe. If \code{NULL}, no percentiles are computed.}
+\item{percentiles}{a vector of scalars in [0, 100] specifying the desired percentiles (applicable only if \code{interval_type = "central"}); if \code{percentiles = NULL}, no percentiles are computed}
+
+\item{interval_type}{string indicating whether a \code{"central"} or \code{"HPD"} interval is desired}
 }
 \value{
 A list object containing:
 \describe{
-  \item{newdata}{A dataframe with predictions and prediction uncertainty at each prediction location of the latent \eqn{Y} process, the conditional mean of the data \eqn{\mu}, the probability of success parameter \eqn{\pi} (if applicable), and the response variable \eqn{Z}. The dataframe also contains percentiles of each term.}
-  \item{MC}{A list with each element being an \code{N * n_MC} matrix of Monte Carlo samples of the quantities specified by \code{type} (some combination of \eqn{Y}, \eqn{\mu}, \eqn{p} (if applicable), and \eqn{Z}) at each prediction location.}
+  \item{newdata}{An object of class \code{newdata}, with predictions and prediction uncertainty at each prediction location of the latent \eqn{Y} process, the conditional mean of the data \eqn{\mu}, the probability of success parameter \eqn{\pi} (if applicable), and the response variable \eqn{Z}}
+  \item{MC}{A list with each element being an \code{N * n_MC} matrix of Monte Carlo samples of the quantities specified by \code{type} (some combination of \eqn{Y}, \eqn{\mu}, \eqn{p} (if applicable), and \eqn{Z}) at each prediction location}
 }
-Note that for all link functions other than the log-link and identity-link, the predictions and prediction uncertainty of \eqn{\mu} contained in \code{newdata} are computed using the Monte Carlo samples contained in \code{MC}.
-When the log- or identity-link functions are used the expectation and variance of the \eqn{\mu} may be computed exactly.
+Note that for all link functions other than the log- and identity-link functions, the predictions and prediction uncertainty of \eqn{\mu} contained in \code{newdata} are computed using the Monte Carlo samples contained in \code{MC}.
+When the log- or identity-link functions are used, the expectation and variance of the \eqn{\mu} may be computed exactly.
 }
 \description{
 Prediction stage of non-Gaussian FRK.

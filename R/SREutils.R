@@ -22,8 +22,8 @@
 #' @param BAUs object of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame}, \code{STIDF}, or \code{STFDF}. The object's data frame must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality. If the function \code{FRK} is used directly, then BAUs are created automatically, but only coordinates can then be used as covariates
 #' @param est_error flag indicating whether the measurement-error variance should be estimated from variogram techniques. If this is set to 0, then \code{data} must contain a field \code{std}. Measurement-error estimation is currently not implemented for spatio-temporal datasets
 #' @param average_in_BAU if \code{TRUE}, then multiple data points falling in the same BAU are averaged; the measurement error of the averaged data point is taken as the average of the individual measurement errors
-#' @param sum_variables vector of strings indicating which variables are to be summed rather than averaged. Only applicable if \code{average_in_BAU = TRUE}.
-#' @param normalise_wts if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represent a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)
+#' @param sum_variables vector of strings indicating which variables are to be summed rather than averaged; only applicable if \code{average_in_BAU == TRUE}
+#' @param normalise_wts if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)
 #' @param BAUs_unique_fs if \code{TRUE}, and each spatial BAU is observed at least 10 times, then each BAU is given a unique fine-scale variation parameter
 #' @param fs_model if "ind" then the fine-scale variation is independent at the BAU level. If "ICAR", then an ICAR model for the fine-scale variation is placed on the BAUs
 #' @param vgm_model an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm}. This object contains the variogram model that will be fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified, the variogram used is \code{gstat::vgm(1, "Lin", d, 1)}, where \code{d} is approximately one third of the maximum distance between any two data points
@@ -124,7 +124,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                              "inverse-gaussian", "negative-binomial", "binomial"), 
                 link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"), 
                 taper = 4, 
-                est_finescale = TRUE,
+                include_fs = TRUE,
                 BAUs_unique_fs = FALSE,
                 ...) {
     
@@ -148,7 +148,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     if ("n" %in% sum_variables) 
         stop("Summing the BAU indices will result in out of bounds errors and hence NAs in the incidence matrix C; please remove 'n' from sum_variables.") 
     
-    if (!is.null(sum_variables) && !average_in_BAU) 
+    if (!is.null(sum_variables) & !average_in_BAU) 
         warning("sum_variables argument does nothing when average_in_BAU = FALSE.")
     
     if (is.null(BAUs$wts)) {
@@ -162,6 +162,12 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     #     }
     # }
     
+    
+    if(normalise_wts &
+       response %in% c("poisson", "binomial", "bernoulli", "negative-binomial") & 
+       any(sapply(data, function(x) is(x, "SpatialPolygons")))) {
+           warning("You have specified a count data model with SpatialPolygons observations; consider setting normalise_wts = FALSE so that aggregation of the mean is a weighted sum rather than a weighted average.")
+    }
     
     ## If we wish to have unique fine-scale variance associated with each BAU, 
     ## we need to:
@@ -434,7 +440,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         mu_xi = mu_xi_init, 
         Q_eta_xi = Q_eta_xi_init,
         k_Z = k, 
-        est_finescale = est_finescale, 
+        include_fs = include_fs, 
         normalise_wts = normalise_wts, 
         BAUs_unique_fs = BAUs_unique_fs)
 }
@@ -481,9 +487,10 @@ SRE.predict <- function(SRE_model, obs_fs = FALSE, newdata = NULL, pred_polys = 
 setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = FALSE, pred_polys = NULL,
                                               pred_time = NULL, covariances = FALSE, 
                                               n_MC = 400, type = "mean", k = NULL, 
-                                              percentiles = c(5, 25, 50, 75, 95)) {
+                                              percentiles = c(5, 95), interval_type = c("HPD", "central"), 
+                                              credMass = 0.9) {
 
-    
+
     SRE_model <- object
     ## Deprecation coercion
     if(!is.null(pred_polys))
@@ -498,12 +505,14 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
             warning("k not provided for prediction: assuming k is equal to 1 for all prediction polygons.")
             }
 
-
     ## Check the arguments are OK
     .check_args3(obs_fs = obs_fs, newdata = newdata, pred_polys = pred_polys,
                  pred_time = pred_time, covariances = covariances, 
                  response = SRE_model@response, SRE_model = SRE_model, type = type, 
-                 k = k, percentiles = percentiles)
+                 k = k, percentiles = percentiles, interval_type = interval_type, 
+                 credMass = credMass)
+    
+    
     
     
     ## Do the stuff which is common to both methods ("EM" and "TMB")
@@ -530,9 +539,6 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
             predict_BAUs <- FALSE
     }
 
-
-    
-    
     ## Call internal prediction functions depending on which method is used
     if (SRE_model@method == "EM") {
         pred_locs <- .SRE.predict(Sm = SRE_model,              # Fitted SRE model
@@ -553,7 +559,9 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                                   obs_fs = obs_fs,             # Case 1 or Case 2?
                                   type = type,                 # Whether we are interested in the "link" (Y-scale), "mean", "response"
                                   k = k,                       # Size parameter
-                                  percentiles = percentiles)   # Desired percentiles of MC samples        
+                                  percentiles = percentiles,   # Desired percentiles of MC samples 
+                                  interval_type = interval_type, 
+                                  credMass = credMass)          
     } 
 
     
@@ -967,7 +975,7 @@ setMethod("remove_BAUs",signature(BAUs="STIDF"),function(BAUs, rmidx, redefine_i
 
 #' @rdname observed_BAUs
 #' @export
-setMethod("observed_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
+setMethod("observed_BAUs", signature(SRE_model = "SRE"), function (SRE_model) {
     
     ## Note that Cmat maps BAUs to the observations. The dimension of SRE_model@Cmat is
     ## (number of observations) * (number of BAUs).
@@ -2187,7 +2195,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 ## Checks arguments for the predict() function. Code is self-explanatory
 .check_args3 <- function(obs_fs = FALSE, newdata = NULL, pred_polys = NULL,
                          pred_time = NULL, covariances = FALSE, SRE_model, type, 
-                         k, percentiles, ...) {
+                         k, percentiles, interval_type, credMass, ...) {
     
     if(!(obs_fs %in% 0:1)) stop("obs_fs needs to be logical")
 
@@ -2227,8 +2235,21 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
             stop("percentiles must either be NULL or a numeric or integer vector with entries between 0 and 100.")
         else if (!is.null(percentiles)) {
             if (min(percentiles) < 0 | max(percentiles) > 100) 
-                stop("percentiles must be a vector with entries between 0 and 100.")   
+                stop("percentiles must be a vector with entries between 0 and 100")   
         }
+        
+        
+        if(!all(type %in% c("link", "mean", "response")))
+            stop("type must be a vector containing combinations of 'link', 'mean', and 'response'")
+        
+        
+        if(!all(interval_type %in% c("central", "HPD")) & !is.null(interval_type))
+            stop("interval_type must be NULL, or a vector containing combinations of 'HPD' and 'central'")
+    
+        
+        if(credMass < 0 | credMass > 1)
+            stop("credMass should be a scalar between 0 and 1")
+        
     }
 }
 

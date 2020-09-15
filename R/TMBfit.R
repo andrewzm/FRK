@@ -95,7 +95,7 @@
   mstar <- ncol(M@C_O)
   M@alphahat <- as(estimates$alpha, "Matrix")
   M@mu_eta   <- as(estimates$random_effects[1:r], "Matrix")
-  if (M@est_finescale) {
+  if (M@include_fs) {
     M@mu_xi  <- as(estimates$random_effects[(r+1):(r + mstar)], "Matrix")
   } else {
     M@mu_xi  <- as(rep(0, mstar), "Matrix")
@@ -301,7 +301,7 @@
   ## one BAU; otherwise, we must fix sigma2fs.
   data$est_sigma2fs <- as.integer( all(tabulate(M@Cmat@i + 1) == 1) )
 
-  data$est_finescale <- as.integer(M@est_finescale)
+  data$include_fs <- as.integer(M@include_fs)
   
   
   ## If we are estimating a unique fine-scale variance at each spatial BAU, 
@@ -437,7 +437,7 @@
     ## MAP estimate of eta
     eta  <- as.vector((1 / regularising_weight) * mat_inv %*% Matrix::t(S_O)  %*% (Y_O - X_O %*% parameters$alpha))
     
-    if (!M@est_finescale) 
+    if (!M@include_fs) 
       break()
     
     
@@ -449,7 +449,7 @@
     
   }
   
-  if (M@est_finescale) {
+  if (M@include_fs) {
     parameters$random_effects <- c(eta, xi_O)
   } else {
     parameters$logsigma2fs <- 0

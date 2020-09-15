@@ -5,37 +5,30 @@
 #' @inheritParams .concat_percentiles_to_df
 #' @param newdata object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified
 #' @param CP Polygon prediction matrix
-#' @param predict_BAUs Logical indicating whether or not we are predicting over the BAUs.
-#' @param pred_time Not sure what this does yet! Ask Andrew.
-#' @param type A character string (possibly vector) indicating the quantities for which predictions and prediction uncertainty is desired.
-#' If \code{"link"} is in \code{type}, the latent \eqn{Y} process is included; 
-#' If \code{"mean"} is in \code{type}, the conditional mean \eqn{\mu} is included (and the probability parameter if applicable);
-#' If \code{"response"} is in \code{type}, the response variable \eqn{Z} is included. 
-#' Any combination of these character strings can be provided. For example, if \code{type = c("link", "response")}, then predictions of the latent \eqn{Y} process and the response variable \eqn{Z} are provided.
+#' @param predict_BAUs Logical indicating whether or not we are predicting over the BAUs
+#' @param pred_time Not sure what this does yet! Ask Andrew. FIXME
+#' @param type A character string (possibly vector) indicating the quantities for which predictions and prediction uncertainty is desired. If \code{"link"} is in \code{type}, the latent \eqn{Y} process is included; If \code{"mean"} is in \code{type}, the conditional mean \eqn{\mu} is included (and the probability parameter if applicable); If \code{"response"} is in \code{type}, the response variable \eqn{Z} is included. Note that any combination of these character strings can be provided. For example, if \code{type = c("link", "response")}, then predictions of the latent \eqn{Y} process and the response variable \eqn{Z} are provided
 #' @return A list object containing:
 #' \describe{
-#'   \item{newdata}{A dataframe with predictions and prediction uncertainty at each prediction location of the latent \eqn{Y} process, the conditional mean of the data \eqn{\mu}, the probability of success parameter \eqn{\pi} (if applicable), and the response variable \eqn{Z}. The dataframe also contains percentiles of each term.}
-#'   \item{MC}{A list with each element being an \code{N * n_MC} matrix of Monte Carlo samples of the quantities specified by \code{type} (some combination of \eqn{Y}, \eqn{\mu}, \eqn{p} (if applicable), and \eqn{Z}) at each prediction location.}
+#'   \item{newdata}{An object of class \code{newdata}, with predictions and prediction uncertainty at each prediction location of the latent \eqn{Y} process, the conditional mean of the data \eqn{\mu}, the probability of success parameter \eqn{\pi} (if applicable), and the response variable \eqn{Z}}
+#'   \item{MC}{A list with each element being an \code{N * n_MC} matrix of Monte Carlo samples of the quantities specified by \code{type} (some combination of \eqn{Y}, \eqn{\mu}, \eqn{p} (if applicable), and \eqn{Z}) at each prediction location}
 #' }
-#' Note that for all link functions other than the log-link and identity-link, the predictions and prediction uncertainty of \eqn{\mu} contained in \code{newdata} are computed using the Monte Carlo samples contained in \code{MC}.
-#' When the log- or identity-link functions are used the expectation and variance of the \eqn{\mu} may be computed exactly.
-.FRKTMB_pred <- function(M, 
-                         newdata, CP, predict_BAUs, pred_time,
-                         type = "mean", n_MC = 400, obs_fs = FALSE, 
-                         k = NULL, 
-                         percentiles = c(5, 25, 50, 75, 95)) {
+#' Note that for all link functions other than the log- and identity-link functions, the predictions and prediction uncertainty of \eqn{\mu} contained in \code{newdata} are computed using the Monte Carlo samples contained in \code{MC}.
+#' When the log- or identity-link functions are used, the expectation and variance of the \eqn{\mu} may be computed exactly.
+.FRKTMB_pred <- function(M, newdata, CP, predict_BAUs, pred_time,type, n_MC, 
+                         obs_fs, k, percentiles, interval_type, credMass) {
   
-
-  ## FIXME: drop unneeded BAUs if predict_BAUs == FALSE
+  
+  ## FIXME: predict over only the observed BAUs needed for newdata locations
   
   # ## If the user has specified which polygons he wants we can remove the ones we don't need
   # ## We only need those BAUs that are influenced by observations and prediction locations
-  # ## For ST use all BAUs as it gets complicated
-  # if(is(newdata,"Spatial")) {
+  # ## For ST, use all BAUs, as it gets complicated
+  # if(!predict_BAUs & is(newdata,"Spatial")) {
   #   
   #   ## The needed BAUs are the nonzero column CP
   #   needed_BAUs <- as(CP,"dgTMatrix")@j
-  #   
+  # 
   #   ## Filter the BAUs and the matrices
   #   ## (Note that we do not update the SRE object so this is safe to do)
   #   M@BAUs <- M@BAUs[needed_BAUs, ]
@@ -92,66 +85,14 @@
     newdata$p_mu <- mu_P
     newdata$RMSPE_mu <- apply(M_P, 1, sd)
     newdata@data <-  .concat_percentiles_to_df(data = newdata@data, X = M_P, 
+                                               interval_type = interval_type,
+                                               credMass = credMass, 
                                                name = "mu", percentiles = percentiles)
     
     return(list(newdata = newdata, MC = M_P))
   }
   
-  
-  
-  # if (!predict_BAUs) {
-  #   CP_dgT <- as(CP, "dgTMatrix")
-  #   
-  #   ## Make a list where the ith element contains the vector of indices 
-  #   ## indicating the BAUs which overlap the ith prediction polygon.
-  #   row_indices <- CP_dgT@i + 1
-  #   col_indices <- CP_dgT@j + 1
-  #   polygon_MC_samples <- list()
-  #   for (i in 1:nrow(CP_dgT)) {
-  #     ## Find the BAUs corresponding to the ith polygon
-  #     ## FIXME: i think there is a more efficient way to do this (perhaps by not converting to dgTmatrix and using the other format)
-  #     polygon_BAU_idx <- col_indices[row_indices == i] 
-  #     
-  #     ## Now subset the MC samples to include only those BAUs in the ith polygon
-  #     ## We make a list of lists of matrices 
-  #     ## (each sub list corresponds to a prediction polygon, 
-  #     ## and each matrix corresponds to Y, mu, or Z Monte Carlo samples)
-  #     polygon_MC_samples[[i]] <- lapply(MC, function(X) X[polygon_BAU_idx, ])
-  #   }
-  # 
-  #   ## The structure of this object is:
-  #   ##                        -- Y
-  #   ##       -- Polygon 1 --| -- mu
-  #   ##     |                  -- Z
-  #   ## L --|
-  #   ##     |                  -- Y
-  #   ##       -- Polygon 2 --| -- mu
-  #   ##                        -- Z
-  #   
-  #   ## Convert from a list of lists of matrices to a list of lists of vectors. 
-  #   ## Note that the lengths of the vectors are different (because each polygon
-  #   ## may overlap a different number of BAUs), so we cannot compact further into 
-  #   ## simply a list of matrices.
-  #   polygon_MC_samples <- lapply(polygon_MC_samples, function(L) lapply(L, c))
-  #   
-  #   ## The above object is grouped by polygon. That is, each element of the list corresponds to a polygon, 
-  #   ## and each sub element corresponds to either the Y, mu, or Z samples. 
-  #   ## Now we will reverse this order so that we first group by the type of MC samples, and THEN by polygon. 
-  #   ## This new ordering is more aligned with how we are storing the MC samples when we predict over BAUs.
-  #   ##                 -- Polygon 1
-  #   ##       -- Y  --| -- Polygon 2
-  #   ##     |           -- Polygon 3
-  #   ## L --|
-  #   ##     |           -- Polygon 1
-  #   ##       -- mu --| -- Polygon 2
-  #   ##                 -- Polygon 3
-  #   MC <- do.call(function(...) Map(list, ...), polygon_MC_samples)
-  #   ## FIXME: it seems inefficient to go from one hierarchy structure, reverse it, and then reverse again.
-  #   ## Surely I can just go straight from the original BAU MC object to this MC object without the change of hierarchy in between. 
-  # 
-  # }
 
-  
   # ------ Create Prediction data ------
   
   ## Produce prediction and RMSPE matrices. 
@@ -190,18 +131,26 @@
   
   if ("link" %in% type) 
     newdata@data <-  .concat_percentiles_to_df(data = newdata@data, X = MC$Y_samples, 
+                                               interval_type = interval_type,
+                                               credMass = credMass, 
                                                name = "Y", percentiles = percentiles)
   
   if ("mean" %in% type) 
     newdata@data <-  .concat_percentiles_to_df(data = newdata@data, X = MC$mu_samples, 
+                                               interval_type = interval_type,
+                                               credMass = credMass, 
                                                name = "mu", percentiles = percentiles)
   
   if ("mean" %in% type & "prob_samples" %in% colnames(predictions)) 
     newdata@data <-  .concat_percentiles_to_df(data = newdata@data, X = MC$prob_samples, 
+                                               interval_type = interval_type,
+                                               credMass = credMass, 
                                                name = "prob", percentiles = percentiles)
   
   if ("response" %in% type) 
     newdata@data <-  .concat_percentiles_to_df(data = newdata@data, X = MC$Z_samples, 
+                                               interval_type = interval_type,
+                                               credMass = credMass, 
                                                name = "Z", percentiles = percentiles)
   
   
@@ -314,7 +263,7 @@
   }
 
   Sigma_eta   <- Sigma[1:r, 1:r]
-  if (M@est_finescale) {
+  if (M@include_fs) {
     Sigma_xi    <- Sigma[(r + 1):(r + mstar), (r + 1):(r + mstar)]
     
     # Covariances between xi_O and eta
@@ -332,7 +281,7 @@
   ## Only one common term for both observed and unobserved locations:
   vY <- as.vector( (M@S0 %*% Sigma_eta * M@S0) %*% rep(1, r) )
 
-  if (M@est_finescale) {
+  if (M@include_fs) {
     
     ## UNOBSERVED locations: simply add the estimate of sigma2fs to the variance.
     ## If we have a unique fine-scale variance at each spatial BAU (spatio-temporal 
@@ -374,28 +323,20 @@
 #' For binomial data, the ith element of \code{k} indicates the number of trials at the ith BAU.
 #'
 #'
-#' @param M An object of class \code{SRE}.
-#' @param X The design matrix of the covariates at the BAU level (often simply an Nx1 column vector of 1's).
-#' @param type A character string (possibly vector) indicating the quantities which are the focus of inference.
-#' Note: unlike in the predict() function, \emph{all} computed quantities are returned. That is, 
-#' the latent \eqn{Y} process samples are always provided; 
-#' If \code{"mean"} \emph{OR} \code{"response"} is in \code{type}, then the samples of \eqn{Y}, the conditonal mean \eqn{\mu}, and the probability parameter (if applicable) are provided.
-#' If \code{"response"} is in \code{type}, the response variable \eqn{Z} samples, and the samples of all other quantities are provided. 
-#' @param n_MC A postive integer indicating the number of MC samples at each location.
-#' @param obs_fs Logical indicating whether the fine-scale variation is included in the latent Y process. 
-#' @param k vector of size parameters parameters at each BAU (applicable only for binomial and negative-binomial data).
-#' If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{\xi} is included in the latent \eqn{Y} process. 
-#' If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}. 
-#' @param Q_L A list containing the Cholesky factor of the permuted precision matrix (stored as \code{Q$Qpermchol}) and the associated permutationmatrix (stored as \code{Q_L$P}).
-#' @param obsidx A vector containing the indices of observed locations.
-#' @return A list containing Monte Carlo samples of various quantites of interest. 
-#' The list elements are (N x n_MC) matrices, whereby the ith row of each matrix corresponds to
-#' n_MC samples of the given quantity at the ith BAU. The available quantities are:
+#' @param M An object of class \code{SRE}
+#' @param X The design matrix of the covariates at the BAU level (often simply an Nx1 column vector of 1's)
+#' @param type A character string (possibly vector) indicating the quantities which are the focus of inference. Note: unlike in the predict() function, \emph{all} computed quantities are returned. That is, the latent \eqn{Y} process samples are always provided; If \code{"mean"} \emph{OR} \code{"response"} is in \code{type}, then the samples of \eqn{Y}, the conditonal mean \eqn{\mu}, and the probability parameter (if applicable) are provided. If \code{"response"} is in \code{type}, the response variable \eqn{Z} samples, and the samples of all other quantities are provided
+#' @param n_MC A postive integer indicating the number of MC samples at each location
+#' @param obs_fs Logical indicating whether the fine-scale variation is included in the latent Y process. If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{\xi} is included in the latent \eqn{Y} process. If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}
+#' @param k vector of size parameters at each BAU (applicable only for binomial and negative-binomial data)
+#' @param Q_L A list containing the Cholesky factor of the permuted precision matrix (stored as \code{Q$Qpermchol}) and the associated permutationmatrix (stored as \code{Q_L$P})
+#' @param obsidx A vector containing the indices of observed locations
+#' @return A list containing Monte Carlo samples of various quantites of interest. The list elements are (N x n_MC) matrices, whereby the ith row of each matrix corresponds to \code{n_MC} samples of the given quantity at the ith BAU. The available quantities are:
 #' \describe{
-#'   \item{Y_samples}{Samples of the latent, Gaussian scale Y process.}
-#'   \item{mu_samples}{Samples of the conditional mean of the data.}
-#'   \item{prob_samples}{Samples of the probability of success parameter (only for the relevant response distributions).}
-#'   \item{Z_samples}{Samples of the response variable.}
+#'   \item{Y_samples}{Samples of the latent, Gaussian scale Y process}
+#'   \item{mu_samples}{Samples of the conditional mean of the data}
+#'   \item{prob_samples}{Samples of the probability of success parameter (only for the relevant response distributions)}
+#'   \item{Z_samples}{Samples of the response variable}
 #' }
 .MC_sampler <- function(M, X, type = "mean", n_MC = 400, obs_fs = FALSE, k = NULL, 
                         Q_L, obsidx){
@@ -410,7 +351,7 @@
   
   ## Must generate samples jointly, as eta and xi_O are correlated.
 
-  if (M@est_finescale) {
+  if (M@include_fs) {
     ## Construct the mean vector of (eta', xi')',
     ## then make an (r + m*) x n_MC matrix whose columns are the mean vector of (eta', xi')'.
     ## Finally, generate (r + m*) x n_MC samples from Gau(0, 1) distribution.
@@ -463,7 +404,7 @@
   ## all other random effects in the model.
   ## All we have to do is make an (N-m) x n_MC matrix of draws from the
   ## Gaussian distribution with mean zero and variance equal to the fine-scale variance.
-  if (M@est_finescale) {
+  if (M@include_fs) {
     
     if (M@BAUs_unique_fs) {
       unobsidx <- unobserved_BAUs(M)
@@ -517,7 +458,7 @@
   # Matrix::t(P) %*% Y_smooth_samples
   
   ## Construct the samples from the latent process Y 
-  if (M@est_finescale) {
+  if (M@include_fs) {
     xi_samples  <- Matrix::t(P) %*% xi_samples
     Y_samples   <- Y_smooth_samples + xi_samples
   } else {

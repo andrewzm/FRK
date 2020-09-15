@@ -37,7 +37,7 @@ FRK <- function(f,                     # formula (compulsory)
                 n_MC = 400, 
                 type = "mean",         
                 k = NULL,              # k used for prediction
-                percentiles = c(5, 25, 50, 75, 90),  # Desired percentiles of the quantitity of interest
+                percentiles = c(5, 95),  # Desired percentiles of the quantitity of interest
                 optimiser = nlminb,    # Optimiser for fitting (applicable only if method = 'TMB')
                 ...)                   # other arguments for BAUs/basis-function construction, or 
 {

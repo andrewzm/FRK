@@ -17,37 +17,29 @@ latent process Y).}
 )
 }
 \arguments{
-\item{M}{An object of class \code{SRE}.}
+\item{M}{An object of class \code{SRE}}
 
-\item{X}{The design matrix of the covariates at the BAU level (often simply an Nx1 column vector of 1's).}
+\item{X}{The design matrix of the covariates at the BAU level (often simply an Nx1 column vector of 1's)}
 
-\item{type}{A character string (possibly vector) indicating the quantities which are the focus of inference.
-Note: unlike in the predict() function, \emph{all} computed quantities are returned. That is, 
-the latent \eqn{Y} process samples are always provided; 
-If \code{"mean"} \emph{OR} \code{"response"} is in \code{type}, then the samples of \eqn{Y}, the conditonal mean \eqn{\mu}, and the probability parameter (if applicable) are provided.
-If \code{"response"} is in \code{type}, the response variable \eqn{Z} samples, and the samples of all other quantities are provided.}
+\item{type}{A character string (possibly vector) indicating the quantities which are the focus of inference. Note: unlike in the predict() function, \emph{all} computed quantities are returned. That is, the latent \eqn{Y} process samples are always provided; If \code{"mean"} \emph{OR} \code{"response"} is in \code{type}, then the samples of \eqn{Y}, the conditonal mean \eqn{\mu}, and the probability parameter (if applicable) are provided. If \code{"response"} is in \code{type}, the response variable \eqn{Z} samples, and the samples of all other quantities are provided}
 
-\item{n_MC}{A postive integer indicating the number of MC samples at each location.}
+\item{n_MC}{A postive integer indicating the number of MC samples at each location}
 
-\item{obs_fs}{Logical indicating whether the fine-scale variation is included in the latent Y process.}
+\item{obs_fs}{Logical indicating whether the fine-scale variation is included in the latent Y process. If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{\xi} is included in the latent \eqn{Y} process. If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}}
 
-\item{k}{vector of size parameters parameters at each BAU (applicable only for binomial and negative-binomial data).
-If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{\xi} is included in the latent \eqn{Y} process. 
-If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}.}
+\item{k}{vector of size parameters at each BAU (applicable only for binomial and negative-binomial data)}
 
-\item{Q_L}{A list containing the Cholesky factor of the permuted precision matrix (stored as \code{Q$Qpermchol}) and the associated permutationmatrix (stored as \code{Q_L$P}).}
+\item{Q_L}{A list containing the Cholesky factor of the permuted precision matrix (stored as \code{Q$Qpermchol}) and the associated permutationmatrix (stored as \code{Q_L$P})}
 
-\item{obsidx}{A vector containing the indices of observed locations.}
+\item{obsidx}{A vector containing the indices of observed locations}
 }
 \value{
-A list containing Monte Carlo samples of various quantites of interest. 
-The list elements are (N x n_MC) matrices, whereby the ith row of each matrix corresponds to
-n_MC samples of the given quantity at the ith BAU. The available quantities are:
+A list containing Monte Carlo samples of various quantites of interest. The list elements are (N x n_MC) matrices, whereby the ith row of each matrix corresponds to \code{n_MC} samples of the given quantity at the ith BAU. The available quantities are:
 \describe{
-  \item{Y_samples}{Samples of the latent, Gaussian scale Y process.}
-  \item{mu_samples}{Samples of the conditional mean of the data.}
-  \item{prob_samples}{Samples of the probability of success parameter (only for the relevant response distributions).}
-  \item{Z_samples}{Samples of the response variable.}
+  \item{Y_samples}{Samples of the latent, Gaussian scale Y process}
+  \item{mu_samples}{Samples of the conditional mean of the data}
+  \item{prob_samples}{Samples of the probability of success parameter (only for the relevant response distributions)}
+  \item{Z_samples}{Samples of the response variable}
 }
 }
 \description{

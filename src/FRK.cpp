@@ -81,7 +81,7 @@ Type objective_function<Type>::operator() ()
   
   DATA_VECTOR(sigma2fs_hat);  // estimate of sigma2fs (the fine-scale variance component)
   DATA_INTEGER(est_sigma2fs);     // Flag indicating whether we should estimate sigma2fs or not (1 if true, 0 if false)
-  DATA_INTEGER(est_finescale);    // Flag indicating whether fine-scale variation is included in the model (1 if true, 0 if false)
+  DATA_INTEGER(include_fs);    // Flag indicating whether fine-scale variation is included in the model (1 if true, 0 if false)
   
   // Fixed effects and variance components relating directly to data
   PARAMETER_VECTOR(alpha);
@@ -109,7 +109,7 @@ Type objective_function<Type>::operator() ()
   vector<Type> eta = random_effects.head(r);
   vector<Type> xi_O(mstar);
   
-  if (est_finescale) {
+  if (include_fs) {
     xi_O = random_effects.tail(mstar);
   } else {
     xi_O.fill(0.0);
@@ -283,7 +283,7 @@ Type objective_function<Type>::operator() ()
   Type ld_eta =  -0.5 * r * log(2.0 * M_PI) - 0.5 * logdetQ_inv - 0.5 * quadform_eta;
  
   Type ld_xi_O{0}; 
-  if (est_finescale) {
+  if (include_fs) {
     
     ld_xi_O += -0.5 * mstar * log(2.0 * M_PI); // constant term in the log-density of xi_O
     

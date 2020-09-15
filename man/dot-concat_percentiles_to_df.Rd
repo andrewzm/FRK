@@ -4,30 +4,25 @@
 \alias{.concat_percentiles_to_df}
 \title{Computation and concatenation of percentiles to a dataframe.}
 \usage{
-.concat_percentiles_to_df(data, X, name, percentiles = c(5, 25, 50, 75, 95))
+.concat_percentiles_to_df(data, X, name, interval_type, percentiles)
 }
 \arguments{
-\item{data}{The dataframe we will append percentiles to.}
+\item{data}{The dataframe we will append percentiles to; the number of rows (if \code{X} is a matrix) or the length (if \code{X} is a list) of \code{X} must equal the number of rows in \code{data}}
 
-\item{X}{A matrix (wherein rows are location, columns are 
-samples)  or list (each element contains a vector of samples corresponding 
-to a particular location) of Monte Carlo samples. The 
-number of rows (if matrix) or the length (if list) of \code{X} must equal
-the number of rows in \code{data}.}
+\item{X}{X a matrix (wherein rows correspond to prediction location, columns are samples)  or a list (wherein each element contains a vector of samples at a given prediction location) of Monte Carlo samples}
 
-\item{name}{The name of the quantity of interest. The names of the percentile
-columns are "name_percentile". In \code{FRK} it will be Y, mu, prob, or Z.}
+\item{name}{The name of the quantity of interest. The names of the percentile columns are "name_percentile". In \code{FRK} it will be Y, mu, prob, or Z}
 
-\item{percentiles}{A vector containing the desired percentiles which will be 
-included in the prediction dataframe. If \code{NULL}, no percentiles are computed.}
+\item{interval_type}{string indicating whether a \code{"central"} or \code{"HPD"} interval is desired}
+
+\item{percentiles}{a vector of scalars in [0, 100] specifying the desired percentiles (applicable only if \code{interval_type = "central"}); if \code{percentiles = NULL}, no percentiles are computed}
 }
 \value{
-The dataframe \code{data} with appended percentiles.
+The dataframe \code{data} with appended percentiles
 }
 \description{
-Given a matrix of MC samples \code{X} (where rows correspond to locations and 
-columns correspond to samples), this function computes the percentiles at 
-each location and appends the result to \code{data} (which must have the same 
-number of rows as \code{X}). Note that we use percentiles rather than quantiles
-because we including a "dot" in the dataframe column name may cause issues.
+Computes the percentiles or HPD interval bounds at each prediction location and appends 
+the result to \code{data}. Note that we use percentiles rather than quantiles
+because we including a "dot" (corresponding to the decimal place) in the 
+dataframe column name may cause issues.
 }

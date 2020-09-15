@@ -33,7 +33,7 @@ FRK(
   n_MC = 400,
   type = "mean",
   k = NULL,
-  percentiles = c(5, 25, 50, 75, 90),
+  percentiles = c(5, 95),
   optimiser = nlminb,
   ...
 )
@@ -56,7 +56,7 @@ SRE(
   link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse",
     "inverse-squared"),
   taper = 4,
-  est_finescale = TRUE,
+  include_fs = TRUE,
   BAUs_unique_fs = FALSE,
   ...
 )
@@ -92,7 +92,7 @@ SRE.predict(
   n_MC = 400,
   type = "mean",
   k = NULL,
-  percentiles = c(5, 25, 50, 75, 95)
+  percentiles = c(5, 95)
 )
 
 loglik(SRE_model)
@@ -110,7 +110,7 @@ loglik(SRE_model)
 
 \item{average_in_BAU}{if \code{TRUE}, then multiple data points falling in the same BAU are averaged; the measurement error of the averaged data point is taken as the average of the individual measurement errors}
 
-\item{sum_variables}{vector of strings indicating which variables are to be summed rather than averaged. Only applicable if \code{average_in_BAU = TRUE}.}
+\item{sum_variables}{vector of strings indicating which variables are to be summed rather than averaged; only applicable if \code{average_in_BAU == TRUE}}
 
 \item{fs_model}{if "ind" then the fine-scale variation is independent at the BAU level. If "ICAR", then an ICAR model for the fine-scale variation is placed on the BAUs}
 
@@ -134,26 +134,19 @@ loglik(SRE_model)
 
 \item{taper}{A positive numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "block-exponential"} and \code{TMB} is used to fit the data)}
 
-\item{n_MC}{A postive integer indicating the number of MC samples at each location.}
+\item{n_MC}{A postive integer indicating the number of MC samples at each location}
 
-\item{type}{A character string (possibly vector) indicating the quantities for which predictions and prediction uncertainty is desired.
-If \code{"link"} is in \code{type}, the latent \eqn{Y} process is included; 
-If \code{"mean"} is in \code{type}, the conditional mean \eqn{\mu} is included (and the probability parameter if applicable);
-If \code{"response"} is in \code{type}, the response variable \eqn{Z} is included. 
-Any combination of these character strings can be provided. For example, if \code{type = c("link", "response")}, then predictions of the latent \eqn{Y} process and the response variable \eqn{Z} are provided.}
+\item{type}{A character string (possibly vector) indicating the quantities for which predictions and prediction uncertainty is desired. If \code{"link"} is in \code{type}, the latent \eqn{Y} process is included; If \code{"mean"} is in \code{type}, the conditional mean \eqn{\mu} is included (and the probability parameter if applicable); If \code{"response"} is in \code{type}, the response variable \eqn{Z} is included. Note that any combination of these character strings can be provided. For example, if \code{type = c("link", "response")}, then predictions of the latent \eqn{Y} process and the response variable \eqn{Z} are provided}
 
-\item{k}{vector of size parameters parameters at each BAU (applicable only for binomial and negative-binomial data).
-If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{\xi} is included in the latent \eqn{Y} process. 
-If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}.}
+\item{k}{vector of size parameters at each BAU (applicable only for binomial and negative-binomial data)}
 
-\item{percentiles}{A vector containing the desired percentiles which will be 
-included in the prediction dataframe. If \code{NULL}, no percentiles are computed.}
+\item{percentiles}{a vector of scalars in [0, 100] specifying the desired percentiles (applicable only if \code{interval_type = "central"}); if \code{percentiles = NULL}, no percentiles are computed}
 
 \item{optimiser}{the optimising function used for model fitting when \code{method = 'TMB'} (default is \code{nlminb}). Users may pass in a function object or a string corresponding to a named function. Optional parameters may be passed to \code{optimiser} via \code{...}. The only requirement of \code{optimiser} is that the first three arguments correspond to the initial parameters, the obejctive function, and the gradient, respectively (note that this may be achieved by rearranging the order of arguments before passing into \code{optimiser})}
 
 \item{...}{other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling \code{FRK}, or the user specified \code{optimiser} function when calling \code{FRK} or \code{SRE.fit}}
 
-\item{normalise_wts}{if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represent a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)}
+\item{normalise_wts}{if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)}
 
 \item{normalise_basis}{flag indicating whether to normalise the basis functions so that they reproduce a stochastic process with approximately constant variance spatially}
 

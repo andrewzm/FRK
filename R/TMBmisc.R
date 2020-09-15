@@ -81,56 +81,65 @@
 
 #' Computation and concatenation of percentiles to a dataframe.
 #'
-#' Given a matrix of MC samples \code{X} (where rows correspond to locations and 
-#' columns correspond to samples), this function computes the percentiles at 
-#' each location and appends the result to \code{data} (which must have the same 
-#' number of rows as \code{X}). Note that we use percentiles rather than quantiles
-#' because we including a "dot" in the dataframe column name may cause issues. 
+#' Computes the percentiles or HPD interval bounds at each prediction location and appends 
+#' the result to \code{data}. Note that we use percentiles rather than quantiles
+#' because we including a "dot" (corresponding to the decimal place) in the 
+#' dataframe column name may cause issues. 
 #'
-#' @param data The dataframe we will append percentiles to.
-#' @param X A matrix (wherein rows are location, columns are 
-#' samples)  or list (each element contains a vector of samples corresponding 
-#' to a particular location) of Monte Carlo samples. The 
-#' number of rows (if matrix) or the length (if list) of \code{X} must equal
-#' the number of rows in \code{data}.
-#' @param name The name of the quantity of interest. The names of the percentile
-#' columns are "name_percentile". In \code{FRK} it will be Y, mu, prob, or Z. 
-#' @param percentiles A vector containing the desired percentiles which will be 
-#' included in the prediction dataframe. If \code{NULL}, no percentiles are computed.
-#' @return The dataframe \code{data} with appended percentiles.
-.concat_percentiles_to_df <- function (data, X, name, 
-                                       percentiles = c(5, 25, 50, 75, 95)) {
-  if (is.null(percentiles)) 
+#' @inheritParams .prediction_interval
+#' @param data The dataframe we will append percentiles to; the number of rows (if \code{X} is a matrix) or the length (if \code{X} is a list) of \code{X} must equal the number of rows in \code{data}
+#' @param name The name of the quantity of interest. The names of the percentile columns are "name_percentile". In \code{FRK} it will be Y, mu, prob, or Z
+#' @return The dataframe \code{data} with appended percentiles
+.concat_percentiles_to_df <- function (data, X, name, interval_type, percentiles, credMass) {
+  if (is.null(interval_type)) 
     return(data)
-  
-  if (is(X, "matrix") || is(X, "Matrix"))
-    tmp           <- t(apply(X, 1, quantile, percentiles / 100))
-  else if (is(X, "list"))
-    tmp <- t(sapply(X, quantile, percentiles / 100))
-  
-  colnames(tmp) <- paste(name, "percentile", as.character(percentiles), sep = "_")
-  data          <- cbind(data, tmp)
+
+  for (type in unique(interval_type)) {
+    Q           <- .prediction_interval(X, interval_type = type, percentiles = percentiles, credMass = credMass)
+    
+    if (type == "central") {
+      colnames(Q) <- paste(name, "percentile", as.character(percentiles), sep = "_")
+    } else if (type == "HPD") {
+      colnames(Q) <- paste(colnames(Q), "HPD_bound", name, sep = "_")
+    }
+    
+    data        <- cbind(data, Q)
+  }
   
   return(data)
 }
 
 
-## FIXME: I made a nicer, more-genral function in the MODIS comparison study script.
-#' Prediction interval width. 
+#' Prediction intervals. 
 #'
-#' This function is used to compute prediction interval width
-#' given \code{X}, a matrix of Monte Carlo samples (wherein rows correpsond to locations, columns samples)
+#' Given a matrix of Monte Carlo samples \code{X} (wherein rows correspond to 
+#' locations, columns correspond to samples), this function computes symmetric 
+#' or HPD prediction intervals, and returns the prediction interval lower and 
+#' upper bound
 #' 
-#' @param X A matrix of Monte Carlo samples (rows are observation, columns are 
-#' samples).
-#' @param l The lower probability.
-#' @param u The upper probability.
-#' @return The prediction interval width at each location.
-.intervalWidth <- function(X, l = 0.025, u = 0.975) {
-  Q <- apply(X, 1, function(x) quantile(x, c(l, u)))
-  return(Q[2, ] - Q[1, ])
+#' @inheritParams HDInterval::hdi
+#' @param X X a matrix (wherein rows correspond to prediction location, columns are samples)  or a list (wherein each element contains a vector of samples at a given prediction location) of Monte Carlo samples
+#' @param interval_type string indicating whether a \code{"central"} or \code{"HPD"} interval is desired
+#' @param percentiles a vector of scalars in [0, 100] specifying the desired percentiles (applicable only if \code{interval_type = "central"}); if \code{percentiles = NULL}, no percentiles are computed 
+#' @return The prediction interval at each location (or width at each location if \code{width = TRUE})
+.prediction_interval <- function(X, interval_type, percentiles, credMass) {
+  
+  quantiles <- percentiles / 100
+  
+  ## Note that hdi() wants variables in columns, samples in rows
+  if (is(X, "matrix") || is(X, "Matrix")) {
+    if (interval_type == "central") Q <- t(apply(X, 1, quantile, quantiles))
+    if (interval_type == "HPD")     Q <- t(HDInterval::hdi(t(X), credMass = credMass))
+  } else if (is(X, "list")) {
+    
+    if (interval_type == "central") Q  <- t(sapply(X, quantile, quantiles))
+    ## FIXME: Use the americium example to figure out how to do this
+    # if (interval_type == "HPD")     Q <- HDInterval::hdi(t(X), credMass = credMass)
+    
+  }
+  
+    return(Q)
 }
-
 
 
 ## Since we will use ggplot2 we will first convert our objects to data frames.
@@ -138,8 +147,7 @@
 ## The following function converts a SpatialPolygonsDataFrame to a data.frame.
 ## sp_polys: Object of class SpatialPolygonsDataFrame
 ## vars: vector of characters identifying the field names to retain
-.SpatialPolygonsDataFrame_to_df <- function (sp_polys, vars = names(sp_polys))
-{
+.SpatialPolygonsDataFrame_to_df <- function (sp_polys, vars = names(sp_polys)) {
   ## Extract the names of the polygons
   polynames <- as.character(row.names(sp_polys))
   

@@ -387,7 +387,7 @@ setGeneric("auto_BAU", function(manifold,type,cellsize,resl,d,nonconvex_hull,con
 #' @param variogram.formula formula used for detrending the data for variogram estimation of the observation error. Should be identical to that used for \code{SRE()}
 #' @param est_error flag indicating whether variogram estimation of the observation error should be carried out or no. This can take a long time with large datasets
 #' @param average_in_BAU flag indicating whether to summarise data that fall into a single BAU by simply taking an average of the data and the standard devitation of the data within each BAU (suitable for extremely large datasets)
-#' @param sum_variables vector of strings indicating which variables are to be summed rather than averaged.
+#' @param sum_variables vector of strings indicating which variables are to be summed rather than averaged; only applicable if \code{average_in_BAU == TRUE}
 #' @details This generic function is not called directly. It is called in the SRE function for binning data in BAUs
 #' @noRd
 setGeneric("map_data_to_BAUs", function(data_sp,sp_pols,variogram.formula=NULL,est_error=T,average_in_BAU = TRUE, sum_variables = NULL) standardGeneric("map_data_to_BAUs"))
