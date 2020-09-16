@@ -89,7 +89,7 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 
 \item{\code{normalise_wts}}{if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)}
 
-\item{\code{BAUs_unique_fs}}{BAUs_unique_fs if \code{TRUE}, and each spatial BAU is observed at least 10 times, then each BAU is given a unique fine-scale variation parameter}
+\item{\code{fs_by_spatial_BAU}}{if \code{TRUE}, and each spatial BAU is observed at least 10 times, then each BAU is given a unique fine-scale variation parameter}
 }}
 
 \seealso{

@@ -39,7 +39,7 @@ FRK <- function(f,                     # formula (compulsory)
                 type = "mean",         
                 k = NULL,              # k used for prediction
                 percentiles = c(5, 95),  # Desired percentiles of the quantitity of interest
-                credMass = 0.9,
+                cred_mass = 0.9,
                 ...)                   # other arguments for BAUs/basis-function construction, or 
 {
 

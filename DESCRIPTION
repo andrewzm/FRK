@@ -52,7 +52,8 @@ Imports:
     statmod,
     stats,
     TMB, 
-    utils
+    utils,
+    HDInterval
 Additional_repositories: https://andrewzm.github.io/dggrids-repo, 
                          https://inla.r-inla-download.org/R/stable
 License: GPL (>= 2)

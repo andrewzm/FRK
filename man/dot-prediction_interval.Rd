@@ -4,7 +4,7 @@
 \alias{.prediction_interval}
 \title{Prediction intervals.}
 \usage{
-.prediction_interval(X, interval_type, percentiles, credMass)
+.prediction_interval(X, interval_type, percentiles, cred_mass)
 }
 \arguments{
 \item{X}{a matrix (wherein rows correspond to prediction locations and columns are samples) of Monte Carlo samples}
@@ -13,7 +13,7 @@
 
 \item{percentiles}{a vector of scalars in [0, 100] specifying the desired percentiles; if \code{percentiles = NULL}, no percentiles are computed}
 
-\item{credMass}{a scalar [0, 1] specifying the mass within the credible interval; if \code{credMass = NULL}, no HPD credible interval is computed}
+\item{cred_mass}{a scalar [0, 1] specifying the mass within the credible interval; if \code{cred_mass = NULL}, no HPD credible interval is computed}
 }
 \value{
 The prediction interval at each location (or width at each location if \code{width = TRUE})

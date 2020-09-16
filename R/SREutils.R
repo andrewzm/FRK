@@ -24,7 +24,7 @@
 #' @param average_in_BAU if \code{TRUE}, then multiple data points falling in the same BAU are averaged; the measurement error of the averaged data point is taken as the average of the individual measurement errors
 #' @param sum_variables vector of strings indicating which variables are to be summed rather than averaged; only applicable if \code{average_in_BAU == TRUE}
 #' @param normalise_wts if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)
-#' @param BAUs_unique_fs if \code{TRUE}, and each spatial BAU is observed at least 10 times, then each BAU is given a unique fine-scale variation parameter
+#' @param fs_by_spatial_BAU if \code{TRUE}, and each spatial BAU is observed at least 10 times, then each BAU is given a unique fine-scale variation parameter
 #' @param fs_model if "ind" then the fine-scale variation is independent at the BAU level. If "ICAR", then an ICAR model for the fine-scale variation is placed on the BAUs
 #' @param vgm_model an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm}. This object contains the variogram model that will be fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified, the variogram used is \code{gstat::vgm(1, "Lin", d, 1)}, where \code{d} is approximately one third of the maximum distance between any two data points
 #' @param K_type the parameterisation used for the \code{K} matrix. If the EM algorithm is used for model fitting, \code{K_type} can be "unstructured" or "block-exponential". If TMB is used for model fitting, \code{K_type} can be "neighbour" or "block-exponential". The default is "block-exponential"
@@ -47,7 +47,7 @@
 #' @param taper A positive numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "block-exponential"} and \code{TMB} is used to fit the data)
 #' @inheritParams .FRKTMB_pred
 #' @param optimiser the optimising function used for model fitting when \code{method = 'TMB'} (default is \code{nlminb}). Users may pass in a function object or a string corresponding to a named function. Optional parameters may be passed to \code{optimiser} via \code{...}. The only requirement of \code{optimiser} is that the first three arguments correspond to the initial parameters, the obejctive function, and the gradient, respectively (note that this may be achieved by rearranging the order of arguments before passing into \code{optimiser}) 
-#' @param sigma2fs known value of the fine-scale variance. If \code{NULL} (the default), the fine-scale variance \eqn{\sigma^2_\xi} is estimated as usual. If \code{sigma2fs} is not \code{NULL}, the fine-scale variance is fixed to the supplied value
+#' @param known_sigma2fs known value of the fine-scale variance. If \code{NULL} (the default), the fine-scale variance \eqn{\sigma^2_\xi} is estimated as usual. If \code{sigma2fs} is not \code{NULL}, the fine-scale variance is fixed to the supplied value
 #' @param ... other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling \code{FRK}, or the user specified \code{optimiser} function when calling \code{FRK} or \code{SRE.fit}
 #' @details \code{SRE()} is the main function in the package: It constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of Basic Areal Units (BAUs). The function first takes each object in the list \code{data} and maps it to the BAUs -- this entails binning the point-referenced data into the BAUs (and averaging within the BAU) if \code{average_in_BAU = TRUE}, and finding which BAUs are influenced by the polygon datasets. Following this, the incidence matrix \code{Cmat} is constructed, which appears in the observation model \eqn{Z = CY + C\delta + e}, where \eqn{C} is the incidence matrix and \eqn{\delta} is systematic error at the BAU level.
 #'
@@ -125,7 +125,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                 link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"), 
                 taper = 4, 
                 include_fs = TRUE,
-                BAUs_unique_fs = FALSE,
+                fs_by_spatial_BAU = FALSE,
                 ...) {
     
 
@@ -175,10 +175,10 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     ##              ii) ensure each spatial BAU is associated with a sufficient number of observations
     ## The second check requires the binned data and the indices of the observed 
     ## BAUs, so we need to check this condition later.
-    if (BAUs_unique_fs) {
+    if (fs_by_spatial_BAU) {
         if(!is(BAUs, "STFDF"))
             stop("A unique fine-scale variance can only be associated with each spatial BAU if the application is spatio-temporal (i.e., the BAUs are of class 'STFDF').
-                 Please either set BAUs_unique_fs to FALSE if yo uare not in a spatio-temporal application.")
+                 Please either set fs_by_spatial_BAU to FALSE if yo uare not in a spatio-temporal application.")
 
     } 
     
@@ -395,10 +395,10 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     X_O <- X_BAU[obsidx, , drop = FALSE]
     
 
-    if (BAUs_unique_fs) {
+    if (fs_by_spatial_BAU) {
         fewest_obs <-  min(table(obsidx %% ns)) # count of observations from spatial BAU with fewest observations
         if(fewest_obs == 0) {
-            stop("A unique fine-scale variance at each spatial BAU can only be fit if all spatial BAUs are oobserved, which is not the case for the provided data and BAUs. Please set BAUs_unique_fs = FALSE.")
+            stop("A unique fine-scale variance at each spatial BAU can only be fit if all spatial BAUs are oobserved, which is not the case for the provided data and BAUs. Please set fs_by_spatial_BAU = FALSE.")
         } else if(fewest_obs < 10) {
             warning(paste0("The smallest number of observations associated with a spatial BAUs is: ", fewest_obs, 
                            ". As you have selected to fit a unique fine-scale variance at each spatial BAU, please consider if this is a sufficient number of observations."))
@@ -442,7 +442,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         k_Z = k, 
         include_fs = include_fs, 
         normalise_wts = normalise_wts, 
-        BAUs_unique_fs = BAUs_unique_fs)
+        fs_by_spatial_BAU = fs_by_spatial_BAU)
 }
 
 
@@ -450,13 +450,13 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
 #' @export
 SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
                     lambda = 0, print_lik = FALSE, optimiser = nlminb, 
-                    sigma2fs = NULL, ...) {
+                    known_sigma2fs = NULL, ...) {
 
     method <- match.arg(method)
     optimiser <- match.fun(optimiser)
     
-    if (!is.null(sigma2fs)) {
-        SRE_model@sigma2fshat <- sigma2fs
+    if (!is.null(known_sigma2fs)) {
+        SRE_model@sigma2fshat <- known_sigma2fs
     }
     
     ## Check the arguments are OK
@@ -466,7 +466,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     
     ## Call internal fitting function with checked arguments
     return(.SRE.fit(SRE_model = SRE_model, n_EM = n_EM, tol = tol, method = method, 
-             lambda = lambda, print_lik = print_lik, optimiser = optimiser, sigma2fs = sigma2fs,
+             lambda = lambda, print_lik = print_lik, optimiser = optimiser, known_sigma2fs = known_sigma2fs,
              ...))
 
 }
@@ -487,7 +487,7 @@ SRE.predict <- function(SRE_model, obs_fs = FALSE, newdata = NULL, pred_polys = 
 setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = FALSE, pred_polys = NULL,
                                               pred_time = NULL, covariances = FALSE, 
                                               n_MC = 400, type = "mean", k = NULL, 
-                                              percentiles = c(5, 95), credMass = 0.9) {
+                                              percentiles = c(5, 95), cred_mass = 0.9) {
 
 
     SRE_model <- object
@@ -508,7 +508,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     .check_args3(obs_fs = obs_fs, newdata = newdata, pred_polys = pred_polys,
                  pred_time = pred_time, covariances = covariances, 
                  response = SRE_model@response, SRE_model = SRE_model, type = type, 
-                 k = k, percentiles = percentiles, credMass = credMass)
+                 k = k, percentiles = percentiles, cred_mass = cred_mass)
     
     
     
@@ -558,7 +558,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                                   type = type,                 # Whether we are interested in the "link" (Y-scale), "mean", "response"
                                   k = k,                       # Size parameter
                                   percentiles = percentiles,   # Desired percentiles of MC samples 
-                                  credMass = credMass)          
+                                  cred_mass = cred_mass)          
     } 
 
     
@@ -1003,7 +1003,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 
 ## Main prediction routine
 .SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method="EM", lambda = 0, 
-                     print_lik = FALSE, optimiser = nlminb, sigma2fs = NULL, ...) {
+                     print_lik = FALSE, optimiser = nlminb, known_sigma2fs = NULL, ...) {
 
     info_fit <- list()      # initialise info_fit
     
@@ -1072,7 +1072,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 
         }
     } else if (method == "TMB") {
-        SRE_model <- .FRKTMB_fit(SRE_model, optimiser = optimiser, sigma2fs = sigma2fs, ...)
+        SRE_model <- .FRKTMB_fit(SRE_model, optimiser = optimiser, known_sigma2fs = known_sigma2fs, ...)
     } else {
         stop("No other estimation method implemented yet. Please use method = 'EM' or method = 'TMB'.")
     }
@@ -2192,7 +2192,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 ## Checks arguments for the predict() function. Code is self-explanatory
 .check_args3 <- function(obs_fs = FALSE, newdata = NULL, pred_polys = NULL,
                          pred_time = NULL, covariances = FALSE, SRE_model, type, 
-                         k, percentiles, credMass, ...) {
+                         k, percentiles, cred_mass, ...) {
     
     if(!(obs_fs %in% 0:1)) stop("obs_fs needs to be logical")
 
@@ -2239,11 +2239,11 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
         if(!all(type %in% c("link", "mean", "response")))
             stop("type must be a vector containing combinations of 'link', 'mean', and 'response'")
         
-        if (!is.null(credMass)) {
-            if (length(credMass) != 1)
-                stop("credMass should be a single scalar, not a vector")
-            if(credMass < 0 | credMass > 1)
-                stop("credMass should be a scalar between 0 and 1")
+        if (!is.null(cred_mass)) {
+            if (length(cred_mass) != 1)
+                stop("cred_mass should be a single scalar, not a vector")
+            if(cred_mass < 0 | cred_mass > 1)
+                stop("cred_mass should be a scalar between 0 and 1")
         }
     }
 }

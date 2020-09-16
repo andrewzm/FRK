@@ -79,8 +79,8 @@ Type objective_function<Type>::operator() ()
 
   DATA_SCALAR(sigma2e);  // measurement error for Gaussian data model (fixed)
   
-  DATA_VECTOR(sigma2fs_hat);  // estimate of sigma2fs (the fine-scale variance component)
-  DATA_INTEGER(est_sigma2fs);     // Flag indicating whether we should estimate sigma2fs or not (1 if true, 0 if false)
+  DATA_VECTOR(sigma2fs_hat);   // estimate of sigma2fs (the fine-scale variance component)
+  DATA_INTEGER(fix_sigma2fs);  // Flag indicating whether we should fix sigma2fs or not (1 if true, 0 if false)
   DATA_INTEGER(include_fs);    // Flag indicating whether fine-scale variation is included in the model (1 if true, 0 if false)
   
   // Fixed effects and variance components relating directly to data
@@ -98,8 +98,8 @@ Type objective_function<Type>::operator() ()
   // If we are not estimating sigma2fs, fix it to the estimate. Otherwise, 
   // treat it as a parameter.
   PARAMETER_VECTOR(logsigma2fs);   vector<Type> sigma2fs = exp(logsigma2fs);
-  DATA_INTEGER(BAUs_unique_fs);
-  if (!est_sigma2fs)
+  DATA_INTEGER(fs_by_spatial_BAU);
+  if (fix_sigma2fs)
     sigma2fs = sigma2fs_hat;
   
   
@@ -287,7 +287,7 @@ Type objective_function<Type>::operator() ()
     
     ld_xi_O += -0.5 * mstar * log(2.0 * M_PI); // constant term in the log-density of xi_O
     
-    if (BAUs_unique_fs) {
+    if (fs_by_spatial_BAU) {
       
       vector<Type> sigma2fs_long(mstar); 
       for (int i = 0; i < mstar; i++) {

@@ -4,7 +4,7 @@
 \alias{.FRKTMB_fit}
 \title{Fitting stage of non-Gaussian FRK.}
 \usage{
-.FRKTMB_fit(M, optimiser, sigma2fs, ...)
+.FRKTMB_fit(M, optimiser, known_sigma2fs, ...)
 }
 \arguments{
 \item{M}{An object of class \code{SRE}.

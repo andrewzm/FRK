@@ -122,7 +122,7 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot k_Z vector of known size parameters at the data support (only applicable to binomial and negative-binomial response distributions) 
 #' @slot include_fs Flag indicating whether the fine-scale variation should be include in the model
 #' @slot normalise_wts if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)
-#' @slot BAUs_unique_fs BAUs_unique_fs if \code{TRUE}, and each spatial BAU is observed at least 10 times, then each BAU is given a unique fine-scale variation parameter
+#' @slot fs_by_spatial_BAU if \code{TRUE}, and each spatial BAU is observed at least 10 times, then each BAU is given a unique fine-scale variation parameter
 #' @seealso \code{\link{SRE}} for details on how to construct and fit SRE models.
 #' @keywords spatial
 setClass("SRE",representation(data="list",
@@ -163,4 +163,4 @@ setClass("SRE",representation(data="list",
                               k_Z = "Matrix", 
                               include_fs = "logical", 
                               normalise_wts = "logical", 
-                              BAUs_unique_fs = "logical"))
+                              fs_by_spatial_BAU = "logical"))

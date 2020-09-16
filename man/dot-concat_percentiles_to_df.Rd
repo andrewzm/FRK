@@ -4,7 +4,7 @@
 \alias{.concat_percentiles_to_df}
 \title{Computation and concatenation of percentiles to a dataframe.}
 \usage{
-.concat_percentiles_to_df(data, X, name, percentiles, credMass)
+.concat_percentiles_to_df(data, X, name, percentiles, cred_mass)
 }
 \arguments{
 \item{data}{The dataframe we will append percentiles to; the number of rows (if \code{X} is a matrix) or the length (if \code{X} is a list) of \code{X} must equal the number of rows in \code{data}}
@@ -15,7 +15,7 @@
 
 \item{percentiles}{a vector of scalars in [0, 100] specifying the desired percentiles; if \code{percentiles = NULL}, no percentiles are computed}
 
-\item{credMass}{a scalar [0, 1] specifying the mass within the credible interval; if \code{credMass = NULL}, no HPD credible interval is computed}
+\item{cred_mass}{a scalar [0, 1] specifying the mass within the credible interval; if \code{cred_mass = NULL}, no HPD credible interval is computed}
 }
 \value{
 The dataframe \code{data} with appended percentiles

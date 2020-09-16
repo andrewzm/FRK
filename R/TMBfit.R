@@ -28,11 +28,11 @@
 #'   \item{phi}{Estimate of the dispersion parameter (only for applicable response distributions).}
 #'   \item{log_likelihood}{The log-likelihood of the model evaluated at the final parameter estimates. Can be obtained by calling loglik(M).}
 #' }
-.FRKTMB_fit <- function(M, optimiser, sigma2fs, ...) {
+.FRKTMB_fit <- function(M, optimiser, known_sigma2fs, ...) {
 
   
   ## Data and parameter preparation for TMB
-  data_params_init <- .TMB_prep(M, sigma2fs = sigma2fs)
+  data_params_init <- .TMB_prep(M, known_sigma2fs = known_sigma2fs)
   
 
   ## TMB model compilation
@@ -147,7 +147,7 @@
 #'   \item{data}{The data.}
 #'   \item{parameters}{The initialised parameters/fixed-effects/random-effects.}
 #' }
-.TMB_prep <- function (M, sigma2fs) {
+.TMB_prep <- function (M, known_sigma2fs) {
 
   k_Z  <- as.vector(M@k_Z)
   N    <- nrow(M@S0)               # Number of BAUs
@@ -176,7 +176,7 @@
                   K_type = M@K_type, response = M@response, link = M@link,
                   k_BAU = k_BAU, k_Z = k_Z,
                   temporal = as.integer(is(M@basis,"TensorP_Basis")), 
-                  BAUs_unique_fs = M@BAUs_unique_fs, sigma2e = sigma2e)
+                  fs_by_spatial_BAU = M@fs_by_spatial_BAU, sigma2e = sigma2e)
 
   ## The location of the stored spatial basis functions depend on whether the 
   ## data is spatio-temporal or not. Here, we also define the number of temporal
@@ -299,24 +299,24 @@
   data$sigma2fs_hat <- exp(parameters$logsigma2fs)
   ## Only estimate sigma2fs if all the observations are associated with exactly 
   ## one BAU; otherwise, we must fix sigma2fs.
-  data$est_sigma2fs <- as.integer( all(tabulate(M@Cmat@i + 1) == 1) )
+  data$fix_sigma2fs <- as.integer( !all(tabulate(M@Cmat@i + 1) == 1) )
 
   data$include_fs <- as.integer(M@include_fs)
   
   
   ## If we are estimating a unique fine-scale variance at each spatial BAU, 
   ## simply replicate ns times. 
-  if (M@BAUs_unique_fs) {
+  if (M@fs_by_spatial_BAU) {
     data$sigma2fs_hat      <- rep(data$sigma2fs_hat, ns)
     parameters$logsigma2fs <- rep(parameters$logsigma2fs, ns)
   }
   
   
   ## Fix sigma2fs to the known value provided by the user (if provided). 
-  if (!is.null(sigma2fs)) {
+  if (!is.null(known_sigma2fs)) {
     data$sigma2fs_hat <- sigma2fs
     parameters$logsigma2fs <- log(data$sigma2fs_hat) 
-    data$est_sigma2fs <- 0
+    data$fix_sigma2fs <- 1
   }
   
   

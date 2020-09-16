@@ -90,19 +90,19 @@
 #' @param data The dataframe we will append percentiles to; the number of rows (if \code{X} is a matrix) or the length (if \code{X} is a list) of \code{X} must equal the number of rows in \code{data}
 #' @param name The name of the quantity of interest. The names of the percentile columns are "name_percentile". In \code{FRK} it will be Y, mu, prob, or Z
 #' @return The dataframe \code{data} with appended percentiles
-.concat_percentiles_to_df <- function (data, X, name, percentiles, credMass) {
-  if (is.null(percentiles) & is.null(credMass)) 
+.concat_percentiles_to_df <- function (data, X, name, percentiles, cred_mass) {
+  if (is.null(percentiles) & is.null(cred_mass)) 
     return(data)
   
   
   if (!is.null(percentiles)) {
-    Q           <- .prediction_interval(X, interval_type = "central", percentiles = percentiles, credMass = credMass)
+    Q           <- .prediction_interval(X, interval_type = "central", percentiles = percentiles, cred_mass = cred_mass)
     colnames(Q) <- paste(name, "percentile", as.character(percentiles), sep = "_")
     data        <- cbind(data, Q)
   }
   
-  if(!is.null(credMass)) {
-    Q           <- .prediction_interval(X, interval_type = "HPD", percentiles = percentiles, credMass = credMass)
+  if(!is.null(cred_mass)) {
+    Q           <- .prediction_interval(X, interval_type = "HPD", percentiles = percentiles, cred_mass = cred_mass)
     colnames(Q) <- paste(colnames(Q), "HPD_bound", name, sep = "_")
     data        <- cbind(data, Q)
   }
@@ -121,13 +121,13 @@
 #' @param X a matrix (wherein rows correspond to prediction locations and columns are samples) of Monte Carlo samples
 #' @param interval_type string indicating whether a \code{"central"} or \code{"HPD"} interval is desired
 #' @param percentiles a vector of scalars in [0, 100] specifying the desired percentiles; if \code{percentiles = NULL}, no percentiles are computed 
-#' @param credMass a scalar [0, 1] specifying the mass within the credible interval; if \code{credMass = NULL}, no HPD credible interval is computed
+#' @param cred_mass a scalar [0, 1] specifying the mass within the credible interval; if \code{cred_mass = NULL}, no HPD credible interval is computed
 #' @return The prediction interval at each location (or width at each location if \code{width = TRUE})
-.prediction_interval <- function(X, interval_type, percentiles, credMass) {
+.prediction_interval <- function(X, interval_type, percentiles, cred_mass) {
 
   X <- as.matrix(X)
   if (interval_type == "central") Q <- t(apply(X, 1, quantile, percentiles / 100))
-  if (interval_type == "HPD")     Q <- t(HDInterval::hdi(t(X), credMass = credMass)) # Note that hdi() expects locations in columns, samples in rows
+  if (interval_type == "HPD")     Q <- t(HDInterval::hdi(t(X), cred_mass = cred_mass)) # Note that hdi() expects locations in columns, samples in rows
   
   return(Q)
 }

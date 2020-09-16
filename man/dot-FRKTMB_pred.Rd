@@ -15,7 +15,7 @@
   obs_fs,
   k,
   percentiles,
-  credMass
+  cred_mass
 )
 }
 \arguments{
@@ -39,7 +39,7 @@
 
 \item{percentiles}{a vector of scalars in [0, 100] specifying the desired percentiles; if \code{percentiles = NULL}, no percentiles are computed}
 
-\item{credMass}{a scalar [0, 1] specifying the mass within the credible interval; if \code{credMass = NULL}, no HPD credible interval is computed}
+\item{cred_mass}{a scalar [0, 1] specifying the mass within the credible interval; if \code{cred_mass = NULL}, no HPD credible interval is computed}
 }
 \value{
 A list object containing:

@@ -35,7 +35,7 @@ FRK(
   type = "mean",
   k = NULL,
   percentiles = c(5, 95),
-  credMass = 0.9,
+  cred_mass = 0.9,
   ...
 )
 
@@ -58,7 +58,7 @@ SRE(
     "inverse-squared"),
   taper = 4,
   include_fs = TRUE,
-  BAUs_unique_fs = FALSE,
+  fs_by_spatial_BAU = FALSE,
   ...
 )
 
@@ -70,7 +70,7 @@ SRE.fit(
   lambda = 0,
   print_lik = FALSE,
   optimiser = nlminb,
-  sigma2fs = NULL,
+  known_sigma2fs = NULL,
   ...
 )
 
@@ -94,7 +94,7 @@ SRE.predict(
   type = "mean",
   k = NULL,
   percentiles = c(5, 95),
-  credMass = 0.9
+  cred_mass = 0.9
 )
 
 loglik(SRE_model)
@@ -146,7 +146,7 @@ loglik(SRE_model)
 
 \item{percentiles}{a vector of scalars in [0, 100] specifying the desired percentiles; if \code{percentiles = NULL}, no percentiles are computed}
 
-\item{credMass}{a scalar [0, 1] specifying the mass within the credible interval; if \code{credMass = NULL}, no HPD credible interval is computed}
+\item{cred_mass}{a scalar [0, 1] specifying the mass within the credible interval; if \code{cred_mass = NULL}, no HPD credible interval is computed}
 
 \item{...}{other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling \code{FRK}, or the user specified \code{optimiser} function when calling \code{FRK} or \code{SRE.fit}}
 
@@ -154,11 +154,11 @@ loglik(SRE_model)
 
 \item{normalise_basis}{flag indicating whether to normalise the basis functions so that they reproduce a stochastic process with approximately constant variance spatially}
 
-\item{BAUs_unique_fs}{if \code{TRUE}, and each spatial BAU is observed at least 10 times, then each BAU is given a unique fine-scale variation parameter}
+\item{fs_by_spatial_BAU}{if \code{TRUE}, and each spatial BAU is observed at least 10 times, then each BAU is given a unique fine-scale variation parameter}
 
 \item{SRE_model}{object returned from the constructor \code{SRE()} containing all the parameters and information on the SRE model}
 
-\item{sigma2fs}{known value of the fine-scale variance. If \code{NULL} (the default), the fine-scale variance \eqn{\sigma^2_\xi} is estimated as usual. If \code{sigma2fs} is not \code{NULL}, the fine-scale variance is fixed to the supplied value}
+\item{known_sigma2fs}{known value of the fine-scale variance. If \code{NULL} (the default), the fine-scale variance \eqn{\sigma^2_\xi} is estimated as usual. If \code{sigma2fs} is not \code{NULL}, the fine-scale variance is fixed to the supplied value}
 
 \item{obs_fs}{flag indicating whether the fine-scale variation sits in the observation model (systematic error, Case 1) or in the process model (fine-scale process variation, Case 2, default)}
 
