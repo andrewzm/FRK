@@ -30,11 +30,9 @@
 #' }
 .FRKTMB_fit <- function(M, optimiser, known_sigma2fs, ...) {
 
-  
   ## Data and parameter preparation for TMB
   data_params_init <- .TMB_prep(M, known_sigma2fs = known_sigma2fs)
   
-
   ## TMB model compilation
   obj <- MakeADFun(data = data_params_init$data,
                    parameters = data_params_init$parameters,
@@ -314,7 +312,7 @@
   
   ## Fix sigma2fs to the known value provided by the user (if provided). 
   if (!is.null(known_sigma2fs)) {
-    data$sigma2fs_hat <- sigma2fs
+    data$sigma2fs_hat <- known_sigma2fs
     parameters$logsigma2fs <- log(data$sigma2fs_hat) 
     data$fix_sigma2fs <- 1
   }
