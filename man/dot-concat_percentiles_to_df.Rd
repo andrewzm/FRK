@@ -4,14 +4,12 @@
 \alias{.concat_percentiles_to_df}
 \title{Computation and concatenation of percentiles to a dataframe.}
 \usage{
-.concat_percentiles_to_df(data, X, name, percentiles, cred_mass)
+.concat_percentiles_to_df(data, MC, percentiles, cred_mass)
 }
 \arguments{
-\item{data}{The dataframe we will append percentiles to; the number of rows (if \code{X} is a matrix) or the length (if \code{X} is a list) of \code{X} must equal the number of rows in \code{data}}
+\item{data}{The dataframe we will append percentiles to; the number of rows of the matrices in \code{MC} and  in \code{data} must be equal}
 
-\item{X}{a matrix (wherein rows correspond to prediction locations and columns are samples) of Monte Carlo samples}
-
-\item{name}{The name of the quantity of interest. The names of the percentile columns are "name_percentile". In \code{FRK} it will be Y, mu, prob, or Z}
+\item{MC}{List of matrices containing Monte carlo samples}
 
 \item{percentiles}{a vector of scalars in [0, 100] specifying the desired percentiles; if \code{percentiles = NULL}, no percentiles are computed}
 

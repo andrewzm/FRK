@@ -73,103 +73,65 @@
   
   ## Generate Monte Carlo samples at all BAUs
   MC <- .MC_sampler(M = M, X = X, type = type, obs_fs = obs_fs, 
-                    n_MC = n_MC, k = k, Q_L = Q_L, obsidx = obsidx)
+                    n_MC = n_MC, k = k, Q_L = Q_L, obsidx = obsidx, 
+                    predict_BAUs = predict_BAUs, CP = CP)
 
+  ## We do not allow aggregation of the Y-process when predicting over arbitrary polygons
+  if(!predict_BAUs)
+    MC$Y_samples <- NULL
   
-  # ---- Predicting over arbitrary polygons ----
+  ## Remove other quantities if the user is not interested in them
+  if(!("link" %in% type)) {
+    MC$Y_samples <- NULL
+  } 
   
-
-  if (!predict_BAUs) {
-    M_P <- CP %*% MC$mu_samples
-    mu_P <- rowMeans(M_P)
-    newdata$p_mu <- mu_P
-    newdata$RMSPE_mu <- apply(M_P, 1, sd)
-    newdata@data <-  .concat_percentiles_to_df(data = newdata@data, X = M_P, 
-                                               cred_mass = cred_mass, 
-                                               name = "mu", percentiles = percentiles)
-    
-    return(list(newdata = newdata, MC = M_P))
-  }
-  
+  if(!("mean" %in% type)) {
+    MC$mu_samples <- NULL
+    MC$prob_samples <- NULL
+  } 
 
   # ------ Create Prediction data ------
   
   ## Produce prediction and RMSPE matrices. 
-  ## The columns are the quantity of interest (Y, mu, prob, or Z) and the rows are prediction locations.
-  ## If we are predicting over the BAUs, the Monte Carlo samples are easy to 
-  ## store as matrices. Otherwise, MC will be a list of lists.
-  if (predict_BAUs) {
-    predictions <- sapply(MC, rowMeans)
-    RMSPE <- sapply(MC, apply, 1, sd)
-  } else {
-    predictions <- sapply(MC, function(L) sapply(L, mean))
-    RMSPE <- sapply(MC, function(L) sapply(L, sd))
-  }
-  
+  ## The columns are the quantity of interest (Y, mu, prob, or Z), and the rows are prediction locations.
+  predictions <- sapply(MC, rowMeans)
+  RMSPE <- sapply(MC, apply, 1, sd)
+
   ## If we are predicting over BAUs, newdata is NULL, so set it to the BAUs
   if (predict_BAUs)
     newdata <- M@BAUs 
   
-
-  
   ## Now update newdata with the predictions, RMSPE, and percentiles. 
-  ## Note that I do them separately as I think it is easier to read if they are in order 
-  ## (i.e., have all predictions together, all RMSPE together, all percentiles together). 
-  ## We may change this later.
-  if ("link" %in% type) newdata$p_Y <- predictions[, "Y_samples"]
-  if ("mean" %in% type) newdata$p_mu <- predictions[, "mu_samples"]
-  if ("mean" %in% type & "prob_samples" %in% colnames(predictions)) newdata$p_prob <- predictions[, "prob_samples"]
-  if ("response" %in% type) newdata$p_Z <- predictions[, "Z_samples"]
+  ## (See https://datascience.stackexchange.com/a/8924 for a description of what this gsub is doing.)
+  QOI <- gsub("_.*", "", names(MC)) # quantities of interest
   
+  ## Create a dummy data column just incase newdata is of class "SpatialPolygons" 
+  ## and we need to convert to "SpatialPolygonsDataframe"
+  newdata$dummy_blah123 <- rep(1, length(newdata))
+  newdata$dummy_blah123 <- NULL
+  
+  ## Predictions and RMSPE
+  newdata@data[, paste0("p_", QOI)] <- predictions
+  newdata@data[, paste0("RMSPE_", QOI)] <- RMSPE
+  
+  ## Use p_Y (computed with estimates from TMB) as the predictor for Y, rather than the noisy MC estimates
+  if("link" %in% type & predict_BAUs) {
+    newdata$p_Y <- p_Y
+    newdata$RMSPE_Y <- sqrt(MSPE_Y)
+  }
+  
+  ## Percentiles and HPD interval bounds
+  newdata@data <- .concat_percentiles_to_df(data = newdata@data, MC = MC, 
+                                            cred_mass = cred_mass, percentiles = percentiles)
 
-  if ("link" %in% type) newdata$RMSPE_Y <- RMSPE[, "Y_samples"]
-  if ("mean" %in% type) newdata$RMSPE_mu <- RMSPE[, "mu_samples"]
-  if ("mean" %in% type & "prob_samples" %in% colnames(predictions)) newdata$RMSPE_prob <- RMSPE[, "prob_samples"]
-  if ("response" %in% type) newdata$RMSPE_Z <- RMSPE[, "Z_samples"]
-  
-  
-  if ("link" %in% type) 
-    newdata@data <-  .concat_percentiles_to_df(data = newdata@data, X = MC$Y_samples, 
-                                               cred_mass = cred_mass, 
-                                               name = "Y", percentiles = percentiles)
-  
-  if ("mean" %in% type) 
-    newdata@data <-  .concat_percentiles_to_df(data = newdata@data, X = MC$mu_samples, 
-                                               cred_mass = cred_mass, 
-                                               name = "mu", percentiles = percentiles)
-  
-  if ("mean" %in% type & "prob_samples" %in% colnames(predictions)) 
-    newdata@data <-  .concat_percentiles_to_df(data = newdata@data, X = MC$prob_samples, 
-                                               cred_mass = cred_mass, 
-                                               name = "prob", percentiles = percentiles)
-  
-  if ("response" %in% type) 
-    newdata@data <-  .concat_percentiles_to_df(data = newdata@data, X = MC$Z_samples, 
-                                               cred_mass = cred_mass, 
-                                               name = "Z", percentiles = percentiles)
-  
-  
 
-  ## Previous code: The main difference is that here we use p_Y and MSPE_Y 
-  ## rather than the Y_samples in MC, and that for some link functions (namely
-  ## the identity and lok link functions), we can analytically compute the mean. 
-  ## It would be good to retain these optimisations, but I will come back to this later.
-  ## Note that we always need to compute the MC samples, so we won't really save any time by doing this.
-  ## I suppose if percentiles = NULL we do not actually need to compute the MC samples.
+  # ## Previous code: The main difference is that here we use p_Y and MSPE_Y 
+  # ## rather than the Y_samples in MC, and that for some link functions (namely
+  # ## the identity and lok link functions), we can analytically compute the mean. 
+  # ## It would be good to retain these optimisations, but I will come back to this later.
+  # ## I think this would probably need to go in the MC sampling function.. maybe not though.
   # if (predict_BAUs) {
   # 
-  #   ## The latent Y process
-  #   if ("link" %in% type) {
-  #     newdata$p_Y     <- p_Y   
-  #     newdata$RMSPE_Y <- sqrt(MSPE_Y)
-  #     newdata@data <- .concat_percentiles_to_df(X = MC$Y_samples, data = newdata@data,
-  #                                          name = "Y", percentiles = percentiles)
-  #   }
-  #   
-  #   ## If Y is the only quantity of interest, exit the function.
-  #   if (!("mean" %in% type) & !("response" %in% type)) 
-  #     return(list(newdata = newdata, MC = MC)) 
-  #   
   #   ## Conditional mean of the data, mu
   #   ## If a log- or identity-link function is used, then expectations and variance
   #   ## of the conditional mean may be evaluated analytically.
@@ -186,31 +148,23 @@
   #   } else {
   #     ## USE THE SAMPLES.
   #   }
-  #   
-  #   ## Output mu (and prob) predictions if it is requested
-  #   if ("mean" %in% type) {
-  #     newdata$p_mu <- p_mu
-  #     newdata$RMSPE_mu <- RMSPE_mu
-  #     newdata@data <- .concat_percentiles_to_df(X = MC$mu_samples, data = newdata@data,
-  #                                               name = "mu", percentiles = percentiles)
-  #   }
-  # } 
+  # 
+  # }
   
   # ---- Add a column indicating the time point in space-time setting ----
   
-  ## FIXME: how does pred_time come into play? I think pred_time gives the time indices to predict over. Perhaps we need to simply subset the final predications based on pred_time
+  ## FIXME: how does pred_time come into play? I think pred_time gives the time 
+  ## indices to predict over. Perhaps we need to simply subset the final 
+  # predictions based on pred_time
   if (is(M@basis,"TensorP_Basis")) {
     newdata$t <- M@BAUs@data$t
   }
-  
   
   ## It is convenient to have the spatial coordinates in the @data slot of the
   ## return newdata object. Only add those coordinates not already in the data.
   tmp <- which(!(colnames(coordinates(newdata)) %in% names(newdata@data)))
   if (length(tmp))
     newdata@data <- cbind(newdata@data, coordinates(newdata)[, tmp])  
-  
-  
   
   ## Return the predictions, and the MC samples at either the BAUs (if we are 
   ## predicting over BAUs) or over the user specified arbitrary polygons.
@@ -329,8 +283,7 @@
 #'   \item{prob_samples}{Samples of the probability of success parameter (only for the relevant response distributions)}
 #'   \item{Z_samples}{Samples of the response variable}
 #' }
-.MC_sampler <- function(M, X, type = "mean", n_MC = 400, obs_fs = FALSE, k = NULL, 
-                        Q_L, obsidx){
+.MC_sampler <- function(M, X, type, n_MC, obs_fs, k, Q_L, obsidx, predict_BAUs, CP){
   
   MC <- list()        # object we will return 
   N   <- nrow(M@S0)   
@@ -389,7 +342,7 @@
   ## row i of eta corresponds to n_MC MC samples of eta_i,
   ## row i of xi_O corresponds to n_MC MC samples of the fine-scale variation at the ith observed location.
   
-  # # ---- Generate samples from xi_U ----
+  # ---- Generate samples from xi_U ----
   
   ## This is straightforward as each element of xi_U is independent of
   ## all other random effects in the model.
@@ -467,7 +420,7 @@
     
   
   ## If Y is the ONLY quantity of interest, exit the function.
-  if (!("mean" %in% type) && !("response" %in% type)) return(MC) 
+  if (!("mean" %in% type) & !("response" %in% type)) return(MC) 
   
   
   # ---- Apply inverse-link function to the samples to obtain conditional mean ----
@@ -482,7 +435,7 @@
   ## The exception is negative-binomial with a log or square-root link, 
   ## in which case we map directly from Y to mu.
   
-  ## Note that for all cases other than type == "link", we need to compute the conditonal mean samples.
+  ## Note that for all cases other than type == "link", we need to compute the conditional mean samples.
   
   ## Create the relevant link functions.
   ## FIXME: change these names to ginv, hinv, finv
@@ -505,51 +458,70 @@
     mu_samples <- psi(Y_samples)
   }
 
-  ## Output the mean samples. If probability parameter p was computed, also output.
-  MC$mu_samples <- mu_samples
-  if (exists("prob_samples")) MC$prob_samples <- prob_samples
 
+
+  
+  # ---- Predicting over arbitrary polygons ----
+  
+  
+  ## FIXME: Should add some checks for this. The user should only provide "mean" or "response" in \code{type}
+  ## if they wish to predict over arbitrary polygons other than the BAUs.
+  if (!predict_BAUs) 
+    mu_samples <- as.matrix(CP %*% mu_samples)
+
+    
+
+  
+  ## Output the mean samples. If probability parameter was computed, and 
+  ## we are predicting over the BAUs, also output.
+  MC$mu_samples <- mu_samples
+  if (exists("prob_samples") & predict_BAUs) 
+    MC$prob_samples <- prob_samples
+  
   
   ## If the response is not a quanitity of interest, exit the function
   if (!("response" %in% type)) return(MC)
  
   
   # ---- Sample the response variable, Z ----
+
+  n <- nrow(CP) * n_MC
   
   if (M@response == "poisson") {
-    Z_samples <- rpois(n = N * n_MC, lambda = c(t(mu_samples)))
+    Z_samples <- rpois(n, lambda = c(t(mu_samples)))
   } else if (M@response == "gaussian") {
     sigma2e <- M@Ve[1, 1] # measurement error standard deviation
-    Z_samples <- rnorm(n = N * n_MC, mean = c(t(mu_samples)), sd = sqrt(sigma2e))
+    Z_samples <- rnorm(n, mean = c(t(mu_samples)), sd = sqrt(sigma2e))
   } else if (M@response == "bernoulli") {
-    Z_samples <- rbinom(n = N * n_MC, size = 1, prob = c(t(mu_samples)))
+    Z_samples <- rbinom(n, size = 1, prob = c(t(mu_samples)))
   } else if (M@response == "gamma") {
     theta <- 1 / c(t(mu_samples)) # canonical parameter
     alpha <- 1/M@phi                 # shape parameter
     beta  <- theta * alpha           # rate parameter (1/scale)
-    Z_samples <- rgamma(n = N * n_MC, shape = alpha, rate = beta)
-    Z_samples <- statmod::rinvgauss(n = N * n_MC, mean = c(t(mu_samples)), dispersion = M@phi)
+    Z_samples <- rgamma(n, shape = alpha, rate = beta)
+    Z_samples <- statmod::rinvgauss(n, mean = c(t(mu_samples)), dispersion = M@phi)
   } else if (M@response == "negative-binomial") {
     k_vec <- rep(k, each = n_MC)
-    Z_samples <- rnbinom(n = N * n_MC, size = k_vec, prob = c(t(prob_samples)))
+    ## FIXME: currently, we do not (and cannot) compute prob)samples over abitrary prediction ploygons. 
+    ## This means we need to find a way to simulate rnbinom without using prob_samples.
+    ## If I cannot do this, then I need to add a check that newdata is not NULL when response = negative-binomial.
+    Z_samples <- rnbinom(n, size = k_vec, prob = c(t(prob_samples)))
   } else if (M@response == "binomial") {
     k_vec <- rep(k, each = n_MC)
     theta <- log((c(t(mu_samples))/k_vec) / (1 - (c(t(mu_samples))/k_vec)))
     p <- 1 / (1 + exp(-theta))
-    ## NAs will occur if k = 0.
-    ## Fortunately, if k = 0, we know Z will be 0. Hence, simply replace the
-    ## NA occurences in p with 0.
+    ## NAs will occur if k = 0. Fortunately, if k = 0, we know Z will be 0. 
+    ## Hence, simply replace the NA occurences in p with 0.
     p[is.na(p)] <- 0
-    Z_samples <- rbinom(n = N * n_MC, size = k_vec, prob = p)
+    Z_samples <- rbinom(n, size = k_vec, prob = p)
   }
   
-  ## Convert from a long vector to an N * n_MC matrix
+  ## Convert from a long vector to an n_pred_locs x n_MC matrix
   Z_samples <- matrix(Z_samples, ncol = n_MC, byrow = TRUE)
   
   ## Add Z_samples to list object
   MC$Z_samples <- Z_samples
   
-
   
   return(MC)
 }

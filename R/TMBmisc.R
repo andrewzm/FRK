@@ -87,24 +87,33 @@
 #' dataframe column name may cause issues. 
 #'
 #' @inheritParams .prediction_interval
-#' @param data The dataframe we will append percentiles to; the number of rows (if \code{X} is a matrix) or the length (if \code{X} is a list) of \code{X} must equal the number of rows in \code{data}
-#' @param name The name of the quantity of interest. The names of the percentile columns are "name_percentile". In \code{FRK} it will be Y, mu, prob, or Z
+#' @param data The dataframe we will append percentiles to; the number of rows of the matrices in \code{MC} and  in \code{data} must be equal
+#' @param MC List of matrices containing Monte carlo samples
 #' @return The dataframe \code{data} with appended percentiles
-.concat_percentiles_to_df <- function (data, X, name, percentiles, cred_mass) {
+.concat_percentiles_to_df <- function (data, MC, percentiles, cred_mass) {
+  
   if (is.null(percentiles) & is.null(cred_mass)) 
     return(data)
   
+  QOI <- gsub("_.*", "", names(MC))
+
   
-  if (!is.null(percentiles)) {
-    Q           <- .prediction_interval(X, interval_type = "central", percentiles = percentiles, cred_mass = cred_mass)
-    colnames(Q) <- paste(name, "percentile", as.character(percentiles), sep = "_")
-    data        <- cbind(data, Q)
-  }
-  
-  if(!is.null(cred_mass)) {
-    Q           <- .prediction_interval(X, interval_type = "HPD", percentiles = percentiles, cred_mass = cred_mass)
-    colnames(Q) <- paste(colnames(Q), "HPD_bound", name, sep = "_")
-    data        <- cbind(data, Q)
+  for(i in seq_along(MC)) {
+    X <- MC[[i]] 
+    
+    if (!is.null(percentiles)) {
+      Q           <- .prediction_interval(X, interval_type = "central", percentiles = percentiles, cred_mass = cred_mass)
+      colnames(Q)
+      colnames(Q) <- paste(QOI[i], "percentile", as.character(percentiles), sep = "_")
+      data        <- cbind(data, Q)
+    }
+    
+    if(!is.null(cred_mass)) {
+      Q           <- .prediction_interval(X, interval_type = "HPD", percentiles = percentiles, cred_mass = cred_mass)
+      colnames(Q) <- paste(colnames(Q), "HPD_bound", QOI[i], sep = "_")
+      data        <- cbind(data, Q)
+    }
+    
   }
   
   return(data)
