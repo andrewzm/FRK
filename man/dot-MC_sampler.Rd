@@ -5,7 +5,19 @@
 \title{Monte Carlo sampling of the conditional mean of the data (a function of the
 latent process Y).}
 \usage{
-.MC_sampler(M, X, type, n_MC, obs_fs, k, Q_L, obsidx, predict_BAUs, CP)
+.MC_sampler(
+  M,
+  X,
+  type,
+  n_MC,
+  obs_fs,
+  k,
+  Q_L,
+  obsidx,
+  predict_BAUs,
+  CP,
+  kriging
+)
 }
 \arguments{
 \item{M}{An object of class \code{SRE}}

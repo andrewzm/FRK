@@ -8,6 +8,7 @@
 #' @param predict_BAUs Logical indicating whether or not we are predicting over the BAUs
 #' @param pred_time vector of time indices at which prediction will be carried out. All time points are used if this option is not specified
 #' @param type A character string (possibly vector) indicating the quantities for which predictions and prediction uncertainty is desired. If \code{"link"} is in \code{type}, the latent \eqn{Y} process is included; If \code{"mean"} is in \code{type}, the conditional mean \eqn{\mu} is included (and the probability parameter if applicable); If \code{"response"} is in \code{type}, the response variable \eqn{Z} is included. Note that any combination of these character strings can be provided. For example, if \code{type = c("link", "response")}, then predictions of the latent \eqn{Y} process and the response variable \eqn{Z} are provided
+#' @param kriging A string indicating the kind of kriging (\code{"simple"} or \code{"universal"})
 #' @return A list object containing:
 #' \describe{
 #'   \item{newdata}{An object of class \code{newdata}, with predictions and prediction uncertainty at each prediction location of the latent \eqn{Y} process, the conditional mean of the data \eqn{\mu}, the probability of success parameter \eqn{\pi} (if applicable), and the response variable \eqn{Z}}
@@ -16,7 +17,7 @@
 #' Note that for all link functions other than the log- and identity-link functions, the predictions and prediction uncertainty of \eqn{\mu} contained in \code{newdata} are computed using the Monte Carlo samples contained in \code{MC}.
 #' When the log- or identity-link functions are used, the expectation and variance of the \eqn{\mu} may be computed exactly.
 .FRKTMB_pred <- function(M, newdata, CP, predict_BAUs, pred_time, type, n_MC, 
-                         obs_fs, k, percentiles, cred_mass) {
+                         obs_fs, k, percentiles, cred_mass, kriging) {
   
   
   ## FIXME: predict over only the observed BAUs needed for newdata locations
@@ -48,8 +49,19 @@
   
   # ---- Compute the Cholesky factor of the permuted precision matrix ----
   
+  ## Number of fixed and random effects
+  p <- length(M@alphahat)
+  mstar <- length(obsidx)
+  r <- ncol(M@S0)
+  s <- r + mstar * M@include_fs
+  
   ## Permuted Cholesky factor
-  Q_L <- sparseinv::cholPermute(Q = M@Q_eta_xi)
+  if (kriging == "universal") {
+    Q_joint <- M@Q_eta_xi
+  } else {
+    Q_joint <- M@Q_eta_xi[-(1:p), -(1:p)]
+  }
+  Q_L <- sparseinv::cholPermute(Q = Q_joint)
   
   
   # ------ Latent process Y prediction and Uncertainty ------
@@ -66,7 +78,7 @@
   
   ## Posterior variance of Y at each prediction location.
   ## Note that MSPE(E(Y|Z), Y) is approximated by var(Y|Z).
-  MSPE_Y  <- .Y_var(M = M, Q_L = Q_L, obsidx = obsidx) 
+  MSPE_Y  <- .Y_var(M = M, Q_joint = Q_joint, Q_L = Q_L, obsidx = obsidx, X = X, kriging = kriging) 
   
   
   # ------ Monte Carlo sampling ------
@@ -74,7 +86,7 @@
   ## Generate Monte Carlo samples at all BAUs
   MC <- .MC_sampler(M = M, X = X, type = type, obs_fs = obs_fs, 
                     n_MC = n_MC, k = k, Q_L = Q_L, obsidx = obsidx, 
-                    predict_BAUs = predict_BAUs, CP = CP)
+                    predict_BAUs = predict_BAUs, CP = CP, kriging = kriging)
 
   ## We do not allow aggregation of the Y-process when predicting over arbitrary polygons
   if(!predict_BAUs)
@@ -192,43 +204,72 @@
 #' @param Q_L A list containing the Cholesky factor of the permuted precision matrix (stored as \code{Q$Qpermchol}) and the associated permutationmatrix (stored as \code{Q_L$P}).
 #' @param obsidx Vector containing the observed locations.
 #' @return A vector of the posterior variance of Y at every BAU. 
-.Y_var <- function(M, Q_L, obsidx){
+.Y_var <- function(M, Q_joint, Q_L, obsidx, X, kriging){
   
-  r  <- ncol(M@S0)
+  r <- ncol(M@S0)
   mstar <- length(obsidx)
+  
+  ## Number of fixed and random effects
+  p <- length(M@alphahat)
+  s <- r + mstar * M@include_fs
   
   # ---- Sparse-inverse-subset of Q (acting as a proxy for the true covariance matrix) ----
 
+  
   if (r + mstar < 4000) {
     Sigma <- chol2inv(chol(M@Q_eta_xi))
   } else {
     ## Sparse-inverse-subset of random effects (eta and xi_O)
     ## (a proxy for the covariance matrix)
-    Sigma <- sparseinv::Takahashi_Davis(Q = M@Q_eta_xi,
+    Sigma <- sparseinv::Takahashi_Davis(Q = Q_joint,
                                         cholQp = Q_L$Qpermchol,
                                         P = Q_L$P)
   }
 
-  Sigma_eta   <- Sigma[1:r, 1:r]
+
+  if (kriging == "universal") {
+    Sigma_alpha <- Sigma[1:p, 1:p, drop = FALSE]
+    Sigma_random <- Sigma[-(1:p), -(1:p)]
+    Cov_alpha_eta <- Sigma[1:p, (p+1):(p+r), drop = FALSE]
+    Cov_alpha_xi <- Sigma[1:p, (p + r +1):(p+r+mstar), drop = FALSE]
+  } else {
+    Sigma_random <- Sigma
+  }
+  
+  Sigma_eta <- Sigma_random[1:r, 1:r]
   if (M@include_fs) {
-    Sigma_xi    <- Sigma[(r + 1):(r + mstar), (r + 1):(r + mstar)]
-    Cov_eta_xi  <- Sigma[1:r, (r + 1):ncol(Sigma)] # Covariances between xi_O and eta
+    Sigma_xi    <- Sigma_random[(r + 1):(r + mstar), (r + 1):(r + mstar)]
+    Cov_eta_xi  <- Sigma_random[1:r, (r + 1):(r + mstar)] # Covariances between xi_O and eta
   }
 
   
   # ----- Uncertainty: Posterior variance of Y at each BAU ------
   
   ## To extract the variances of eta|Z, we need diag(S0 %*% Sigma_eta %*% t(S0)).
-  ## Also, to extract the covariances term, we need: diag(S %*% COV_{eta, xi}).
+  ## Also, to extract the covariance terms, we need: diag(S %*% COV_{eta, xi}).
   ## This in very inefficient to do directly, it much better to use the identity:
   ##      diag(AB) = (A*B')1
   
-  ## Only one common term for both observed and unobserved locations:
-  vY <- as.vector( (M@S0 %*% Sigma_eta * M@S0) %*% rep(1, r) )
 
+  ## Add common terms for both observed and unobserved locations:
+  vY <- as.vector( (M@S0 %*% Sigma_eta * M@S0) %*% rep(1, r) )
+  
+  if(kriging == "universal") {
+    
+    ## Variance due to alpha
+    vY <- vY + as.vector( (X %*% Sigma_alpha * X) %*% rep(1, p) )
+    
+    ## Covariance terms between alpha and eta
+    cov_alpha_eta <- as.vector( (X %*% Cov_alpha_eta * M@S0) %*% rep(1, r) )
+    vY <- vY + 2 * cov_alpha_eta
+  }
+
+  
   if (M@include_fs) {
     
-    ## UNOBSERVED locations: simply add the estimate of sigma2fs to the variance.
+    ## UNOBSERVED locations
+    
+    ## simply add the estimate of sigma2fs to the variance.
     ## If we have a unique fine-scale variance at each spatial BAU (spatio-temporal 
     ## case only), add the sigma2fs associated with that BAU.
     if (M@fs_by_spatial_BAU) {
@@ -239,13 +280,17 @@
       vY[-obsidx] <- vY[-obsidx] + M@sigma2fshat
     }
     
-    ## OBSERVED location: add both var(xi_O|Z) and cov(xi_O, eta | Z)
-    covar      <- (M@S_O * Matrix::t(Cov_eta_xi)) %*% rep(1, r)  # covariance terms
-    vY[obsidx] <- vY[obsidx] + Matrix::diag(Sigma_xi) + 2 * covar
+    ## OBSERVED locations
+    
+    ## add both var(xi_O|Z) and cov(xi_O, eta | Z)
+    vY[obsidx] <- vY[obsidx] + diag(Sigma_xi) + 2 * (M@S_O * t(Cov_eta_xi)) %*% rep(1, r)
+
+    ## Add covariance between alpha and xi_O if we are using universal kriging
+    if(kriging == "universal") 
+      vY[obsidx] <- vY[obsidx] + 2 * (M@X_O * t(Cov_alpha_xi)) %*% rep(1, p)
     
   }
 
-  
   
   # ---- Output ----
   
@@ -283,25 +328,40 @@
 #'   \item{prob_samples}{Samples of the probability of success parameter (only for the relevant response distributions)}
 #'   \item{Z_samples}{Samples of the response variable}
 #' }
-.MC_sampler <- function(M, X, type, n_MC, obs_fs, k, Q_L, obsidx, predict_BAUs, CP){
+.MC_sampler <- function(M, X, type, n_MC, obs_fs, k, Q_L, obsidx, predict_BAUs, CP, kriging){
   
   MC <- list()        # object we will return 
   N   <- nrow(M@S0)   
   mstar <- length(obsidx)
   r   <- ncol(M@S0)   # Total number of basis functions
   
+  ## Number of fixed and random effects
+  p <- length(M@alphahat)
+  s <- r + mstar * M@include_fs
+  
   
   # ---- Generate samples from (eta', xi_O')' ----
   
   ## Must generate samples jointly, as eta and xi_O are correlated.
-
+  
   if (M@include_fs) {
     ## Construct the mean vector of (eta', xi')',
     ## then make an (r + m*) x n_MC matrix whose columns are the mean vector of (eta', xi')'.
     ## Finally, generate (r + m*) x n_MC samples from Gau(0, 1) distribution.
-    mu_eta_xi_O         <- c(as.numeric(M@mu_eta), as.numeric(M@mu_xi))
+    if (kriging == "universal") {
+      mu_eta_xi_O <- c(as.numeric(M@alphahat), as.numeric(M@mu_eta), as.numeric(M@mu_xi))
+    } else {
+      mu_eta_xi_O <- c(as.numeric(M@mu_eta), as.numeric(M@mu_xi))
+    }
+    
     mu_eta_xi_O_Matrix  <- matrix(rep(mu_eta_xi_O, times = n_MC), ncol = n_MC)
-    z <- matrix(rnorm((r + mstar) * n_MC), nrow = r + mstar, ncol = n_MC)
+    
+    if (kriging == "universal") {
+      z <- matrix(rnorm((p + r + mstar) * n_MC), nrow = p + r + mstar, ncol = n_MC)
+    } else {
+      z <- matrix(rnorm((r + mstar) * n_MC), nrow = r + mstar, ncol = n_MC)
+    }
+    
     
     ## Compute the Cholesky factor of  Q (the joint precision matrix of (eta', xi')').
     ## Then, to generate samples from (eta, xi_O), 
@@ -315,10 +375,19 @@
   
   
     ## Separate the eta and xi samples
-    eta     <- eta_xi_O[1:r, ]
-    xi_O    <- eta_xi_O[(r + 1):(r + mstar), ]
+    if (kriging == "universal") {
+      alpha <- eta_xi_O[1:p, , drop = FALSE]
+      eta   <- eta_xi_O[(p + 1):(p + r), ]
+      xi_O  <- eta_xi_O[(p + r + 1):(p + r + mstar), ]
+    } else {
+      eta   <- eta_xi_O[1:r, ]
+      xi_O  <- eta_xi_O[(r + 1):(r + mstar), ]
+    }
+    
+
     
   } else {
+    
     
     ## Construct the mean vector of eta,
     ## then make an r x n_MC matrix whose columns are the mean vector of eta.
@@ -376,11 +445,14 @@
   X_U <- X[-obsidx, ]   # Unobserved fixed effect 'design' matrix
   S_U <- M@S0[-obsidx, ] # Unobserved random effect 'design' matrix
 
-  ## Observed Samples
-  Y_smooth_O <- M@X_O %*% M@alphahat + M@S_O %*% eta
-
-  ## Unobserved Samples
-  Y_smooth_U  <- X_U %*% M@alphahat + S_U %*% eta
+  ## Simulate the smooth Y-process (excluding fs variation) over the observed and unobserved BAUs
+  if (kriging == "universal") {
+    Y_smooth_O <- M@X_O %*% alpha + M@S_O %*% eta
+    Y_smooth_U <- X_U %*% alpha + S_U %*% eta
+  } else {
+    Y_smooth_O <- M@X_O %*% M@alphahat + M@S_O %*% eta
+    Y_smooth_U <- X_U %*% M@alphahat + S_U %*% eta
+  }
   
   ## Combine samples
   Y_smooth_samples  <- rbind(Y_smooth_O, Y_smooth_U)

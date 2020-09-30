@@ -28,10 +28,36 @@
 #'   \item{phi}{Estimate of the dispersion parameter (only for applicable response distributions).}
 #'   \item{log_likelihood}{The log-likelihood of the model evaluated at the final parameter estimates. Can be obtained by calling loglik(M).}
 #' }
-.FRKTMB_fit <- function(M, optimiser, known_sigma2fs, ...) {
-
+.FRKTMB_fit <- function(M, optimiser, known_sigma2fs, kriging = "universal", ...) {
+  
+  
   ## Data and parameter preparation for TMB
   data_params_init <- .TMB_prep(M, known_sigma2fs = known_sigma2fs)
+  
+  # browser()
+  # 
+  # 
+  # 
+  # d <- data_params_init$data
+  # p <- data_params_init$parameters
+  # 
+  # d$Z
+  # 
+  # d$X_O %>% dim
+  # d$S_O %>% dim
+  # d$C_O %>% dim
+  # 
+  # M %>% observed_BAUs() %>% length
+  # 
+  # all(d$Z == round(d$Z))
+  # 
+  # d$K_type
+  # 
+  # p$logsigma2fs %>% exp
+  # 
+  # p$random_effects
+  # p$alpha
+  
   
   ## TMB model compilation
   obj <- MakeADFun(data = data_params_init$data,
@@ -62,8 +88,8 @@
   ## (We do this here rather than in the C++ template because it only needs to 
   ## be done once, as C(Z, phi) depends only on Z for one-parameter exponential 
   ## families)
-  Z <- data_params_init$data$Z
-  k_Z <- as.vector(M@k_Z)
+  # Z <- data_params_init$data$Z
+  # k_Z <- as.vector(M@k_Z)
   
   ## Extract parameter and random effect estimates
   par <- obj$env$last.par.best
@@ -84,8 +110,43 @@
   ## By conditioning on \hat{theta}, we can consider the precision matrix of  
   ## the random effects in isolation.
 
+  ## Number of parameters and fixed effects:
+  p <- length(obj$par)
+  s <- length(estimates$random_effects)
+  
   ## Precision matrix of the random effects only
   Q <- obj$env$spHess(par = obj$env$last.par.best, random = TRUE)
+  
+  warning("Currently assuming universal kriging. This is slightly ineffecient if we are only using simple kriging, as it means we need to call sdreport().")
+  if (kriging == "universal") {
+    ## The joint-precision matrix obtained with obj$env$spHess() is not correct for the 
+    ## parameters and fixed effects block; in particular, the block is just a zero matrix.
+    ## Instead, we need to use sdreport() if we wish to use the uncertainty of the
+    ## parameters and fixed effects.
+    ## However, obj$env$spHess is ok if we just want the random effects uncertainty.
+    Q_joint <- sdreport(obj, getJointPrecision = TRUE)$jointPrecision
+    
+    ## Sanity check: precision matrix of random effects match
+    all(Q == Q_joint[(p+1):(p+s), (p+1):(p+s)])
+    
+    # ## Need to remove any rows which are entirely zero (these rows correspond to 
+    # ## parameters which were not actually used in this model)
+    # rmidx <- which(diag(Q_joint) == 0)
+    # Q_joint <- Q_joint[-rmidx, -rmidx]
+    
+    ## For universal kriging, we will only retain the uncertainty in the fixed effects
+    ## (i.e., in alpha), and not the parameters.
+    retain_idx <- rownames(Q_joint) %in% c("alpha", "random_effects") 
+    Q_joint <- Q_joint[retain_idx, retain_idx]
+    
+    # Q_joint[1:8, 1:8]
+    # Sigma <- solve(Q_joint)
+    # Sigma %>% diag %>% sort %>% tail
+  } else {
+    Q_joint <- Q
+  }
+  
+ 
   
   ## Update the slots of M
   ## Convert to Matrix as these SRE slots require class "Matrix"
@@ -101,13 +162,14 @@
   
   
   M@sigma2fshat <- unname(exp(estimates$logsigma2fs))
-  M@Q_eta_xi <- Q          
+  # M@Q_eta_xi <- Q          
+  M@Q_eta_xi <- Q_joint ## FIXME: change slot name from Q_eta_xi to Q_joint (especially if we retain option for universal kriging)          
   M@phi <- unname(exp(estimates$logphi))
   
   ## log-likelihood evaluated at optimal estimates. After fitting, can be obtained from loglik(M).
   M@log_likelihood <- log_likelihood 
 
-  ## Posterior variance and precision matrix of eta random effects
+  ## Posterior precision matrix of eta random effects
   M@Q_eta <- Q[1:r, 1:r] # Don't need it, but this matrix is easily obtained, so provide anyway
 
   ## For TMB, we do not need to compute these matrices; return an empty matrix.
@@ -156,6 +218,7 @@
   obsidx <- observed_BAUs(M) # FIXME: Use this everywhere, so could just make it into a slot of SRE object
   
   ## Observed k_BAU
+  ## FIXME: need to add a check that k_BAU is present when the data is areal
   if (is.null(M@BAUs$k_BAU)) {
     k_BAU <- -1
   } else {
@@ -169,12 +232,16 @@
     sigma2e = -1
   }
   
+  X_O = M@X_O
+  S_O = M@S_O
+  C_O = M@C_O
+  
   ## Common to all
-  data    <- list(Z = Z, X_O = M@X_O, S_O = M@S_O, C_O = M@C_O,
-                  K_type = M@K_type, response = M@response, link = M@link,
-                  k_BAU = k_BAU, k_Z = k_Z,
-                  temporal = as.integer(is(M@basis,"TensorP_Basis")), 
-                  fs_by_spatial_BAU = M@fs_by_spatial_BAU, sigma2e = sigma2e)
+  data <- list(Z = Z, X_O = X_O, S_O = S_O, C_O = C_O,
+               K_type = M@K_type, response = M@response, link = M@link,
+               k_BAU = k_BAU, k_Z = k_Z,
+               temporal = as.integer(is(M@basis,"TensorP_Basis")), 
+               fs_by_spatial_BAU = M@fs_by_spatial_BAU, sigma2e = sigma2e)
 
   ## The location of the stored spatial basis functions depend on whether the 
   ## data is spatio-temporal or not. Here, we also define the number of temporal
@@ -266,18 +333,42 @@
   if(M@response %in% c("binomial", "negative-binomial"))
     C_O@x <- as.numeric(k_BAU)
   
-  
+
+
   ## Parameter and random effect initialisations.
-  Cpseudoinverse <- t(C_O) %*% chol2inv(chol(C_O %*% t(C_O))) # pseudo-inverse of the incidence matrix 
-  mu_O <- Cpseudoinverse %*% Z0 # least norm solution to C.mu = mu_Z
-  ## Sanity check: C_O %*% mu_O == M@Z
   
+  # ## If we have point-referenced data, need a workaround
+  # ## FIXME: This condition might not be right
+  # if (any(table(as(C_O, "dgTMatrix")@j) > 1)) {
+  #   mu_O <- M@Z
+  # } else {
+  #   Cpseudoinverse <- t(C_O) %*% chol2inv(chol(C_O %*% t(C_O))) # pseudo-inverse of the incidence matrix 
+  #   mu_O <- Cpseudoinverse %*% Z0 # least norm solution to C.mu = mu_Z
+  #   ## Sanity check: C_O %*% mu_O == M@Z
+  #   
+  #   ## For some link functions, mu_0 = 0 causes NaNs; set these to a small positive value
+  #   mu_O[mu_O == 0] <- 0.05
+  #   
+  #   ## Also, the size parameter being 0 also causes NaNs:
+  #   k_BAU[k_BAU == 0] <- 1
+  # }
+  
+  ## If we have point-referenced data and the user has set average_in_BAU = FALSE, we need 
+  ## to average the data that fell in the same BAU (otherwise, we will have non-conformable arrays)
+  ## FIXME: I think I need to add a condition that checks the data is defintely point-referenced (and we don't have overlapping areal data)
+  if (any(table(as(C_O, "dgTMatrix")@j) > 1)) {
+    mu_O <- (t(C_O) / colSums(C_O)) %*% Z0 
+  } else {
+    Cpseudoinverse <- t(C_O) %*% chol2inv(chol(C_O %*% t(C_O))) # pseudo-inverse of the incidence matrix 
+    mu_O <- Cpseudoinverse %*% Z0 # least norm solution to C.mu = mu_Z
+    ## Sanity check: C_O %*% mu_O == M@Z
+  }
+
   ## For some link functions, mu_0 = 0 causes NaNs; set these to a small positive value
   mu_O[mu_O == 0] <- 0.05
   
   ## Also, the size parameter being 0 also causes NaNs:
   k_BAU[k_BAU == 0] <- 1
-
   
   ## Transformed data: convert from data scale to Gaussian Y-scale.
   if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
@@ -350,12 +441,7 @@
   
   ## i. Fixed effects alpha (OLS solution)
   parameters$alpha <- as.vector(chol2inv(chol(t(X_O) %*% X_O)) %*% t(X_O) %*% Y_O) # OLS solution
-  ## Equivalently:
-  # tmp       <- as.data.frame(as.matrix(M@X))
-  # tmp$Y_O  <- Y_O
-  # parameters$alpha        <- coef(lm(update(formula(M@f), Y_O ~ .), tmp))
 
-  
   ## ii. Variance components
   
   ## Dispersion parameter depends on response; some require it to be 1. 

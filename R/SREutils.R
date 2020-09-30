@@ -21,6 +21,7 @@
 #' @param basis object of class \code{Basis} (or \code{TensorP_Basis})
 #' @param BAUs object of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame}, \code{STIDF}, or \code{STFDF}. The object's data frame must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality. If the function \code{FRK} is used directly, then BAUs are created automatically, but only coordinates can then be used as covariates
 #' @param est_error flag indicating whether the measurement-error variance should be estimated from variogram techniques. If this is set to 0, then \code{data} must contain a field \code{std}. Measurement-error estimation is currently not implemented for spatio-temporal datasets
+#' @param include_fs flag indicating whether the fine-scale variation should be include in the model
 #' @param average_in_BAU if \code{TRUE}, then multiple data points falling in the same BAU are averaged; the measurement error of the averaged data point is taken as the average of the individual measurement errors
 #' @param sum_variables vector of strings indicating which variables are to be summed rather than averaged; only applicable if \code{average_in_BAU == TRUE}
 #' @param normalise_wts if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)
@@ -257,9 +258,14 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         }
 
 
-        ## The next step is to allocate all data (both point and polygon referenced) to BAUs. We can either average data points falling in
-        ## the same BAU (average_in_BAU == TRUE) or not (average_in_BAU == FALSE)
+        ## The next step is to allocate all data (both point and polygon referenced) to BAUs. 
+        ## We can either average data points falling in the same 
+        ## BAU (average_in_BAU == TRUE) or not (average_in_BAU == FALSE).
+        ## sum_variables contains a vector of variables which are to be summed
+        ## rather than averaged. Since k_Z must be an integer, always include it. 
         cat("Binning data ...\n")
+        if (response %in% c("binomial", "negative-binomial"))
+            sum_variables = c("k_Z", sum_variables)
         data_proc <- map_data_to_BAUs(data[[i]],       # data object
                                       BAUs,            # BAUs
                                       average_in_BAU = average_in_BAU, # average in BAU?
@@ -323,7 +329,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         ## Construct k the same way Z is constructed when response is binomial
         ## or negative binomial
         if(response %in% c("binomial", "negative-binomial")) {
-            k[[i]] <- Matrix(data_proc$k)
+            k[[i]] <- Matrix(data_proc$k_Z)
         } else {
             k <- Matrix(-1) # a dummy value of type Matrix so that we can pass it in the created SRE object
         }
@@ -347,14 +353,14 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     if(response %in% c("binomial", "negative-binomial")) {
         k <- do.call("rbind",k)
         
-        ## I THINK THE FOLLOWING CAN BE REMOVED AS I HAVE IMPLEMENTED THE SUMMING OPTION IN map_data_to_BAUs()
+        ## FIXME: I THINK THE FOLLOWING CAN BE REMOVED AS I HAVE IMPLEMENTED THE SUMMING OPTION IN map_data_to_BAUs()
         ## Also round the observations and k parameter.
         ## The approach of averaging observations and constant parameters which
         ## fell in the same BAU is not ideal, as we lose information. 
         ## Preferably, we should add both the Z values and k values of 
         ## observations which fell into the same BAU. 
         Z <- round(Z)
-        k <- round(k)
+        k <- ceiling(k)
     } else if (response == "poisson") {
        Z <- round(Z)
     }
@@ -487,7 +493,8 @@ SRE.predict <- function(SRE_model, obs_fs = FALSE, newdata = NULL, pred_polys = 
 setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = FALSE, pred_polys = NULL,
                                               pred_time = NULL, covariances = FALSE, 
                                               n_MC = 400, type = "mean", k = NULL, 
-                                              percentiles = c(5, 95), cred_mass = 0.9) {
+                                              percentiles = c(5, 95), cred_mass = 0.9, 
+                                              kriging = "simple") {
 
 
     SRE_model <- object
@@ -495,14 +502,19 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     if(!is.null(pred_polys))
         newdata <- pred_polys
     
-    ## The user can either provide k in SRE_model@BAUs$k or in the predict call.
+    ## The user can either provide k in SRE_model@BAUs$k_BAU, or in the predict call.
     ## This is so that the user can change k without having to call SRE() and SRE.fit() again.
     ## The k supplied in predict() will take precedence over the k stored in SRE_model@BAUs$k.
-    if (SRE_model@response %in% c("binomial", "negative-binomial"))
+    if (SRE_model@response %in% c("binomial", "negative-binomial")) 
         if (is.null(k)) {
-            k <- 1
-            warning("k not provided for prediction: assuming k is equal to 1 for all prediction polygons.")
+            if(is.null(SRE_model@BAUs$k_BAU)) {
+                k <- 1
+                warning("k not provided for prediction: assuming k is equal to 1 for all prediction polygons.")
+            } else {
+                k <- SRE_model@BAUs$k_BAU
             }
+        }
+
 
     ## Check the arguments are OK
     .check_args3(obs_fs = obs_fs, newdata = newdata, pred_polys = pred_polys,
@@ -558,7 +570,8 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                                   type = type,                 # Whether we are interested in the "link" (Y-scale), "mean", "response"
                                   k = k,                       # Size parameter
                                   percentiles = percentiles,   # Desired percentiles of MC samples 
-                                  cred_mass = cred_mass)          
+                                  cred_mass = cred_mass, 
+                                  kriging = kriging)          
     } 
 
     
@@ -2106,13 +2119,13 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
     
     ## Check k (for data)
     if (response %in% c("binomial", "negative-binomial")) {
-        if (!all(sapply(data, function(l) "k" %in% names(l)))) {
+        if (!all(sapply(data, function(l) "k_Z" %in% names(l)))) {
             stop("For binomial or negative-binomial data, the known constant 
-                 parameter k must be provided for each observation.")
-        } else if (!all(sapply(data, function(l) class(l$k) %in% c("numeric", "integer")))) {
+                 parameter k must be provided for each observation. Please provide this in a field called 'k_Z'.")
+        } else if (!all(sapply(data, function(l) class(l$k_Z) %in% c("numeric", "integer")))) {
             stop("The known constant parameter k must contain only positive integers.")
-        } else if (any(sapply(data, function(l) l$k <= 0)) | 
-                   !all(sapply(data, function(l) l$k == round(l$k)))) {
+        } else if (any(sapply(data, function(l) l$k_Z <= 0)) | 
+                   !all(sapply(data, function(l) l$k_Z == round(l$k_Z)))) {
             stop("The known constant parameter k must contain only positive integers.")
         }
     }

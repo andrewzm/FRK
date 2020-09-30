@@ -94,7 +94,8 @@ SRE.predict(
   type = "mean",
   k = NULL,
   percentiles = c(5, 95),
-  cred_mass = 0.9
+  cred_mass = 0.9,
+  kriging = "simple"
 )
 
 loglik(SRE_model)
@@ -154,6 +155,8 @@ loglik(SRE_model)
 
 \item{normalise_basis}{flag indicating whether to normalise the basis functions so that they reproduce a stochastic process with approximately constant variance spatially}
 
+\item{include_fs}{flag indicating whether the fine-scale variation should be include in the model}
+
 \item{fs_by_spatial_BAU}{if \code{TRUE}, and each spatial BAU is observed at least 10 times, then each BAU is given a unique fine-scale variation parameter}
 
 \item{SRE_model}{object returned from the constructor \code{SRE()} containing all the parameters and information on the SRE model}
@@ -171,6 +174,8 @@ loglik(SRE_model)
 \item{covariances}{logical variable indicating whether prediction covariances should be returned or not. If set to \code{TRUE}, a maximum of 4000 prediction locations or polygons are allowed.}
 
 \item{object}{object of class \code{SRE}}
+
+\item{kriging}{A string indicating the kind of kriging (\code{"simple"} or \code{"universal"})}
 }
 \description{
 The Spatial Random Effects (SRE) model is the central object in FRK. The function \code{FRK} provides a wrapper for the construction and estimation of the SRE object from data, using the functions \code{SRE} (the object constructor) and \code{SRE.fit} (for fitting it to the data). Please see \code{\link{SRE-class}} for more details on the SRE object's properties and methods.
