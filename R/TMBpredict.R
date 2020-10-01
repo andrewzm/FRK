@@ -55,10 +55,12 @@
   r <- ncol(M@S0)
   s <- r + mstar * M@include_fs
   
-  ## Permuted Cholesky factor
+  ## Permuted Cholesky factor. If we are doing universal kriging, keep the joint precision 
+  ## matrix od the fixed and random effects. Otherwise, if we are doing simple kriging, 
+  ## use only the random effect block of the precision matrix.
   if (kriging == "universal") {
     Q_joint <- M@Q_eta_xi
-  } else {
+  } else if (kriging == "simple") {
     Q_joint <- M@Q_eta_xi[-(1:p), -(1:p)]
   }
   Q_L <- sparseinv::cholPermute(Q = Q_joint)
@@ -229,10 +231,10 @@
 
   if (kriging == "universal") {
     Sigma_alpha <- Sigma[1:p, 1:p, drop = FALSE]
-    Sigma_random <- Sigma[-(1:p), -(1:p)]
+    Sigma_random <- Sigma[-(1:p), -(1:p), drop = FALSE]
     Cov_alpha_eta <- Sigma[1:p, (p+1):(p+r), drop = FALSE]
     Cov_alpha_xi <- Sigma[1:p, (p + r +1):(p+r+mstar), drop = FALSE]
-  } else {
+  } else if (kriging == "simple") {
     Sigma_random <- Sigma
   }
   

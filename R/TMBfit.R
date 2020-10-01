@@ -28,7 +28,7 @@
 #'   \item{phi}{Estimate of the dispersion parameter (only for applicable response distributions).}
 #'   \item{log_likelihood}{The log-likelihood of the model evaluated at the final parameter estimates. Can be obtained by calling loglik(M).}
 #' }
-.FRKTMB_fit <- function(M, optimiser, known_sigma2fs, kriging = "universal", ...) {
+.FRKTMB_fit <- function(M, optimiser, known_sigma2fs, ...) {
   
   
   ## Data and parameter preparation for TMB
@@ -114,10 +114,9 @@
   p <- length(obj$par)
   s <- length(estimates$random_effects)
   
-  ## Precision matrix of the random effects only
-  Q <- obj$env$spHess(par = obj$env$last.par.best, random = TRUE)
+
   
-  warning("Currently assuming universal kriging. This is slightly ineffecient if we are only using simple kriging, as it means we need to call sdreport().")
+  kriging = "universal"
   if (kriging == "universal") {
     ## The joint-precision matrix obtained with obj$env$spHess() is not correct for the 
     ## parameters and fixed effects block; in particular, the block is just a zero matrix.
@@ -125,9 +124,6 @@
     ## parameters and fixed effects.
     ## However, obj$env$spHess is ok if we just want the random effects uncertainty.
     Q_joint <- sdreport(obj, getJointPrecision = TRUE)$jointPrecision
-    
-    ## Sanity check: precision matrix of random effects match
-    all(Q == Q_joint[(p+1):(p+s), (p+1):(p+s)])
     
     # ## Need to remove any rows which are entirely zero (these rows correspond to 
     # ## parameters which were not actually used in this model)
@@ -139,11 +135,9 @@
     retain_idx <- rownames(Q_joint) %in% c("alpha", "random_effects") 
     Q_joint <- Q_joint[retain_idx, retain_idx]
     
-    # Q_joint[1:8, 1:8]
-    # Sigma <- solve(Q_joint)
-    # Sigma %>% diag %>% sort %>% tail
   } else {
-    Q_joint <- Q
+    ## Precision matrix of the random effects only
+    Q_joint <- obj$env$spHess(par = obj$env$last.par.best, random = TRUE)  
   }
   
  
@@ -356,6 +350,7 @@
   ## If we have point-referenced data and the user has set average_in_BAU = FALSE, we need 
   ## to average the data that fell in the same BAU (otherwise, we will have non-conformable arrays)
   ## FIXME: I think I need to add a condition that checks the data is defintely point-referenced (and we don't have overlapping areal data)
+  ## FIXME: average_in_BAU is only considered when we have point data; this code should only come into play for point-data.
   if (any(table(as(C_O, "dgTMatrix")@j) > 1)) {
     mu_O <- (t(C_O) / colSums(C_O)) %*% Z0 
   } else {
