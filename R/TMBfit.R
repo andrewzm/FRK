@@ -114,8 +114,6 @@
   p <- length(obj$par)
   s <- length(estimates$random_effects)
   
-
-  
   kriging = "universal"
   if (kriging == "universal") {
     ## The joint-precision matrix obtained with obj$env$spHess() is not correct for the 
@@ -125,23 +123,15 @@
     ## However, obj$env$spHess is ok if we just want the random effects uncertainty.
     Q_joint <- sdreport(obj, getJointPrecision = TRUE)$jointPrecision
     
-    # ## Need to remove any rows which are entirely zero (these rows correspond to 
-    # ## parameters which were not actually used in this model)
-    # rmidx <- which(diag(Q_joint) == 0)
-    # Q_joint <- Q_joint[-rmidx, -rmidx]
-    
     ## For universal kriging, we will only retain the uncertainty in the fixed effects
     ## (i.e., in alpha), and not the parameters.
     retain_idx <- rownames(Q_joint) %in% c("alpha", "random_effects") 
     Q_joint <- Q_joint[retain_idx, retain_idx]
-    
-  } else {
+  } else if (kriging == "simple") {
     ## Precision matrix of the random effects only
     Q_joint <- obj$env$spHess(par = obj$env$last.par.best, random = TRUE)  
   }
-  
- 
-  
+
   ## Update the slots of M
   ## Convert to Matrix as these SRE slots require class "Matrix"
   r  <- nbasis(M)
@@ -156,17 +146,14 @@
   
   
   M@sigma2fshat <- unname(exp(estimates$logsigma2fs))
-  # M@Q_eta_xi <- Q          
   M@Q_eta_xi <- Q_joint ## FIXME: change slot name from Q_eta_xi to Q_joint (especially if we retain option for universal kriging)          
   M@phi <- unname(exp(estimates$logphi))
   
   ## log-likelihood evaluated at optimal estimates. After fitting, can be obtained from loglik(M).
   M@log_likelihood <- log_likelihood 
-
-  ## Posterior precision matrix of eta random effects
-  M@Q_eta <- Q[1:r, 1:r] # Don't need it, but this matrix is easily obtained, so provide anyway
-
+  
   ## For TMB, we do not need to compute these matrices; return an empty matrix.
+  M@Q_eta <- Matrix()
   M@S_eta <- Matrix()
   M@Khat_inv <- Matrix()
   M@Khat <- Matrix()
