@@ -86,9 +86,13 @@
   # ------ Monte Carlo sampling ------
   
   ## Generate Monte Carlo samples at all BAUs
-  MC <- .MC_sampler(M = M, X = X, type = type, obs_fs = obs_fs, 
+  MC_list <- .MC_sampler(M = M, X = X, type = type, obs_fs = obs_fs, 
                     n_MC = n_MC, k = k, Q_L = Q_L, obsidx = obsidx, 
                     predict_BAUs = predict_BAUs, CP = CP, kriging = kriging)
+  
+  MC <- MC_list$MC
+  MC_alpha_eta_xi <- MC_list$MC_alpha_eta_xi
+  
 
   ## We do not allow aggregation of the Y-process when predicting over arbitrary polygons
   if(!predict_BAUs)
@@ -182,7 +186,7 @@
   
   ## Return the predictions, and the MC samples at either the BAUs (if we are 
   ## predicting over BAUs) or over the user specified arbitrary polygons.
-  return(list(newdata = newdata, MC = MC))
+  return(list(newdata = newdata, MC = MC, MC_alpha_eta_xi = MC_alpha_eta_xi))
 }
 
 
@@ -332,7 +336,8 @@
 #' }
 .MC_sampler <- function(M, X, type, n_MC, obs_fs, k, Q_L, obsidx, predict_BAUs, CP, kriging){
   
-  MC <- list()        # object we will return 
+  MC <- list()              # object we will return holding the quantities of interest (Y, mu, Z)
+  MC_alpha_eta_xi <- list() # another object holding the alpha, eta, xi samples
   N   <- nrow(M@S0)   
   mstar <- length(obsidx)
   r   <- ncol(M@S0)   # Total number of basis functions
@@ -379,6 +384,7 @@
     ## Separate the eta and xi samples
     if (kriging == "universal") {
       alpha <- eta_xi_O[1:p, , drop = FALSE]
+      MC_alpha_eta_xi$alpha <- alpha
       eta   <- eta_xi_O[(p + 1):(p + r), ]
       xi_O  <- eta_xi_O[(p + r + 1):(p + r + mstar), ]
     } else {
@@ -408,6 +414,8 @@
     eta  <- as.matrix(y + mu_eta_Matrix) # add the mean to y
   }
   
+  
+  MC_alpha_eta_xi$eta <- eta
 
   ## We now have two matrices, eta and xi_O:
   ## row i of eta corresponds to n_MC MC samples of eta_i,
@@ -478,6 +486,7 @@
   ## Construct the samples from the latent process Y 
   if (M@include_fs) {
     xi_samples  <- Matrix::t(P) %*% xi_samples
+    MC_alpha_eta_xi$xi_samples <- xi_samples
     Y_samples   <- Y_smooth_samples + xi_samples
   } else {
     Y_samples <- Y_smooth_samples
@@ -495,6 +504,9 @@
   
   ## If Y is the ONLY quantity of interest, exit the function.
   if (!("mean" %in% type) & !("response" %in% type)) return(MC) 
+  
+  
+  
   
   
   # ---- Apply inverse-link function to the samples to obtain conditional mean ----
@@ -597,5 +609,5 @@
   MC$Z_samples <- Z_samples
   
   
-  return(MC)
+  return(list(MC=MC, MC_alpha_eta_xi = MC_alpha_eta_xi))
 }
