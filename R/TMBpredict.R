@@ -94,6 +94,8 @@
   MC_alpha_eta_xi <- MC_list$MC_alpha_eta_xi
   
 
+
+
   ## We do not allow aggregation of the Y-process when predicting over arbitrary polygons
   if(!predict_BAUs)
     MC$Y_samples <- NULL
@@ -503,10 +505,7 @@
     
   
   ## If Y is the ONLY quantity of interest, exit the function.
-  if (!("mean" %in% type) & !("response" %in% type)) return(MC) 
-  
-  
-  
+  if (!("mean" %in% type) & !("response" %in% type)) return(list(MC=MC, MC_alpha_eta_xi = MC_alpha_eta_xi)) 
   
   
   # ---- Apply inverse-link function to the samples to obtain conditional mean ----
@@ -566,7 +565,7 @@
   
   
   ## If the response is not a quanitity of interest, exit the function
-  if (!("response" %in% type)) return(MC)
+  if (!("response" %in% type)) return(list(MC=MC, MC_alpha_eta_xi = MC_alpha_eta_xi))
  
   
   # ---- Sample the response variable, Z ----
@@ -607,7 +606,7 @@
   
   ## Add Z_samples to list object
   MC$Z_samples <- Z_samples
-  
+
   
   return(list(MC=MC, MC_alpha_eta_xi = MC_alpha_eta_xi))
 }
