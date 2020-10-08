@@ -1001,7 +1001,7 @@ setMethod("observed_BAUs", signature(SRE_model = "SRE"), function (SRE_model) {
 setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
     
     ## Id of observed BAUs:
-    obsidx <- observed_BAUs(M)
+    obsidx <- observed_BAUs(SRE_model)
     
     ## Id of unobserved BAUs (ncol(SRE_model@Cmat) is the total number of BAUs):
     unobsidx <- (1:ncol(SRE_model@Cmat))[-obsidx]

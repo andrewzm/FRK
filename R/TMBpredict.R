@@ -587,10 +587,7 @@
     Z_samples <- statmod::rinvgauss(n, mean = c(t(mu_samples)), dispersion = M@phi)
   } else if (M@response == "negative-binomial") {
     k_vec <- rep(k, each = n_MC)
-    ## FIXME: currently, we do not (and cannot) compute prob)samples over abitrary prediction ploygons. 
-    ## This means we need to find a way to simulate rnbinom without using prob_samples.
-    ## If I cannot do this, then I need to add a check that newdata is not NULL when response = negative-binomial.
-    Z_samples <- rnbinom(n, size = k_vec, prob = c(t(prob_samples)))
+    Z_samples <- rnbinom(n, size = k_vec, mu = c(t(mu_samples)))
   } else if (M@response == "binomial") {
     k_vec <- rep(k, each = n_MC)
     theta <- log((c(t(mu_samples))/k_vec) / (1 - (c(t(mu_samples))/k_vec)))
