@@ -35,28 +35,8 @@
   data_params_init <- .TMB_prep(M, known_sigma2fs = known_sigma2fs)
   
   # browser()
-  # 
-  # 
-  # 
   # d <- data_params_init$data
   # p <- data_params_init$parameters
-  # 
-  # d$Z
-  # 
-  # d$X_O %>% dim
-  # d$S_O %>% dim
-  # d$C_O %>% dim
-  # 
-  # M %>% observed_BAUs() %>% length
-  # 
-  # all(d$Z == round(d$Z))
-  # 
-  # d$K_type
-  # 
-  # p$logsigma2fs %>% exp
-  # 
-  # p$random_effects
-  # p$alpha
   
   
   ## TMB model compilation
@@ -227,7 +207,7 @@
   ## The location of the stored spatial basis functions depend on whether the 
   ## data is spatio-temporal or not. Here, we also define the number of temporal
   ## basis function locations (equal to 1 if in a spatial setting).
-  if (data$temporal == TRUE) {
+  if (data$temporal) {
     spatial_dist_matrix <- M@D_basis[[1]]
     spatial_basis <- M@basis@Basis1  
     data$r_t <- M@basis@Basis2@n

@@ -391,12 +391,10 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     
     
     ## Some matrices evaluated at observed BAUs only:
-    ## In R, we can just subset using obsidx. However, it's also nice to check 
-    ## that the maths I wrote using the A matrix is correct.
     obsidx <- unique(as(Cmat, "dgTMatrix")@j) + 1 
-    # A <- sparseMatrix(i = 1:length(obsidx), j = obsidx, x = 1)
     C_O <- Cmat[, obsidx, drop = FALSE] 
     S_O <- S0[obsidx, , drop = FALSE]
+    S_O <- drop0(S_O) # FIXME: Shouldn't need to do this. For some reason S0 results in explicit zeros when nres = 1
     X_BAU <- as(.extract_BAU_X_matrix(f, BAUs), "matrix") # fixed-effect design matrix at BAU level
     X_O <- X_BAU[obsidx, , drop = FALSE]
     

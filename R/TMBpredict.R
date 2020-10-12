@@ -215,6 +215,15 @@
   p <- length(M@alphahat)
   s <- r + mstar * M@include_fs
   
+  ## number of spatial and temporal BAUs
+  if (is(M@basis,"TensorP_Basis")) {
+    ns <- length(M@BAUs@sp)
+    nt <- length(unique(M@BAUs@endTime))
+  } else {
+    ns <- length(M@BAUs)
+  }
+  
+  
   # ---- Sparse-inverse-subset of Q (acting as a proxy for the true covariance matrix) ----
 
   
@@ -340,6 +349,14 @@
   ## Number of fixed and random effects
   p <- length(M@alphahat)
   s <- r + mstar * M@include_fs
+  
+  ## number of spatial and temporal BAUs
+  if (is(M@basis,"TensorP_Basis")) {
+    ns <- length(M@BAUs@sp)
+    nt <- length(unique(M@BAUs@endTime))
+  } else {
+    ns <- length(M@BAUs)
+  }
   
   
   # ---- Generate samples from (eta', xi_O')' ----
