@@ -73,10 +73,10 @@
   ## Posterior expectation E(Y|Z) at each prediction location (i.e., at each BAU).
   ## large- and medium-scale variation terms:
   ## FIXME: change from vector and leave as a matrix form. Then we can remove other as.vector() calls too
-  p_Y <- as.vector(X %*% M@alphahat + M@S0 %*% M@mu_eta)  # see Equation (2.1.2)
+  # p_Y <- as.vector(X %*% M@alphahat + M@S0 %*% M@mu_eta)  # see Equation (2.1.2)
 
   ## Add posterior estimate of xi_O at observed BAUs
-  p_Y[obsidx]   <-  p_Y[obsidx] + as.vector(M@mu_xi)
+  # p_Y[obsidx]   <-  p_Y[obsidx] + as.vector(M@mu_xi)
   
   ## Posterior variance of Y at each prediction location.
   ## Note that MSPE(E(Y|Z), Y) is approximated by var(Y|Z).
@@ -129,10 +129,10 @@
   newdata@data[, paste0("RMSPE_", QOI)] <- RMSPE
   
   ## Use p_Y (computed with estimates from TMB) as the predictor for Y, rather than the noisy MC estimates
-  if("link" %in% type & predict_BAUs) {
-    newdata$p_Y <- p_Y
-    newdata$RMSPE_Y <- sqrt(MSPE_Y)
-  }
+  # if("link" %in% type & predict_BAUs) {
+  #   newdata$p_Y <- p_Y
+  #   newdata$RMSPE_Y <- sqrt(MSPE_Y)
+  # }
   
   ## Percentiles and HPD interval bounds
   newdata@data <- .concat_percentiles_to_df(data = newdata@data, MC = MC, 

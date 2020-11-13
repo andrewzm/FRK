@@ -1292,8 +1292,6 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
               
               ## FIXME: I changed this to .safe_mean temporarily
               BAUs_aux_data <- .parallel_over(data_sp, BAU_as_points,fn=.safe_mean)
-              ?over
-              dim(BAUs_aux_data)
               
               ## Now include the ID in the table so we merge by it later
               BAUs_aux_data$id <- as.character(row.names(BAUs_aux_data))
