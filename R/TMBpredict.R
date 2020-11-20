@@ -178,8 +178,9 @@
   ## return newdata object. Only add those coordinates not already in the data.
   tmp <- which(!(colnames(coordinates(newdata)) %in% names(newdata@data)))
   if (length(tmp))
-    newdata@data <- cbind(newdata@data, coordinates(newdata)[, tmp])  
-  
+    newdata@data <- cbind(newdata@data, coordinates(newdata)[, tmp]) 
+
+    
   ## Return the predictions, and the MC samples at either the BAUs (if we are 
   ## predicting over BAUs) or over the user specified arbitrary polygons.
   return(list(newdata = newdata, MC = MC))

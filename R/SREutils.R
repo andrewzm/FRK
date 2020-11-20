@@ -179,7 +179,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     if (fs_by_spatial_BAU) {
         if(!is(BAUs, "STFDF"))
             stop("A unique fine-scale variance can only be associated with each spatial BAU if the application is spatio-temporal (i.e., the BAUs are of class 'STFDF').
-                 Please either set fs_by_spatial_BAU to FALSE if yo uare not in a spatio-temporal application.")
+                 Please either set fs_by_spatial_BAU to FALSE if you are not in a spatio-temporal application.")
 
     } 
     
@@ -203,11 +203,9 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     ## basis functions, then we average the basis functions over the polygons
     ## using Monte Carlo integration with 1000 samples per polygon.
     
-    if (is(BAUs, "STFDF")) {
-        n_BAUs_spatial <- length(BAUs@sp)
-    } else {
-        n_BAUs_spatial <- length(BAUs)
-    }
+    ## Number of spatial BAUs:
+    # if (is(BAUs, "STFDF")) ns <- length(BAUs@sp) else ns <- length(BAUs)
+    ns <- dim(BAUs)[1] 
     
     if (is(basis,"TensorP_Basis")) {
         n_basis_spatial <- nbasis(basis@Basis1)
@@ -215,15 +213,11 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         n_basis_spatial <- nbasis(basis)
     }
     
-
-    if(n_BAUs_spatial < n_basis_spatial) {
+    if(ns < n_basis_spatial) {
         S0 <- eval_basis(basis, BAUs)     # evaluate basis functions by averaging the basis functions over the polygons
     } else {
         S0 <- eval_basis(basis,.polygons_to_points(BAUs))     # evaluate basis functions over BAU centroids
     }
-    
-
-    
     
     ## Normalise basis functions for the prior process to have constant variance. This was seen to pay dividends in
     ## latticekrig, however we only do it once initially
@@ -399,6 +393,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     X_O <- X_BAU[obsidx, , drop = FALSE]
     
 
+    ## Check if each spatial BAU is observed enough times for a unique fs to be associated with each spatial BAU
     if (fs_by_spatial_BAU) {
         fewest_obs <-  min(table(obsidx %% ns)) # count of observations from spatial BAU with fewest observations
         if(fewest_obs == 0) {

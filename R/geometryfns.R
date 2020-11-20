@@ -305,6 +305,7 @@ setMethod("coordnames",signature(x="STIDF"),function(x) {
 #' @param tunit temporal unit when requiring space-time BAUs. Can be "secs", "mins", "hours", etc.
 #' @param xlims limits of the horizontal axis (overrides automatic selection)
 #' @param ylims limits of the vertical axis (overrides automatic selection)
+#' @param spatial_BAUs object of class \code{SpatialPolygonsDataFrame} or \code{SpatialPixelsDataFrame} representing the spatial BAUs to be use in a spatio-temporal setting (if left \code{NULL}, the spatial BAUs are constructed automatically using the data)
 #' @param ... currently unused
 #' @details \code{auto_BAUs} constructs a set of Basic Areal Units (BAUs) used both for data pre-processing and for prediction. As such, the BAUs need to be of sufficienly fine resolution so that inferences are not affected due to binning.
 #'
@@ -345,7 +346,8 @@ setMethod("coordnames",signature(x="STIDF"),function(x) {
 #' @export
 auto_BAUs <- function(manifold, type=NULL,cellsize = NULL,
                       isea3h_res=NULL,data=NULL,nonconvex_hull=TRUE,
-                      convex=-0.05,tunit=NULL,xlims=NULL,ylims=NULL,...) {
+                      convex=-0.05,tunit=NULL,xlims=NULL,ylims=NULL,
+                      spatial_BAUs = NULL, ...) {
     
     ## Basic checks and setting of defaults
     if(!(is(data,"Spatial") | is(data,"ST") | is(data,"Date") | is.null(data)))
@@ -431,15 +433,25 @@ auto_BAUs <- function(manifold, type=NULL,cellsize = NULL,
     if(grepl("ST",class(manifold)) & is.null(tunit))
         tunit <- .choose_BAU_tunit_from_data(data)
 
+    ## Check that spatial_BAUs is the correct class, and we are in a space-time setting
+    if(!is.null(spatial_BAUs)) {
+        if(!grepl("ST",class(manifold)))
+            stop("The argument spatial_BAUs only applicable in a space-time setting")
+        if(!(is(spatial_BAUs, "SpatialPolygons") | is(spatial_BAUs, "SpatialPixels")))
+            stop("The argument spatial_BAUs should be of class SpatialPolygonsDataFrame, or SpatialPixelsDataFrame")
+    }
+
+        
     
     ## Call the internal function with checked arguments
     auto_BAU(manifold=manifold,type=type,cellsize=cellsize,resl=resl,d=data,
-             nonconvex_hull=nonconvex_hull,convex=convex,tunit=tunit,xlims=xlims,ylims=ylims)
+             nonconvex_hull=nonconvex_hull,convex=convex,tunit=tunit,xlims=xlims,ylims=ylims, 
+             spatial_BAUs = spatial_BAUs)
 }
 
 ## Automatically generate BAUs on the real line
 setMethod("auto_BAU",signature(manifold="real_line"),
-          function(manifold,type="grid",cellsize = 1,resl=resl,d=NULL,xlims=NULL,...) {
+          function(manifold,type="grid",cellsize = 1,resl=resl,d=NULL,xlims=NULL, ...) {
 
               if(is.null(d))
                   stop("Data must be supplied when generating BAUs on a plane")
@@ -699,7 +711,7 @@ setMethod("auto_BAU",signature(manifold="plane"),
 
 ## Constructing BAUs on the surface of the sphere
 setMethod("auto_BAU",signature(manifold="sphere"),
-          function(manifold,type="grid",cellsize = c(1,1),resl=2,d=NULL,xlims=NULL,ylims=NULL,...) {
+          function(manifold,type="grid",cellsize = c(1,1),resl=2,d=NULL,xlims=NULL,ylims=NULL, ...) {
 
               ## For this function d (the data) may be NULL in which case the whole sphere is covered with BAUs
               if(is.null(d))                                  # set CRS if data not provided
@@ -852,7 +864,7 @@ setMethod("auto_BAU",signature(manifold="sphere"),
 ## Constructing BAUs on the surface of the sphere x time
 setMethod("auto_BAU",signature(manifold = c("STmanifold")),
           function(manifold,type="grid",cellsize = c(1,1,1),resl=resl,d=NULL,
-                   nonconvex_hull=TRUE,convex=-0.05,xlims=NULL,ylims=NULL,...) {
+                   nonconvex_hull=TRUE,convex=-0.05,xlims=NULL,ylims=NULL, spatial_BAUs, ...) {
 
               ## In this function user can opt to just supply a Date object, in which case
               ## the whole surface of the sphere is covered and the temporal part of the BAUs
@@ -877,22 +889,51 @@ setMethod("auto_BAU",signature(manifold = c("STmanifold")),
                   spat_manifold <- sphere()
               } else stop("Cannot recognise manifold")
 
-              ## Set cellsize if not supplied. Time cellsize defaults to 1
-              if(is.null(cellsize) & !is.null(space_part)) {
+              ## Set cellsize if not supplied. Time cellsize defaults to 1.
+              ## We only need the temporal cellsize if spatial_BAUs are provided 
+              ## by the user. Also cater for the possiblity that the user provides 
+              ## only the temporal cellsize when they have set the spatial_BAUs 
+              ## (which makes sense to do). Do this by just tkaing the last element 
+              ## of cellsize, which will be the only element if it is a scalar, 
+              ## and the third element if they provide three elements as was the previous
+              ## required behaviour.
+              
+              if(!is.null(spatial_BAUs)) {
+                  if(is.null(cellsize)) {
+                      cellsize_temp <- 1
+                  } else {
+                      cellsize_temp <- last(cellsize)
+                  }
+              } else if(is.null(cellsize) & !is.null(space_part)) {
                   cellsize_spat <-  .choose_BAU_cellsize_from_data(space_part)
                   cellsize_temp <- 1
               } else {
-                  cellsize_spat <- cellsize[1:2]
+                  cellsize_spat <- cellsize[1:2] 
                   cellsize_temp <- cellsize[3]
               }
 
-              
 
-              ## Construct the spatial BAUs
-              spatial_BAUs <- auto_BAU(manifold=spat_manifold,cellsize=cellsize_spat,
-                                       resl=resl,type=type,d=space_part,nonconvex_hull=nonconvex_hull,
-                                       convex=convex,xlims=xlims,ylims=ylims,...)
-              
+              ## Redefine the data if spatial_BAUs was provided. 
+              ## This is so that the spatial_BAUs play nicely with other functions, 
+              ## and in case the user wants to specify covariates in the final 
+              ## ST_BAUs object (in which case, they cannot have the same covariate
+              ## names as those stored in spatial_BAUs, so here we will prevent that 
+              ## possible naming clash). I will define it in a way that recreates 
+              ## the behaviour of auto_BAUS() when spatial_BAUs is NULL; specifically, 
+              ## the only data we want is the spatial coordinates.
+              ## (Also, creating  data converts SpatialPolygons to SpatialPolygonsDataFrame)
+              if(!is.null(spatial_BAUs)) {
+                  spatial_BAUs$tmp <- 1
+                  spatial_BAUs@data <- as.data.frame(coordinates(spatial_BAUs))
+              }
+                 
+
+
+              ## Construct the spatial BAUs (if spatial_BAUs not provided)
+              if(is.null(spatial_BAUs)) 
+                  spatial_BAUs <- auto_BAU(manifold=spat_manifold,cellsize=cellsize_spat,
+                                           resl=resl,type=type,d=space_part,nonconvex_hull=nonconvex_hull,
+                                           convex=convex,xlims=xlims,ylims=ylims,...)
               
               ## Construct the temporal BAUs
               temporal_BAUs <- auto_BAU(manifold=real_line(), cellsize=cellsize_temp,
@@ -910,6 +951,7 @@ setMethod("auto_BAU",signature(manifold = c("STmanifold")),
               STBAUs <- STFDF(spatial_BAUs,
                               temporal_BAUs,
                               data = df_info)
+
 
               ## Return the ST BAUs
               return(STBAUs)
