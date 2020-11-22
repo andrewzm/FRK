@@ -305,7 +305,7 @@ setMethod("coordnames",signature(x="STIDF"),function(x) {
 #' @param tunit temporal unit when requiring space-time BAUs. Can be "secs", "mins", "hours", etc.
 #' @param xlims limits of the horizontal axis (overrides automatic selection)
 #' @param ylims limits of the vertical axis (overrides automatic selection)
-#' @param spatial_BAUs object of class \code{SpatialPolygonsDataFrame} or \code{SpatialPixelsDataFrame} representing the spatial BAUs to be use in a spatio-temporal setting (if left \code{NULL}, the spatial BAUs are constructed automatically using the data)
+#' @param spatial_BAUs object of class \code{SpatialPolygonsDataFrame} or \code{SpatialPixelsDataFrame} representing the spatial BAUs to be used in a spatio-temporal setting (if left \code{NULL}, the spatial BAUs are constructed automatically using the data)
 #' @param ... currently unused
 #' @details \code{auto_BAUs} constructs a set of Basic Areal Units (BAUs) used both for data pre-processing and for prediction. As such, the BAUs need to be of sufficienly fine resolution so that inferences are not affected due to binning.
 #'

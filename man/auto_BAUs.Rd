@@ -15,6 +15,7 @@ auto_BAUs(
   tunit = NULL,
   xlims = NULL,
   ylims = NULL,
+  spatial_BAUs = NULL,
   ...
 )
 }
@@ -38,6 +39,8 @@ auto_BAUs(
 \item{xlims}{limits of the horizontal axis (overrides automatic selection)}
 
 \item{ylims}{limits of the vertical axis (overrides automatic selection)}
+
+\item{spatial_BAUs}{object of class \code{SpatialPolygonsDataFrame} or \code{SpatialPixelsDataFrame} representing the spatial BAUs to be used in a spatio-temporal setting (if left \code{NULL}, the spatial BAUs are constructed automatically using the data)}
 
 \item{...}{currently unused}
 }
