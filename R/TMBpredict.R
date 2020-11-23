@@ -56,7 +56,7 @@
   s <- r + mstar * M@include_fs
   
   ## Permuted Cholesky factor. If we are doing universal kriging, keep the joint precision 
-  ## matrix od the fixed and random effects. Otherwise, if we are doing simple kriging, 
+  ## matrix of the fixed and random effects. Otherwise, if we are doing simple kriging, 
   ## use only the random effect block of the precision matrix.
   if (kriging == "universal") {
     Q_joint <- M@Q_eta_xi
@@ -80,7 +80,11 @@
   
   ## Posterior variance of Y at each prediction location.
   ## Note that MSPE(E(Y|Z), Y) is approximated by var(Y|Z).
-  MSPE_Y  <- .Y_var(M = M, Q_joint = Q_joint, Q_L = Q_L, obsidx = obsidx, X = X, kriging = kriging) 
+  
+  
+  # Analytic <- TRUE
+  # MSPE_Y  <- .Y_var(M = M, Q_joint = Q_joint, Q_L = Q_L, obsidx = obsidx, X = X, kriging = kriging)
+  
   
   
   # ------ Monte Carlo sampling ------
@@ -95,9 +99,8 @@
     MC$Y_samples <- NULL
   
   ## Remove other quantities if the user is not interested in them
-  if(!("link" %in% type)) {
+  if(!("link" %in% type)) 
     MC$Y_samples <- NULL
-  } 
   
   if(!("mean" %in% type)) {
     MC$mu_samples <- NULL
