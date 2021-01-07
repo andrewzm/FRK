@@ -120,7 +120,7 @@
   
   ## Now update newdata with the predictions, RMSPE, and percentiles. 
   ## (See https://datascience.stackexchange.com/a/8924 for a description of what this gsub is doing.)
-  QOI <- gsub("_.*", "", names(MC)) # quantities of interest
+  QOI <- gsub("_.*", "", names(MC)) # Quantities Of Interest
   
   ## Create a dummy data column just incase newdata is of class "SpatialPolygons" 
   ## and we need to convert to "SpatialPolygonsDataframe"
@@ -128,8 +128,9 @@
   newdata$dummy_blah123 <- NULL
   
   ## Predictions and RMSPE
-  newdata@data[, paste0("p_", QOI)] <- predictions
-  newdata@data[, paste0("RMSPE_", QOI)] <- RMSPE
+  colnames(predictions) <- paste0("p_", QOI)
+  colnames(RMSPE) <- paste0("RMSPE_", QOI)
+  newdata@data <- cbind(newdata@data, predictions, RMSPE)
   
   ## Use p_Y (computed with estimates from TMB) as the predictor for Y, rather than the noisy MC estimates
   # if("link" %in% type & predict_BAUs) {

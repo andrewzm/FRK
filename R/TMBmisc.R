@@ -103,7 +103,6 @@
     
     if (!is.null(percentiles)) {
       Q           <- .prediction_interval(X, interval_type = "central", percentiles = percentiles, cred_mass = cred_mass)
-      colnames(Q)
       colnames(Q) <- paste(QOI[i], "percentile", as.character(percentiles), sep = "_")
       data        <- cbind(data, Q)
     }

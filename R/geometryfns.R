@@ -1271,9 +1271,9 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
               ## We now create a new SpatialPointsDataFrame but this time the data
               ## is averaged over the BAUs, and we have at most one data point per BAU
               new_sp_pts <- SpatialPointsDataFrame(
-                  ## FIXME: check with Andrew that the following is ok. I think these should be focused on sp_pols (the BAUs) because we construct the coordinate columns based on the sp_pols 
-                  # coords=Data_in_BAU[coordnames(data_sp)],         # coordinates of summarised data
-                  coords=Data_in_BAU[coordnames(sp_pols)],         # coordinates of summarised data
+                  ## FIXME: I think these should be focused on sp_pols (the BAUs) because we construct the coordinate columns based on the sp_pols 
+                  coords=Data_in_BAU[coordnames(data_sp)],         # coordinates of summarised data
+                  # coords=Data_in_BAU[coordnames(sp_pols)],         # coordinates of summarised data
                   data=Data_in_BAU,                                # data frame
                   proj4string = CRS(proj4string(data_sp)))         # CRS of original data
 
