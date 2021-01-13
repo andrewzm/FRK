@@ -102,10 +102,9 @@
   if(!("link" %in% type)) 
     MC$Y_samples <- NULL
   
-  if(!("mean" %in% type)) {
-    MC$mu_samples <- NULL
-    MC$prob_samples <- NULL
-  } 
+  if(!("mean" %in% type)) 
+    MC$mu_samples <- MC$prob_samples <- NULL
+  
 
   # ------ Create Prediction data ------
   
@@ -114,18 +113,18 @@
   predictions <- sapply(MC, rowMeans)
   RMSPE <- sapply(MC, apply, 1, sd)
 
-  ## If we are predicting over BAUs, newdata is NULL, so set it to the BAUs
-  if (predict_BAUs)
+  ## If we are predicting over BAUs, newdata is NULL, so set it to the BAUs.
+  ## Note that the BAUs must be a Spatial*DataFrame, so coercion is unnecessary, but we will do it 
+  ## to be safe.
+  if (predict_BAUs) {
     newdata <- M@BAUs 
-  
+    newdata$dummy_blah123 <- rep(1, length(newdata))
+    newdata$dummy_blah123 <- NULL
+  }
+    
   ## Now update newdata with the predictions, RMSPE, and percentiles. 
   ## (See https://datascience.stackexchange.com/a/8924 for a description of what this gsub is doing.)
   QOI <- gsub("_.*", "", names(MC)) # Quantities Of Interest
-  
-  ## Create a dummy data column just incase newdata is of class "SpatialPolygons" 
-  ## and we need to convert to "SpatialPolygonsDataframe"
-  newdata$dummy_blah123 <- rep(1, length(newdata))
-  newdata$dummy_blah123 <- NULL
   
   ## Predictions and RMSPE
   colnames(predictions) <- paste0("p_", QOI)

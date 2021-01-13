@@ -38,7 +38,7 @@
 #' @param print_lik flag indicating whether likelihood value should be printed or not after convergence of the EM estimation algorithm
 # #' @param use_centroid flag indicating whether the basis functions are averaged over the BAU, or whether the basis functions are evaluated at the BAUs centroid in order to construct the matrix \eqn{S}. The flag can safely be set when the basis functions are approximately constant over the BAUs in order to reduce computational time
 #' @param object object of class \code{SRE}
-#' @param newdata object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified
+#' @param newdata object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out, or an object of class \code{SpatialPoints}, indicating the points that prediction will be carried out. The BAUs are used if this option is not specified. If \code{newdata}is of class \code{SpatialPoints}, then FRK will predict over the BAUs and then use \code{over()} to find the BAU associated with each prediction location in order to provide a prediction
 #' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error, Case 1) or in the process model (fine-scale process variation, Case 2, default)
 #' @param pred_polys deprecated. Please use \code{newdata} instead
 #' @param pred_time vector of time indices at which prediction will be carried out. All time points are used if this option is not specified
@@ -495,6 +495,13 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     if(!is.null(pred_polys))
         newdata <- pred_polys
     
+    ## We need to add the prediction and uncertainty at each location, and 
+    ## so we need a Spatial*DataFrame: create a dummy data just 
+    ## incase we were provided with a simple SpatialPolygons or SpatialPoints object.
+    ## NULL it so this dummy data is not returned to the user.
+    newdata$dummy_blah123 <- rep(1, length(newdata))
+    newdata$dummy_blah123 <- NULL
+    
     ## The user can either provide k in SRE_model@BAUs$k_BAU, or in the predict call.
     ## This is so that the user can change k without having to call SRE() and SRE.fit() again.
     ## The k supplied in predict() will take precedence over the k stored in SRE_model@BAUs$k.
@@ -515,11 +522,29 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                  response = SRE_model@response, SRE_model = SRE_model, type = type, 
                  k = k, percentiles = percentiles, cred_mass = cred_mass)
     
+    ## If newdata is a SpatialPoints* object, then we wish to predict over 
+    ## irregularly spaced points. We do this by first predicting over the BAUs, 
+    ## and then finding which BAU each prediction point falls into. 
+    if(is(newdata, "SpatialPoints")) {
+        ## Perhaps we shouldn't NULL newdata, but instead add checks
+        ## for newdata being a SpatialPoints object. I thought this may be a
+        ## bit of effort (need to check how the CP matrix would deal with this), 
+        ## so I haven't done it for now.
+        prediction_points <- newdata
+        newdata <- NULL # setting newdata to NULL means we predict over the BAUs
+        
+        ## It is more efficient to predict over only those BAUs which are associated 
+        ## with prediction locations.
+        ## (It is actually only more efficient if I change the code in the TMB 
+        ## section to predict only over the BAUs associated with a prediction location. 
+        ## Currently, I always predict over every BAU; still, it is good to have this for
+        ## when I make the improvement.)
+        ## The BAUs associated with prediction locations are:
+        # tmp <- over(newdata, 
+        #             as(SRE_model@BAUs, "SpatialPolygons"))
+        # newdata <- SRE_model@BAUs[1:length(SRE_model@BAUs) %in% tmp, ]
+    }
     
-    
-    
-    ## Do the stuff which is common to both methods ("EM" and "TMB")
-
     ## If the user does not specify time points to predict at when in space-time
     ## Then predict at every time point
     if(is.null(pred_time) & is(SRE_model@BAUs,"ST"))
@@ -535,7 +560,6 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     ## predict over linear combinations of BAUs, and hence need to
     ## compute the full covariance matrix. Note this by setting
     ## predict_BAUs to be FALSE
-    # if(!all(table(C_idx$i_idx) == 1))
     if (!is.null(newdata)) {
         tmp <- as(CP, "dgTMatrix")
         if (!all(table(tmp@i) == 1))
@@ -567,6 +591,30 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                                   kriging = kriging)          
     } 
 
+    ## If the user originally supplied SpatialPoints* to predict over, 
+    ## find the BAUs associated with each prediction location and returns its
+    # prediction as the prediction for that location.
+    if (exists("prediction_points")) {
+        
+        ## Now need to find the BAU associated with each prediction location.
+        ## The help file of over() suggests passing the prediction location (a SpatialPoints 
+        ## object) and the BAUs (converted to SpatialPolygons, NOT passed in 
+        ## as SpatialPixelsDataFrame) will result in the desired behavior.
+        tmp <- over(prediction_points, 
+                    as(SRE_model@BAUs, "SpatialPolygons"))
+        
+        ## Now map the BAU predictions and uncertainty to each point.
+        ## Depending on "method", pred_locs may be a list, or a Spatial* object.
+        if(is.list(pred_locs)) {
+            prediction_points@data <- cbind(pred_locs$newdata@data[tmp, ])
+            pred_locs$newdata <- prediction_points
+        } else {
+            prediction_points@data <- cbind(pred_locs@data[tmp, ])
+            pred_locs <- prediction_points
+        }
+        
+        
+    }
     
     ## Return predictions
     return(pred_locs)
