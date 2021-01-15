@@ -47,7 +47,7 @@ A list containing Monte Carlo samples of various quantites of interest. The list
 }
 \description{
 Computes a Monte Carlo sample of \eqn{Y}, the conditional mean of the data
-\eqn{\mu = \psi(Y)} (which is a deterministic function of Y), the response variable \eqn{Z}, and, for response-link
+\eqn{\mu = g^-1(Y)} (which is a deterministic function of Y), the response variable \eqn{Z}, and, for response-link
 combinations to which it is applicable, the probability of success parameter
 p. It does so for every BAU location.
 }

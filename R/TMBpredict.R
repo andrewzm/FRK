@@ -293,7 +293,7 @@
 #' latent process Y).
 #'
 #' Computes a Monte Carlo sample of \eqn{Y}, the conditional mean of the data
-#' \eqn{\mu = \psi(Y)} (which is a deterministic function of Y), the response variable \eqn{Z}, and, for response-link
+#' \eqn{\mu = g^-1(Y)} (which is a deterministic function of Y), the response variable \eqn{Z}, and, for response-link
 #' combinations to which it is applicable, the probability of success parameter
 #' p. It does so for every BAU location. 
 #' 
@@ -340,69 +340,42 @@
   # ---- Generate samples from (eta', xi_O')' ----
   
   ## Must generate samples jointly, as elements of alpha, eta, and xi_O are correlated.
-  
-
-  
-  
-  if (M@include_fs) { # If we have included fine-scale variation
-    ## Construct the mean vector containing all fixed (if kriging == "universal"), 
-    ## and random effects: the basis function random weights, and the fine-scale variation (if M@include_fs = TRUE). 
-    ## then make an (r + m*) x n_MC matrix whose columns are the mean vector of (eta', xi')'.
-    ## Finally, generate (r + m*) x n_MC samples from Gau(0, 1) distribution.
-    if (kriging == "universal") {
-      mu_eta_xi_O <- c(as.numeric(M@alphahat), as.numeric(M@mu_eta), as.numeric(M@mu_xi))
-    } else {
-      mu_eta_xi_O <- c(as.numeric(M@mu_eta), as.numeric(M@mu_xi))
-    }
-    
-    mu_eta_xi_O_Matrix  <- matrix(rep(mu_eta_xi_O, times = n_MC), ncol = n_MC)
-    
-    if (kriging == "universal") {
-      z <- matrix(rnorm((p + r + mstar) * n_MC), nrow = p + r + mstar, ncol = n_MC)
-    } else if (kriging == "simple") {
-      z <- matrix(rnorm((r + mstar) * n_MC), nrow = r + mstar, ncol = n_MC)
-    }
-    
-    
-    ## Compute the Cholesky factor of Q (the joint precision matrix of (eta', xi')').
-    ## Then, to generate samples from (eta, xi_O), 
-    ## use eta_xi = L^{-T} z + mu = U^{-1} z + mu, 
-    ## where U upper cholesky factor of Q, so that Q = U'U.
-    U <- Matrix::t(Q_L$Qpermchol) # upper Cholesky factor of permuted joint posterior precision matrix 
-    x <- solve(U, z)              # x ~ Gau(0, A), where A is the permuted precision matrix i.e. A = P'QP
-    y <- Q_L$P %*% x              # y ~ Gau(0, Q^{-1})
-    eta_xi_O  <- as.matrix(y + mu_eta_xi_O_Matrix) # add the mean to y
-  
-  
-    ## Separate the MC samples of each quantity
-    if (kriging == "universal") {
-      alpha <- eta_xi_O[1:p, , drop = FALSE]
-      eta   <- eta_xi_O[(p + 1):(p + r), ]
-      xi_O  <- eta_xi_O[(p + r + 1):(p + r + mstar), ]
-    } else if (kriging == "simple") {
-      eta   <- eta_xi_O[1:r, ]
-      xi_O  <- eta_xi_O[(r + 1):(r + mstar), ]
-    }
-    
-  } else { # No fine-scale variation to deal with
-    ## Construct the mean vector of eta,
-    ## then make an r x n_MC matrix whose columns are the mean vector of eta.
-    ## Finally, generate r x n_MC samples from Gau(0, 1) distribution.
-    mu_eta         <- as.numeric(M@mu_eta)
-    mu_eta_Matrix  <- matrix(rep(mu_eta, times = n_MC), ncol = n_MC)
-    z <- matrix(rnorm(r * n_MC), nrow = r, ncol = n_MC)
-    
-    ## Compute the Cholesky factor of  Q, where Q is the precision matrix of eta.
-    ## Then, to generate samples from eta, use eta = L^{-T} z + mu = U^{-1} z + mu, 
-    ## where U upper cholesky factor of Q, so that Q = U'U.
-    U <- Matrix::t(Q_L$Qpermchol) # upper Cholesky factor of permuted joint posterior precision matrix 
-    x <- solve(U, z)              # x ~ Gau(0, A), where A is the permuted precision matrix i.e. A = P'QP
-    y <- Q_L$P %*% x              # y ~ Gau(0, Q^{-1})
-    eta  <- as.matrix(y + mu_eta_Matrix) # add the mean to y
+  ## First, construct the mean vector containing all fixed (if kriging == "universal"), 
+  ## and random effects: the basis function random weights, and the fine-scale variation (if M@include_fs = TRUE). 
+  if (kriging == "universal") {
+    mu_posterior <- as.numeric(M@alphahat)
+  } else if (kriging == "simple") {
+    mu_posterior <- c(as.numeric(M@alphahat), as.numeric(M@mu_eta))
   }
   
-
-  ## We now have two matrices, eta and xi_O:
+  if (M@include_fs)
+    mu_posterior <- c(mu_posterior, as.numeric(M@mu_xi))
+  
+  ## Now make a matrix with n_MC columns, whose columns are the mean vector repeated.
+  mu_posterior_Matrix  <- matrix(rep(mu_posterior, times = n_MC), ncol = n_MC)
+  
+  ## Finally, generate samples from Gau(0, 1) distribution, and transform this 
+  ## standard normal vector to one that has the desired posterior precision matrix.
+  z <- matrix(rnorm(length(mu_posterior) * n_MC), nrow = r, ncol = n_MC)
+  U <- Matrix::t(Q_L$Qpermchol) # upper Cholesky factor of permuted joint posterior precision matrix 
+  x <- solve(U, z)              # x ~ Gau(0, A), where A is the permuted precision matrix i.e. A = P'QP
+  y <- Q_L$P %*% x              # y ~ Gau(0, Q^{-1})
+  mu_posterior <- as.matrix(y + mu_posterior_Matrix) # add the mean to y
+  
+  ## Separate the MC samples of each quantity
+  if (kriging == "universal") {
+    alpha <- mu_posterior[1:p, , drop = FALSE]
+    eta   <- mu_posterior[(p + 1):(p + r), ]
+    if (M@include_fs)
+      xi_O  <- mu_posterior[(p + r + 1):(p + r + mstar), ]
+  } else if (kriging == "simple") {
+    eta   <- mu_posterior[1:r, ]
+    if (M@include_fs)
+      xi_O  <- mu_posterior[(r + 1):(r + mstar), ]
+  }
+  
+  ## We now have several matrices of Monte Carlo samples:
+  ## alpha (if kriging = "universal"), eta, and xi_O (if include_fs = TRUE).
   ## row i of eta corresponds to n_MC MC samples of eta_i,
   ## row i of xi_O corresponds to n_MC MC samples of the fine-scale variation at the ith observed location.
   
@@ -452,21 +425,11 @@
   ## Combine samples
   Y_smooth_samples  <- rbind(Y_smooth_O, Y_smooth_U)
   
-  ## Use permutation matrix to get the correct (original) ordering
+  ## Use permutation matrix to get the correct (original) ordering in terms of the BAUs
   unobsidx         <- unobserved_BAUs(M)   # Unobserved BAUs indices
   ids              <- c(obsidx, unobsidx)  # All indices (observed and unobserved)
   P                <- Matrix::sparseMatrix(i = 1:N, j = 1:N, x = 1)[ids, ]
   Y_smooth_samples <- Matrix::t(P) %*% Y_smooth_samples
-
-  ## Sanity check:
-  # N = 10
-  # obsidx <- sample(1:N, 6, replace = F)
-  # unobsidx <- (1:N)[-obsidx]
-  # ids              <- c(obsidx, unobsidx)  # All indices (observed and unobserved)
-  # P                <- Matrix::sparseMatrix(i = 1:N, j = 1:N, x = 1)[ids, ]
-  # n_MC <- 5
-  # (Y_smooth_samples <- rep(c(obsidx, unobsidx), each = n_MC) %>% matrix(nrow = N, byrow = T))
-  # Matrix::t(P) %*% Y_smooth_samples
   
   ## Construct the samples from the latent process Y 
   if (M@include_fs) {
@@ -496,38 +459,35 @@
   ## In the case of type == "all", we simply export Y_smooth_samples as the samples of Y.
 
   ## For families with a known constant parameter (binomial, negative-binomial),
-  ## zeta() maps the Gaussian scale Y process to the probability parameter p.
-  ## Then, we map p to the conditional mean mu via chi().
-  ## For all other families, psi() maps Y directly to mu.
+  ## finv() maps the Gaussian scale Y process to the probability parameter p.
+  ## Then, we map p to the conditional mean mu via hinv().
+  ## For all other families, ginv() maps Y directly to mu.
   ## The exception is negative-binomial with a log or square-root link, 
   ## in which case we map directly from Y to mu.
   
   ## Note that for all cases other than type == "link", we need to compute the conditional mean samples.
   
   ## Create the relevant link functions.
-  ## FIXME: change these names to ginv, hinv, finv
   if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
-    zeta    <- .link_fn("Y_to_prob", link = M@link)
-    chi     <- .link_fn("prob_to_mu", response = M@response)
+    finv    <- .link_fn("Y_to_prob", link = M@link)
+    hinv     <- .link_fn("prob_to_mu", response = M@response)
   } else {
-    psi     <- .link_fn("Y_to_mu", link = M@link) 
+    ginv     <- .link_fn("Y_to_mu", link = M@link) 
   }
   
   ## Create the mu samples (and prob parameter if applicable)
   if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
-    prob_samples <- zeta(Y = Y_samples)
-    mu_samples   <- chi(p = prob_samples, k = k)
+    prob_samples <- finv(Y = Y_samples)
+    mu_samples   <- hinv(p = prob_samples, k = k)
   } else if (M@response == "negative-binomial" & M@link %in% c("log", "square-root")) {
-    mu_samples   <- k * psi(Y_samples)
+    mu_samples   <- k * ginv(Y_samples)
     f            <- .link_fn(kind = "mu_to_prob", response = M@response)
     prob_samples <- f(mu = mu_samples, k = k)
   } else {
-    mu_samples <- psi(Y_samples)
+    mu_samples <- ginv(Y_samples)
   }
 
 
-
-  
   # ---- Predicting over arbitrary polygons ----
   
   
