@@ -75,7 +75,7 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 
 \item{\code{mu_xi}}{updated expectation of the fine-scale random effects at all BAUs (estimated)}
 
-\item{\code{Q_eta_xi}}{updated joint precision matrix of the basis function random effects and observed fine-scale random effects (estimated)}
+\item{\code{Q_posterior}}{updated joint precision matrix of the basis function random effects and observed fine-scale random effects (estimated)}
 
 \item{\code{log_likelihood}}{the log likelihood of the fitted model}
 
@@ -85,7 +85,7 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 
 \item{\code{k_Z}}{vector of known size parameters at the data support (only applicable to binomial and negative-binomial response distributions)}
 
-\item{\code{include_fs}}{Flag indicating whether the fine-scale variation should be include in the model}
+\item{\code{include_fs}}{flag indicating whether the fine-scale variation should be include in the model}
 
 \item{\code{normalise_wts}}{if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)}
 

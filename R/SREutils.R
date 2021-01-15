@@ -124,12 +124,8 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                 response = c("gaussian", "poisson", "bernoulli", "gamma",
                              "inverse-gaussian", "negative-binomial", "binomial"), 
                 link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"), 
-                taper = 4, 
-                include_fs = TRUE,
-                fs_by_spatial_BAU = FALSE,
+                taper = 4, include_fs = TRUE, fs_by_spatial_BAU = FALSE,
                 ...) {
-    
-
     
     ## Strings that must be lower-case (this allows users to enter 
     ## response = "Gaussian", for example, without causing issues)
@@ -137,56 +133,26 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     link      <- tolower(link)
     K_type    <- tolower(K_type)
     
-    K_type <- match.arg(K_type)
+    ## Allow partial matching of string arguments
+    K_type   <- match.arg(K_type)
     response <- match.arg(response)
-    link <- match.arg(link)
+    link     <- match.arg(link)
     
-    ## Produce a warning if the response is non-Gaussian and user has specified 
-    ## the block-exponential covariance formulation
-    if (response != "gaussian" & K_type == "block-exponential")
-        warning("Using K_type = 'block-exponential' is computationally inefficient when response != 'gaussian' (or, in general, when method == 'TMB'). For these situations, consider using K_type = 'neighbour' or K_type = 'separable'.")
-    
-    if ("n" %in% sum_variables) 
-        stop("Summing the BAU indices will result in out of bounds errors and hence NAs in the incidence matrix C; please remove 'n' from sum_variables.") 
-    
-    if (!is.null(sum_variables) & !average_in_BAU) 
-        warning("sum_variables argument does nothing when average_in_BAU = FALSE.")
-    
+    ## The weights of the BAUs only really matter if the data are SpatialPolygons. 
+    ## However, we still need a 1 for all other kinds, so we still want to set them to 1.
+    ## only produce a warning if we have areal data.
     if (is.null(BAUs$wts)) {
         BAUs$wts <- 1
+        if (any(sapply(data, function(x) is(x, "SpatialPolygons")))) 
+            warning("SpatialPolygons were provided for the data support. No 'wts' field was found in the BAUs, so all BAUs are assumed to be of equal weight; if this is not the case, set the 'wts' field in the BAUs accordingly.")
     }
     
-    # if (any(sapply(data, function(x) is(x, "SpatialPolygons")))) {
-    #     if (is.null(BAUs$wts)) {
-    #         BAUs$wts <- 1
-    #         warning("SpatialPolygons were provided for the data support. No 'wts' field was found in the BAUs, so we are assuming BAUs are equally weighted; if this is not the case, set the 'wts' field in the BAUs accordingly.")
-    #     }
-    # }
-    
-    
-    if(normalise_wts &
-       response %in% c("poisson", "binomial", "bernoulli", "negative-binomial") & 
-       any(sapply(data, function(x) is(x, "SpatialPolygons")))) {
-           warning("You have specified a count data model with SpatialPolygons observations; consider setting normalise_wts = FALSE so that aggregation of the mean is a weighted sum rather than a weighted average.")
-    }
-    
-    ## If we wish to have unique fine-scale variance associated with each BAU, 
-    ## we need to:
-    ##              i) be in a spatio-temporal application
-    ##              ii) ensure each spatial BAU is associated with a sufficient number of observations
-    ## The second check requires the binned data and the indices of the observed 
-    ## BAUs, so we need to check this condition later.
-    if (fs_by_spatial_BAU) {
-        if(!is(BAUs, "STFDF"))
-            stop("A unique fine-scale variance can only be associated with each spatial BAU if the application is spatio-temporal (i.e., the BAUs are of class 'STFDF').
-                 Please either set fs_by_spatial_BAU to FALSE if you are not in a spatio-temporal application.")
 
-    } 
-    
-    
     ## Check that the arguments are OK
     .check_args1(f = f, data = data, basis = basis, BAUs = BAUs, est_error = est_error, 
-                 response = response, link = link, taper = taper, K_type = K_type) 
+                 response = response, link = link, taper = taper, K_type = K_type, 
+                 fs_by_spatial_BAU = fs_by_spatial_BAU, normalise_wts = normalise_wts, 
+                 sum_variables = sum_variables, average_in_BAU = average_in_BAU) 
     
     ## Extract the dependent variable from the formula
     av_var <- all.vars(f)[1]
@@ -195,9 +161,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     ndata <- length(data)
 
     ## Initialise list of matrices (We construct one for every data object then concatenate)
-    S <- Ve <- Vfs <- X <- Z <- Cmat <- k <- list()
-
-
+    S <- Ve <- Vfs <- X <- Z <- Cmat <- k_Z <- list()
 
     ## Evaluate the basis functions over the BAUs. If we have fewer BAUs than 
     ## basis functions, then we average the basis functions over the polygons
@@ -255,16 +219,21 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         ## The next step is to allocate all data (both point and polygon referenced) to BAUs. 
         ## We can either average data points falling in the same 
         ## BAU (average_in_BAU == TRUE) or not (average_in_BAU == FALSE).
-        ## sum_variables contains a vector of variables which are to be summed
-        ## rather than averaged. Since k_Z must be an integer, always include it. 
         cat("Binning data ...\n")
-        if (response %in% c("binomial", "negative-binomial"))
-            sum_variables = c("k_Z", sum_variables)
+  
+        ## sum_variables is a vector of variable names which are to be summed
+        ## rather than averaged. Typically, we will wish to sum the data/size parameter 
+        ## in a binomial setting. 
+        ## Possibly this should be added as an option. Later in this function, 
+        ## we will round the data to ensure the data and size parameters are whole numbers.
+        if (response %in% c("binomial", "negative-binomial")) {
+            response_name <- all.vars(f)[1]
+            sum_variables <- c(response_name, "k_Z", sum_variables)
+        }
         data_proc <- map_data_to_BAUs(data[[i]],       # data object
                                       BAUs,            # BAUs
                                       average_in_BAU = average_in_BAU, # average in BAU?
                                       sum_variables = sum_variables)   # variables to sum rather than average
-
         
         ## The mapping can fail if not all data are covered by BAUs. Throw an error message if this is the case
         if(any(is.na(data_proc@data[av_var])))
@@ -298,19 +267,11 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                  within the polygons. For polygon data, influence on a BAU is determined from
                  whether the BAU centroid falls within the polygon or not.")
 
-        ## We ensure the polygon observations are a  weighted average over the 
+        ## We ensure the polygon observations are a weighted average over the 
         ## BAUs. This just means dividing each row by its row sum, so that each 
         ## entry is between 0 and 1, and the row sums are all equal to 1. 
         if (normalise_wts)
             Cmat[[i]] <- Cmat[[i]] / rowSums(Cmat[[i]]) 
-        
-        # ## If sum_wts_in_data_polygon = TRUE, we change to a weighted SUM. We do 
-        # ## this by taking the weighted proportions computed above, and multiply
-        # ## each row by the number of BAUs associated with that data polygon.
-        # ## Note that tabulate(Cmat[[i]]@i + 1) computes the number of non-zero
-        # ## entries in each row of Cmat
-        # if (sum_wts_in_data_polygon)
-        #     Cmat[[i]] <- Cmat[[i]] * tabulate(Cmat[[i]]@i + 1) 
         
         ## Only the independent model is allowed for now, future implementation will include CAR/ICAR (in development)
         if(fs_model == "ind") {
@@ -320,12 +281,12 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         ## S0 is the matrix S in the vignette. Here S is the matrix SZ in the vignette.
         S[[i]] <- Cmat[[i]] %*% S0
         
-        ## Construct k the same way Z is constructed when response is binomial
+        ## Construct k_Z the same way Z is constructed when response is binomial
         ## or negative binomial
         if(response %in% c("binomial", "negative-binomial")) {
-            k[[i]] <- Matrix(data_proc$k_Z)
+            k_Z[[i]] <- Matrix(data_proc$k_Z)
         } else {
-            k <- Matrix(-1) # a dummy value of type Matrix so that we can pass it in the created SRE object
+            k_Z <- Matrix(-1) # a dummy value of type Matrix so that we can pass it in the created SRE object
         }
     }
 
@@ -345,16 +306,12 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     Ve <- do.call("bdiag",Ve)
     Vfs <- do.call("bdiag",Vfs)
     if(response %in% c("binomial", "negative-binomial")) {
-        k <- do.call("rbind",k)
+        k_Z <- do.call("rbind", k_Z)
         
-        ## FIXME: I THINK THE FOLLOWING CAN BE REMOVED AS I HAVE IMPLEMENTED THE SUMMING OPTION IN map_data_to_BAUs()
-        ## Also round the observations and k parameter.
-        ## The approach of averaging observations and constant parameters which
-        ## fell in the same BAU is not ideal, as we lose information. 
-        ## Preferably, we should add both the Z values and k values of 
-        ## observations which fell into the same BAU. 
+        ## Also round the observations and size parameter. 
+        ## (Not necessary if we choose to sum the data which fall into the same BAU)
         Z <- round(Z)
-        k <- ceiling(k)
+        k_Z <- ceiling(k_Z)
     } else if (response == "poisson") {
        Z <- round(Z)
     }
@@ -381,29 +338,28 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     ## (dummy values provided only)
     ## (possibly come back to this and provide the actual initial values computed in .TMB_prep())
     mu_xi_init <- Matrix(0, nrow = 1)
-    Q_eta_xi_init <- Matrix(0, nrow = 1, 1)
-    
+    Q_posterior_init <- Matrix(0, nrow = 1, 1)
     
     ## Some matrices evaluated at observed BAUs only:
     obsidx <- unique(as(Cmat, "dgTMatrix")@j) + 1 
     C_O <- Cmat[, obsidx, drop = FALSE] 
     S_O <- S0[obsidx, , drop = FALSE]
-    S_O <- drop0(S_O) # FIXME: Shouldn't need to do this. For some reason S0 results in explicit zeros when nres = 1
+    S_O <- drop0(S_O) # For some reason, S0 results in explicit zeros when nres = 1.
     X_BAU <- as(.extract_BAU_X_matrix(f, BAUs), "matrix") # fixed-effect design matrix at BAU level
     X_O <- X_BAU[obsidx, , drop = FALSE]
-    
 
     ## Check if each spatial BAU is observed enough times for a unique fs to be associated with each spatial BAU
     if (fs_by_spatial_BAU) {
         fewest_obs <-  min(table(obsidx %% ns)) # count of observations from spatial BAU with fewest observations
         if(fewest_obs == 0) {
-            stop("A unique fine-scale variance at each spatial BAU can only be fit if all spatial BAUs are oobserved, which is not the case for the provided data and BAUs. Please set fs_by_spatial_BAU = FALSE.")
+            stop("A unique fine-scale variance at each spatial BAU can only be fit if all spatial BAUs are observed, which is not the case for the provided data and BAUs. Please set fs_by_spatial_BAU = FALSE.")
         } else if(fewest_obs < 10) {
             warning(paste0("The smallest number of observations associated with a spatial BAUs is: ", fewest_obs, 
                            ". As you have selected to fit a unique fine-scale variance at each spatial BAU, please consider if this is a sufficient number of observations."))
         }
     } 
     
+
     ## Construct the SRE object
     new("SRE",
         data=data,
@@ -437,8 +393,8 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         link = link, 
         taper = taper, 
         mu_xi = mu_xi_init, 
-        Q_eta_xi = Q_eta_xi_init,
-        k_Z = k, 
+        Q_posterior = Q_posterior_init,
+        k_Z = k_Z, 
         include_fs = include_fs, 
         normalise_wts = normalise_wts, 
         fs_by_spatial_BAU = fs_by_spatial_BAU)
@@ -496,11 +452,9 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
         newdata <- pred_polys
     
     ## We need to add the prediction and uncertainty at each location, and 
-    ## so we need a Spatial*DataFrame: create a dummy data just 
-    ## incase we were provided with a simple SpatialPolygons or SpatialPoints object.
-    ## NULL it so this dummy data is not returned to the user.
-    newdata$dummy_blah123 <- rep(1, length(newdata))
-    newdata$dummy_blah123 <- NULL
+    ## so we need to ensure newdata is a Spatial*DataFrame (and not just a 
+    ## simple SpatialPolygons or SpatialPoints object).
+    newdata <- .Coerce_SpatialDataFrame(newdata)
     
     ## The user can either provide k in SRE_model@BAUs$k_BAU, or in the predict call.
     ## This is so that the user can change k without having to call SRE() and SRE.fit() again.
@@ -524,25 +478,10 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     
     ## If newdata is a SpatialPoints* object, then we wish to predict over 
     ## irregularly spaced points. We do this by first predicting over the BAUs, 
-    ## and then finding which BAU each prediction point falls into. 
+    ## and then associating each prediction location with a BAU. 
     if(is(newdata, "SpatialPoints")) {
-        ## Perhaps we shouldn't NULL newdata, but instead add checks
-        ## for newdata being a SpatialPoints object. I thought this may be a
-        ## bit of effort (need to check how the CP matrix would deal with this), 
-        ## so I haven't done it for now.
-        prediction_points <- newdata
+        prediction_points <- newdata # save the prediction locations for use later
         newdata <- NULL # setting newdata to NULL means we predict over the BAUs
-        
-        ## It is more efficient to predict over only those BAUs which are associated 
-        ## with prediction locations.
-        ## (It is actually only more efficient if I change the code in the TMB 
-        ## section to predict only over the BAUs associated with a prediction location. 
-        ## Currently, I always predict over every BAU; still, it is good to have this for
-        ## when I make the improvement.)
-        ## The BAUs associated with prediction locations are:
-        # tmp <- over(newdata, 
-        #             as(SRE_model@BAUs, "SpatialPolygons"))
-        # newdata <- SRE_model@BAUs[1:length(SRE_model@BAUs) %in% tmp, ]
     }
     
     ## If the user does not specify time points to predict at when in space-time
@@ -592,8 +531,8 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     } 
 
     ## If the user originally supplied SpatialPoints* to predict over, 
-    ## find the BAUs associated with each prediction location and returns its
-    # prediction as the prediction for that location.
+    ## associate each prediction location with a BAU, and use the prediction
+    ## of this BAU as the prediction at the corresponding point. 
     if (exists("prediction_points")) {
         
         ## Now need to find the BAU associated with each prediction location.
@@ -621,6 +560,14 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
 })
 
 
+.Coerce_SpatialDataFrame <- function (newdata) {
+    ## Add dummy data (with a name that is extremely unlikely to have been used already)
+    newdata$dummy_blah123 <- rep(1, length(newdata)) 
+    ## NULL it so this dummy data is not returned to the user
+    newdata$dummy_blah123 <- NULL 
+    return(newdata)
+}
+
 
 ## unexported function to construct CP (the prediction polygon matrix)
 ## I made this into a function because it is common for the methods ("TMB" and
@@ -639,7 +586,6 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                                      sum_variables = NULL,
                                      est_error = FALSE)
         C_idx <- BuildC(newdata2, SRE_model@BAUs)
-        
         
         CP <- sparseMatrix(i = C_idx$i_idx,
                            j = C_idx$j_idx,
@@ -665,7 +611,7 @@ loglik <- function(SRE_model) {
     } else if (SRE_model@fs_model == "ind") {
         return(.loglik.ind(SRE_model))
     } else {
-        stop("Currently onle independent fine-scale model is implemented")
+        stop("Currently only independent fine-scale model is implemented")
     }
 }
 
@@ -2073,12 +2019,9 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 
 
 ## Checks arguments for the SRE() function. Code is self-explanatory
-.check_args1 <- function(f,data,basis,BAUs,est_error, 
-                         K_type = c("block-exponential", "neighbour", "unstructured", "separable"), 
-                         response = c("gaussian", "poisson", "bernoulli", "gamma",
-                                      "inverse-gaussian", "negative-binomial", "binomial"), 
-                         link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"), 
-                         taper = 4) {
+.check_args1 <- function(f, data,basis, BAUs, est_error, 
+                         K_type, response, link, taper, fs_by_spatial_BAU, normalise_wts, 
+                         sum_variables, average_in_BAU) {
     
     if(!is(f,"formula")) stop("f needs to be a formula.")
     if(!is(data,"list"))
@@ -2093,8 +2036,6 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
     if(is(BAUs,"STFDF") && nrow(BAUs@data) != nrow(BAUs@sp) * length(BAUs@time))
         stop("The number of rows in BAUs@data should be equal to the number of spatial BAUs, nrow(BAUs@sp), multiplied by the number of time indices, length(BAUs@time)")
         
-    
-    
     # if(is(BAUs,"SpatialPointsDataFrame"))
     #     stop("Implementation with Point BAUs is currently in progress")
     # if(is(BAUs,"STFDF")) if(is(BAUs@sp,"SpatialPointsDataFrame"))
@@ -2122,40 +2063,43 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
     if(response == "gaussian" & !est_error & !all(sapply(data,function(x) "std" %in% names(x@data))))
         stop("If the response is Gaussian and observational error is not going to be estimated,
              please supply a field 'std' in the data objects")
+
     
-    #### TMB section
-    if (!missing(K_type)) {
-        if(!(K_type %in% c("block-exponential", "neighbour", "unstructured", "separable"))) {
+    if(!(K_type %in% c("block-exponential", "neighbour", "unstructured", "separable"))) 
             stop("Invalid K_type argument")
-        }
-    }
+    if (response != "gaussian" & K_type == "block-exponential")
+        warning("Using K_type = 'block-exponential' is computationally inefficient when response != 'gaussian' (more specifically, when method = 'TMB'). For these situations, consider using K_type = 'neighbour' or K_type = 'separable'.")
     
-    ## Check that a valid response-link combination has been chosen
-    if (!missing(response) & !missing(link)) {
-        
-        if (!(response %in% c("gaussian", "poisson", "bernoulli", "gamma",
-                              "inverse-gaussian", "negative-binomial", "binomial")))
+    ## Check that valid data model and link function have been chosen
+    if (!(response %in% c("gaussian", "poisson", "bernoulli", "gamma", "inverse-gaussian", "negative-binomial", "binomial")))
             stop("Invalid response argument")
-        
-        if (!(link %in% c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared")))
+    if (!(link %in% c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared")))
             stop("Invalid link argument")
-        
-        if (response == "gaussian" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "square-root")) ||
+    
+    ## Check that an appropriate response-link combination has been chosen
+    if (response == "gaussian" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "square-root")) ||
             response == "poisson" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "square-root")) ||
             response == "gamma" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "square-root")) ||
             response == "inverse-gaussian" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "square-root")) ||
             response == "negative-binomial" & !(link %in% c("log", "square-root", "logit", "probit", "cloglog")) ||
             response == "binomial" & !(link %in% c("logit", "probit", "cloglog")) ||
             response == "bernoulli" & !(link %in% c("logit", "probit", "cloglog"))) {
-            stop("Invalid response-link combination selected")
-        }
+            stop("Invalid response-link combination selected. Please choose an appropriate link function for the specified response distribution.")
     }
     
-    ## Check taper
+    ## Provide a warning if a possibly problematic combination is chosen
+    if (response == "gaussian" & link %in% c("log", "inverse-squared", "square-root") ||
+        response == "poisson" & link %in% c("identity", "inverse", "inverse-squared") ||
+        response == "gamma" & link %in% c("identity", "inverse", "inverse-squared") ||
+        response == "inverse-gaussian" & link %in% c("inverse-squared")) {
+        warning("Due to the implied range of the mean function, and the permitted support of the mean for the specified response, nonsensical results are possible with the chosen link function. Consider using a link function which ensures the mean is mapped to the correct support.")
+    }
+    
+    ## Check taper (applicable to block-exponential when method = TMB)
     if (!(class(taper) %in% c("numeric", "integer"))) {
-        stop("taper must be numeric or integer.")
+        stop("taper, the argument controlling the coveriance taper, must be numeric or integer.")
     } else if (taper <= 0) {
-        stop("taper must be positive.")
+        stop("taper, the argument controlling the coveriance taper, must be positive.")
     }
     
     ## Check k (for data)
@@ -2171,8 +2115,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
         }
     }
     
-    ## Check that, if K_type == separable, the basis functions are in a regular
-    ## rectangular lattice
+    ## Check that, if K_type == separable, the basis functions are in a regular rectangular lattice
     if (K_type == "separable") 
         for (i in unique(basis@df$res)) {
             temp <- basis@df[basis@df$res == i, ]
@@ -2180,7 +2123,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
                 stop("Basis functions must be arranged in a regular rectangular lattice when K_type == 'separable'.")
         }
     
-    ## If K_type == "neighbour", we jsut need basis functions to be in a regular 
+    ## If K_type == "neighbour", we just need basis functions to be in a regular 
     ## lattice (does not need to be rectangular)
     if (K_type == "neighbour") 
         for (i in unique(basis@df$res)) {
@@ -2188,6 +2131,31 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
             if (!.test_regular_grid(temp$loc1, temp$loc2, rectangular = FALSE) ) 
                 stop("Basis functions must be arranged in a regular lattice when K_type == 'neighbour'.")
         }
+    
+    ## If we wish to have unique fine-scale variance associated with each BAU, 
+    ## we need to:
+    ##  i) be in a spatio-temporal application
+    ##  ii) ensure each spatial BAU is associated with a sufficient number of observations
+    ## The second check requires the binned data and the indices of the observed 
+    ## BAUs, so we need to check this condition later.
+    if (fs_by_spatial_BAU & !is(BAUs, "STFDF")) 
+        stop("A unique fine-scale variance can only be associated with each spatial BAU if the application is spatio-temporal (i.e., the BAUs are of class 'STFDF').
+              Please either set fs_by_spatial_BAU to FALSE if you are not in a spatio-temporal application.")
+    
+    
+    if(normalise_wts &
+       response %in% c("poisson", "binomial", "bernoulli", "negative-binomial") & 
+       any(sapply(data, function(x) is(x, "SpatialPolygons")))) {
+        warning("You have specified a count data model with SpatialPolygons observations; consider setting normalise_wts = FALSE so that aggregation of the mean is a weighted sum rather than a weighted average.")
+    }
+    
+    
+    ## FIXME: Need to think about the role that sum_variables plays
+    if ("n" %in% sum_variables) 
+        stop("Summing the BAU indices will result in out of bounds errors and hence NAs in the incidence matrix C; please remove 'n' from sum_variables.") 
+    
+    if (!is.null(sum_variables) & !average_in_BAU) 
+        warning("sum_variables is not considered when average_in_BAU = FALSE.")
     
 }
 
@@ -2262,43 +2230,40 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
     if(!(is.integer(pred_time) | is.null(pred_time))) stop("pred_time needs to be of class integer")
     if(!is.logical(covariances)) stop("covariances needs to be TRUE or FALSE")
     
-
-    if(!missing(SRE_model)){
-        
-        ## Check k (for predictions)
-        if (SRE_model@response %in% c("binomial", "negative-binomial")) {
-            if(length(k) == 1){
-                warning("Single number k provided for all BAUs: assuming k is invariant over the whole spatial domain.")
-            } else if (!(class(k) %in% c("numeric", "integer"))) {
-                stop("k must contain only positive integers.")
-            } else if (any(k < 0) | any(k != round (k))) {
-                stop("k must contain only positive integers.")
-            } else if (length(k) != nrow(SRE_model@S0)) {
-                ## FIXME: If we are allowing the user to predict over arbitrary polygons specified
-                ## by the argument "newdata", then k will not be equal to the number of BAUs. Perhaps
-                ## we should check to see if newdata is null, and then test if k equals its length. 
-                stop("length(k) must equal 1 or N (the number of BAUs)." )
-            }      
-        }
-        
-        ## Check requested percentiles are ok
-        if (!is.null(percentiles) & !(class(percentiles) %in% c("numeric", "integer"))) 
-            stop("percentiles must either be NULL or a numeric or integer vector with entries between 0 and 100.")
-        else if (!is.null(percentiles)) {
-            if (min(percentiles) < 0 | max(percentiles) > 100) 
-                stop("percentiles must be a vector with entries between 0 and 100")   
-        }
-        
-        
-        if(!all(type %in% c("link", "mean", "response")))
-            stop("type must be a vector containing combinations of 'link', 'mean', and 'response'")
-        
-        if (!is.null(cred_mass)) {
-            if (length(cred_mass) != 1)
-                stop("cred_mass should be a single scalar, not a vector")
-            if(cred_mass < 0 | cred_mass > 1)
-                stop("cred_mass should be a scalar between 0 and 1")
-        }
+    ## Quantities of interest
+    if(!all(type %in% c("link", "mean", "response")))
+        stop("type must be a vector containing combinations of 'link', 'mean', and 'response'")
+    
+    ## Check k (for predictions)
+    if (SRE_model@response %in% c("binomial", "negative-binomial")) {
+        if(length(k) == 1){
+            warning("Single number k provided for all BAUs: assuming k is invariant over the whole spatial domain.")
+        } else if (!(class(k) %in% c("numeric", "integer"))) {
+            stop("k must contain only positive integers.")
+        } else if (any(k < 0) | any(k != round (k))) {
+            stop("k must contain only positive integers.")
+        } else if (length(k) != nrow(SRE_model@S0)) {
+            ## FIXME: If we are allowing the user to predict over arbitrary polygons specified
+            ## by the argument "newdata", then k will not be equal to the number of BAUs. Perhaps
+            ## we should check to see if newdata is null, and then test if k equals its length. 
+            stop("length(k) must equal 1 or N (the number of BAUs)." )
+        }      
+    }
+    
+    ## Check requested percentiles 
+    if (!is.null(percentiles) & !(class(percentiles) %in% c("numeric", "integer"))) 
+        stop("percentiles must either be NULL or a numeric or integer vector with entries between 0 and 100.")
+    else if (!is.null(percentiles)) {
+        if (min(percentiles) < 0 | max(percentiles) > 100) 
+            stop("percentiles must be a vector with entries between 0 and 100")   
+    }
+    
+    ## Check credible mass for HPD interval
+    if (!is.null(cred_mass)) {
+        if (length(cred_mass) != 1)
+            stop("cred_mass should be a single scalar, not a vector")
+        if(any(cred_mass < 0 | cred_mass > 1))
+            stop("Elements of cred_mass should be between 0 and 1")
     }
 }
 

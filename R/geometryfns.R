@@ -1271,9 +1271,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
               ## We now create a new SpatialPointsDataFrame but this time the data
               ## is averaged over the BAUs, and we have at most one data point per BAU
               new_sp_pts <- SpatialPointsDataFrame(
-                  ## FIXME: I think these should be focused on sp_pols (the BAUs) because we construct the coordinate columns based on the sp_pols 
                   coords=Data_in_BAU[coordnames(data_sp)],         # coordinates of summarised data
-                  # coords=Data_in_BAU[coordnames(sp_pols)],         # coordinates of summarised data
                   data=Data_in_BAU,                                # data frame
                   proj4string = CRS(proj4string(data_sp)))         # CRS of original data
 
@@ -1330,7 +1328,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
               ## The following returns a data frame equal in number of rows to
               ## the data polygons, with all the BAU features averaged (hence if
               ## BAU_as_points$xx = c(1,2,3) for those BAUs inside the data polygon
-              ## BAUs_aux_data$xx = 3. # FIXME: shouldn't this be 2?
+              ## BAUs_aux_data$xx = 2. 
               
               ## FIXME: I changed this to .safe_mean temporarily
               BAUs_aux_data <- .parallel_over(data_sp, BAU_as_points,fn=.safe_mean)
@@ -1554,7 +1552,7 @@ setMethod("BuildC",signature(data="SpatialPolygons"),
                   
                   i_idx <- c(i_idx,rep(i,length(overlap)))                  # the row index is the data number repeated
                   j_idx <- c(j_idx,as.numeric(overlap))                     # the column index is the BAU number
-                  x_idx <- c(x_idx, BAUs$wts[overlap])
+                  x_idx <- c(x_idx, BAUs$wts[overlap])                      # the weight is the the weight associated with the current BAU
               }
 
               ## If no overlap was found it means the user generated the BAUs and that
@@ -1570,7 +1568,7 @@ setMethod("BuildC",signature(data="SpatialPolygons"),
           })
 
 ## If we have an STIDF the BAUs and the data both need to have a field "n"
-## which can be used for mapping. Tese fields are automatically created
+## which can be used for mapping. These fields are automatically created
 ## by auto_BAUs and map_data_to_BAUs
 setMethod("BuildC",signature(data="STIDF"),
           function(data,BAUs) {

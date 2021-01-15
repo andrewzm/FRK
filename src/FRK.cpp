@@ -206,8 +206,6 @@ Type objective_function<Type>::operator() ()
       
       
       // Compute the matrix coefficients and store them in the triplet list.
-      // FIXME: I COULD DO THIS IN A FUNCTION
-      
       if (K_type == "neighbour") {
         for (int j = start_x; j < start_x + nnz[k]; j++) {  
           (row_indices[j] == col_indices[j]) ? coef = tau[k] * (x[j] + sigma2[k]) : coef = tau[k] * x[j];

@@ -20,7 +20,7 @@
 #' @param ... other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling \code{FRK}, or the user specified \code{optimiser} function when calling \code{FRK} or \code{SRE.fit}
 #' @return This function updates the following slots of \code{M}:
 #' \describe{
-#'   \item{Q_eta_xi}{An estimate of the joint precision matrix of all random effects in the model (the random weights \eqn{\eta} and fine-scale variation \eqn{\xi}).}
+#'   \item{Q_posterior}{An estimate of the joint precision matrix of all random effects in the model (the random weights \eqn{\eta} and fine-scale variation \eqn{\xi}).}
 #'   \item{mu_eta}{Posterior expectation of the random weights \eqn{\eta}.}
 #'   \item{mu_xi}{Posterior expectation of the fine-scale variation \eqn{\xi}.}
 #'   \item{alphahat}{Estimate of the fixed-effects.}
@@ -30,46 +30,26 @@
 #' }
 .FRKTMB_fit <- function(M, optimiser, known_sigma2fs, ...) {
   
-  
   ## Data and parameter preparation for TMB
   data_params_init <- .TMB_prep(M, known_sigma2fs = known_sigma2fs)
-  
-  # browser()
-  # d <- data_params_init$data
-  # p <- data_params_init$parameters
-  
   
   ## TMB model compilation
   obj <- MakeADFun(data = data_params_init$data,
                    parameters = data_params_init$parameters,
                    random = c("random_effects"),
                    DLL = "FRK")
-  
-  ## View the sparsity pattern.
-  ## Note that this can be done before model fitting.
-  # tmp <- obj$env$spHess(random = TRUE)
-  # image(tmp)
-  # length(tmp@x) # number of non-zeros
 
-  ## the following means we want to print every parameter passed to obj$fn.
+  ## The following means we want to print every parameter passed to obj$fn.
   obj$env$tracepar <- TRUE
   
   # ---- Model fitting ----
   
   ## The optimiser should have arguments: start, objective, gradient. 
   ## The remaining arguments can be whatever.
-
   fit <- optimiser(obj$par, obj$fn, obj$gr, ...)
   
-  ## Log-likeihood
-  log_likelihood <- -obj$fn() # could also use -fit$objective
-  
-  ## Add the C(Z, phi) terms for one-parameter exponential families
-  ## (We do this here rather than in the C++ template because it only needs to 
-  ## be done once, as C(Z, phi) depends only on Z for one-parameter exponential 
-  ## families)
-  # Z <- data_params_init$data$Z
-  # k_Z <- as.vector(M@k_Z)
+  ## Log-likeihood (negative of the negative-log-likelihood)
+  M@log_likelihood <- -obj$fn() # could also use -fit$objective
   
   ## Extract parameter and random effect estimates
   par <- obj$env$last.par.best
@@ -94,23 +74,13 @@
   p <- length(obj$par)
   s <- length(estimates$random_effects)
   
-  kriging = "universal"
-  if (kriging == "universal") {
-    ## The joint-precision matrix obtained with obj$env$spHess() is not correct for the 
-    ## parameters and fixed effects block; in particular, the block is just a zero matrix.
-    ## Instead, we need to use sdreport() if we wish to use the uncertainty of the
-    ## parameters and fixed effects.
-    ## However, obj$env$spHess is ok if we just want the random effects uncertainty.
-    Q_joint <- sdreport(obj, getJointPrecision = TRUE)$jointPrecision
-    
-    ## For universal kriging, we will only retain the uncertainty in the fixed effects
-    ## (i.e., in alpha), and not the parameters.
-    retain_idx <- rownames(Q_joint) %in% c("alpha", "random_effects") 
-    Q_joint <- Q_joint[retain_idx, retain_idx]
-  } else if (kriging == "simple") {
-    ## Precision matrix of the random effects only
-    Q_joint <- obj$env$spHess(par = obj$env$last.par.best, random = TRUE)  
-  }
+  ## We need to use sdreport() if we wish to use the uncertainty of the
+  ## parameters and fixed effects, as opposed to using obj$env$spHess(par = obj$env$last.par.best, random = TRUE) 
+  ## We will only retain the uncertainty in the fixed effects
+  ## (i.e., in alpha), and not the parameters.
+  Q_posterior <- sdreport(obj, getJointPrecision = TRUE)$jointPrecision
+  retain_idx  <- rownames(Q_posterior) %in% c("alpha", "random_effects") 
+  Q_posterior <- Q_posterior[retain_idx, retain_idx]
 
   ## Update the slots of M
   ## Convert to Matrix as these SRE slots require class "Matrix"
@@ -124,39 +94,16 @@
     M@mu_xi  <- as(rep(0, mstar), "Matrix")
   }
   
-  
   M@sigma2fshat <- unname(exp(estimates$logsigma2fs))
-  M@Q_eta_xi <- Q_joint ## FIXME: change slot name from Q_eta_xi to Q_joint (especially if we retain option for universal kriging)          
+  M@Q_posterior <- Q_posterior
   M@phi <- unname(exp(estimates$logphi))
   
-  ## log-likelihood evaluated at optimal estimates. After fitting, can be obtained from loglik(M).
-  M@log_likelihood <- log_likelihood 
-  
   ## For TMB, we do not need to compute these matrices; return an empty matrix.
-  M@Q_eta <- Matrix()
-  M@S_eta <- Matrix()
-  M@Khat_inv <- Matrix()
-  M@Khat <- Matrix()
+  M@Q_eta <- M@S_eta <- M@Khat_inv <- M@Khat <- Matrix()
   
   return(M)
 }
 
-## Exctracts the covariate design matrix of the fixed effects at the BAU level.
-.extract_BAU_X_matrix <- function (formula, BAUs) {
-  ## Retrieve the dependent variable name
-  depname <- all.vars(formula)[1]
-  
-  ## Set the dependent variable in BAUs to something just so that 
-  ## .extract.from.formula doesn't throw an error. We are not returning M, 
-  ## so we don't need to worry about NULL-ing afterwards.
-  BAUs[[depname]] <- 0.1
-  
-  ## Extract covariates from BAUs
-  L <- .extract.from.formula(formula, data = BAUs)
-  X <- as(L$X,"Matrix")
-  
-  return(X)
-}
 
 #' TMB data and parameter preparation.
 #'
@@ -176,7 +123,7 @@
   m    <- length(Z)                # Number of data points AFTER BINNING
   X    <- as(.extract_BAU_X_matrix(M@f, M@BAUs), "matrix")   
   
-  obsidx <- observed_BAUs(M) # FIXME: Use this everywhere, so could just make it into a slot of SRE object
+  obsidx <- observed_BAUs(M) 
   
   ## Observed k_BAU
   ## FIXME: need to add a check that k_BAU is present when the data is areal
@@ -220,8 +167,6 @@
   }
   
   data$spatial_BAU_id <-  (obsidx - 1) %% ns
-  
-  
   data$r_si <- as.vector(table(spatial_basis@df$res))
 
   ## Data which depend on K_type:
@@ -285,14 +230,22 @@
     Z0[Z == 0] <- 0.05
   } 
 
-
-  ## FIXME: excluding k from the C_O matrix means the size parameter is no longer accounted for!! This means that some mu_O > k_BAU.
-  ## The problem is that excluding k from the C matrix makes sense when we are using C to aggregate the mean process, but NOT when 
+  ## FIXME: This is all a bit of a mess...
+  ## FIXME: excluding k from the C_O matrix means the size parameter is no longer accounted for!! 
+  ## This means that some mu_O > k_BAU.
+  ## The problem is that excluding k from the C matrix makes sense when we are using C to aggregate the 
+  ## mean process, but NOT when 
   ## we are trying to go the other way, because we need to account for k when splitting up mu_Z into mu.
   ## A temporary fix:
   C_O <- M@C_O
-  if(M@response %in% c("binomial", "negative-binomial"))
-    C_O@x <- as.numeric(k_BAU)
+  if(M@response %in% c("binomial", "negative-binomial")) {
+    if (length(k_BAU) > 0 || k_BAU > 0) { # DATA IS AREAL
+      C_O@x <- as.numeric(k_BAU)
+    } else if (length(k_Z) > 0 || k_Z > 0) { # DATA IS POINT REFERENCED
+      C_O@x <- as.numeric(M@k_Z)
+    }
+  }
+    
   
 
 
@@ -323,14 +276,14 @@
   } else {
     Cpseudoinverse <- t(C_O) %*% chol2inv(chol(C_O %*% t(C_O))) # pseudo-inverse of the incidence matrix 
     mu_O <- Cpseudoinverse %*% Z0 # least norm solution to C.mu = mu_Z
-    ## Sanity check: C_O %*% mu_O == M@Z
+    ## Sanity check: all(C_O %*% mu_O == M@Z)
   }
 
-  ## For some link functions, mu_0 = 0 causes NaNs; set these to a small positive value
-  mu_O[mu_O == 0] <- 0.05
-  
-  ## Also, the size parameter being 0 also causes NaNs:
+  ## For some link functions, mu_0 = 0 causes NaNs; set these to a small positive value.
+  ## The size parameter being 0 also causes NaNs.
   k_BAU[k_BAU == 0] <- 1
+  mu_O[mu_O == 0] <- 0.05
+
   
   ## Transformed data: convert from data scale to Gaussian Y-scale.
   if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
@@ -344,24 +297,20 @@
   
   parameters <- .initialise_param(M, Y_O, r_si = data$r_si)
 
-
   ## Create a data entry of sigma2fs_hat (one that will stay constant if we are 
   ## not estimating sigma2fs within TMB)
   data$sigma2fs_hat <- exp(parameters$logsigma2fs)
   ## Only estimate sigma2fs if all the observations are associated with exactly 
-  ## one BAU; otherwise, we must fix sigma2fs.
+  ## one BAU; otherwise, we must fix sigma2fs, otherwise TMB explodes.
   data$fix_sigma2fs <- as.integer( !all(tabulate(M@Cmat@i + 1) == 1) )
-
-  data$include_fs <- as.integer(M@include_fs)
-  
+  data$include_fs   <- as.integer(M@include_fs)
   
   ## If we are estimating a unique fine-scale variance at each spatial BAU, 
-  ## simply replicate ns times. 
+  ## simply replicate the initialisation ns times. 
   if (M@fs_by_spatial_BAU) {
     data$sigma2fs_hat      <- rep(data$sigma2fs_hat, ns)
     parameters$logsigma2fs <- rep(parameters$logsigma2fs, ns)
   }
-  
   
   ## Fix sigma2fs to the known value provided by the user (if provided). 
   if (!is.null(known_sigma2fs)) {
@@ -369,23 +318,6 @@
     parameters$logsigma2fs <- log(data$sigma2fs_hat) 
     data$fix_sigma2fs <- 1
   }
-  
-  
-
-  # mstar <- data$C_O %>% ncol
-  # mstar == length(observed_BAUs(M))
-  # xi_O <- parameters$random_effects %>% tail(mstar)
-  # spatial_BAU_id <- data$spatial_BAU_id + 1
-  # length(spatial_BAU_id) == mstar
-  # sigma2fs <- parameters$logsigma2fs %>% exp
-  # sigma2fs <- rnorm(ns) # just for testing
-  # sigma2fs_long <- c()
-  # for (i in 1:mstar) {
-  #   sigma2fs_long[i] = sigma2fs[spatial_BAU_id[i]]; 
-  # }
-  # browser()
-  # 
-  # sigma2fs_long
   
   return(list(data = data, parameters = parameters))
 }
@@ -421,7 +353,7 @@
   
   ## variance components of the basis function random weights
   ## FIXME: Not sure what to do for time yet.
-  ## FIXME: haven't really though about when K_type = separable.
+  ## FIXME: haven't really thought about when K_type = separable.
   parameters$logsigma2      <- log(var(as.vector(Y_O)) * (0.1)^(0:(nres - 1)))
   # if (is.null(eta)) {
   #   parameters$logsigma2      <- log(var(as.vector(Y_O)) * (0.1)^(0:(nres - 1)))
@@ -549,10 +481,6 @@
   beta   <- taper * minDist
   
   ## Construct D matrix with elements set to zero after tapering
-  ## FIXME: I could also apply the taper here, whereby we compute the spherical 
-  ## taper and multiply the distances by the taper. This would have the advtange 
-  ## that we no longer need to construct the taper within C++. However, it is 
-  ## probably simpler to leave as is.
   D_tap <- list()
   nnz <- c()
   for (i in 1:nres) {
@@ -853,4 +781,23 @@
   Q <- Matrix::bdiag(Q_matrices)
 
   return(list(Q = Q, nnz = nnz))
+}
+
+
+
+## Exctracts the covariate design matrix of the fixed effects at the BAU level.
+.extract_BAU_X_matrix <- function (formula, BAUs) {
+  ## Retrieve the dependent variable name
+  depname <- all.vars(formula)[1]
+  
+  ## Set the dependent variable in BAUs to something just so that 
+  ## .extract.from.formula doesn't throw an error. We are not returning M, 
+  ## so we don't need to worry about NULL-ing afterwards.
+  BAUs[[depname]] <- 0.1
+  
+  ## Extract covariates from BAUs
+  L <- .extract.from.formula(formula, data = BAUs)
+  X <- as(L$X,"Matrix")
+  
+  return(X)
 }

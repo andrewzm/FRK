@@ -19,51 +19,32 @@
 .FRKTMB_pred <- function(M, newdata, CP, predict_BAUs, pred_time, type, n_MC, 
                          obs_fs, k, percentiles, cred_mass, kriging) {
   
-  
-  ## FIXME: predict over only the observed BAUs needed for newdata locations
-  
-  # ## If the user has specified which polygons he wants we can remove the ones we don't need
-  # ## We only need those BAUs that are influenced by observations and prediction locations
-  # ## For ST, use all BAUs, as it gets complicated
-  # if(!predict_BAUs & is(newdata,"Spatial")) {
-  #   
-  #   ## The needed BAUs are the nonzero column CP
-  #   needed_BAUs <- as(CP,"dgTMatrix")@j
-  # 
-  #   ## Filter the BAUs and the matrices
-  #   ## (Note that we do not update the SRE object so this is safe to do)
-  #   M@BAUs <- M@BAUs[needed_BAUs, ]
-  #   CP <- CP[, needed_BAUs]
-  #   # CZ <- CZ[, needed_BAUs]
-  #   M@S0 <- M@S0[needed_BAUs, ]
-  # }
 
   # ---- Create objects needed thoughout the function ----
   
   ## Id of observed BAUs
-  obsidx <- observed_BAUs(M) # FIXME: Use this everywhere, so could just make it into a slot of SRE object
+  obsidx <- observed_BAUs(M)
   
   ## The covariate design matrix, X (at the BAU level i.e. for all BAUs)
   X <- as(.extract_BAU_X_matrix(formula = M@f, BAUs = M@BAUs), "matrix")
-
+  
   
   # ---- Compute the Cholesky factor of the permuted precision matrix ----
   
-  ## Number of fixed and random effects
-  p <- length(M@alphahat)
-  mstar <- length(obsidx)
-  r <- ncol(M@S0)
-  s <- r + mstar * M@include_fs
+  p <- length(M@alphahat) # Number of fixed regression effects
+  mstar <- length(obsidx) # Number of observed BAUs
+  r <- nbasis(M)         
+  s <- r + mstar * M@include_fs # Total number of random effects (fine-scale variation only included if include_fs = TRUE)
   
   ## Permuted Cholesky factor. If we are doing universal kriging, keep the joint precision 
   ## matrix of the fixed and random effects. Otherwise, if we are doing simple kriging, 
   ## use only the random effect block of the precision matrix.
   if (kriging == "universal") {
-    Q_joint <- M@Q_eta_xi
+    Q_posterior <- M@Q_posterior
   } else if (kriging == "simple") {
-    Q_joint <- M@Q_eta_xi[-(1:p), -(1:p)]
+    Q_posterior <- M@Q_posterior[-(1:p), -(1:p)]
   }
-  Q_L <- sparseinv::cholPermute(Q = Q_joint)
+  Q_L <- sparseinv::cholPermute(Q = Q_posterior)
   
   
   # ------ Latent process Y prediction and Uncertainty ------
@@ -83,7 +64,7 @@
   
   
   # Analytic <- TRUE
-  # MSPE_Y  <- .Y_var(M = M, Q_joint = Q_joint, Q_L = Q_L, obsidx = obsidx, X = X, kriging = kriging)
+  # MSPE_Y  <- .Y_var(M = M, Q_posterior = Q_posterior, Q_L = Q_L, obsidx = obsidx, X = X, kriging = kriging)
   
   
   
@@ -118,8 +99,7 @@
   ## to be safe.
   if (predict_BAUs) {
     newdata <- M@BAUs 
-    newdata$dummy_blah123 <- rep(1, length(newdata))
-    newdata$dummy_blah123 <- NULL
+    newdata <- .Coerce_SpatialDataFrame(newdata)
   }
     
   ## Now update newdata with the predictions, RMSPE, and percentiles. 
@@ -178,14 +158,12 @@
   }
   
   ## It is convenient to have the spatial coordinates in the @data slot of the
-  ## return newdata object. Only add those coordinates not already in the data.
+  ## returned newdata object. Only add those coordinates not already in the data.
   tmp <- which(!(colnames(coordinates(newdata)) %in% names(newdata@data)))
   if (length(tmp))
     newdata@data <- cbind(newdata@data, coordinates(newdata)[, tmp]) 
-
     
-  ## Return the predictions, and the MC samples at either the BAUs (if we are 
-  ## predicting over BAUs) or over the user specified arbitrary polygons.
+  ## Return the predictions and uncertainty summary (in newdata) and the MC samples (in MC)
   return(list(newdata = newdata, MC = MC))
 }
 
@@ -210,9 +188,9 @@
 #' @param Q_L A list containing the Cholesky factor of the permuted precision matrix (stored as \code{Q$Qpermchol}) and the associated permutationmatrix (stored as \code{Q_L$P}).
 #' @param obsidx Vector containing the observed locations.
 #' @return A vector of the posterior variance of Y at every BAU. 
-.Y_var <- function(M, Q_joint, Q_L, obsidx, X, kriging){
+.Y_var <- function(M, Q_posterior, Q_L, obsidx, X, kriging){
   
-  r <- ncol(M@S0)
+  r <- nbasis(M)
   mstar <- length(obsidx)
   
   ## Number of fixed and random effects
@@ -228,27 +206,23 @@
   }
   
   
-  # ---- Sparse-inverse-subset of Q (acting as a proxy for the true covariance matrix) ----
+  # ---- Inverse of Q  ----
 
-  
+  ## Use the sparse-inverse-subset (acting as a proxy for the true covariance matrix)
+  ## if we have too many random effects
   if (r + mstar < 4000) {
-    Sigma <- chol2inv(chol(M@Q_eta_xi))
+    Sigma <- chol2inv(chol(M@Q_posterior))
   } else {
-    ## Sparse-inverse-subset of random effects (eta and xi_O)
-    ## (a proxy for the covariance matrix)
-    Sigma <- sparseinv::Takahashi_Davis(Q = Q_joint,
-                                        cholQp = Q_L$Qpermchol,
-                                        P = Q_L$P)
+    Sigma <- sparseinv::Takahashi_Davis(Q = Q_posterior, cholQp = Q_L$Qpermchol, P = Q_L$P)
   }
 
-
   if (kriging == "universal") {
-    Sigma_alpha <- Sigma[1:p, 1:p, drop = FALSE]
-    Sigma_random <- Sigma[-(1:p), -(1:p), drop = FALSE]
+    Sigma_alpha   <- Sigma[1:p, 1:p, drop = FALSE]
+    Sigma_random  <- Sigma[-(1:p), -(1:p), drop = FALSE]
     Cov_alpha_eta <- Sigma[1:p, (p+1):(p+r), drop = FALSE]
-    Cov_alpha_xi <- Sigma[1:p, (p + r +1):(p+r+mstar), drop = FALSE]
+    Cov_alpha_xi  <- Sigma[1:p, (p + r +1):(p+r+mstar), drop = FALSE]
   } else if (kriging == "simple") {
-    Sigma_random <- Sigma
+    Sigma_random  <- Sigma
   }
   
   Sigma_eta <- Sigma_random[1:r, 1:r]
@@ -335,7 +309,7 @@
 #' @param obs_fs Logical indicating whether the fine-scale variation is included in the latent Y process. If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{\xi} is included in the latent \eqn{Y} process. If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}
 #' @param k vector of size parameters at each BAU (applicable only for binomial and negative-binomial data)
 #' @param Q_L A list containing the Cholesky factor of the permuted precision matrix (stored as \code{Q$Qpermchol}) and the associated permutationmatrix (stored as \code{Q_L$P})
-#' @param obsidx A vector containing the indices of observed locations
+#' @param obsidx A vector containing the indices of observed BAUs
 #' @return A list containing Monte Carlo samples of various quantites of interest. The list elements are (N x n_MC) matrices, whereby the ith row of each matrix corresponds to \code{n_MC} samples of the given quantity at the ith BAU. The available quantities are:
 #' \describe{
 #'   \item{Y_samples}{Samples of the latent, Gaussian scale Y process}
@@ -345,10 +319,10 @@
 #' }
 .MC_sampler <- function(M, X, type, n_MC, obs_fs, k, Q_L, obsidx, predict_BAUs, CP, kriging){
   
-  MC <- list()              # object we will return holding the quantities of interest (Y, mu, Z)
+  MC <- list()              
   N   <- nrow(M@S0)   
   mstar <- length(obsidx)
-  r   <- ncol(M@S0)   # Total number of basis functions
+  r   <- nbasis(M)   
   
   ## Number of fixed and random effects
   p <- length(M@alphahat)
@@ -365,10 +339,14 @@
   
   # ---- Generate samples from (eta', xi_O')' ----
   
-  ## Must generate samples jointly, as eta and xi_O are correlated.
+  ## Must generate samples jointly, as elements of alpha, eta, and xi_O are correlated.
   
-  if (M@include_fs) {
-    ## Construct the mean vector of (eta', xi')',
+
+  
+  
+  if (M@include_fs) { # If we have included fine-scale variation
+    ## Construct the mean vector containing all fixed (if kriging == "universal"), 
+    ## and random effects: the basis function random weights, and the fine-scale variation (if M@include_fs = TRUE). 
     ## then make an (r + m*) x n_MC matrix whose columns are the mean vector of (eta', xi')'.
     ## Finally, generate (r + m*) x n_MC samples from Gau(0, 1) distribution.
     if (kriging == "universal") {
@@ -381,35 +359,32 @@
     
     if (kriging == "universal") {
       z <- matrix(rnorm((p + r + mstar) * n_MC), nrow = p + r + mstar, ncol = n_MC)
-    } else {
+    } else if (kriging == "simple") {
       z <- matrix(rnorm((r + mstar) * n_MC), nrow = r + mstar, ncol = n_MC)
     }
     
     
-    ## Compute the Cholesky factor of  Q (the joint precision matrix of (eta', xi')').
+    ## Compute the Cholesky factor of Q (the joint precision matrix of (eta', xi')').
     ## Then, to generate samples from (eta, xi_O), 
     ## use eta_xi = L^{-T} z + mu = U^{-1} z + mu, 
     ## where U upper cholesky factor of Q, so that Q = U'U.
-    U <- Matrix::t(Q_L$Qpermchol) # upper Cholesky factor of permuted joint precision matrix M@Q_eta_xi
-    # x <- backsolve(U, z)          # x ~ Gau(0, A), where A is the permuted precision matrix i.e. A = P'QP
-    x <- solve(U, z)          
+    U <- Matrix::t(Q_L$Qpermchol) # upper Cholesky factor of permuted joint posterior precision matrix 
+    x <- solve(U, z)              # x ~ Gau(0, A), where A is the permuted precision matrix i.e. A = P'QP
     y <- Q_L$P %*% x              # y ~ Gau(0, Q^{-1})
     eta_xi_O  <- as.matrix(y + mu_eta_xi_O_Matrix) # add the mean to y
   
   
-    ## Separate the eta and xi samples
+    ## Separate the MC samples of each quantity
     if (kriging == "universal") {
       alpha <- eta_xi_O[1:p, , drop = FALSE]
       eta   <- eta_xi_O[(p + 1):(p + r), ]
       xi_O  <- eta_xi_O[(p + r + 1):(p + r + mstar), ]
-    } else {
+    } else if (kriging == "simple") {
       eta   <- eta_xi_O[1:r, ]
       xi_O  <- eta_xi_O[(r + 1):(r + mstar), ]
     }
     
-  } else {
-    
-    
+  } else { # No fine-scale variation to deal with
     ## Construct the mean vector of eta,
     ## then make an r x n_MC matrix whose columns are the mean vector of eta.
     ## Finally, generate r x n_MC samples from Gau(0, 1) distribution.
@@ -420,9 +395,8 @@
     ## Compute the Cholesky factor of  Q, where Q is the precision matrix of eta.
     ## Then, to generate samples from eta, use eta = L^{-T} z + mu = U^{-1} z + mu, 
     ## where U upper cholesky factor of Q, so that Q = U'U.
-    U <- Matrix::t(Q_L$Qpermchol) # upper Cholesky factor of permuted joint precision matrix M@Q_eta_xi
-    # x <- backsolve(U, z)          # x ~ Gau(0, A), where A is the permuted precision matrix i.e. A = P'QP
-    x <- solve(U, z)
+    U <- Matrix::t(Q_L$Qpermchol) # upper Cholesky factor of permuted joint posterior precision matrix 
+    x <- solve(U, z)              # x ~ Gau(0, A), where A is the permuted precision matrix i.e. A = P'QP
     y <- Q_L$P %*% x              # y ~ Gau(0, Q^{-1})
     eta  <- as.matrix(y + mu_eta_Matrix) # add the mean to y
   }
@@ -484,7 +458,7 @@
   P                <- Matrix::sparseMatrix(i = 1:N, j = 1:N, x = 1)[ids, ]
   Y_smooth_samples <- Matrix::t(P) %*% Y_smooth_samples
 
-  # ## Sanity check:
+  ## Sanity check:
   # N = 10
   # obsidx <- sample(1:N, 6, replace = F)
   # unobsidx <- (1:N)[-obsidx]
@@ -562,9 +536,6 @@
   if (!predict_BAUs) 
     mu_samples <- as.matrix(CP %*% mu_samples)
 
-    
-
-  
   ## Output the mean samples. If probability parameter was computed, and 
   ## we are predicting over the BAUs, also output.
   MC$mu_samples <- mu_samples

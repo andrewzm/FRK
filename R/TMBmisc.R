@@ -132,13 +132,12 @@
 #' @param cred_mass a scalar [0, 1] specifying the mass within the credible interval; if \code{cred_mass = NULL}, no HPD credible interval is computed
 #' @return The prediction interval at each location (or width at each location if \code{width = TRUE})
 .prediction_interval <- function(X, interval_type, percentiles, cred_mass) {
-
   X <- as.matrix(X)
   if (interval_type == "central") Q <- t(apply(X, 1, quantile, percentiles / 100))
-  if (interval_type == "HPD")     Q <- t(HDInterval::hdi(t(X), cred_mass = cred_mass)) # Note that hdi() expects locations in columns, samples in rows
-  
+  if (interval_type == "HPD") Q <- t(HDInterval::hdi(t(X), cred_mass = cred_mass)) # Note that hdi() expects locations in columns, samples in rows
   return(Q)
 }
+
 
 
 ## Since we will use ggplot2 we will first convert our objects to data frames.

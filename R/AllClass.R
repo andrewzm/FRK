@@ -115,12 +115,12 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot link A character string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted. 
 #' @slot taper A positve numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "covariance"} and \code{TMB} is used to fit the data)
 #' @slot mu_xi updated expectation of the fine-scale random effects at all BAUs (estimated)
-#' @slot Q_eta_xi updated joint precision matrix of the basis function random effects and observed fine-scale random effects (estimated)
+#' @slot Q_posterior updated joint precision matrix of the basis function random effects and observed fine-scale random effects (estimated)
 #' @slot log_likelihood the log likelihood of the fitted model
 #' @slot method the fitting procedure used to fit the SRE model
 #' @slot phi the estimated dispersion parameter (assumed constant throughout the spatial domain)
 #' @slot k_Z vector of known size parameters at the data support (only applicable to binomial and negative-binomial response distributions) 
-#' @slot include_fs Flag indicating whether the fine-scale variation should be include in the model
+#' @slot include_fs flag indicating whether the fine-scale variation should be include in the model
 #' @slot normalise_wts if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)
 #' @slot fs_by_spatial_BAU if \code{TRUE}, and each spatial BAU is observed at least 10 times, then each BAU is given a unique fine-scale variation parameter
 #' @seealso \code{\link{SRE}} for details on how to construct and fit SRE models.
@@ -156,7 +156,7 @@ setClass("SRE",representation(data="list",
                               link = "character", 
                               taper = "numeric", 
                               mu_xi = "Matrix",
-                              Q_eta_xi = "dsCMatrix",
+                              Q_posterior = "dsCMatrix",
                               log_likelihood = "numeric", 
                               method = "character", 
                               phi = "numeric", 

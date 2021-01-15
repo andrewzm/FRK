@@ -4,7 +4,7 @@
 \alias{.Y_var}
 \title{Posterior variance of the latent Y process.}
 \usage{
-.Y_var(M, Q_joint, Q_L, obsidx, X, kriging)
+.Y_var(M, Q_posterior, Q_L, obsidx, X, kriging)
 }
 \arguments{
 \item{M}{An object of class SRE.}
