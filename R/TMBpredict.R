@@ -95,12 +95,8 @@
   RMSPE <- sapply(MC, apply, 1, sd)
 
   ## If we are predicting over BAUs, newdata is NULL, so set it to the BAUs.
-  ## Note that the BAUs must be a Spatial*DataFrame, so coercion is unnecessary, but we will do it 
-  ## to be safe.
-  if (predict_BAUs) {
-    newdata <- M@BAUs 
-    newdata <- .Coerce_SpatialDataFrame(newdata)
-  }
+  ## Note that BAUs must be a Spatial*DataFrame, so coercion isn't really necessary.
+  if (predict_BAUs) newdata <- .Coerce_SpatialDataFrame(M@BAUs)
     
   ## Now update newdata with the predictions, RMSPE, and percentiles. 
   ## (See https://datascience.stackexchange.com/a/8924 for a description of what this gsub is doing.)
@@ -186,7 +182,10 @@
 #' 
 #' @param M An object of class SRE.
 #' @param Q_L A list containing the Cholesky factor of the permuted precision matrix (stored as \code{Q$Qpermchol}) and the associated permutationmatrix (stored as \code{Q_L$P}).
+#' @param Q_posterior the posterior precision matrix of the fixed and random effects
 #' @param obsidx Vector containing the observed locations.
+#' @param X matrix of covariates
+#' @param kriging whether we wish to perform "simple" or "universal" kriging
 #' @return A vector of the posterior variance of Y at every BAU. 
 .Y_var <- function(M, Q_posterior, Q_L, obsidx, X, kriging){
   
@@ -309,6 +308,9 @@
 #' @param obs_fs Logical indicating whether the fine-scale variation is included in the latent Y process. If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{\xi} is included in the latent \eqn{Y} process. If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}
 #' @param k vector of size parameters at each BAU (applicable only for binomial and negative-binomial data)
 #' @param Q_L A list containing the Cholesky factor of the permuted precision matrix (stored as \code{Q$Qpermchol}) and the associated permutationmatrix (stored as \code{Q_L$P})
+#' @param predic_BAUs logical, indicating whether we are predicting over the BAUs
+#' @param CP the prediction incidence matrix
+#' @param kriging whether we wish to perform "simple" or "universal" kriging
 #' @param obsidx A vector containing the indices of observed BAUs
 #' @return A list containing Monte Carlo samples of various quantites of interest. The list elements are (N x n_MC) matrices, whereby the ith row of each matrix corresponds to \code{n_MC} samples of the given quantity at the ith BAU. The available quantities are:
 #' \describe{
@@ -340,26 +342,24 @@
   # ---- Generate samples from (eta', xi_O')' ----
   
   ## Must generate samples jointly, as elements of alpha, eta, and xi_O are correlated.
-  ## First, construct the mean vector containing all fixed (if kriging == "universal"), 
-  ## and random effects: the basis function random weights, and the fine-scale variation (if M@include_fs = TRUE). 
-  if (kriging == "universal") {
-    mu_posterior <- as.numeric(M@alphahat)
-  } else if (kriging == "simple") {
-    mu_posterior <- c(as.numeric(M@alphahat), as.numeric(M@mu_eta))
-  }
-  
-  if (M@include_fs)
-    mu_posterior <- c(mu_posterior, as.numeric(M@mu_xi))
+  ## First, construct the mean vector containing all fixed effects 
+  ## (if kriging == "universal"), and random effects; the basis function random 
+  ## weights, and the fine-scale variation (if M@include_fs). 
+  mu_posterior <- if (kriging == "universal") as.numeric(M@alphahat) else vector()
+  mu_posterior <- c(mu_posterior, as.numeric(M@mu_eta))
+  if (M@include_fs) mu_posterior <- c(mu_posterior, as.numeric(M@mu_xi))
+
   
   ## Now make a matrix with n_MC columns, whose columns are the mean vector repeated.
   mu_posterior_Matrix  <- matrix(rep(mu_posterior, times = n_MC), ncol = n_MC)
   
   ## Finally, generate samples from Gau(0, 1) distribution, and transform this 
   ## standard normal vector to one that has the desired posterior precision matrix.
-  z <- matrix(rnorm(length(mu_posterior) * n_MC), nrow = r, ncol = n_MC)
+  z <- matrix(rnorm(length(mu_posterior) * n_MC), 
+              nrow = length(mu_posterior), ncol = n_MC)
   U <- Matrix::t(Q_L$Qpermchol) # upper Cholesky factor of permuted joint posterior precision matrix 
-  x <- solve(U, z)              # x ~ Gau(0, A), where A is the permuted precision matrix i.e. A = P'QP
-  y <- Q_L$P %*% x              # y ~ Gau(0, Q^{-1})
+  x <- solve(U, z)        # x ~ Gau(0, A), where A is the permuted precision matrix i.e. A = P'QP
+  y <- Q_L$P %*% x        # y ~ Gau(0, Q^{-1})
   mu_posterior <- as.matrix(y + mu_posterior_Matrix) # add the mean to y
   
   ## Separate the MC samples of each quantity
@@ -514,7 +514,7 @@
   if (M@response == "poisson") {
     Z_samples <- rpois(n, lambda = c(t(mu_samples)))
   } else if (M@response == "gaussian") {
-    sigma2e <- M@Ve[1, 1] # measurement error standard deviation
+    sigma2e <- mean(diag(M@Ve)) # measurement error standard deviation
     Z_samples <- rnorm(n, mean = c(t(mu_samples)), sd = sqrt(sigma2e))
   } else if (M@response == "bernoulli") {
     Z_samples <- rbinom(n, size = 1, prob = c(t(mu_samples)))

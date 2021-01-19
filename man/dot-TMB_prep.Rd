@@ -8,6 +8,8 @@
 }
 \arguments{
 \item{M}{An object of class \code{SRE}.}
+
+\item{known_sigma2fs}{known value of the fine-scale variance. If \code{NULL} (the default), the fine-scale variance \eqn{\sigma^2_\xi} is estimated as usual. If \code{known_sigma2fs} is not \code{NULL}, the fine-scale variance is fixed to the supplied value; this may be a scalar, or vector of length equal to the number of spatial BAUs (if fs_by_spatial_BAU = TRUE)}
 }
 \value{
 A list object containing:

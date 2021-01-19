@@ -41,13 +41,13 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 
 \item{\code{Cmat}}{incidence matrix mapping the observations to the BAUs}
 
-\item{\code{C_O}}{incidence matrix mapping the observations to the OBSERVED BAUs}
+\item{\code{C_O}}{incidence matrix mapping the observations to the observed BAUs}
 
 \item{\code{X}}{matrix of covariates}
 
-\item{\code{X}}{matrix of covariates at observed BAUs}
+\item{\code{X_O}}{matrix of covariates at observed BAUs}
 
-\item{\code{K_type}}{type of prior covariance matrix of random effects. Can be "block-exponential" (correlation between effects decays as a function of distance between the basis-function centroids), "unstructured" (all elements in \code{K} are unknown and need to be estimated), or "precision" (a sparse precision matrix is used).}
+\item{\code{K_type}}{type of prior covariance matrix of random effects. Can be "block-exponential" (correlation between effects decays as a function of distance between the basis-function centroids), "unstructured" (all elements in \code{K} are unknown and need to be estimated), or "neighbour" (a sparse precision matrix is used, whereby only neighbouring basis functions have non-zero precision matrix elements).}
 
 \item{\code{mu_eta}}{updated expectation of the basis function random effects (estimated)}
 
@@ -89,7 +89,7 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 
 \item{\code{normalise_wts}}{if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)}
 
-\item{\code{fs_by_spatial_BAU}}{if \code{TRUE}, and each spatial BAU is observed at least 10 times, then each BAU is given a unique fine-scale variation parameter}
+\item{\code{fs_by_spatial_BAU}}{if \code{TRUE}, then each BAU is associated with its own fine-scale variance parameter}
 }}
 
 \seealso{

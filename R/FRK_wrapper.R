@@ -40,6 +40,7 @@ FRK <- function(f,                     # formula (compulsory)
                 k = NULL,              # k used for prediction
                 percentiles = c(5, 95),  # Desired percentiles of the quantitity of interest
                 cred_mass = 0.9,
+                fs_by_spatial_BAU = FALSE,
                 ...)                   # other arguments for BAUs/basis-function construction, or 
 {
 
@@ -68,7 +69,8 @@ FRK <- function(f,                     # formula (compulsory)
     
     # check that the arguments are OK for SRE.fit
     .check_args2(n_EM = n_EM, tol = tol, method = method, print_lik = print_lik, 
-                 response = response, link = link, K_type = K_type, optimiser = optimiser, ...)                      
+                 response = response, link = link, K_type = K_type, lambda = lambda,
+                 optimiser = optimiser, fs_by_spatial_BAU = fs_by_spatial_BAU, ...)                      
 
     ## if there is a measurement error declared in all datasets then
     ## don't estimate it

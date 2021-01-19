@@ -20,12 +20,12 @@
 #' @param data list of objects of class \code{SpatialPointsDataFrame}, \code{SpatialPolygonsDataFrame}, \code{STIDF}, or  \code{STFDF}. If using space-time objects, the data frame must have another field, \code{t}, containing the time index of the data point. If the assumed response distribution is \code{"binomial"} or \code{"negative-binomial"}, the data frame must have another field, \code{k}, containing the known constant parameter \eqn{k} for each observation. 
 #' @param basis object of class \code{Basis} (or \code{TensorP_Basis})
 #' @param BAUs object of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame}, \code{STIDF}, or \code{STFDF}. The object's data frame must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality. If the function \code{FRK} is used directly, then BAUs are created automatically, but only coordinates can then be used as covariates
-#' @param est_error flag indicating whether the measurement-error variance should be estimated from variogram techniques. If this is set to 0, then \code{data} must contain a field \code{std}. Measurement-error estimation is currently not implemented for spatio-temporal datasets
+#' @param est_error flag indicating whether the measurement-error variance should be estimated from variogram techniques (only applicable for a Gaussian response). If this is set to 0, then \code{data} must contain a field \code{std}. Measurement-error estimation is currently not implemented for spatio-temporal datasets
 #' @param include_fs flag indicating whether the fine-scale variation should be include in the model
 #' @param average_in_BAU if \code{TRUE}, then multiple data points falling in the same BAU are averaged; the measurement error of the averaged data point is taken as the average of the individual measurement errors
 #' @param sum_variables vector of strings indicating which variables are to be summed rather than averaged; only applicable if \code{average_in_BAU == TRUE}
 #' @param normalise_wts if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)
-#' @param fs_by_spatial_BAU if \code{TRUE}, and each spatial BAU is observed at least 10 times, then each BAU is given a unique fine-scale variation parameter
+#' @param fs_by_spatial_BAU if \code{TRUE}, then each spatial BAU is associated with its own fine-scale variance parameter (only allowed if method = 'TMB'). Otherwise, a single fine-scale variance parameter is used
 #' @param fs_model if "ind" then the fine-scale variation is independent at the BAU level. If "ICAR", then an ICAR model for the fine-scale variation is placed on the BAUs
 #' @param vgm_model an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm}. This object contains the variogram model that will be fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified, the variogram used is \code{gstat::vgm(1, "Lin", d, 1)}, where \code{d} is approximately one third of the maximum distance between any two data points
 #' @param K_type the parameterisation used for the \code{K} matrix. If the EM algorithm is used for model fitting, \code{K_type} can be "unstructured" or "block-exponential". If TMB is used for model fitting, \code{K_type} can be "neighbour" or "block-exponential". The default is "block-exponential"
@@ -48,7 +48,7 @@
 #' @param taper A positive numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "block-exponential"} and \code{TMB} is used to fit the data)
 #' @inheritParams .FRKTMB_pred
 #' @param optimiser the optimising function used for model fitting when \code{method = 'TMB'} (default is \code{nlminb}). Users may pass in a function object or a string corresponding to a named function. Optional parameters may be passed to \code{optimiser} via \code{...}. The only requirement of \code{optimiser} is that the first three arguments correspond to the initial parameters, the objective function, and the gradient, respectively (note that this may be achieved by rearranging the order of the arguments before passing into \code{optimiser}) 
-#' @param known_sigma2fs known value of the fine-scale variance. If \code{NULL} (the default), the fine-scale variance \eqn{\sigma^2_\xi} is estimated as usual. If \code{known_sigma2fs} is not \code{NULL}, the fine-scale variance is fixed to the supplied value
+#' @param known_sigma2fs known value of the fine-scale variance. If \code{NULL} (the default), the fine-scale variance \eqn{\sigma^2_\xi} is estimated as usual. If \code{known_sigma2fs} is not \code{NULL}, the fine-scale variance is fixed to the supplied value; this may be a scalar, or vector of length equal to the number of spatial BAUs (if fs_by_spatial_BAU = TRUE)
 #' @param ... other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling \code{FRK}, or the user specified \code{optimiser} function when calling \code{FRK} or \code{SRE.fit}
 #' @details \code{SRE()} is the main function in the package: It constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of Basic Areal Units (BAUs). The function first takes each object in the list \code{data} and maps it to the BAUs -- this entails binning the point-referenced data into the BAUs (and averaging within the BAU) if \code{average_in_BAU = TRUE}, and finding which BAUs are influenced by the polygon datasets. Following this, the incidence matrix \code{Cmat} is constructed, which appears in the observation model \eqn{Z = CY + C\delta + e}, where \eqn{C} is the incidence matrix and \eqn{\delta} is systematic error at the BAU level.
 #'
@@ -146,7 +146,6 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         if (any(sapply(data, function(x) is(x, "SpatialPolygons")))) 
             warning("SpatialPolygons were provided for the data support. No 'wts' field was found in the BAUs, so all BAUs are assumed to be of equal weight; if this is not the case, set the 'wts' field in the BAUs accordingly.")
     }
-    
 
     ## Check that the arguments are OK
     .check_args1(f = f, data = data, basis = basis, BAUs = BAUs, est_error = est_error, 
@@ -163,25 +162,15 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     ## Initialise list of matrices (We construct one for every data object then concatenate)
     S <- Ve <- Vfs <- X <- Z <- Cmat <- k_Z <- list()
 
-    ## Evaluate the basis functions over the BAUs. If we have fewer BAUs than 
-    ## basis functions, then we average the basis functions over the polygons
-    ## using Monte Carlo integration with 1000 samples per polygon.
-    
-    ## Number of spatial BAUs:
-    # if (is(BAUs, "STFDF")) ns <- length(BAUs@sp) else ns <- length(BAUs)
+    ## Number of spatial BAUs and basis functions
     ns <- dim(BAUs)[1] 
+    n_basis_spatial <- if(is(basis,"TensorP_Basis")) nbasis(basis@Basis1) else nbasis(basis)
     
-    if (is(basis,"TensorP_Basis")) {
-        n_basis_spatial <- nbasis(basis@Basis1)
-    } else {
-        n_basis_spatial <- nbasis(basis)
-    }
-    
-    if(ns < n_basis_spatial) {
-        S0 <- eval_basis(basis, BAUs)     # evaluate basis functions by averaging the basis functions over the polygons
-    } else {
-        S0 <- eval_basis(basis,.polygons_to_points(BAUs))     # evaluate basis functions over BAU centroids
-    }
+    ## Evaluate the basis functions over the BAUs. If we have fewer spatial BAUs 
+    ## than basis functions, then we average the basis functions over the BAUs
+    ## using Monte Carlo integration with 1000 samples per BAU. 
+    ## Otherwise, evaluate the basis functions over the BAU centroids.
+    S0 <- eval_basis(basis, if(ns < n_basis_spatial) BAUs else .polygons_to_points(BAUs))
     
     ## Normalise basis functions for the prior process to have constant variance. This was seen to pay dividends in
     ## latticekrig, however we only do it once initially
@@ -200,7 +189,10 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     for(i in 1:ndata) {
 
         ## If we are estimating measurement error
-        if(est_error) {
+        ## (I think that this measurement error term will be very dodgy when the
+        ## link is not the identity function; perhaps we should add a transformation to
+        ## the data.)
+        if(est_error & response == "gaussian") {
             ## Algorithm for estimating measurement error in space-time objects still not implemented
             if(is(data[[i]],"ST"))
                 stop("Estimation of error not yet implemented for spatio-temporal data")
@@ -214,8 +206,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
             ## Allocate the measurement standard deviation from variogram analysis
             data[[i]]$std <- this_data$std
         }
-
-
+      
         ## The next step is to allocate all data (both point and polygon referenced) to BAUs. 
         ## We can either average data points falling in the same 
         ## BAU (average_in_BAU == TRUE) or not (average_in_BAU == FALSE).
@@ -230,9 +221,9 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
             response_name <- all.vars(f)[1]
             sum_variables <- c(response_name, "k_Z", sum_variables)
         }
-        data_proc <- map_data_to_BAUs(data[[i]],       # data object
-                                      BAUs,            # BAUs
-                                      average_in_BAU = average_in_BAU, # average in BAU?
+        data_proc <- map_data_to_BAUs(data[[i]],       
+                                      BAUs,           
+                                      average_in_BAU = average_in_BAU, 
                                       sum_variables = sum_variables)   # variables to sum rather than average
         
         ## The mapping can fail if not all data are covered by BAUs. Throw an error message if this is the case
@@ -270,29 +261,29 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         ## We ensure the polygon observations are a weighted average over the 
         ## BAUs. This just means dividing each row by its row sum, so that each 
         ## entry is between 0 and 1, and the row sums are all equal to 1. 
-        if (normalise_wts)
-            Cmat[[i]] <- Cmat[[i]] / rowSums(Cmat[[i]]) 
+        if (normalise_wts) Cmat[[i]] <- Cmat[[i]] / rowSums(Cmat[[i]]) 
         
         ## Only the independent model is allowed for now, future implementation will include CAR/ICAR (in development)
         if(fs_model == "ind") {
-            Vfs[[i]] <- tcrossprod(Cmat[[i]] %*% Diagonal(x=sqrt(BAUs$fs)))
+          ## FIXME: Originally, Cmat was constructed to have only 1's appear in the non-zero elements,
+          ## To accomodate for non-equally weighted BAUs, Cmat now has non-zero elements
+          ## If we want to retain the old functionality, just use tmp <- Cmat[[i]]; tmp@x <- rep(1, length(tmp@x))  
+          Vfs[[i]] <- tcrossprod(Cmat[[i]] %*% Diagonal(x=sqrt(BAUs$fs)))
         } else stop("No other fs-model implemented yet")
 
         ## S0 is the matrix S in the vignette. Here S is the matrix SZ in the vignette.
         S[[i]] <- Cmat[[i]] %*% S0
         
         ## Construct k_Z the same way Z is constructed when response is binomial
-        ## or negative binomial
+        ## or negative binomial. Otherwise, provide a placeholder dummy value
         if(response %in% c("binomial", "negative-binomial")) {
-            k_Z[[i]] <- Matrix(data_proc$k_Z)
-        } else {
-            k_Z <- Matrix(-1) # a dummy value of type Matrix so that we can pass it in the created SRE object
+          k_Z[[i]] <- Matrix(data_proc$k_Z) 
+        } else  {
+          k_Z <- Matrix(-1)
         }
+          
     }
 
-    
-    
-    
     if(fs_model == "ind") {
         Qfs_BAUs <- Diagonal(x=1/BAUs$fs)
         Vfs_BAUs <- Diagonal(x=BAUs$fs)
@@ -316,7 +307,6 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
        Z <- round(Z)
     }
     
-    
     ## Initialise the expectations and covariances from E-step to reasonable values
     mu_eta_init <- Matrix(0,nbasis(basis),1)
     S_eta_init <- Diagonal(x = rep(1,nbasis(basis)))
@@ -328,8 +318,9 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
 
     if(!is.finite(determinant(t(X) %*% X)$modulus))
         stop("Matrix of covariates has columns that are linearly dependent. Please change formula or covariates.")
-    alphahat_init <- solve(t(X) %*% X) %*% t(X) %*% Z
-    sigma2fshat_init <- mean(diag(Ve)) / 4
+      alphahat_init <- solve(t(X) %*% X) %*% t(X) %*% Z
+      sigma2fshat_init <- mean(diag(Ve)) / 4
+
 
     ## Information on fitting
     info_fit = list("SRE not fitted to data yet. Please use SRE.fit()")
@@ -348,8 +339,10 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     X_BAU <- as(.extract_BAU_X_matrix(f, BAUs), "matrix") # fixed-effect design matrix at BAU level
     X_O <- X_BAU[obsidx, , drop = FALSE]
 
-    ## Check if each spatial BAU is observed enough times for a unique fs to be associated with each spatial BAU
+    
     if (fs_by_spatial_BAU) {
+       ## Check each spatial BAU is observed enough times for a unique fine-scale
+       ## variance parameter to be associated with each spatial BAU
         fewest_obs <-  min(table(obsidx %% ns)) # count of observations from spatial BAU with fewest observations
         if(fewest_obs == 0) {
             stop("A unique fine-scale variance at each spatial BAU can only be fit if all spatial BAUs are observed, which is not the case for the provided data and BAUs. Please set fs_by_spatial_BAU = FALSE.")
@@ -357,9 +350,12 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
             warning(paste0("The smallest number of observations associated with a spatial BAUs is: ", fewest_obs, 
                            ". As you have selected to fit a unique fine-scale variance at each spatial BAU, please consider if this is a sufficient number of observations."))
         }
+        
+        ## Throw a warning if the the number of spatial BAUs (and hence number 
+        ## of fine-scale variance parameters) is very large
+        if(ns > 500) warning(paste0("The number of spatial BAUs is relatively large (",ns,"). As you have chosen to fit a separate fine-scale variance parameter at each spatial BAU, there will be ",ns," fine-scale variance parameters to estimate, which may result in difficulties in model fitting. (However, it may not be an issue.)"))
     } 
     
-
     ## Construct the SRE object
     new("SRE",
         data=data,
@@ -415,15 +411,19 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     }
     
     ## Check the arguments are OK
-    .check_args2(n_EM = n_EM, tol = tol, method = method, print_lik = print_lik, 
-                 response = SRE_model@response, link = SRE_model@link, K_type = SRE_model@K_type,
+    ## (Note that we cannot pass the SRE model, because it complicates things 
+    ## for the FRK() wrapper)
+    .check_args2(n_EM = n_EM, tol = tol, lambda = lambda,
+                 method = method, print_lik = print_lik, 
+                 fs_by_spatial_BAU = SRE_model@fs_by_spatial_BAU, 
+                 response = SRE_model@response, K_type = SRE_model@K_type, link = SRE_model@link, 
                  optimiser = optimiser, ...) # control parameters to optimiser() 
     
     ## Call internal fitting function with checked arguments
-    return(.SRE.fit(SRE_model = SRE_model, n_EM = n_EM, tol = tol, method = method, 
-             lambda = lambda, print_lik = print_lik, optimiser = optimiser, known_sigma2fs = known_sigma2fs,
-             ...))
-
+    SRE_model <- .SRE.fit(SRE_model = SRE_model, n_EM = n_EM, tol = tol, 
+                          method = method, lambda = lambda, print_lik = print_lik, 
+                          optimiser = optimiser, known_sigma2fs = known_sigma2fs, ...)
+    return(SRE_model)
 }
 
 #' @rdname SRE
@@ -469,11 +469,11 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
             }
         }
 
-
+    
     ## Check the arguments are OK
     .check_args3(obs_fs = obs_fs, newdata = newdata, pred_polys = pred_polys,
                  pred_time = pred_time, covariances = covariances, 
-                 response = SRE_model@response, SRE_model = SRE_model, type = type, 
+                 SRE_model = SRE_model, type = type, kriging = kriging,
                  k = k, percentiles = percentiles, cred_mass = cred_mass)
     
     ## If newdata is a SpatialPoints* object, then we wish to predict over 
@@ -559,13 +559,19 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     return(pred_locs)
 })
 
-
+## If newdata is a SpatialPoints, SpatialPolygons, or SPatialPixels object, 
+## this function coerces newdata to is Spatial*DataFrame variant (with an empty 
+## data slot). If newdata is NULL, NULL is returned.
 .Coerce_SpatialDataFrame <- function (newdata) {
-    ## Add dummy data (with a name that is extremely unlikely to have been used already)
-    newdata$dummy_blah123 <- rep(1, length(newdata)) 
-    ## NULL it so this dummy data is not returned to the user
-    newdata$dummy_blah123 <- NULL 
-    return(newdata)
+  
+   if(!is.null(newdata)) {
+     ## Add dummy data (with a name that is extremely unlikely to have been used already)
+     newdata$dummy_blah123 <- rep(1, length(newdata)) 
+     ## NULL it so this dummy data is not returned to the user
+     newdata$dummy_blah123 <- NULL 
+   }
+  
+  return(newdata)
 }
 
 
@@ -624,7 +630,7 @@ print.SRE <- function(x,...) {
         basis_class = class(x@basis)[1],
         nBAUs = length(x@BAUs),
         nobs = length(x@Z),
-        mean_obsvar = mean(x@Ve@x),
+        mean_obsvar = mean(x@Ve@x), # FIXME: @
         fs_var = x@sigma2fshat,
         dimC = deparse(dim(x@Cmat)),
         dimS = deparse(dim(x@S)),
@@ -1002,8 +1008,8 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 ##################################
 
 ## Main prediction routine
-.SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method="EM", lambda = 0, 
-                     print_lik = FALSE, optimiser = nlminb, known_sigma2fs = NULL, ...) {
+.SRE.fit <- function(SRE_model, n_EM, tol, method, lambda, 
+                     print_lik, optimiser = nlminb, known_sigma2fs, ...) {
 
     info_fit <- list()      # initialise info_fit
     
@@ -2036,6 +2042,8 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
     if(is(BAUs,"STFDF") && nrow(BAUs@data) != nrow(BAUs@sp) * length(BAUs@time))
         stop("The number of rows in BAUs@data should be equal to the number of spatial BAUs, nrow(BAUs@sp), multiplied by the number of time indices, length(BAUs@time)")
         
+    
+  
     # if(is(BAUs,"SpatialPointsDataFrame"))
     #     stop("Implementation with Point BAUs is currently in progress")
     # if(is(BAUs,"STFDF")) if(is(BAUs@sp,"SpatialPointsDataFrame"))
@@ -2053,7 +2061,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
         stop("basis needs to be of class Basis  or TensorP_Basis (package FRK)")
     if(!("fs" %in% names(BAUs@data))) {
         stop("BAUs should contain a field 'fs' containing a basis
-             function for fine-scale variation. Do BAUs$fs <- 1 if you don't know what this is.")
+             vector for fine-scale variation. Do BAUs$fs <- 1 if you don't know what this is.")
     }
     if(!(all(BAUs$fs >= 0)))
         stop("fine-scale variation basis function needs to be nonnegative everywhere")
@@ -2066,16 +2074,39 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 
     
     if(!(K_type %in% c("block-exponential", "neighbour", "unstructured", "separable"))) 
-            stop("Invalid K_type argument")
-    if (response != "gaussian" & K_type == "block-exponential")
-        warning("Using K_type = 'block-exponential' is computationally inefficient when response != 'gaussian' (more specifically, when method = 'TMB'). For these situations, consider using K_type = 'neighbour' or K_type = 'separable'.")
+        stop("Invalid K_type argument. Please select from 'block-exponential', 'neighbour', 'unstructured', or 'separable'")
+    if(K_type == "unstructured" & response != "gaussian")
+        stop("The unstructured covariance matrix (K_type = 'unstructured') is not implemented for non-Gaussian response (more specifically, when method = 'TMB')")
+    if (K_type == "block-exponential" & response != "gaussian")
+        warning("Using the block-exponential covariance matrix (K_type = 'block-exponential') is computationally inefficient with a non-Gaussian response (more specifically, when method = 'TMB'). For these situations, consider using K_type = 'neighbour' or K_type = 'separable'.")
     
+  
+  if (K_type == "separable" & is(basis,"TensorP_Basis"))
+    stop("K_type = 'separable' is not yet implemented in a space-time setting.")
+  
+  ## If K_type == separable, the basis functions must be in a regular rectangular lattice
+  if (K_type == "separable") 
+    for (i in unique(basis@df$res)) {
+      temp <- basis@df[basis@df$res == i, ]
+      if (!.test_regular_grid(temp$loc1, temp$loc2, rectangular = TRUE) ) 
+        stop("Basis functions must be arranged in a regular rectangular lattice when K_type = 'separable'.")
+    }
+  
+  
+  ## If K_type == "neighbour", we just need basis functions to be in a regular 
+  ## lattice (does not need to be rectangular)
+  if (K_type == "neighbour") 
+    for (i in unique(basis@df$res)) {
+      temp <- basis@df[basis@df$res == i, ]
+      if (!.test_regular_grid(temp$loc1, temp$loc2, rectangular = FALSE) ) 
+        stop("Basis functions must be arranged in a regular lattice when K_type = 'neighbour'.")
+    }  
+  
     ## Check that valid data model and link function have been chosen
     if (!(response %in% c("gaussian", "poisson", "bernoulli", "gamma", "inverse-gaussian", "negative-binomial", "binomial")))
             stop("Invalid response argument")
     if (!(link %in% c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared")))
             stop("Invalid link argument")
-    
     ## Check that an appropriate response-link combination has been chosen
     if (response == "gaussian" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "square-root")) ||
             response == "poisson" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "square-root")) ||
@@ -2086,7 +2117,6 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
             response == "bernoulli" & !(link %in% c("logit", "probit", "cloglog"))) {
             stop("Invalid response-link combination selected. Please choose an appropriate link function for the specified response distribution.")
     }
-    
     ## Provide a warning if a possibly problematic combination is chosen
     if (response == "gaussian" & link %in% c("log", "inverse-squared", "square-root") ||
         response == "poisson" & link %in% c("identity", "inverse", "inverse-squared") ||
@@ -2115,22 +2145,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
         }
     }
     
-    ## Check that, if K_type == separable, the basis functions are in a regular rectangular lattice
-    if (K_type == "separable") 
-        for (i in unique(basis@df$res)) {
-            temp <- basis@df[basis@df$res == i, ]
-            if (!.test_regular_grid(temp$loc1, temp$loc2, rectangular = TRUE) ) 
-                stop("Basis functions must be arranged in a regular rectangular lattice when K_type == 'separable'.")
-        }
-    
-    ## If K_type == "neighbour", we just need basis functions to be in a regular 
-    ## lattice (does not need to be rectangular)
-    if (K_type == "neighbour") 
-        for (i in unique(basis@df$res)) {
-            temp <- basis@df[basis@df$res == i, ]
-            if (!.test_regular_grid(temp$loc1, temp$loc2, rectangular = FALSE) ) 
-                stop("Basis functions must be arranged in a regular lattice when K_type == 'neighbour'.")
-        }
+
     
     ## If we wish to have unique fine-scale variance associated with each BAU, 
     ## we need to:
@@ -2161,9 +2176,9 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 
 
 ## Checks arguments for the SRE.fit() function. Code is self-explanatory
-.check_args2 <- function(n_EM = 100L, tol = 0.01, lambda = 0, method = "EM", print_lik = FALSE, 
-                         response = "gaussian", link = "identity", K_type = "block-exponential",
-                         optimiser, ...) {
+.check_args2 <- function(n_EM, tol, lambda, method, print_lik, optimiser, 
+                         response, K_type, link, fs_by_spatial_BAU, ...) {
+  
     if(!is.numeric(n_EM)) stop("n_EM needs to be an integer")
     if(!(n_EM <- round(n_EM)) > 0) stop("n_EM needs to be greater than 0")
     if(!is.numeric(tol)) stop("tol needs to be a number greater than zero")
@@ -2178,7 +2193,9 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
     if(method == "EM" & !(link == "identity")) stop("The EM algorithm is only available for link = 'identity'. Please use method = 'TMB' for all other link functions.")
     if(method == "EM" & K_type == "neighbour") stop("The neighbour matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
     if(method == "EM" & K_type == "separable") stop("The separable spatial model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
-
+    if(method == "TMB" & K_type == "unstructured") stop("The unstructured covariance matrix (K_type = 'unstructured') is not implemented for method = 'TMB'")
+    if(method != "TMB" & fs_by_spatial_BAU) stop("fs_by_spatial_BAU can only be TRUE if method = 'TMB'. Please set method = 'TMB', or fs_by_spatial_BAU = FALSE.")
+  
     ## Check optional parameters to optimiser function are ok:
     l <- list(...)
     
@@ -2189,12 +2206,10 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
     # This is not ideal, as the ... argument in SRE.fit() is present solely
     # for optimiser(), and so when SRE.fit() is called, we should really only
     # try to match with the parameters of optimiser.
-    
     valid_param_names <- c(names(formals(auto_BAUs)), 
                            names(formals(auto_basis)), 
                            names(formals(optimiser)))
 
-    
     ## If any of the formals have the same argument - omit the ellipsis "..." from this check
     optimiser_arg_in_other_functions <- names(formals(optimiser))[names(formals(optimiser)) != "..."] %in% c(names(formals(auto_BAUs)), names(formals(auto_basis)))
     if(any(optimiser_arg_in_other_functions)) {
@@ -2203,7 +2218,6 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
         stop(paste(c(msg1, msg2), collapse = " "))
     }
         
-    
     if(!all(names(l) %in% valid_param_names)) {
         msg1 <- "Optional arguments for auto_BAUs(), auto_basis(), or optimiser function not matching declared arguments. It is also possible that you have misspelt an argument to SRE.fit() or FRK(). Offending arguments:"
         msg2 <- names(l)[!(names(l) %in% valid_param_names)]
@@ -2212,13 +2226,16 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 }
 
 ## Checks arguments for the predict() function. Code is self-explanatory
-.check_args3 <- function(obs_fs = FALSE, newdata = NULL, pred_polys = NULL,
-                         pred_time = NULL, covariances = FALSE, SRE_model, type, 
-                         k, percentiles, cred_mass, ...) {
+.check_args3 <- function(obs_fs, newdata, pred_polys,
+                         pred_time, covariances, SRE_model, type, 
+                         k, percentiles, cred_mass, kriging, ...) {
+  
+    if(kriging != "simple" & SRE_model@method == "EM")
+      stop("Universal kriging is only available when method = 'TMB'")
     
     if(!(obs_fs %in% 0:1)) stop("obs_fs needs to be logical")
 
-    if(!(is(newdata,"Spatial") | (is(newdata,"ST")) | is.null(newdata)))
+    if(!(is(newdata,"Spatial") | is(newdata,"ST") | is.null(newdata)))
         stop("Predictions need to be over Spatial or ST objects")
 
     if(!is.null(newdata) & !is.null(pred_time))

@@ -21,7 +21,7 @@ test_that("real_line_BAUs",{
     C1 <- BuildC(binned_data1,Grid1D_df)
     C2 <- BuildC(binned_data2,Grid1D_df)
     expect_is(C1,"list")
-    expect_equal(names(C1),c("i_idx","j_idx"))
+    expect_equal(names(C1),c("i_idx","j_idx", "x_idx"))
     expect_equal(length(C1$i_idx),nrow(binned_data1))
     expect_equal(length(C1$j_idx),nrow(binned_data1))
 
@@ -60,7 +60,7 @@ test_that("plane_BAUs",{
 
     C <- BuildC(binned_data,Grid2D)
     expect_is(C,"list")
-    expect_equal(names(C),c("i_idx","j_idx"))
+    expect_equal(names(C),c("i_idx","j_idx", "x_idx"))
     expect_equal(length(C$i_idx),nrow(binned_data))
     expect_equal(length(C$j_idx),nrow(binned_data))
 
@@ -178,8 +178,8 @@ test_that("SpaceTime_BAUs",{
     C2 <- BuildC(binned_data2,space_time_grid)
     expect_is(C1,"list")
     expect_is(C2,"list")
-    expect_equal(names(C1),c("i_idx","j_idx"))
-    expect_equal(names(C2),c("i_idx","j_idx"))
+    expect_equal(names(C1),c("i_idx","j_idx", "x_idx"))
+    expect_equal(names(C2),c("i_idx","j_idx", "x_idx"))
     expect_equal(length(C1$i_idx),as.numeric(nrow(binned_data1)))
     expect_equal(length(C1$j_idx),as.numeric(nrow(binned_data1)))
 

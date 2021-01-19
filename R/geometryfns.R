@@ -360,9 +360,7 @@ auto_BAUs <- function(manifold, type=NULL,cellsize = NULL,
 
     on_sphere <- grepl("sphere",type(manifold))
 
-    if(is.null(type)) {
-        type <- ifelse(on_sphere,"hex","grid")
-    }
+    if(is.null(type)) type <- ifelse(on_sphere,"hex","grid")
 
     ## If user has specified the ISEA3h resolution
     if(!is.null(isea3h_res)) {
@@ -639,8 +637,8 @@ setMethod("auto_BAU",signature(manifold="plane"),
 
               ## Create x and y grid with 20% buffer and selected cellsizes
               ## If the user has specified the limits do not do buffer
-              bufferx <- ifelse(is.null(xlims),0.2,0) # x buffer
-              buffery <- ifelse(is.null(ylims),0.2,0) # y buffer
+              bufferx <- if(is.null(xlims)) 0.2 else 0 
+              buffery <- if(is.null(ylims)) 0.2 else 0 
 
               xgrid <- seq(xrange[1] - drangex*bufferx,
                            xrange[2] + drangex*bufferx,

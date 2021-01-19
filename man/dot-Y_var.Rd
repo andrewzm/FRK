@@ -9,9 +9,15 @@
 \arguments{
 \item{M}{An object of class SRE.}
 
+\item{Q_posterior}{the posterior precision matrix of the fixed and random effects}
+
 \item{Q_L}{A list containing the Cholesky factor of the permuted precision matrix (stored as \code{Q$Qpermchol}) and the associated permutationmatrix (stored as \code{Q_L$P}).}
 
 \item{obsidx}{Vector containing the observed locations.}
+
+\item{X}{matrix of covariates}
+
+\item{kriging}{whether we wish to perform "simple" or "universal" kriging}
 }
 \value{
 A vector of the posterior variance of Y at every BAU.

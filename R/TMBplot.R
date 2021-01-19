@@ -132,40 +132,37 @@
 }
 
 
-
-
-
-## I think it is better to use a dedicated plotting package for this purpose, 
-## such as cowplot or ggpubr.
-## Aligning ggplots
-.align_plots <- function(...) {
-
-  if (!requireNamespace(c("grid", "gtable"), quietly = TRUE)) {
-    stop("Packages \"grid\" and \"gtable\" needed for this function to work. Please install them.",
-         call. = FALSE)
-  }
-
-  LegendWidth <- function(x) x$grobs[[8]]$grobs[[1]]$widths[[4]]
-
-  plots.grobs <- lapply(list(...), ggplotGrob)
-
-  max.widths <- do.call(grid::unit.pmax, lapply(plots.grobs, "[[", "widths"))
-  plots.grobs.eq.widths <- lapply(plots.grobs, function(x) {
-    x$widths <- max.widths
-    x
-  })
-
-  legends.widths <- lapply(plots.grobs, LegendWidth)
-  max.legends.width <- do.call(max, legends.widths)
-  plots.grobs.eq.widths.aligned <- lapply(plots.grobs.eq.widths, function(x) {
-    if (gtable::is.gtable(x$grobs[[8]])) {
-      x$grobs[[8]] <- gtable::gtable_add_cols(x$grobs[[8]],
-                                      unit(abs(diff(c(LegendWidth(x),
-                                                      max.legends.width))),
-                                           "mm"))
-    }
-    x
-  })
-
-  plots.grobs.eq.widths.aligned
-}
+# ## I think it is better to use a dedicated plotting package for this purpose, 
+# ## such as cowplot or ggpubr.
+# ## Aligning ggplots
+# .align_plots <- function(...) {
+# 
+#   if (!requireNamespace(c("grid", "gtable"), quietly = TRUE)) {
+#     stop("Packages \"grid\" and \"gtable\" needed for this function to work. Please install them.",
+#          call. = FALSE)
+#   }
+# 
+#   LegendWidth <- function(x) x$grobs[[8]]$grobs[[1]]$widths[[4]]
+# 
+#   plots.grobs <- lapply(list(...), ggplotGrob)
+# 
+#   max.widths <- do.call(grid::unit.pmax, lapply(plots.grobs, "[[", "widths"))
+#   plots.grobs.eq.widths <- lapply(plots.grobs, function(x) {
+#     x$widths <- max.widths
+#     x
+#   })
+# 
+#   legends.widths <- lapply(plots.grobs, LegendWidth)
+#   max.legends.width <- do.call(max, legends.widths)
+#   plots.grobs.eq.widths.aligned <- lapply(plots.grobs.eq.widths, function(x) {
+#     if (gtable::is.gtable(x$grobs[[8]])) {
+#       x$grobs[[8]] <- gtable::gtable_add_cols(x$grobs[[8]],
+#                                       unit(abs(diff(c(LegendWidth(x),
+#                                                       max.legends.width))),
+#                                            "mm"))
+#     }
+#     x
+#   })
+# 
+#   plots.grobs.eq.widths.aligned
+# }

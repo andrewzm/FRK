@@ -35,6 +35,12 @@ latent process Y).}
 \item{Q_L}{A list containing the Cholesky factor of the permuted precision matrix (stored as \code{Q$Qpermchol}) and the associated permutationmatrix (stored as \code{Q_L$P})}
 
 \item{obsidx}{A vector containing the indices of observed BAUs}
+
+\item{CP}{the prediction incidence matrix}
+
+\item{kriging}{whether we wish to perform "simple" or "universal" kriging}
+
+\item{predic_BAUs}{logical, indicating whether we are predicting over the BAUs}
 }
 \value{
 A list containing Monte Carlo samples of various quantites of interest. The list elements are (N x n_MC) matrices, whereby the ith row of each matrix corresponds to \code{n_MC} samples of the given quantity at the ith BAU. The available quantities are:

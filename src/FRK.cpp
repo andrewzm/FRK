@@ -58,6 +58,7 @@ Type objective_function<Type>::operator() ()
   DATA_STRING(K_type);        // Indicates the desired model formulation of eta prior (K or Q)
   DATA_STRING(response);      // String specifying the response distribution
   DATA_STRING(link);          // String specifying the link function
+  DATA_VECTOR(BAUs_fs);        // Vector of weights that account for fine-scale heteroskedasticity
   DATA_VECTOR(k_BAU);         // Known size parameter at the BAU level (only relevant for negative-binomial and binomial)
   DATA_VECTOR(k_Z);           // Known size parameter at the DATA support level (only relevant for negative-binomial and binomial)
   DATA_INTEGER(temporal);     // Boolean indicating whether we are in space-time or not (1 if true, 0 if false)
@@ -285,18 +286,21 @@ Type objective_function<Type>::operator() ()
     
     ld_xi_O += -0.5 * mstar * log(2.0 * M_PI); // constant term in the log-density of xi_O
     
+    // This also deals with heteroskedastic fine-scale variation (controlled in BAUs$fs)
     if (fs_by_spatial_BAU) {
       
       vector<Type> sigma2fs_long(mstar); 
       for (int i = 0; i < mstar; i++) {
         sigma2fs_long[i] = sigma2fs[spatial_BAU_id[i]]; 
       }
-      Type quadform_xi_O = ((xi_O * xi_O) / sigma2fs_long).sum();
-      ld_xi_O += -0.5 * (sigma2fs_long).log().sum() - 0.5 * quadform_xi_O;
+      Type quadform_xi_O = ((xi_O * xi_O) / (sigma2fs_long * BAUs_fs)).sum();
+      ld_xi_O += -0.5 * (sigma2fs_long * BAUs_fs).log().sum() - 0.5 * quadform_xi_O;
 
     } else {
-      Type quadform_xi_O = pow(sigma2fs[0], -1.0) * (xi_O * xi_O).sum();
-      ld_xi_O += - 0.5 * mstar * log(sigma2fs[0]) - 0.5 * quadform_xi_O;
+      Type quadform_xi_O = (xi_O * xi_O / (sigma2fs[0] * BAUs_fs)).sum();
+      ld_xi_O += - 0.5 * (sigma2fs[0] * BAUs_fs).log().sum() - 0.5 * quadform_xi_O;
+      // Type quadform_xi_O = (xi_O * xi_O / sigma2fs[0]).sum();
+      // ld_xi_O += - 0.5 * (sigma2fs[0] * BAUs_fs).log().sum() - 0.5 * quadform_xi_O;
     }
   }
     

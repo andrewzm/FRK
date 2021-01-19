@@ -17,6 +17,7 @@
 #' which contains the 'known-constant' parameters for each observation
 #' (the number of trials for binomial data, or the target number of successes for negative-binomial data).
 #' @param optimiser the optimising function used for model fitting when \code{method = 'TMB'} (default is \code{nlminb}). Users may pass in a function object or a string corresponding to a named function. Optional parameters may be passed to \code{optimiser} via \code{...}. The only requirement of \code{optimiser} is that the first three arguments correspond to the initial parameters, the objective function, and the gradient, respectively (note that this may be achieved by rearranging the order of the arguments before passing into \code{optimiser}) 
+#' @param known_sigma2fs known value of the fine-scale variance. If \code{NULL} (the default), the fine-scale variance \eqn{\sigma^2_\xi} is estimated as usual. If \code{known_sigma2fs} is not \code{NULL}, the fine-scale variance is fixed to the supplied value; this may be a scalar, or vector of length equal to the number of spatial BAUs (if fs_by_spatial_BAU = TRUE)
 #' @param ... other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling \code{FRK}, or the user specified \code{optimiser} function when calling \code{FRK} or \code{SRE.fit}
 #' @return This function updates the following slots of \code{M}:
 #' \describe{
@@ -110,6 +111,7 @@
 #' Prepares data and parameter/fixed-effects/random-effects for input to \code{TMB}.
 #'
 #' @param M An object of class \code{SRE}.
+#' @param known_sigma2fs known value of the fine-scale variance. If \code{NULL} (the default), the fine-scale variance \eqn{\sigma^2_\xi} is estimated as usual. If \code{known_sigma2fs} is not \code{NULL}, the fine-scale variance is fixed to the supplied value; this may be a scalar, or vector of length equal to the number of spatial BAUs (if fs_by_spatial_BAU = TRUE)
 #' @return A list object containing:
 #' \describe{
 #'   \item{data}{The data.}
@@ -117,43 +119,32 @@
 #' }
 .TMB_prep <- function (M, known_sigma2fs) {
 
-  k_Z  <- as.vector(M@k_Z)
+  k_Z  <- as.vector(M@k_Z) # FIXME: what is k_Z? does it makes sense when the data is areal?
   N    <- nrow(M@S0)               # Number of BAUs
   Z    <- as.vector(M@Z)           # Binned data
   m    <- length(Z)                # Number of data points AFTER BINNING
   X    <- as(.extract_BAU_X_matrix(M@f, M@BAUs), "matrix")   
+  obsidx <- observed_BAUs(M)       # Indices of observed BAUs
+  X_O <- M@X_O
+  S_O <- M@S_O
+  C_O <- M@C_O
   
-  obsidx <- observed_BAUs(M) 
+  ## Observed k_BAU # FIXME: need to add a check that k_BAU is present when the data is areal
+  k_BAU <- if (!is.null(M@BAUs$k_BAU)) M@BAUs$k_BAU[obsidx] else -1
   
-  ## Observed k_BAU
-  ## FIXME: need to add a check that k_BAU is present when the data is areal
-  if (is.null(M@BAUs$k_BAU)) {
-    k_BAU <- -1
-  } else {
-    k_BAU <- M@BAUs$k_BAU[obsidx]
-  }
-
+  ## measurement error variance 
+  sigma2e <- if (M@response == "gaussian") mean(diag(M@Ve)) else -1
   
-  if(M@response == "gaussian") {
-    sigma2e = diag(M@Ve)[1]
-  } else {
-    sigma2e = -1
-  }
-  
-  X_O = M@X_O
-  S_O = M@S_O
-  C_O = M@C_O
-  
-  ## Common to all
+  ## Data passed to TMB which is common to all
   data <- list(Z = Z, X_O = X_O, S_O = S_O, C_O = C_O,
                K_type = M@K_type, response = M@response, link = M@link,
                k_BAU = k_BAU, k_Z = k_Z,
                temporal = as.integer(is(M@basis,"TensorP_Basis")), 
-               fs_by_spatial_BAU = M@fs_by_spatial_BAU, sigma2e = sigma2e)
+               fs_by_spatial_BAU = M@fs_by_spatial_BAU, sigma2e = sigma2e, BAUs_fs = M@BAUs$fs[obsidx])
 
   ## The location of the stored spatial basis functions depend on whether the 
   ## data is spatio-temporal or not. Here, we also define the number of temporal
-  ## basis function locations (equal to 1 if in a spatial setting).
+  ## basis function (r_t), and number of spatial BAUs (ns).
   if (data$temporal) {
     spatial_dist_matrix <- M@D_basis[[1]]
     spatial_basis <- M@basis@Basis1  
@@ -170,9 +161,9 @@
   data$r_si <- as.vector(table(spatial_basis@df$res))
 
   ## Data which depend on K_type:
-  ## Provide dummy data, and only change the ones we actually need.
-  data$beta <- data$nnz <- data$row_indices <- data$col_indices <- -1       
-  data$x <- data$n_r <- data$n_c  <- -1 
+  ## Provide dummy data (can't provide nothing), and only change the ones we actually need.
+  data$beta <- data$nnz <- data$row_indices <- data$col_indices <- 
+    data$x <- data$n_r <- data$n_c  <- -1 
 
   if (M@K_type == "block-exponential") {
     tmp         <- .cov_tap(spatial_dist_matrix, taper = M@taper)
@@ -192,6 +183,7 @@
     data$x           <- R@x
     
   } else if (M@K_type == "separable") {
+    ## Compute number of basis functions in each row (n_r) and each column (n_c)
     for (i in unique(spatial_basis@df$res)) {
       tmp <- spatial_basis@df[spatial_basis@df$res == i, ]
       data$n_r[i] <- length(unique(tmp$loc1))
@@ -230,6 +222,11 @@
     Z0[Z == 0] <- 0.05
   } 
 
+
+  
+
+  ## Parameter and random effect initialisations.
+  
   ## FIXME: This is all a bit of a mess...
   ## FIXME: excluding k from the C_O matrix means the size parameter is no longer accounted for!! 
   ## This means that some mu_O > k_BAU.
@@ -239,17 +236,12 @@
   ## A temporary fix:
   C_O <- M@C_O
   if(M@response %in% c("binomial", "negative-binomial")) {
-    if (length(k_BAU) > 0 || k_BAU > 0) { # DATA IS AREAL
+    if (all(sapply(M@data, function(x) is(x, "SpatialPolygonsDataFrame")))) { 
       C_O@x <- as.numeric(k_BAU)
-    } else if (length(k_Z) > 0 || k_Z > 0) { # DATA IS POINT REFERENCED
-      C_O@x <- as.numeric(M@k_Z)
+    } else if (all(sapply(M@data, function(x) is(x, "SpatialPointsDataFrame")))) { 
+      C_O@x <- as.numeric(M@k_Z) # FIXME: this may not work if average_in_BAU = FALSE. CHECK!!
     }
   }
-    
-  
-
-
-  ## Parameter and random effect initialisations.
   
   # ## If we have point-referenced data, need a workaround
   # ## FIXME: This condition might not be right
@@ -259,12 +251,6 @@
   #   Cpseudoinverse <- t(C_O) %*% chol2inv(chol(C_O %*% t(C_O))) # pseudo-inverse of the incidence matrix 
   #   mu_O <- Cpseudoinverse %*% Z0 # least norm solution to C.mu = mu_Z
   #   ## Sanity check: C_O %*% mu_O == M@Z
-  #   
-  #   ## For some link functions, mu_0 = 0 causes NaNs; set these to a small positive value
-  #   mu_O[mu_O == 0] <- 0.05
-  #   
-  #   ## Also, the size parameter being 0 also causes NaNs:
-  #   k_BAU[k_BAU == 0] <- 1
   # }
   
   ## If we have point-referenced data and the user has set average_in_BAU = FALSE, we need 
@@ -287,15 +273,15 @@
   
   ## Transformed data: convert from data scale to Gaussian Y-scale.
   if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
-    Y_O <- f(h(mu_O, k_BAU))
+    Y_O <- f(h(mu_O, k_BAU)) # FIXME: k_BAU
   } else if (M@response == "negative-binomial" & M@link %in% c("log", "square-root")) {
-    Y_O <- g(mu_O / k_BAU) 
+    Y_O <- g(mu_O / k_BAU) # FIXME: k_BAU
   } else {
     Y_O <- g(mu_O)
   } 
   
   
-  parameters <- .initialise_param(M, Y_O, r_si = data$r_si)
+  parameters <- .initialise_param(M = M, Y_O = Y_O, r_si = data$r_si, Z0 = Z0)
 
   ## Create a data entry of sigma2fs_hat (one that will stay constant if we are 
   ## not estimating sigma2fs within TMB)
@@ -323,7 +309,7 @@
 }
 
 # params: a list containing the current initial values of the parameters/random effects
-.initialise_param <- function(M, Y_O, r_si, iterations = 5) {
+.initialise_param <- function(M, Y_O, r_si, Z0, iterations = 5) {
   
   X_O  <- M@X_O
   S_O  <- M@S_O
@@ -342,8 +328,7 @@
   if (M@response %in% c("poisson", "bernoulli", "binomial", "negative-binomial")) {
     parameters$logphi <- log(1)
   } else if (M@response == "gaussian") {
-    ## FIXME: may have to change this from simply getting the first element of Ve
-    parameters$logphi <- log(M@Ve[1, 1]) 
+    parameters$logphi <- log(mean(diag(M@Ve[1, 1]))) 
   } else {
     ## Use the variance of the data as our estimate of the dispersion parameter.
     ## This will almost certainly be an overestimate, as the mean-variance 
