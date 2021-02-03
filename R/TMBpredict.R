@@ -308,7 +308,7 @@
 #' @param obs_fs Logical indicating whether the fine-scale variation is included in the latent Y process. If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{\xi} is included in the latent \eqn{Y} process. If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}
 #' @param k vector of size parameters at each BAU (applicable only for binomial and negative-binomial data)
 #' @param Q_L A list containing the Cholesky factor of the permuted precision matrix (stored as \code{Q$Qpermchol}) and the associated permutationmatrix (stored as \code{Q_L$P})
-#' @param predic_BAUs logical, indicating whether we are predicting over the BAUs
+#' @param predict_BAUs logical, indicating whether we are predicting over the BAUs
 #' @param CP the prediction incidence matrix
 #' @param kriging whether we wish to perform "simple" or "universal" kriging
 #' @param obsidx A vector containing the indices of observed BAUs

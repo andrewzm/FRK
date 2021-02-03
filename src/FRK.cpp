@@ -59,7 +59,7 @@ Type objective_function<Type>::operator() ()
   DATA_STRING(response);      // String specifying the response distribution
   DATA_STRING(link);          // String specifying the link function
   DATA_VECTOR(BAUs_fs);        // Vector of weights that account for fine-scale heteroskedasticity
-  DATA_VECTOR(k_BAU);         // Known size parameter at the BAU level (only relevant for negative-binomial and binomial)
+  DATA_VECTOR(k_BAU_O);         // Known size parameter at the BAU level (only relevant for negative-binomial and binomial)
   DATA_VECTOR(k_Z);           // Known size parameter at the DATA support level (only relevant for negative-binomial and binomial)
   DATA_INTEGER(temporal);     // Boolean indicating whether we are in space-time or not (1 if true, 0 if false)
   
@@ -78,7 +78,7 @@ Type objective_function<Type>::operator() ()
   DATA_IVECTOR(n_r);          // Integer vector indicating the number of rows at each resolution (applicable only if K-type == separable)
   DATA_IVECTOR(n_c);          // Integer vector indicating the number of columns at each resolution (applicable only if K-type == separable)
 
-  DATA_SCALAR(sigma2e);  // measurement error for Gaussian data model (fixed)
+  DATA_VECTOR(sigma2e);  // measurement error for Gaussian data model (fixed)
   
   DATA_VECTOR(sigma2fs_hat);   // estimate of sigma2fs (the fine-scale variance component)
   DATA_INTEGER(fix_sigma2fs);  // Flag indicating whether we should fix sigma2fs or not (1 if true, 0 if false)
@@ -272,7 +272,7 @@ Type objective_function<Type>::operator() ()
   
   // 1.3. Quadratic form in the case of space-time 
   if (temporal) { 
-    J.resize(r_s * r_t, 1); // apply the vec operator
+    J.resize(r_s * r_t, 1); // apply the vec operator (could make vec it's own function)
     quadform_eta += (J.array() * J.array()).sum();
   }
   
@@ -325,9 +325,9 @@ Type objective_function<Type>::operator() ()
   // If response is negative-binomial or binomial, link the probability parameter to the mean:
   if (link == "logit" || link == "probit" || link == "cloglog") {
     if (response == "negative-binomial") {
-      mu_O = k_BAU * (1.0 / (mu_O + epsilon) - 1);
+      mu_O = k_BAU_O * (1.0 / (mu_O + epsilon) - 1);
     } else if (response == "binomial") {
-      mu_O *= k_BAU; 
+      mu_O *= k_BAU_O; 
     }
   } 
   
@@ -340,7 +340,6 @@ Type objective_function<Type>::operator() ()
 
   
   // 4.3. Construct a(phi) and c(Z, phi).
-  // NB: computation of C(Z, phi) for one-parameter exponential family is done within R
   Type aphi{1.0}; // initialise to 1.0, only change for two-parameter exponential families
   vector<Type> cZphi(m);
   
@@ -348,11 +347,14 @@ Type objective_function<Type>::operator() ()
       response == "binomial" || response == "bernoulli") 
     phi = 1.0;
   
-  
   if (response == "gaussian") {
-    phi = sigma2e;
-    aphi = phi;
-    cZphi = -0.5 * (Z * Z / phi + log(2.0 * M_PI * phi));
+    // Previous code when sigma2e was a DATA_SCALAR()
+    // phi = sigma2e;
+    // aphi = phi;
+    // cZphi = -0.5 * (Z * Z / phi + log(2.0 * M_PI * phi));
+    // sigma2e is a DATA_VECTOR(), to provide backward compatability and allow users to set the measurement error in a Gaussian setting
+    phi = sigma2e.mean(); // just so that we show a reasonable value
+    cZphi = -0.5 * (Z * Z / sigma2e + log(2.0 * M_PI * sigma2e));
   } else if (response == "gamma") {
     aphi    =   -phi;
     cZphi   =   log(Z/phi)/phi - log(Z) - lgamma(1.0/phi);
@@ -375,9 +377,15 @@ Type objective_function<Type>::operator() ()
     cZphi = 0.0;
   }
   
-
   // 4.4. Construct ln[Z|Y_Z]
-  Type ld_Z  =  ((Z * lambda - blambda)/aphi).sum() + cZphi.sum();
+  Type ld_Z{0.0};
+  if (response == "gaussian") {
+    // now that sigma2e is a DATA_VECTOR(), this is the simplest fix;
+    // don't want to make aphi a vector. 
+    ld_Z  =  ((Z * lambda - blambda) / sigma2e).sum() + cZphi.sum(); 
+  } else {
+    ld_Z  =  ((Z * lambda - blambda) / aphi).sum() + cZphi.sum();  
+  }
   
   
   // -------- 5. Define Objective function -------- //
@@ -386,9 +394,7 @@ Type objective_function<Type>::operator() ()
   // Specify the negative joint log-likelihood function,
   // as R optimisation routines minimise by default.
   
-  // Type nld = -(ld_Z  + ld_xi_O + ld_eta + ld_sigma_xi);
   Type nld = -(ld_Z  + ld_xi_O + ld_eta);
-  
   
   return nld;
 }

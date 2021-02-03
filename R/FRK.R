@@ -39,4 +39,5 @@
 #' @importFrom utils data
 #' @importFrom statmod rinvgauss
 #' @importFrom HDInterval hdi
+#' @importFrom VCA MPinv
 NULL

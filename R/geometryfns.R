@@ -296,7 +296,7 @@ setMethod("coordnames",signature(x="STIDF"),function(x) {
 #' @title Automatic BAU generation
 #' @description This function calls the generic function \code{auto_BAU} (not exported) after a series of checks and is the easiest way to generate a set of Basic Areal Units (BAUs) on the manifold being used; see details.
 #' @param manifold object of class \code{manifold}
-#' @param type either ``grid'' or ``hex'', indicating whether gridded or hexagonal BAUs should be used
+#' @param type either ``grid'' or ``hex'', indicating whether gridded or hexagonal BAUs should be used. If \code{type} is unspecified, ``hex'' will be used if we are on the sphere, and ``grid'' will used otherwise 
 #' @param cellsize denotes size of gridcell when \code{type} = ``grid''. Needs to be of length 1 (square-grid case) or a vector of length \code{dimensions(manifold)} (rectangular-grid case)
 #' @param isea3h_res resolution number of the isea3h DGGRID cells for when type is ``hex'' and manifold is the surface of a \code{sphere}
 #' @param data object of class \code{SpatialPointsDataFrame}, \code{SpatialPolygonsDataFrame},  \code{STIDF}, or \code{STFDF}. Provision of \code{data} implies that the domain is bounded, and is thus necessary when the manifold is a \code{real_line, plane}, or \code{STplane}, but is not necessary when the manifold is the surface of a \code{sphere}
@@ -1320,8 +1320,6 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
                                                           proj4string = CRS(proj4string(sp_pols)))
               }
 
-              
-              
               ## Now see which centroids fall into the BAUs
               ## The following returns a data frame equal in number of rows to
               ## the data polygons, with all the BAU features averaged (hence if
@@ -1347,7 +1345,6 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
               
               ## Return Spatial object
               return(data_sp) 
-              
           })
 
 ## Sometimes the BAUs are concave polygons, in which case the BAU centroid may

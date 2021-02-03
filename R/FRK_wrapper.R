@@ -41,6 +41,7 @@ FRK <- function(f,                     # formula (compulsory)
                 percentiles = c(5, 95),  # Desired percentiles of the quantitity of interest
                 cred_mass = 0.9,
                 fs_by_spatial_BAU = FALSE,
+                known_sigma2fs = NULL, 
                 ...)                   # other arguments for BAUs/basis-function construction, or 
 {
 
@@ -61,6 +62,18 @@ FRK <- function(f,                     # formula (compulsory)
     method    <- match.arg(method)
     optimiser <- match.fun(optimiser)
     
+    ## FRK() is intended to be used for a novice user; simply enforce 
+    ## method = "TMB" for non-Gaussian data or when a link other than the 
+    ## identity is used, and enforce K_type = "neighbour" when method = "TMB"
+    if (response != "gaussian" || link != "identity") {
+        if (method != "TMB") cat("Setting method = 'TMB', as a non-Gaussian data model or a non-identity link function has been chosen.\n")
+        method <- "TMB"
+    }
+    if (method == "TMB") {
+        if (K_type != "neighbour") cat("For computational efficiency, setting K_type = 'neighbour', because method = 'TMB'; if you really want to use the K_type = 'block-exponential' with method = 'TMB', use SRE() and SRE.fit().\n")
+        K_type <- "neighbour"
+    }
+    
     .check_args_wrapper(f = f,              # check that the arguments are OK for SRE
                         data = data,
                         basis = basis,
@@ -70,7 +83,8 @@ FRK <- function(f,                     # formula (compulsory)
     # check that the arguments are OK for SRE.fit
     .check_args2(n_EM = n_EM, tol = tol, method = method, print_lik = print_lik, 
                  response = response, link = link, K_type = K_type, lambda = lambda,
-                 optimiser = optimiser, fs_by_spatial_BAU = fs_by_spatial_BAU, ...)                      
+                 optimiser = optimiser, fs_by_spatial_BAU = fs_by_spatial_BAU, 
+                 known_sigma2fs = known_sigma2fs, BAUs = BAUs, ...)                      
 
     ## if there is a measurement error declared in all datasets then
     ## don't estimate it

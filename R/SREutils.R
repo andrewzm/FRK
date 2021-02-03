@@ -143,10 +143,21 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     ## only produce a warning if we have areal data.
     if (is.null(BAUs$wts)) {
         BAUs$wts <- 1
-        if (any(sapply(data, function(x) is(x, "SpatialPolygons")))) 
-            warning("SpatialPolygons were provided for the data support. No 'wts' field was found in the BAUs, so all BAUs are assumed to be of equal weight; if this is not the case, set the 'wts' field in the BAUs accordingly.")
+        if (any(sapply(data, function(x) is(x, "SpatialPolygons"))) &&
+            !response %in% c("binomial", "negative-binomial")) # wts doesn't come into play for binomial or neg. binomial data, as it is forced to 1
+            cat("SpatialPolygons were provided for the data support. No 'wts' field was found in the BAUs, so all BAUs are assumed to be of equal weight; if this is not the case, set the 'wts' field in the BAUs accordingly.\n")
     }
-
+    
+    ## When the response has a size parameter, restrict the incidence matrices 
+    ## (Cz and Cp) to represent simple sums only. This behaviour is kept vague
+    ## in the paper, but perhaps a warning should be thrown to notify users.
+    ## Also enforce average_in_BAU = TRUE for simplicity.
+    if (response %in% c("binomial", "negative-binomial")) {
+      normalise_wts <- FALSE # Set to FALSE so that Cz represents an aggregation of the mean
+      BAUs$wts <- 1
+      average_in_BAU <- TRUE
+    }
+      
     ## Check that the arguments are OK
     .check_args1(f = f, data = data, basis = basis, BAUs = BAUs, est_error = est_error, 
                  response = response, link = link, taper = taper, K_type = K_type, 
@@ -189,10 +200,10 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     for(i in 1:ndata) {
 
         ## If we are estimating measurement error
-        ## (I think that this measurement error term will be very dodgy when the
+        ## (FIXME: I think that this measurement error term will be very dodgy when the
         ## link is not the identity function; perhaps we should add a transformation to
         ## the data.)
-        if(est_error & response == "gaussian") {
+        if(est_error && response == "gaussian") {
             ## Algorithm for estimating measurement error in space-time objects still not implemented
             if(is(data[[i]],"ST"))
                 stop("Estimation of error not yet implemented for spatio-temporal data")
@@ -205,7 +216,8 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
 
             ## Allocate the measurement standard deviation from variogram analysis
             data[[i]]$std <- this_data$std
-        }
+        } else if (est_error && response != "gaussian") 
+            cat("Not estimating the measurement error variance since the response model is not Gaussian.\n")
       
         ## The next step is to allocate all data (both point and polygon referenced) to BAUs. 
         ## We can either average data points falling in the same 
@@ -214,35 +226,32 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   
         ## sum_variables is a vector of variable names which are to be summed
         ## rather than averaged. Typically, we will wish to sum the data/size parameter 
-        ## in a binomial setting. 
-        ## Possibly this should be added as an option. Later in this function, 
-        ## we will round the data to ensure the data and size parameters are whole numbers.
-        if (response %in% c("binomial", "negative-binomial")) {
-            response_name <- all.vars(f)[1]
-            sum_variables <- c(response_name, "k_Z", sum_variables)
-        }
+        ## in a setting with a size parameter (binomial or negative-binomial). 
+        if (response %in% c("binomial", "negative-binomial")) 
+            sum_variables <- c(all.vars(f)[1], "k_Z", sum_variables)
+        
         data_proc <- map_data_to_BAUs(data[[i]],       
                                       BAUs,           
                                       average_in_BAU = average_in_BAU, 
-                                      sum_variables = sum_variables)   # variables to sum rather than average
+                                      sum_variables = sum_variables)  
         
         ## The mapping can fail if not all data are covered by BAUs. Throw an error message if this is the case
         if(any(is.na(data_proc@data[av_var])))
             stop("NAs found when mapping data to BAUs. Do you have NAs in your data?
                  If not, are you sure all your data are covered by BAUs?")
 
-        
         ## Extract information from the data using the .extract.from.formula internal function
         L <- .extract.from.formula(f,data=data_proc)
         X[[i]] <- as(L$X,"Matrix")                # covariate information
         Z[[i]] <- Matrix(L$y)                     # data values
         Ve[[i]] <- Diagonal(x=data_proc$std^2)    # measurement-error variance
         
-        ## Construct the incidence matrix mapping data to BAUs. This just returns indices and values which then need to be
-        ## assembled into a sparse matrix
+        ## Construct the incidence matrix mapping data to BAUs. This just returns 
+        ## indices and values which then need to be assembled into a sparse matrix.
         C_idx <- BuildC(data_proc,BAUs)
 
-        ## Construct the sparse incidence Matrix from above indices. This is the matrix C_Z in the vignette
+        ## Construct the sparse incidence Matrix from above indices. This is the 
+        ## matrix C_Z in the vignette
         Cmat[[i]] <- sparseMatrix(i=C_idx$i_idx,
                                   j=C_idx$j_idx,
                                   x=C_idx$x_idx,   
@@ -274,14 +283,9 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         ## S0 is the matrix S in the vignette. Here S is the matrix SZ in the vignette.
         S[[i]] <- Cmat[[i]] %*% S0
         
-        ## Construct k_Z the same way Z is constructed when response is binomial
-        ## or negative binomial. Otherwise, provide a placeholder dummy value
-        if(response %in% c("binomial", "negative-binomial")) {
+        ## Construct k_Z the same way Z is constructed
+        if(response %in% c("binomial", "negative-binomial")) 
           k_Z[[i]] <- Matrix(data_proc$k_Z) 
-        } else  {
-          k_Z <- Matrix(-1)
-        }
-          
     }
 
     if(fs_model == "ind") {
@@ -296,41 +300,6 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     Z <- do.call("rbind",Z)
     Ve <- do.call("bdiag",Ve)
     Vfs <- do.call("bdiag",Vfs)
-    if(response %in% c("binomial", "negative-binomial")) {
-        k_Z <- do.call("rbind", k_Z)
-        
-        ## Also round the observations and size parameter. 
-        ## (Not necessary if we choose to sum the data which fall into the same BAU)
-        Z <- round(Z)
-        k_Z <- ceiling(k_Z)
-    } else if (response == "poisson") {
-       Z <- round(Z)
-    }
-    
-    ## Initialise the expectations and covariances from E-step to reasonable values
-    mu_eta_init <- Matrix(0,nbasis(basis),1)
-    S_eta_init <- Diagonal(x = rep(1,nbasis(basis)))
-    Q_eta_init <- Diagonal(x = rep(1,nbasis(basis)))
-
-    ## Start with reasonable parameter estimates (that will be updated in M-step)
-    K_init = Diagonal(n=nbasis(basis),x = 1/(1/var(Z[,1])))
-    K_inv_init = solve(K_init)
-
-    if(!is.finite(determinant(t(X) %*% X)$modulus))
-        stop("Matrix of covariates has columns that are linearly dependent. Please change formula or covariates.")
-      alphahat_init <- solve(t(X) %*% X) %*% t(X) %*% Z
-      sigma2fshat_init <- mean(diag(Ve)) / 4
-
-
-    ## Information on fitting
-    info_fit = list("SRE not fitted to data yet. Please use SRE.fit()")
-
-    ## Initial values for TMB slots 
-    ## (dummy values provided only)
-    ## (possibly come back to this and provide the actual initial values computed in .TMB_prep())
-    mu_xi_init <- Matrix(0, nrow = 1)
-    Q_posterior_init <- Matrix(0, nrow = 1, 1)
-    
     ## Some matrices evaluated at observed BAUs only:
     obsidx <- unique(as(Cmat, "dgTMatrix")@j) + 1 
     C_O <- Cmat[, obsidx, drop = FALSE] 
@@ -338,23 +307,68 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     S_O <- drop0(S_O) # For some reason, S0 results in explicit zeros when nres = 1.
     X_BAU <- as(.extract_BAU_X_matrix(f, BAUs), "matrix") # fixed-effect design matrix at BAU level
     X_O <- X_BAU[obsidx, , drop = FALSE]
-
     
-    if (fs_by_spatial_BAU) {
-       ## Check each spatial BAU is observed enough times for a unique fine-scale
-       ## variance parameter to be associated with each spatial BAU
-        fewest_obs <-  min(table(obsidx %% ns)) # count of observations from spatial BAU with fewest observations
-        if(fewest_obs == 0) {
-            stop("A unique fine-scale variance at each spatial BAU can only be fit if all spatial BAUs are observed, which is not the case for the provided data and BAUs. Please set fs_by_spatial_BAU = FALSE.")
-        } else if(fewest_obs < 10) {
-            warning(paste0("The smallest number of observations associated with a spatial BAUs is: ", fewest_obs, 
-                           ". As you have selected to fit a unique fine-scale variance at each spatial BAU, please consider if this is a sufficient number of observations."))
-        }
-        
-        ## Throw a warning if the the number of spatial BAUs (and hence number 
-        ## of fine-scale variance parameters) is very large
-        if(ns > 500) warning(paste0("The number of spatial BAUs is relatively large (",ns,"). As you have chosen to fit a separate fine-scale variance parameter at each spatial BAU, there will be ",ns," fine-scale variance parameters to estimate, which may result in difficulties in model fitting. (However, it may not be an issue.)"))
+    # Size parameter
+    if(response %in% c("binomial", "negative-binomial")) {
+      k_Z <- as.numeric(do.call("rbind", k_Z))
+      
+      ## Size parameter associated with observed BAUs.
+      ## If any observations are associated with multiple BAUs, 
+      ## we require the size parameter in a field of the BAUs;
+      ## otherwise, we just use the observation size parameters.
+      num_BAUs_each_data_support <- table(as(Cmat, "dgTMatrix")@i)
+      if (!all(num_BAUs_each_data_support == 1)) {
+        if (!("k_BAU" %in% names(BAUs))) stop("When dealing with binomial or negative-binomial data, and some data supports are associated with multiple BAUs (e.g., areal data), the size parameter must be provided in the BAUs objects, in a field named 'k_BAU'.") 
+        k_BAU_O <- BAUs$k_BAU[obsidx]
+      } else {
+        ## Note that we have to re-order the observation size parameters, so that element i
+        ## of k_Z is associated with the same BAU as element i of k_BAU_O;
+        ## Cmat@i contains the index of the observation associated with BAU Cmat@j
+        k_BAU_O <- k_Z[as(Cmat, "dgTMatrix")@i + 1]
+      }
+      
+      if (any(is.na(k_BAU_O))) stop("The size parameter is required at all observed BAUs")
     } 
+    
+    ## If we are estimating a unique fine-scale variance at each spatial BAU, 
+    ## simply replicate the initialisation of sigma2fs ns times. 
+    ## Also check a few things that we couldn't check before computing the matrices.
+    if (fs_by_spatial_BAU) {
+      ## Check each spatial BAU is observed enough times for a unique fine-scale
+      ## variance parameter to be associated with each spatial BAU
+      fewest_obs <-  min(table(obsidx %% ns)) # count of observations from spatial BAU with fewest observations
+      if(fewest_obs == 0) {
+        stop("A unique fine-scale variance at each spatial BAU can only be fit (i.e., fs_by_spatial_BAU = TRUE) if all spatial BAUs are observed, which is not the case for the provided data and BAUs. Please set fs_by_spatial_BAU = FALSE.")
+      } else if(fewest_obs < 10) {
+        warning(paste0("The smallest number of observations associated with a spatial BAUs is: ", fewest_obs, 
+                       ". As you have selected to fit a unique fine-scale variance at each spatial BAU (i.e., fs_by_spatial_BAU = TRUE), please consider if this is a sufficient number of observations."))
+      }
+      
+      ## Throw a warning if the the number of spatial BAUs (and hence number 
+      ## of fine-scale variance parameters) is very large
+      if(ns > 500) warning(paste0("The number of spatial BAUs is relatively large (",ns,"). As you have chosen to fit a separate fine-scale variance parameter at each spatial BAU, there will be ",ns," fine-scale variance parameters to estimate, which may result in difficulties in model fitting. (However, it may not be an issue.)"))
+    } 
+
+    ## If the response should be an integer, round to be safe
+    ## (otherwise factorials will not make sense).
+    if (response %in% c("poisson", "binomial", "negative-binomial"))
+       Z <- round(Z)
+  
+    ## Information on fitting
+    info_fit <- list("SRE not fitted to data yet. Please use SRE.fit()")
+
+    ## Initialise the fixed effects and parameters for the EM algorithm.
+    ## Note that this is done here for backwards compatability, and that 
+    ## the initalisations are not computationally demanding, so it is not a major
+    ## issue that we always do them irrespective of which method is used.
+    ## The initialisations for method = 'TMB' is more complicated, and is 
+    ## performed in SRE.fit(); doing it there means we know the method, and
+    ## we do not have to create extra slots to pass the initialised parameters 
+    ## from SRE() to SRE.fit().
+    l <- .EM_initialise(basis, Z, X, Ve, mstar = length(obsidx))
+    
+    ## Dummy values:
+    if(!(response %in% c("binomial", "negative-binomial"))) k_BAU_O <- k_Z <- -1
     
     ## Construct the SRE object
     new("SRE",
@@ -375,25 +389,49 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         C_O = C_O,
         X = X,
         X_O = X_O,
-        mu_eta = mu_eta_init,
-        S_eta = S_eta_init,
-        Q_eta = Q_eta_init,
+        mu_eta = l$mu_eta_init,
+        S_eta = l$S_eta_init,
+        Q_eta = l$Q_eta_init,
         K_type = K_type,
-        Khat = K_init,
-        Khat_inv = K_inv_init,
-        alphahat = alphahat_init,
-        sigma2fshat = sigma2fshat_init,
+        Khat = l$K_init,
+        Khat_inv = l$K_inv_init,
+        alphahat = l$alphahat_init,
+        sigma2fshat = l$sigma2fshat_init,
         fs_model = fs_model,
         info_fit = info_fit, 
         response = response, 
         link = link, 
         taper = taper, 
-        mu_xi = mu_xi_init, 
-        Q_posterior = Q_posterior_init,
-        k_Z = k_Z, 
+        mu_xi = l$mu_xi_init,
+        k_Z = as.numeric(k_Z), 
+        k_BAU_O = as.numeric(k_BAU_O), 
         include_fs = include_fs, 
         normalise_wts = normalise_wts, 
         fs_by_spatial_BAU = fs_by_spatial_BAU)
+}
+
+## Initalise the fixed effects and parameters for method = 'EM'
+.EM_initialise <- function(basis, Z, X, Ve, mstar) {
+  
+  l <- list() # list of initial values
+  nres <- max(basis@df$res)   # Number of resolutions
+  
+  ## Initialise the expectations and covariances from E-step to reasonable values
+  l$mu_eta_init <- Matrix(0,nbasis(basis),1)
+  l$mu_xi_init <- Matrix(0,mstar,1)
+  l$S_eta_init <- Diagonal(x = rep(1,nbasis(basis)))
+  l$Q_eta_init <- Diagonal(x = rep(1,nbasis(basis)))
+  
+  ## Start with reasonable parameter estimates (that will be updated in M-step)
+  l$K_init = Diagonal(n=nbasis(basis),x = 1/(1/var(Z[,1])))
+  l$K_inv_init = solve(l$K_init)
+  
+  if(!is.finite(determinant(t(X) %*% X)$modulus))
+    stop("Matrix of covariates has columns that are linearly dependent. Please change formula or covariates.")
+  l$alphahat_init <- solve(t(X) %*% X) %*% t(X) %*% Z
+  l$sigma2fshat_init <- mean(diag(Ve)) / 4
+  
+  return(l)
 }
 
 
@@ -406,10 +444,19 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     method <- match.arg(method)
     optimiser <- match.fun(optimiser)
     
-    if (!is.null(known_sigma2fs)) {
+    if (!is.null(known_sigma2fs)) 
         SRE_model@sigma2fshat <- known_sigma2fs
+    
+    if (method == "TMB" & SRE_model@K_type == "block-exponential") {
+      tmp <- readline(cat("You have selected method = 'TMB' and K_type = 'block-exponential'. Whilst this combination is allowed, it is significantly more computationally demanding than K_type = 'neighbour'. Please enter Y if you would like to continue with the block-exponential formulation, or N if you would like to change to the more efficient neighbour based sparse precision matrix formulation."))
+      if (tmp != "Y" && tmp != "N") {
+        stop("You did not enter Y or N.")
+      } else if (tmp == "N") {
+        SRE_model@K_type <- "neighbour"
+      }
     }
     
+
     ## Check the arguments are OK
     ## (Note that we cannot pass the SRE model, because it complicates things 
     ## for the FRK() wrapper)
@@ -417,6 +464,8 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
                  method = method, print_lik = print_lik, 
                  fs_by_spatial_BAU = SRE_model@fs_by_spatial_BAU, 
                  response = SRE_model@response, K_type = SRE_model@K_type, link = SRE_model@link, 
+                 known_sigma2fs = known_sigma2fs,
+                 BAUs = SRE_model@BAUs,
                  optimiser = optimiser, ...) # control parameters to optimiser() 
     
     ## Call internal fitting function with checked arguments
@@ -462,8 +511,8 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     if (SRE_model@response %in% c("binomial", "negative-binomial")) 
         if (is.null(k)) {
             if(is.null(SRE_model@BAUs$k_BAU)) {
-                k <- 1
-                warning("k not provided for prediction: assuming k is equal to 1 for all prediction polygons.")
+                k <- rep(1, length(SRE_model@BAUs))
+                warning("k not provided for prediction: assuming k is equal to 1 for all prediction locations.")
             } else {
                 k <- SRE_model@BAUs$k_BAU
             }
@@ -2028,7 +2077,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 .check_args1 <- function(f, data,basis, BAUs, est_error, 
                          K_type, response, link, taper, fs_by_spatial_BAU, normalise_wts, 
                          sum_variables, average_in_BAU) {
-    
+  
     if(!is(f,"formula")) stop("f needs to be a formula.")
     if(!is(data,"list"))
         stop("Please supply a list of Spatial objects.")
@@ -2038,11 +2087,8 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
         stop("BAUs should be a SpatialPolygonsDataFrame, SpatialPixelsDataFrame, or a STFDF object")
     if(is(BAUs,"STFDF")) if(!(is(BAUs@sp,"SpatialPointsDataFrame") | is(BAUs@sp,"SpatialPolygonsDataFrame") | is(BAUs@sp,"SpatialPixelsDataFrame")))
         stop("The spatial component of the BAUs should be a SpatialPolygonsDataFrame or SpatialPixelsDataFrame")
-
     if(is(BAUs,"STFDF") && nrow(BAUs@data) != nrow(BAUs@sp) * length(BAUs@time))
         stop("The number of rows in BAUs@data should be equal to the number of spatial BAUs, nrow(BAUs@sp), multiplied by the number of time indices, length(BAUs@time)")
-        
-    
   
     # if(is(BAUs,"SpatialPointsDataFrame"))
     #     stop("Implementation with Point BAUs is currently in progress")
@@ -2051,6 +2097,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 
     if(!all(all.vars(f)[-1] %in% c(names(BAUs@data),coordnames(BAUs))))
         stop("All covariates need to be in the SpatialPolygons BAU object")
+  
     if(any(sapply(data,function(x) any(names(x@data) %in% names(BAUs@data)))))
         stop("Please don't have overlapping variable names in data and BAUs. All covariates need to be in the BAUs")
     if(!all(sapply(data,function(x) all.vars(f)[1] %in% names(x@data))))
@@ -2095,12 +2142,12 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
   
   ## If K_type == "neighbour", we just need basis functions to be in a regular 
   ## lattice (does not need to be rectangular)
-  if (K_type == "neighbour") 
-    for (i in unique(basis@df$res)) {
-      temp <- basis@df[basis@df$res == i, ]
-      if (!.test_regular_grid(temp$loc1, temp$loc2, rectangular = FALSE) ) 
-        stop("Basis functions must be arranged in a regular lattice when K_type = 'neighbour'.")
-    }  
+    if (K_type == "neighbour") 
+      for (i in unique(basis@df$res)) {
+        temp <- basis@df[basis@df$res == i, ]
+        if (!.test_regular_grid(temp$loc1, temp$loc2, rectangular = FALSE) ) 
+          stop("Basis functions must be arranged in a regular lattice when K_type = 'neighbour'.")
+      }  
   
     ## Check that valid data model and link function have been chosen
     if (!(response %in% c("gaussian", "poisson", "bernoulli", "gamma", "inverse-gaussian", "negative-binomial", "binomial")))
@@ -2132,20 +2179,24 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
         stop("taper, the argument controlling the coveriance taper, must be positive.")
     }
     
-    ## Check k (for data)
+    ## Check k_Z (size parameter for data)
     if (response %in% c("binomial", "negative-binomial")) {
         if (!all(sapply(data, function(l) "k_Z" %in% names(l)))) {
-            stop("For binomial or negative-binomial data, the known constant 
-                 parameter k must be provided for each observation. Please provide this in a field called 'k_Z'.")
+            stop("For binomial or negative-binomial data, the known constant size parameter must be provided for each observation. Please provide this in the data object, in a field called 'k_Z'.")
         } else if (!all(sapply(data, function(l) class(l$k_Z) %in% c("numeric", "integer")))) {
-            stop("The known constant parameter k must contain only positive integers.")
+            stop("The known constant size parameter must contain only positive integers.")
         } else if (any(sapply(data, function(l) l$k_Z <= 0)) | 
                    !all(sapply(data, function(l) l$k_Z == round(l$k_Z)))) {
-            stop("The known constant parameter k must contain only positive integers.")
+            stop("The known constant size parameter must contain only positive integers.")
         }
+    } else {
+      ## it is unlikely to occur, but here we ensure that k_Z and k_BAU 
+      ## are not used for other variables: these terms are treated specially.
+      if(any(sapply(data,function(x) any("k_Z" %in% names(x@data)))))
+        stop("k_Z is a reserved keyword for the size parameter in a binomial or negative-binomial setting; please do not include it as a covariate name in the data objects.")
+      if("k_BAU" %in% names(BAUs@data))
+        stop("k_BAU is a reserved keyword for the size parameter in a binomial or negative-binomial setting; please do not include it as a covariate name in the BAUs object.")
     }
-    
-
     
     ## If we wish to have unique fine-scale variance associated with each BAU, 
     ## we need to:
@@ -2156,16 +2207,13 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
     if (fs_by_spatial_BAU & !is(BAUs, "STFDF")) 
         stop("A unique fine-scale variance can only be associated with each spatial BAU if the application is spatio-temporal (i.e., the BAUs are of class 'STFDF').
               Please either set fs_by_spatial_BAU to FALSE if you are not in a spatio-temporal application.")
-    
-    
+  
     if(normalise_wts &
        response %in% c("poisson", "binomial", "bernoulli", "negative-binomial") & 
        any(sapply(data, function(x) is(x, "SpatialPolygons")))) {
         warning("You have specified a count data model with SpatialPolygons observations; consider setting normalise_wts = FALSE so that aggregation of the mean is a weighted sum rather than a weighted average.")
     }
     
-    
-    ## FIXME: Need to think about the role that sum_variables plays
     if ("n" %in% sum_variables) 
         stop("Summing the BAU indices will result in out of bounds errors and hence NAs in the incidence matrix C; please remove 'n' from sum_variables.") 
     
@@ -2177,7 +2225,8 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 
 ## Checks arguments for the SRE.fit() function. Code is self-explanatory
 .check_args2 <- function(n_EM, tol, lambda, method, print_lik, optimiser, 
-                         response, K_type, link, fs_by_spatial_BAU, ...) {
+                         response, K_type, link, fs_by_spatial_BAU, known_sigma2fs, 
+                         BAUs, ...) {
   
     if(!is.numeric(n_EM)) stop("n_EM needs to be an integer")
     if(!(n_EM <- round(n_EM)) > 0) stop("n_EM needs to be greater than 0")
@@ -2195,6 +2244,20 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
     if(method == "EM" & K_type == "separable") stop("The separable spatial model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
     if(method == "TMB" & K_type == "unstructured") stop("The unstructured covariance matrix (K_type = 'unstructured') is not implemented for method = 'TMB'")
     if(method != "TMB" & fs_by_spatial_BAU) stop("fs_by_spatial_BAU can only be TRUE if method = 'TMB'. Please set method = 'TMB', or fs_by_spatial_BAU = FALSE.")
+  
+  
+  ## Check known_sigma2fs 
+  ns <- dim(BAUs)[1]
+  if (!is.null(known_sigma2fs)) {
+    if (any(known_sigma2fs < 0))
+      stop("known_sigma2fs should contain only positive elements.")
+    ## Check that the known_sigma2fs is of length 1, 
+    ## or of length equal to the number of spatial BAUs
+    if ((fs_by_spatial_BAU & length(known_sigma2fs) != ns) ||
+        (!fs_by_spatial_BAU & length(known_sigma2fs) != 1))
+      stop("The length of known_sigma2fs should be equal to the number of spatial BAUs when fs_by_spatial_BAU = TRUE, and 1 otherwise")
+  }
+  
   
     ## Check optional parameters to optimiser function are ok:
     l <- list(...)

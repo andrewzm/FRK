@@ -22,7 +22,7 @@ auto_BAUs(
 \arguments{
 \item{manifold}{object of class \code{manifold}}
 
-\item{type}{either ``grid'' or ``hex'', indicating whether gridded or hexagonal BAUs should be used}
+\item{type}{either ``grid'' or ``hex'', indicating whether gridded or hexagonal BAUs should be used. If \code{type} is unspecified, ``hex'' will be used if we are on the sphere, and ``grid'' will used otherwise}
 
 \item{cellsize}{denotes size of gridcell when \code{type} = ``grid''. Needs to be of length 1 (square-grid case) or a vector of length \code{dimensions(manifold)} (rectangular-grid case)}
 

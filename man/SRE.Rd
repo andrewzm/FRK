@@ -37,6 +37,7 @@ FRK(
   percentiles = c(5, 95),
   cred_mass = 0.9,
   fs_by_spatial_BAU = FALSE,
+  known_sigma2fs = NULL,
   ...
 )
 
@@ -152,6 +153,8 @@ loglik(SRE_model)
 
 \item{fs_by_spatial_BAU}{if \code{TRUE}, then each spatial BAU is associated with its own fine-scale variance parameter (only allowed if method = 'TMB'). Otherwise, a single fine-scale variance parameter is used}
 
+\item{known_sigma2fs}{known value of the fine-scale variance. If \code{NULL} (the default), the fine-scale variance \eqn{\sigma^2_\xi} is estimated as usual. If \code{known_sigma2fs} is not \code{NULL}, the fine-scale variance is fixed to the supplied value; this may be a scalar, or vector of length equal to the number of spatial BAUs (if fs_by_spatial_BAU = TRUE)}
+
 \item{...}{other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling \code{FRK}, or the user specified \code{optimiser} function when calling \code{FRK} or \code{SRE.fit}}
 
 \item{normalise_wts}{if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)}
@@ -161,8 +164,6 @@ loglik(SRE_model)
 \item{include_fs}{flag indicating whether the fine-scale variation should be include in the model}
 
 \item{SRE_model}{object returned from the constructor \code{SRE()} containing all the parameters and information on the SRE model}
-
-\item{known_sigma2fs}{known value of the fine-scale variance. If \code{NULL} (the default), the fine-scale variance \eqn{\sigma^2_\xi} is estimated as usual. If \code{known_sigma2fs} is not \code{NULL}, the fine-scale variance is fixed to the supplied value; this may be a scalar, or vector of length equal to the number of spatial BAUs (if fs_by_spatial_BAU = TRUE)}
 
 \item{obs_fs}{flag indicating whether the fine-scale variation sits in the observation model (systematic error, Case 1) or in the process model (fine-scale process variation, Case 2, default)}
 
