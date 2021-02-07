@@ -390,7 +390,7 @@ setGeneric("auto_BAU", function(manifold,type,cellsize,resl,d,nonconvex_hull,con
 #' @param sum_variables vector of strings indicating which variables are to be summed rather than averaged; only applicable if \code{average_in_BAU == TRUE}
 #' @details This generic function is not called directly. It is called in the SRE function for binning data in BAUs
 #' @noRd
-setGeneric("map_data_to_BAUs", function(data_sp,sp_pols,variogram.formula=NULL,est_error=T,average_in_BAU = TRUE, sum_variables = NULL) standardGeneric("map_data_to_BAUs"))
+setGeneric("map_data_to_BAUs", function(data_sp,sp_pols,variogram.formula=NULL,est_error=T,average_in_BAU = TRUE, sum_variables = NULL, silently = FALSE) standardGeneric("map_data_to_BAUs"))
 
 #' @title Concatenation
 #' @description Concatenates FRK objects of the same class together. This is primarily

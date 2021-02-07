@@ -273,8 +273,8 @@
   }
   ## variance components of the basis function random weights
   ## FIXME: Not sure what to do for time yet. Also haven't really thought about when K_type = 'separable'. 
-  l$sigma2_t    <- 5
-  l$rho_t      <- 0
+  l$sigma2_t    <- 1
+  l$rho_t      <- 0.1
   if (M@K_type == "separable") {
     ## Separability means we have twice as many spatial basis function variance
     ## components. So, just replicate the already defined parameters.
@@ -346,7 +346,7 @@
                BAUs_fs = M@BAUs$fs[obsidx])
 
   ## Define the number of temporal basis function (r_t), and number of spatial BAUs (ns).
-  ns <- dim(BAUs)[1]
+  ns <- dim(M@BAUs)[1]
   if (data$temporal) {
     spatial_dist_matrix <- M@D_basis[[1]]
     spatial_basis <- M@basis@Basis1  

@@ -38,7 +38,7 @@
 #' @param print_lik flag indicating whether likelihood value should be printed or not after convergence of the EM estimation algorithm
 # #' @param use_centroid flag indicating whether the basis functions are averaged over the BAU, or whether the basis functions are evaluated at the BAUs centroid in order to construct the matrix \eqn{S}. The flag can safely be set when the basis functions are approximately constant over the BAUs in order to reduce computational time
 #' @param object object of class \code{SRE}
-#' @param newdata object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out, or an object of class \code{SpatialPoints}, indicating the points that prediction will be carried out. The BAUs are used if this option is not specified. If \code{newdata}is of class \code{SpatialPoints}, then FRK will predict over the BAUs and then use \code{over()} to find the BAU associated with each prediction location in order to provide a prediction
+#' @param newdata object of class \code{SpatialPoylgons}, \code{SpatialPoints}, or \code{STI}, indicating the regions or points over which prediction will be carried out. The BAUs are used if this option is not specified. 
 #' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error, Case 1) or in the process model (fine-scale process variation, Case 2, default)
 #' @param pred_polys deprecated. Please use \code{newdata} instead
 #' @param pred_time vector of time indices at which prediction will be carried out. All time points are used if this option is not specified
@@ -126,6 +126,8 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                 link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"), 
                 taper = 4, include_fs = TRUE, fs_by_spatial_BAU = FALSE,
                 ...) {
+  
+  # stop()
     
     ## Strings that must be lower-case (this allows users to enter 
     ## response = "Gaussian", for example, without causing issues)
@@ -182,6 +184,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     ## using Monte Carlo integration with 1000 samples per BAU. 
     ## Otherwise, evaluate the basis functions over the BAU centroids.
     S0 <- eval_basis(basis, if(ns < n_basis_spatial) BAUs else .polygons_to_points(BAUs))
+    ## ^^THIS IS WHERE THE ERROR OCCURS^^
     
     ## Normalise basis functions for the prior process to have constant variance. This was seen to pay dividends in
     ## latticekrig, however we only do it once initially
@@ -194,7 +197,6 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
 
     ## Find the distance matrix associated with the basis-function centroids
     D_basis <- BuildD(basis)
-
 
     ## For each data object
     for(i in 1:ndata) {
@@ -276,7 +278,9 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         if(fs_model == "ind") {
           ## FIXME: Originally, Cmat was constructed to have only 1's appear in the non-zero elements,
           ## To accomodate for non-equally weighted BAUs, Cmat now has non-zero elements
-          ## If we want to retain the old functionality, just use tmp <- Cmat[[i]]; tmp@x <- rep(1, length(tmp@x))  
+          ## If we want to retain the old functionality, just use:
+          # tmp <- Cmat[[i]]; tmp@x <- rep(1, length(tmp@x))
+          # Vfs[[i]] <- tcrossprod(tmp %*% Diagonal(x=sqrt(BAUs$fs)))
           Vfs[[i]] <- tcrossprod(Cmat[[i]] %*% Diagonal(x=sqrt(BAUs$fs)))
         } else stop("No other fs-model implemented yet")
 
@@ -500,9 +504,8 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     if(!is.null(pred_polys))
         newdata <- pred_polys
     
-    ## We need to add the prediction and uncertainty at each location, and 
-    ## so we need to ensure newdata is a Spatial*DataFrame (and not just a 
-    ## simple SpatialPolygons or SpatialPoints object).
+    ## Need to add prediction and uncertainty at each location, and so newdata 
+    ## must be a Spatial*DataFrame (not just a Spatial* object).
     newdata <- .Coerce_SpatialDataFrame(newdata)
     
     ## The user can either provide k in SRE_model@BAUs$k_BAU, or in the predict call.
@@ -525,11 +528,15 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                  SRE_model = SRE_model, type = type, kriging = kriging,
                  k = k, percentiles = percentiles, cred_mass = cred_mass)
     
-    ## If newdata is a SpatialPoints* object, then we wish to predict over 
-    ## irregularly spaced points. We do this by first predicting over the BAUs, 
-    ## and then associating each prediction location with a BAU. 
-    if(is(newdata, "SpatialPoints")) {
-        prediction_points <- newdata # save the prediction locations for use later
+    ## If newdata is SpatialPoints* object, then we predict over irregularly 
+    ## spaced points. Do this by first predicting over the BAUs, and then 
+    ## associating each prediction location with a BAU. 
+    ## NB: Use a long name for the prediction points, exists() is used later to
+    ## see if it is defined; using an obvious name such as "pred_points" (which 
+    ## the user may have already defined in their global scope) may cause issues, 
+    ## as global variables are visible from inside functions.
+    if(is(newdata, "SpatialPoints") || is(newdata, "STI")) {
+        pred_points_from_user <- newdata # save the prediction locations for use later
         newdata <- NULL # setting newdata to NULL means we predict over the BAUs
     }
     
@@ -579,29 +586,54 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                                   kriging = kriging)          
     } 
 
-    ## If the user originally supplied SpatialPoints* to predict over, 
+    ## If the user provided irregular points (SpatialPoints* or STI*) to predict over, 
     ## associate each prediction location with a BAU, and use the prediction
     ## of this BAU as the prediction at the corresponding point. 
-    if (exists("prediction_points")) {
+    if (exists("pred_points_from_user")) {
+      
+      ## The location of the BAU level predictions depends on 
+      ## whether method = "TMB" or method = "EM".
+      if(SRE_model@method == "TMB") {
         
-        ## Now need to find the BAU associated with each prediction location.
-        ## The help file of over() suggests passing the prediction location (a SpatialPoints 
-        ## object) and the BAUs (converted to SpatialPolygons, NOT passed in 
-        ## as SpatialPixelsDataFrame) will result in the desired behavior.
-        tmp <- over(prediction_points, 
-                    as(SRE_model@BAUs, "SpatialPolygons"))
+        ## If method = "TMB", we have a list of MC samples which must
+        ## also be altered. To do this, we select BAUs based on identifiers.
+        ## We may not necessarily have identifiers, particularly if 
+        ## the BAUs were not created with auto_BAUs(). Create some:
+        BAU_UID <- .UIDs(S@BAUs)
+        ## NB: BAU_name is created when calling map_data_to_BAUs(), but this isn't
+        ## exactly what we want when in a spatio-temporal setting (it is not unique
+        ## with respect to time).
         
-        ## Now map the BAU predictions and uncertainty to each point.
-        ## Depending on "method", pred_locs may be a list, or a Spatial* object.
-        if(is.list(pred_locs)) {
-            prediction_points@data <- cbind(pred_locs$newdata@data[tmp, ])
-            pred_locs$newdata <- prediction_points
-        } else {
-            prediction_points@data <- cbind(pred_locs@data[tmp, ])
-            pred_locs <- prediction_points
-        }
+        ## Add BAU_UID to prediction data so it gets included after map_data_to_BAUs()
+        pred_locs$newdata@data$BAU_UID <- BAU_UID
         
+        ## Map the data to the BAUs
+        pred_locs$newdata <- map_data_to_BAUs(pred_points_from_user, pred_locs$newdata, 
+                                              average_in_BAU = FALSE, silently = TRUE)
         
+        ## For some reason, pred_locs$newdata@data$BAU_UID becomes a factor, 
+        ## And this has a weird effect on the reordering below. Change to character 
+        ## for the desired behaviour.
+        pred_locs$newdata@data$BAU_UID <- as.character(pred_locs$newdata@data$BAU_UID)
+
+        ## Add the BAU UIDs to the rows of the MC matrices, then subset based 
+        ## on the BAU UIDs in the predictions.
+        pred_locs$MC <- lapply(pred_locs$MC, function(X) { 
+          rownames(X) <- BAU_UID
+          X <- X[pred_locs$newdata$BAU_UID, ]
+          rownames(X) <- NULL
+          return(X)
+        })
+        
+        ## Clean up returned prediction data
+        pred_locs$newdata@data[, c("BAU_name", "BAU_UID")] <- NULL
+        
+      } else if (SRE_model@method == "EM") {
+        ## If we don't have to reorder MC matrices, then our task is simple:
+        pred_locs <- map_data_to_BAUs(pred_points_from_user, pred_locs, average_in_BAU = FALSE)
+        ## Clean up returned prediction data
+        pred_locs@data[, c("BAU_name")] <- NULL
+      }
     }
     
     ## Return predictions

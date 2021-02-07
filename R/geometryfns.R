@@ -1186,7 +1186,7 @@ setMethod("show",signature(object="manifold"),function(object) print(object))
 ## Returns a SpatialPointsDataFrame with the points aligned at the BAU centroids
 #' @aliases map_data_to_BAUs,Spatial-method
 setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
-          function(data_sp, sp_pols, average_in_BAU = TRUE, sum_variables = NULL) {
+          function(data_sp, sp_pols, average_in_BAU = TRUE, sum_variables = NULL, silently = FALSE) {
               
               ## Suppress bindings warnings
               . <- BAU_name <- NULL
@@ -1274,7 +1274,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
                   proj4string = CRS(proj4string(data_sp)))         # CRS of original data
 
               ## Report time taken to bin data
-              cat("Binned data in",timer[3],"seconds\n")
+              if (!silently) cat("Binned data in",timer[3],"seconds\n")
 
               ## Return new matched data points
               new_sp_pts
@@ -1287,7 +1287,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
 ## sum_variables: string indicating the variables which are to be summed in a BAU rather than averaged
 #' @aliases map_data_to_BAUs,Spatial-method
 setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
-          function(data_sp,sp_pols, average_in_BAU = TRUE, sum_variables = NULL)
+          function(data_sp,sp_pols, average_in_BAU = TRUE, sum_variables = NULL, silently = FALSE)
           {
               ## Suppress bindings warnings
               . <- BAU_name <- NULL
@@ -1327,7 +1327,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
               ## BAUs_aux_data$xx = 2. 
               
               ## FIXME: I changed this to .safe_mean temporarily
-              BAUs_aux_data <- .parallel_over(data_sp, BAU_as_points,fn=.safe_mean)
+              BAUs_aux_data <- .parallel_over(data_sp, BAU_as_points, fn=.safe_mean)
               
               ## Now include the ID in the table so we merge by it later
               BAUs_aux_data$id <- as.character(row.names(BAUs_aux_data))
@@ -1370,7 +1370,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
 ## sum_variables: vector of strings indicating which variables are to be summed rather than averaged.
 #' @aliases map_data_to_BAUs,Spatial-method
 setMethod("map_data_to_BAUs",signature(data_sp="SpatialPixels"),
-          function(data_sp,sp_pols, average_in_BAU = TRUE, sum_variables = NULL) {
+          function(data_sp,sp_pols, average_in_BAU = TRUE, sum_variables = NULL, silently = FALSE) {
               coordlabels <- coordnames(data_sp)
               if(is(data_sp, "SpatialPixelsDataFrame")) {
                   data_sp <- as(data_sp, "SpatialPolygonsDataFrame")
@@ -1378,14 +1378,14 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPixels"),
                   data_sp <- as(data_sp, "SpatialPolygons")
               }
               coordnames(data_sp) <- coordlabels
-              map_data_to_BAUs(data_sp, sp_pols, average_in_BAU = average_in_BAU, sum_variables = sum_variables)
+              map_data_to_BAUs(data_sp, sp_pols, average_in_BAU = average_in_BAU, sum_variables = sum_variables, silently = silently)
           })
 
 ## Returns either a STIDF with the data at the BAU centroids (if data_sp is STIDF)
 ## Or else an STFDF with the original data shifted to the BAU time points and with BAU
 ## features averaged over the ST data polygons
 setMethod("map_data_to_BAUs",signature(data_sp="ST"),
-          function(data_sp,sp_pols,average_in_BAU = TRUE, sum_variables = NULL) {
+          function(data_sp,sp_pols,average_in_BAU = TRUE, sum_variables = NULL, silently = FALSE) {
 
               ## Initialise to no spatial field
               sp_fields <- NULL
@@ -1439,7 +1439,8 @@ setMethod("map_data_to_BAUs",signature(data_sp="ST"),
                                           map_data_to_BAUs(data_spatial,
                                                            BAU_spatial,
                                                            average_in_BAU = average_in_BAU, 
-                                                           sum_variables = sum_variables)
+                                                           sum_variables = sum_variables, 
+                                                           silently = silently)
                                       } else {
                                           NULL
                                       }})

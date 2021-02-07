@@ -167,7 +167,7 @@ loglik(SRE_model)
 
 \item{obs_fs}{flag indicating whether the fine-scale variation sits in the observation model (systematic error, Case 1) or in the process model (fine-scale process variation, Case 2, default)}
 
-\item{newdata}{object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out, or an object of class \code{SpatialPoints}, indicating the points that prediction will be carried out. The BAUs are used if this option is not specified. If \code{newdata}is of class \code{SpatialPoints}, then FRK will predict over the BAUs and then use \code{over()} to find the BAU associated with each prediction location in order to provide a prediction}
+\item{newdata}{object of class \code{SpatialPoylgons}, \code{SpatialPoints}, or \code{STI}, indicating the regions or points over which prediction will be carried out. The BAUs are used if this option is not specified.}
 
 \item{pred_polys}{deprecated. Please use \code{newdata} instead}
 
