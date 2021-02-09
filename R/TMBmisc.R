@@ -86,58 +86,24 @@
 #' because we including a "dot" (corresponding to the decimal place) in the 
 #' dataframe column name may cause issues. 
 #'
-#' @inheritParams .prediction_interval
 #' @param data The dataframe we will append percentiles to; the number of rows of the matrices in \code{MC} and  in \code{data} must be equal
-#' @param MC List of matrices containing Monte carlo samples
+#' @param MC List of matrices containing Monte Carlo samples
+#' @param percentiles a vector of scalars in [0, 100] specifying the desired percentiles; if \code{percentiles = NULL}, no percentiles are computed 
 #' @return The dataframe \code{data} with appended percentiles
-.concat_percentiles_to_df <- function (data, MC, percentiles, cred_mass) {
+.concat_percentiles_to_df <- function (data, MC, percentiles) {
   
-  if (is.null(percentiles) & is.null(cred_mass)) 
-    return(data)
-  
-  QOI <- gsub("_.*", "", names(MC))
-
-  
-  for(i in seq_along(MC)) {
-    X <- MC[[i]] 
+  if (!is.null(percentiles)) {
+    QOI <- gsub("_.*", "", names(MC))
     
-    if (!is.null(percentiles)) {
-      Q           <- .prediction_interval(X, interval_type = "central", percentiles = percentiles, cred_mass = cred_mass)
+    for(i in seq_along(MC)) {
+      Q           <- t(apply(as.matrix(MC[[i]]), 1, quantile, percentiles / 100))
       colnames(Q) <- paste(QOI[i], "percentile", as.character(percentiles), sep = "_")
       data        <- cbind(data, Q)
     }
-    
-    if(!is.null(cred_mass)) {
-      Q           <- .prediction_interval(X, interval_type = "HPD", percentiles = percentiles, cred_mass = cred_mass)
-      colnames(Q) <- paste(colnames(Q), "HPD_bound", QOI[i], sep = "_")
-      data        <- cbind(data, Q)
-    }
-    
   }
   
   return(data)
 }
-
-
-#' Prediction intervals. 
-#'
-#' Given a matrix of Monte Carlo samples \code{X} (wherein rows correspond to 
-#' locations, columns correspond to samples), this function computes symmetric 
-#' or HPD prediction intervals, and returns the prediction interval lower and 
-#' upper bound
-#' 
-#' @param X a matrix (wherein rows correspond to prediction locations and columns are samples) of Monte Carlo samples
-#' @param interval_type string indicating whether a \code{"central"} or \code{"HPD"} interval is desired
-#' @param percentiles a vector of scalars in [0, 100] specifying the desired percentiles; if \code{percentiles = NULL}, no percentiles are computed 
-#' @param cred_mass a scalar [0, 1] specifying the mass within the credible interval; if \code{cred_mass = NULL}, no HPD credible interval is computed
-#' @return The prediction interval at each location (or width at each location if \code{width = TRUE})
-.prediction_interval <- function(X, interval_type, percentiles, cred_mass) {
-  X <- as.matrix(X)
-  if (interval_type == "central") Q <- t(apply(X, 1, quantile, percentiles / 100))
-  if (interval_type == "HPD") Q <- t(HDInterval::hdi(t(X), cred_mass = cred_mass)) # Note that hdi() expects locations in columns, samples in rows
-  return(Q)
-}
-
 
 
 ## Since we will use ggplot2 we will first convert our objects to data frames.

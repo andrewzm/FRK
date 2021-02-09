@@ -114,3 +114,15 @@
 #' @docType data
 #' @references  MODIS Characterization Support Team (2015). MODIS 500m Calibrated Radiance Product.NASA MODIS Adaptive Processing System, Goddard Space Flight Center, USA.
 "MODIS_cloud_df"
+
+
+#' @title Simulated spatial count (Poisson) data
+#' @description Simulated spatial count (Poisson) data 
+#' @format A data frame with 750 rows and 3 variables:
+#' \describe{
+#'   \item{Z}{Response}
+#'   \item{x}{Spatial x-ordinate}
+#'   \item{y}{Spatial y-ordinate}
+#' }
+#' @docType data
+"Poisson_simulated"

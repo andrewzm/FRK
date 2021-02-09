@@ -39,7 +39,6 @@ FRK <- function(f,                     # formula (compulsory)
                 type = "mean",         
                 k = NULL,              # k used for prediction
                 percentiles = c(5, 95),  # Desired percentiles of the quantitity of interest
-                cred_mass = 0.9,
                 fs_by_spatial_BAU = FALSE,
                 known_sigma2fs = NULL, 
                 ...)                   # other arguments for BAUs/basis-function construction, or 

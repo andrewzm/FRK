@@ -17,7 +17,7 @@
 #' Note that for all link functions other than the log- and identity-link functions, the predictions and prediction uncertainty of \eqn{\mu} contained in \code{newdata} are computed using the Monte Carlo samples contained in \code{MC}.
 #' When the log- or identity-link functions are used, the expectation and variance of the \eqn{\mu} may be computed exactly.
 .FRKTMB_pred <- function(M, newdata, CP, predict_BAUs, pred_time, type, n_MC, 
-                         obs_fs, k, percentiles, cred_mass, kriging) {
+                         obs_fs, k, percentiles, kriging) {
   
 
   # ---- Create objects needed thoughout the function ----
@@ -113,9 +113,8 @@
   #   newdata$RMSPE_Y <- sqrt(MSPE_Y)
   # }
   
-  ## Percentiles and HPD interval bounds
-  newdata@data <- .concat_percentiles_to_df(data = newdata@data, MC = MC, 
-                                            cred_mass = cred_mass, percentiles = percentiles)
+  ## Percentiles 
+  newdata@data <- .concat_percentiles_to_df(newdata@data, MC = MC, percentiles = percentiles)
 
 
   # ## Previous code: The main difference is that here we use p_Y and MSPE_Y 
@@ -514,7 +513,13 @@
   if (M@response == "poisson") {
     Z_samples <- rpois(n, lambda = c(t(mu_samples)))
   } else if (M@response == "gaussian") {
-    sigma2e <- mean(diag(M@Ve)) # measurement error standard deviation
+    # measurement error variance
+    if (!.zero_range(diag(M@Ve))) {
+      sigma2e <- mean(diag(M@Ve))
+      cat("You have requested inference on the noisy data process. In a Gaussian setting, this requires the measurement error standard deviation; we are assuming it is spatially invariant, and is the average of std field supplied in the data.")
+    } else {
+      sigma2e <- M@Ve[1, 1]
+    }
     Z_samples <- rnorm(n, mean = c(t(mu_samples)), sd = sqrt(sigma2e))
   } else if (M@response == "bernoulli") {
     Z_samples <- rbinom(n, size = 1, prob = c(t(mu_samples)))

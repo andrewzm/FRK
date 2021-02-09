@@ -35,7 +35,6 @@ FRK(
   type = "mean",
   k = NULL,
   percentiles = c(5, 95),
-  cred_mass = 0.9,
   fs_by_spatial_BAU = FALSE,
   known_sigma2fs = NULL,
   ...
@@ -96,7 +95,6 @@ SRE.predict(
   type = "mean",
   k = NULL,
   percentiles = c(5, 95),
-  cred_mass = 0.9,
   kriging = "simple"
 )
 
@@ -148,8 +146,6 @@ loglik(SRE_model)
 \item{k}{vector of size parameters at each BAU (applicable only for binomial and negative-binomial data)}
 
 \item{percentiles}{a vector of scalars in [0, 100] specifying the desired percentiles; if \code{percentiles = NULL}, no percentiles are computed}
-
-\item{cred_mass}{a scalar [0, 1] specifying the mass within the credible interval; if \code{cred_mass = NULL}, no HPD credible interval is computed}
 
 \item{fs_by_spatial_BAU}{if \code{TRUE}, then each spatial BAU is associated with its own fine-scale variance parameter (only allowed if method = 'TMB'). Otherwise, a single fine-scale variance parameter is used}
 

@@ -15,7 +15,6 @@
   obs_fs,
   k,
   percentiles,
-  cred_mass,
   kriging
 )
 }
@@ -39,8 +38,6 @@
 \item{k}{vector of size parameters at each BAU (applicable only for binomial and negative-binomial data)}
 
 \item{percentiles}{a vector of scalars in [0, 100] specifying the desired percentiles; if \code{percentiles = NULL}, no percentiles are computed}
-
-\item{cred_mass}{a scalar [0, 1] specifying the mass within the credible interval; if \code{cred_mass = NULL}, no HPD credible interval is computed}
 
 \item{kriging}{A string indicating the kind of kriging (\code{"simple"} or \code{"universal"})}
 }

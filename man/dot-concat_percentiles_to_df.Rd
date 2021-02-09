@@ -4,16 +4,14 @@
 \alias{.concat_percentiles_to_df}
 \title{Computation and concatenation of percentiles to a dataframe.}
 \usage{
-.concat_percentiles_to_df(data, MC, percentiles, cred_mass)
+.concat_percentiles_to_df(data, MC, percentiles)
 }
 \arguments{
 \item{data}{The dataframe we will append percentiles to; the number of rows of the matrices in \code{MC} and  in \code{data} must be equal}
 
-\item{MC}{List of matrices containing Monte carlo samples}
+\item{MC}{List of matrices containing Monte Carlo samples}
 
 \item{percentiles}{a vector of scalars in [0, 100] specifying the desired percentiles; if \code{percentiles = NULL}, no percentiles are computed}
-
-\item{cred_mass}{a scalar [0, 1] specifying the mass within the credible interval; if \code{cred_mass = NULL}, no HPD credible interval is computed}
 }
 \value{
 The dataframe \code{data} with appended percentiles

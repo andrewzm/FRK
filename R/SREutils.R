@@ -495,7 +495,7 @@ SRE.predict <- function(SRE_model, obs_fs = FALSE, newdata = NULL, pred_polys = 
 setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = FALSE, pred_polys = NULL,
                                               pred_time = NULL, covariances = FALSE, 
                                               n_MC = 400, type = "mean", k = NULL, 
-                                              percentiles = c(5, 95), cred_mass = 0.9, 
+                                              percentiles = c(5, 95), 
                                               kriging = "simple") {
 
 
@@ -526,7 +526,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     .check_args3(obs_fs = obs_fs, newdata = newdata, pred_polys = pred_polys,
                  pred_time = pred_time, covariances = covariances, 
                  SRE_model = SRE_model, type = type, kriging = kriging,
-                 k = k, percentiles = percentiles, cred_mass = cred_mass)
+                 k = k, percentiles = percentiles)
     
     ## If newdata is SpatialPoints* object, then we predict over irregularly 
     ## spaced points. Do this by first predicting over the BAUs, and then 
@@ -581,8 +581,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                                   obs_fs = obs_fs,             # Case 1 or Case 2?
                                   type = type,                 # Whether we are interested in the "link" (Y-scale), "mean", "response"
                                   k = k,                       # Size parameter
-                                  percentiles = percentiles,   # Desired percentiles of MC samples 
-                                  cred_mass = cred_mass, 
+                                  percentiles = percentiles,   # Desired percentiles of MC samples
                                   kriging = kriging)          
     } 
 
@@ -2323,7 +2322,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 ## Checks arguments for the predict() function. Code is self-explanatory
 .check_args3 <- function(obs_fs, newdata, pred_polys,
                          pred_time, covariances, SRE_model, type, 
-                         k, percentiles, cred_mass, kriging, ...) {
+                         k, percentiles, kriging, ...) {
   
     if(kriging != "simple" & SRE_model@method == "EM")
       stop("Universal kriging is only available when method = 'TMB'")
@@ -2370,13 +2369,13 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
             stop("percentiles must be a vector with entries between 0 and 100")   
     }
     
-    ## Check credible mass for HPD interval
-    if (!is.null(cred_mass)) {
-        if (length(cred_mass) != 1)
-            stop("cred_mass should be a single scalar, not a vector")
-        if(any(cred_mass < 0 | cred_mass > 1))
-            stop("Elements of cred_mass should be between 0 and 1")
-    }
+    # ## Check credible mass for HPD interval
+    # if (!is.null(cred_mass)) {
+    #     if (length(cred_mass) != 1)
+    #         stop("cred_mass should be a single scalar, not a vector")
+    #     if(any(cred_mass < 0 | cred_mass > 1))
+    #         stop("Elements of cred_mass should be between 0 and 1")
+    # }
 }
 
 
