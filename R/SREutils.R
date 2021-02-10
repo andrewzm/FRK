@@ -598,7 +598,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
         ## also be altered. To do this, we select BAUs based on identifiers.
         ## We may not necessarily have identifiers, particularly if 
         ## the BAUs were not created with auto_BAUs(). Create some:
-        BAU_UID <- .UIDs(S@BAUs)
+        BAU_UID <- .UIDs(SRE_model@BAUs)
         ## NB: BAU_name is created when calling map_data_to_BAUs(), but this isn't
         ## exactly what we want when in a spatio-temporal setting (it is not unique
         ## with respect to time).
