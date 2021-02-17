@@ -36,6 +36,7 @@ install:
 - Rscript -e 'install.packages("dplyr", repos = "http://cran.rstudio.com")'
 - Rscript -e 'install.packages("ggplot2", repos = "http://cran.rstudio.com")'
 - Rscript -e 'install.packages("splancs", repos = "http://cran.rstudio.com")'
+- Rscript -e 'install.packages("rgdal", repos = "http://cran.rstudio.com")'
 - Rscript -e 'install.packages("mapproj", repos = "http://cran.rstudio.com")'
 - Rscript -e 'install.packages("rgeos", repos = "http://cran.rstudio.com")'
 - Rscript -e 'install.packages("sparseinv", repos = "http://cran.rstudio.com")'

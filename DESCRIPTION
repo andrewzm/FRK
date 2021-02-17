@@ -1,8 +1,8 @@
 Package: FRK
 Type: Package
 Title: Fixed Rank Kriging
-Version: 0.2.3
-Date: 2019-02-07
+Version: 1.0.0
+Date: 2021-02-17
 Authors@R: c(
     person("Andrew", "Zammit-Mangion", , "andrewzm@gmail.com", c("aut", "cre")))
 Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
@@ -19,7 +19,7 @@ Description: Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling
     fit, and predict using an SRE with relative ease.
 BugReports: http://github.com/andrewzm/FRK/issues
 Depends:
-    R (>= 3.2.0)
+    R (>= 3.5.0)
 Suggests:
     covr,
     dggrids,
@@ -29,6 +29,7 @@ Suggests:
     mapproj,
     parallel,
     rgeos,
+    rgdal,
     spdep,
     splancs,
     testthat,
