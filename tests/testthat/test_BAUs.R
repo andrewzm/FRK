@@ -32,7 +32,7 @@ test_that("plane_BAUs",{
     set.seed(1)
     data <- data.frame(x = rnorm(5),y=rnorm(5),z = rnorm(5),std=1)
     coordinates(data) <- ~x+y
-    if(require("INLA")) {
+    if(require("INLA") & require("rgdal")) {
         Grid2D <- auto_BAUs(manifold = plane(),
                             type="grid",
                             cellsize = 0.5,
@@ -138,7 +138,7 @@ test_that("SpaceTime_BAUs",{
                            tunit="days")
     expect_is(time_grid,"POSIXct")
 
-    if(require("INLA")) {
+    if(require("INLA") & require("rgdal")) {
         space_time_grid <- auto_BAUs(STplane(),
                                      type="hex",
                                      cellsize = c(0.1,0.1,1),
