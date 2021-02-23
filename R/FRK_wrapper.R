@@ -126,13 +126,15 @@ FRK <- function(f,                     # formula (compulsory)
             max_sp_basis <- min(tot_data^(0.5),2000) # amount of basis functions to be sqrt
         } else {                                     # of data points (or 2000), else
             max_sp_basis <- 2000                     # just limit to 2000
-            if(is(manifold,"sphere")) {              # If we're on the sphere just harc
+            if(is(manifold,"sphere")) {              # If we're on the sphere just hard
                 max_basis <- NULL                    # code the default basis functions
                 nres <- 3                            # to 3 ISEA3h resolutions which is OK
                 isea3h_lo <- 2                       # in most applications
             }
         }
 
+        ## If nres is provided, don't need to use the default max number of basis functions
+        if(!is.null(list(...)$nres)) max_sp_basis <- NULL
 
         if(!(grepl("ST",class(manifold)))) {         # If we are NOT in a space-time scenario
 

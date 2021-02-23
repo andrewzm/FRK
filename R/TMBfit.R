@@ -49,6 +49,11 @@
     data$sigma2fs_hat <- known_sigma2fs
     parameters$logsigma2fs <- log(known_sigma2fs) 
   }
+   
+  ## Don't want to pass in variance components that are "too small"
+  parameters$logsigma2 <- pmax(parameters$logsigma2, -3)
+  parameters$logsigma2_t <- pmax(parameters$logsigma2_t, -3)
+  parameters$logtau <- pmax(parameters$logtau, -3)
   
   ## TMB model compilation
   obj <- MakeADFun(data = data,

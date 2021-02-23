@@ -209,12 +209,13 @@ Type objective_function<Type>::operator() ()
       // Compute the matrix coefficients and store them in the triplet list.
       if (K_type == "neighbour") {
         for (int j = start_x; j < start_x + nnz[k]; j++) {  
-          (row_indices[j] == col_indices[j]) ? coef = tau[k] * (x[j] + sigma2[k]) : coef = tau[k] * x[j];
+          //(row_indices[j] == col_indices[j]) ? coef = tau[k] * (x[j] + sigma2[k] + epsilon) : coef = tau[k] * x[j];
+          (row_indices[j] == col_indices[j]) ? coef = tau[k] * (x[j] + sigma2[k] + epsilon) : coef = -tau[k];
           tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
         }
       } else if (K_type == "block-exponential") {
         for (int j = start_x; j < start_x + nnz[k]; j++) {  
-          coef = sigma2[k] * exp( -x[j] / tau[k] ) * pow( 1.0 - x[j] / beta[k], 2.0) * ( 1.0 + x[j] / (2.0 * beta[k]));
+          coef = (sigma2[k] + epsilon) * exp( -x[j] / (tau[k] + epsilon) ) * pow( 1.0 - x[j] / beta[k], 2.0) * ( 1.0 + x[j] / (2.0 * beta[k]));
           tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
         }
       }
@@ -299,14 +300,10 @@ Type objective_function<Type>::operator() ()
     } else {
       Type quadform_xi_O = (xi_O * xi_O / (sigma2fs[0] * BAUs_fs)).sum();
       ld_xi_O += - 0.5 * (sigma2fs[0] * BAUs_fs).log().sum() - 0.5 * quadform_xi_O;
-      // Type quadform_xi_O = (xi_O * xi_O / sigma2fs[0]).sum();
-      // ld_xi_O += - 0.5 * (sigma2fs[0] * BAUs_fs).log().sum() - 0.5 * quadform_xi_O;
     }
   }
     
-
-
-  // ---- 2a. Prior for sigma^2_\xi, the fine-scale variance component ---- //
+  // ---- 2a. Prior for the fine-scale variance component ---- //
   
   // We assume an inverse-gamma prior distribution for the fine-scale variance, 
   // wherein the mean and variance of the prior is equal to sigmafs_hat.
@@ -339,7 +336,7 @@ Type objective_function<Type>::operator() ()
   vector<Type> blambda = cumulantFunction(mu_Z, k_Z, response, "mu");
 
   
-  // 4.3. Construct a(phi) and c(Z, phi).
+  // Construct a(phi) and c(Z, phi).
   Type aphi{1.0}; // initialise to 1.0, only change for two-parameter exponential families
   vector<Type> cZphi(m);
   
@@ -348,11 +345,8 @@ Type objective_function<Type>::operator() ()
     phi = 1.0;
   
   if (response == "gaussian") {
-    // Previous code when sigma2e was a DATA_SCALAR()
-    // phi = sigma2e;
-    // aphi = phi;
-    // cZphi = -0.5 * (Z * Z / phi + log(2.0 * M_PI * phi));
-    // sigma2e is a DATA_VECTOR(), to provide backward compatability and allow users to set the measurement error in a Gaussian setting
+    // sigma2e is a DATA_VECTOR(), to provide backward compatability and allow users
+    // to set the measurement error in a Gaussian setting
     phi = sigma2e.mean(); // just so that we show a reasonable value
     cZphi = -0.5 * (Z * Z / sigma2e + log(2.0 * M_PI * sigma2e));
   } else if (response == "gamma") {
@@ -380,8 +374,7 @@ Type objective_function<Type>::operator() ()
   // 4.4. Construct ln[Z|Y_Z]
   Type ld_Z{0.0};
   if (response == "gaussian") {
-    // now that sigma2e is a DATA_VECTOR(), this is the simplest fix;
-    // don't want to make aphi a vector. 
+    // NB: sigma2e is a vector
     ld_Z  =  ((Z * lambda - blambda) / sigma2e).sum() + cZphi.sum(); 
   } else {
     ld_Z  =  ((Z * lambda - blambda) / aphi).sum() + cZphi.sum();  
@@ -393,7 +386,6 @@ Type objective_function<Type>::operator() ()
   // ln[Z, eta, xi_O | ...] =  ln[Z|Y_Z] + ln[eta|K] + ln[xi_O|sigma2fs]
   // Specify the negative joint log-likelihood function,
   // as R optimisation routines minimise by default.
-  
   Type nld = -(ld_Z  + ld_xi_O + ld_eta);
   
   return nld;
@@ -419,7 +411,7 @@ Eigen::SparseMatrix<Type> choleskyAR1(Type sigma2, Type rho, int n){
   std::vector< T > tripletList;
   tripletList.reserve(2 * n - 1);
   // NB: Must have -1 < rho < 1
-  Type common_term = 1 / sqrt(sigma2 * (1 - rho * rho));
+  Type common_term = 1 / sqrt(sigma2 * (1 - rho * rho + epsilon));
   
   // Diagonal entries (except last diagonal entry), lower diagonal entries
   for (int j = 0; j < (n - 1); j++) {
@@ -494,8 +486,8 @@ Type canonicalParameter(Type mu_Z, Type k_Z, std::string response) {
 template<class Type>
 Type cumulantFunction(Type x, Type k_Z, std::string response, std::string parameterisation) {
   
-  // NB: if the parameterisation is lambda, the canonical parameter should be passed in for x.
-  // if the parameterisation is lambda, the mean should be passed in for x.
+  // NB: if the parameterisation is "lambda", the canonical parameter should be passed in for x.
+  // if the parameterisation is "mu", the mean should be passed in for x.
   double epsilon{10e-8};
   Type b;
   if (parameterisation == "lambda") {
