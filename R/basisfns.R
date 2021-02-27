@@ -207,8 +207,6 @@ auto_basis <- function(manifold = plane(),
                        buffer = 0,
                        ...) {      # currently unused
 
-  browser()
-  nres
     ## Basic checks
     type <- match.arg(type)
     if(!is(manifold,"manifold"))
