@@ -17,6 +17,7 @@ FRK(
   est_error = TRUE,
   average_in_BAU = TRUE,
   sum_variables = NULL,
+  normalise_wts = TRUE,
   fs_model = "ind",
   vgm_model = NULL,
   K_type = c("block-exponential", "neighbour", "unstructured", "separable"),
@@ -115,6 +116,8 @@ loglik(SRE_model)
 
 \item{sum_variables}{vector of strings indicating which variables are to be summed rather than averaged; only applicable if \code{average_in_BAU == TRUE}}
 
+\item{normalise_wts}{if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)}
+
 \item{fs_model}{if "ind" then the fine-scale variation is independent at the BAU level. If "ICAR", then an ICAR model for the fine-scale variation is placed on the BAUs}
 
 \item{vgm_model}{an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm}. This object contains the variogram model that will be fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified, the variogram used is \code{gstat::vgm(1, "Lin", d, 1)}, where \code{d} is approximately one third of the maximum distance between any two data points}
@@ -152,8 +155,6 @@ loglik(SRE_model)
 \item{known_sigma2fs}{known value of the fine-scale variance. If \code{NULL} (the default), the fine-scale variance \eqn{\sigma^2_\xi} is estimated as usual. If \code{known_sigma2fs} is not \code{NULL}, the fine-scale variance is fixed to the supplied value; this may be a scalar, or vector of length equal to the number of spatial BAUs (if fs_by_spatial_BAU = TRUE)}
 
 \item{...}{other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling \code{FRK}, or the user specified \code{optimiser} function when calling \code{FRK} or \code{SRE.fit}}
-
-\item{normalise_wts}{if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)}
 
 \item{normalise_basis}{flag indicating whether to normalise the basis functions so that they reproduce a stochastic process with approximately constant variance spatially}
 

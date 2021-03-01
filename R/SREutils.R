@@ -2303,6 +2303,8 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
     valid_param_names <- c(names(formals(auto_BAUs)), 
                            names(formals(auto_basis)), 
                            names(formals(optimiser)))
+    
+    # browser()
 
     ## If any of the formals have the same argument - omit the ellipsis "..." from this check
     optimiser_arg_in_other_functions <- names(formals(optimiser))[names(formals(optimiser)) != "..."] %in% c(names(formals(auto_BAUs)), names(formals(auto_basis)))
