@@ -59,7 +59,8 @@
   obj <- MakeADFun(data = data,
                    parameters = parameters,
                    random = c("random_effects"),
-                   DLL = "FRK")
+                   DLL = "FRK", 
+                   silent = TRUE) # hide the gradient information during fitting
 
   ## The following means we want to print every parameter passed to obj$fn.
   obj$env$tracepar <- TRUE
@@ -401,7 +402,13 @@
   data$sigma2fs_hat <- sigma2fs_hat
   ## Only estimate sigma2fs if all the observations are associated with exactly 
   ## one BAU; otherwise, we must fix sigma2fs, or else TMB will explode.
-  data$fix_sigma2fs <- as.integer( !all(tabulate(M@Cmat@i + 1) == 1) )
+  if (!all(tabulate(M@Cmat@i + 1) == 1) ) {
+    cat("Some observations are associated with multiple BAUs: fixing the fine-scale variance during model fitting.\n")
+    data$fix_sigma2fs <- as.integer(1)
+  } else {
+    data$fix_sigma2fs <- as.integer(0)
+  }
+  
   data$include_fs   <- as.integer(M@include_fs)
 
   return(data)

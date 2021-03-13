@@ -134,8 +134,10 @@ FRK <- function(f,                     # formula (compulsory)
             }
         }
 
-        ## If nres is provided, don't need to use the default max number of basis functions
-        if(!is.null(list(...)$nres)) max_sp_basis <- NULL
+        ## If nres is provided, don't need to use the default max number of 
+        ## basis functions. Only consider nres if method = "TMB"; we don't want 
+        ## to allow nres >= 4 if method = "EM", as it would be too slow. 
+        if(!is.null(list(...)$nres) && method == "TMB") max_sp_basis <- NULL
 
         if(!(grepl("ST",class(manifold)))) {         # If we are NOT in a space-time scenario
 

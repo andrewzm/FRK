@@ -2149,6 +2149,10 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
     if(response == "gaussian" & !est_error & !all(sapply(data,function(x) "std" %in% names(x@data))))
         stop("If the response is Gaussian and observational error is not going to be estimated,
              please supply a field 'std' in the data objects")
+  
+  if(response == "gaussian" && !est_error && !all(sapply(data, function(x) x$std >= 0)))
+    stop("If the response is Gaussian and observational error is not going to be estimated,
+             the std field must contain only positive numbers")
 
     
     if(!(K_type %in% c("block-exponential", "neighbour", "unstructured", "separable"))) 
