@@ -409,6 +409,9 @@
     data$fix_sigma2fs <- as.integer(0)
   }
   
+  # cat("Estimating fine-scale variance with TMB.\n")
+  # data$fix_sigma2fs <- as.integer(0)
+  
   data$include_fs   <- as.integer(M@include_fs)
 
   return(data)
