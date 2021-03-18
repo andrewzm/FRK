@@ -190,6 +190,8 @@ FRK <- function(f,                     # formula (compulsory)
     cat("Modelling using",nbasis(G),"basis functions\n")
     cat("Constructing SRE model...\n")
 
+
+    
     S <- SRE(f = f,                            # formula
              data = data,                      # list of datasets
              basis = G,                        # basis functions

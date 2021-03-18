@@ -924,6 +924,32 @@ print.summary.Basis <- function(x,...) {
     invisible(x)
 }
 
+
+.auto_basis_STPlane <- function(data) {
+  
+  ## Set up the spatial basis functions
+  G_spatial <- auto_basis(manifold = plane(), data = as(data, "Spatial"))
+  
+  ## Set up the temporal basis functions
+  # FIXME: Should the following be hard-coded like this (particularly, the unit)?
+  end_loc <-  max(data@endTime) - min(data@endTime)
+  units(end_loc) <- "days" 
+  end_loc <- ceiling(as.numeric(end_loc) / 365.25) + 2
+  G_temporal <- local_basis(manifold = real_line(),     
+                            type = "Gaussian",          
+                            loc = matrix(seq(0, end_loc, length.out = 10)), 
+                            scale = rep(end_loc / 10, 10))   
+  
+  
+  ## Spatio-temporal basis functions generated with a tensor product
+  G <- TensorP(G_spatial, G_temporal) 
+  
+  return(G)
+}
+
+
+
+
 ######################################################
 ###########  FUNCTIONS NOT EXPORTED ##################
 ######################################################
