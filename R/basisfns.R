@@ -148,6 +148,7 @@ local_basis <- function(manifold=sphere(),          # default manifold is sphere
 #' @param bndary a \code{matrix} containing points containing the boundary. If \code{regular == 0} this can be used to define a boundary in which irregularly-spaced basis functions are placed
 #' @param verbose a logical variable indicating whether to output a summary of the basis functions created or not
 #' @param buffer a numeric between 0 and 0.5 indicating the size of the buffer of basis functions along the boundary. The buffer is added by computing the number of basis functions in each dimension, and increasing this number by a factor of \code{buffer}. A buffer may be needed when the prior of the basis function random weights, eta,  is formulated in terms of a precision matrix
+#' @param tunit temporal unit when requiring space-time basis. Should be the same as used for the BAUs. Can be "secs", "mins", "hours", "days", "years", etc.
 #' @param ... unused
 #' @details This function automatically places basis functions within the domain of interest. If the domain is a plane or the real line, then the object \code{data} is used to establish the domain boundary.
 #'
@@ -205,7 +206,66 @@ auto_basis <- function(manifold = plane(),
                        scale_aperture = ifelse(is(manifold,"sphere"),1,1.25),
                        verbose = 0L,
                        buffer = 0,
+                       tunit = NULL,
                        ...) {      # currently unused
+  
+  
+   ## If the data is spatio-temporal, construct spatio-temporal basis functions
+   ## using the tensor product of spatial and temporal basis functions. 
+   ## Note that we put this here, because there is a call to auto_basis() 
+   ## when constructing the spatial basis, at which point the arguments will be 
+   ## checked. 
+   if (is(data, "ST") & is(manifold, "STplane")) {
+     if(is.null(tunit)) {
+       stop("Please specify tunit (the temporal unit) if you want to construct a spatio-temporal basis. Note that this should be the same as the BAUs.")
+     }
+     ## Set up the spatial basis functions
+     ## NB: there's no reason we have to hard code plane(). 
+     ## We could easily allow for sphere too.
+     B_spatial <- auto_basis(manifold = plane(), data = as(data, "Spatial"), 
+                             regular = regular, nres = nres, prune = prune, 
+                             max_basis = max_basis, subsamp = subsamp, 
+                             type = type, isea3h_lo = isea3h_lo, bndary = bndary, 
+                             scale_aperture = scale_aperture, verbose = verbose, 
+                             buffer = buffer)
+     
+     ## Set up the temporal basis functions
+     end_loc <-  max(data@endTime) - min(data@endTime)
+     units(end_loc) <- "secs" 
+     
+     ## We always compute the difference in terms of times. Then, we convert to 
+     ## whatever unit was specified.
+     end_loc <- as.numeric(end_loc)
+     if (tunit == "secs") {
+       # Do nothing
+     } else if (tunit == "mins") {
+       end_loc <- end_loc / 60
+     } else if (tunit == "hours") {
+       end_loc <- end_loc / (60 * 60)
+     } else if (tunit == "days") {
+       end_loc <- end_loc / (60 * 60 * 24)
+     } else if (tunit == "weeks") {
+       end_loc <- end_loc / (60 * 60 * 24 * 7)
+     } else if (tunit == "months") {
+       end_loc <- end_loc / (60 * 60 * 24 * 7 * (52/12))
+     } else if (tunit  == "years") {
+       end_loc <- end_loc / (60 * 60 * 24 * 7 * (52/12) * 12)
+     } else {
+       stop("tunit should be a one of: secs, mins, hours, days, weeeks, months, years")
+     }
+     end_loc <- ceiling(end_loc) + 1 # add 1 as a buffer
+     
+     B_temporal <- local_basis(manifold = real_line(),     
+                               type = "Gaussian",          
+                               loc = matrix(seq(0, end_loc, length.out = 10)), 
+                               scale = rep(end_loc / 10, 10))   
+     
+     ## Spatio-temporal basis functions generated with a tensor product
+     B <- TensorP(B_spatial, B_temporal) 
+     
+     return(B)
+   }
+  
 
     ## Basic checks
     type <- match.arg(type)
@@ -925,27 +985,6 @@ print.summary.Basis <- function(x,...) {
 }
 
 
-.auto_basis_STPlane <- function(data) {
-  
-  ## Set up the spatial basis functions
-  G_spatial <- auto_basis(manifold = plane(), data = as(data, "Spatial"))
-  
-  ## Set up the temporal basis functions
-  # FIXME: Should the following be hard-coded like this (particularly, the unit)?
-  end_loc <-  max(data@endTime) - min(data@endTime)
-  units(end_loc) <- "days" 
-  end_loc <- ceiling(as.numeric(end_loc) / 365.25) + 2
-  G_temporal <- local_basis(manifold = real_line(),     
-                            type = "Gaussian",          
-                            loc = matrix(seq(0, end_loc, length.out = 10)), 
-                            scale = rep(end_loc / 10, 10))   
-  
-  
-  ## Spatio-temporal basis functions generated with a tensor product
-  G <- TensorP(G_spatial, G_temporal) 
-  
-  return(G)
-}
 
 
 
