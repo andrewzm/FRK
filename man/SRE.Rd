@@ -30,7 +30,6 @@ FRK(
     "negative-binomial", "binomial"),
   link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse",
     "inverse-squared"),
-  taper = 4,
   optimiser = nlminb,
   n_MC = 400,
   type = "mean",
@@ -138,8 +137,6 @@ loglik(SRE_model)
 
 \item{link}{A character string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted.}
 
-\item{taper}{A positive numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "block-exponential"} and \code{TMB} is used to fit the data)}
-
 \item{optimiser}{the optimising function used for model fitting when \code{method = 'TMB'} (default is \code{nlminb}). Users may pass in a function object or a string corresponding to a named function. Optional parameters may be passed to \code{optimiser} via \code{...}. The only requirement of \code{optimiser} is that the first three arguments correspond to the initial parameters, the objective function, and the gradient, respectively (note that this may be achieved by rearranging the order of the arguments before passing into \code{optimiser})}
 
 \item{n_MC}{A postive integer indicating the number of MC samples at each location}
@@ -157,6 +154,8 @@ loglik(SRE_model)
 \item{...}{other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling \code{FRK}, or the user specified \code{optimiser} function when calling \code{FRK} or \code{SRE.fit}}
 
 \item{normalise_basis}{flag indicating whether to normalise the basis functions so that they reproduce a stochastic process with approximately constant variance spatially}
+
+\item{taper}{A positive numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "block-exponential"} and \code{TMB} is used to fit the data)}
 
 \item{include_fs}{flag indicating whether the fine-scale variation should be include in the model}
 

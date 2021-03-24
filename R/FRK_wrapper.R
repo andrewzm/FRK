@@ -34,7 +34,6 @@ FRK <- function(f,                     # formula (compulsory)
                 response = c("gaussian", "poisson", "bernoulli", "gamma",
                              "inverse-gaussian", "negative-binomial", "binomial"), 
                 link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"),
-                taper = 4,
                 optimiser = nlminb,    # Optimiser for fitting (applicable only if method = 'TMB')
                 n_MC = 400, 
                 type = "mean",         
@@ -196,7 +195,7 @@ FRK <- function(f,                     # formula (compulsory)
              data = data,                      # list of datasets
              basis = G,                        # basis functions
              BAUs = BAUs,                      # BAUs
-             est_error=est_error,              # estimate measurement error?
+             est_error = est_error,            # estimate measurement error?
              average_in_BAU = average_in_BAU,  # do not average data over BAUs
              normalise_wts = normalise_wts,
              sum_variables = sum_variables,  
@@ -204,7 +203,8 @@ FRK <- function(f,                     # formula (compulsory)
              vgm_model = vgm_model,            # vgm model for error estimation
              K_type = K_type,                  # "block-exponential", "unstructured", "neighbour", "separable"
              response = response, 
-             link = link)                  
+             link = link, 
+             fs_by_spatial_BAU = fs_by_spatial_BAU)                  
 
     ## After constructing SRE model, fit it
     cat("Fitting SRE model...\n")
@@ -215,6 +215,7 @@ FRK <- function(f,                     # formula (compulsory)
                  lambda = lambda,     # regularisation parameter
                  print_lik = print_lik, # print log-likelihood at each iteration
                  optimiser = optimiser, 
+                 known_sigma2fs = known_sigma2fs, 
                  ...) 
 
     ## Return fitted SRE model

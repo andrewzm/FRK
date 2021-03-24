@@ -18,6 +18,7 @@ auto_basis(
   scale_aperture = ifelse(is(manifold, "sphere"), 1, 1.25),
   verbose = 0L,
   buffer = 0,
+  tunit = NULL,
   ...
 )
 }
@@ -47,6 +48,8 @@ auto_basis(
 \item{verbose}{a logical variable indicating whether to output a summary of the basis functions created or not}
 
 \item{buffer}{a numeric between 0 and 0.5 indicating the size of the buffer of basis functions along the boundary. The buffer is added by computing the number of basis functions in each dimension, and increasing this number by a factor of \code{buffer}. A buffer may be needed when the prior of the basis function random weights, eta,  is formulated in terms of a precision matrix}
+
+\item{tunit}{temporal unit when requiring space-time basis. Should be the same as used for the BAUs. Can be "secs", "mins", "hours", "days", "years", etc.}
 
 \item{...}{unused}
 }
