@@ -233,7 +233,7 @@ FRK <- function(f,                     # formula (compulsory)
         stop("All data list elements need to be of class Spatial or ST.")
     if(!all(sapply(data,function(x) all.vars(f)[1] %in% names(x@data))))
         stop("All data list elements to have values for the dependent variable.")
-    if(!est_error & !all(sapply(data,function(x) "std" %in% names(x@data))))
+    if(!est_error && response == "gaussian" & !all(sapply(data,function(x) "std" %in% names(x@data))))
         stop("If observational error is not going to be estimated,
              please supply a field 'std' in the data objects.")
     if(!(is.null(BAUs))) {

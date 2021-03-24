@@ -71,13 +71,55 @@
   ## The remaining arguments can be whatever.
   fit <- optimiser(obj$par, obj$fn, obj$gr, ...)
   
-  ## Log-likeihood (negative of the negative-log-likelihood)
-  M@log_likelihood <- -obj$fn() # could also use -fit$objective
-  
+  ## Re-estimate the fine-scale variance using better estimates. 
+  ## Need to refit the model using the final results and the new version of sigma2fs,
+  ## then repeat this process several times until the fine-scale variance parameter converges. 
   ## Extract parameter and random effect estimates
   par <- obj$env$last.par.best
   estimates <- split(par, names(par)) # convert to named list object
+  
+  
+  if (data$fix_sigma2fs && is.null(known_sigma2fs)) {
+    ## Observed fine-scale random effects xi_O
+    Y_O <- .compute_Y_O(M)
+    xi_O <- Y_O - M@X_O %*% as(estimates$alpha, "Matrix") - M@S_O %*% as(estimates$random_effects[1:nbasis(M)], "Matrix")
+    
+    ## Fine-scale variance
+    sigma2fs <- var(as.vector(xi_O)) 
+    
+    ## If we are estimating a unique fine-scale variance at each spatial BAU, 
+    ## simply replicate sigma2fs ns times. 
+    if (M@fs_by_spatial_BAU) {
+      ns <- dim(M@BAUs)[1]
+      sigma2fs <- rep(sigma2fs, ns)
+    }
+    
+    # ## Repeat model fitting. 
+    ## set intitial values to best estimates
+    # obj$env$last.par.best["logsigma2fs"] <- log(sigma2fs)
+    # ## Update data version too (this is what we actually use to fix sigma in the C++ template)
+    # data$sigma2fs_hat <- sigma2fs
+    # parameters <- obj$env$last.par.best
+    # ## TMB model compilation
+    # rm(obj)
+    # ## Unfortunately, this doesn't work, as R simply crashes.
+    # obj <- MakeADFun(data = data,
+    #                  parameters = parameters,
+    #                  random = c("random_effects"),
+    #                  DLL = "FRK", 
+    #                  silent = TRUE) # hide the gradient information during fitting
+    # ## The following means we want to print every parameter passed to obj$fn.
+    # obj$env$tracepar <- TRUE
+    # fit <- optimiser(obj$par, obj$fn, obj$gr, ...)
+    
+    
+    
+    estimates$logsigma2fs <- log(sigma2fs) # FIXME: Have to check this works when M@fs_by_spatial_BAU == TRUE (i.e., for the Chicago example)
+  }
 
+  
+  
+  
 
   # ---- Joint precision/covariance matrix of random effects ----
 
@@ -92,10 +134,7 @@
   ## post-fitting we condition on theta = \hat{theta}, the ML estimate.
   ## By conditioning on \hat{theta}, we can consider the precision matrix of  
   ## the random effects in isolation.
-
-  ## Number of parameters and fixed effects:
-  p <- length(obj$par)
-  s <- length(estimates$random_effects)
+  s <- length(estimates$random_effects) # Number of random effects
   
   ## We need to use sdreport() if we wish to use the uncertainty of the
   ## parameters and fixed effects, as opposed to using obj$env$spHess(par = obj$env$last.par.best, random = TRUE) 
@@ -121,6 +160,11 @@
   M@Q_posterior <- Q_posterior
   M@phi <- unname(exp(estimates$logphi))
   
+  ## Log-likeihood (negative of the negative-log-likelihood)
+  M@log_likelihood <- -obj$fn() # could also use -fit$objective
+  
+
+  
   return(M)
 }
 
@@ -131,7 +175,108 @@
   
   # ---- Set-up ----
   
+  nres    <- max(M@basis@df$res)  # Number of basis function resolutions
+  X_O     <- M@X_O
+  S_O     <- M@S_O
+  r       <- M@basis@n   
+  m       <- nrow(M@C_O)
+  mstar   <- ncol(M@C_O)
+  
+  # ---- Estimate Y over the observed BAUs ----
+  
+  Y_O <- .compute_Y_O(M)
+  
+  # ---- Parameter and random effect initialisations ----
+  
+  ## Now that we have a crude estimate of Y_O, we may initialise the variance
+  ## components and random effects
+
   l <- list() # list of initial values
+  
+  ## i. Fixed effects alpha (OLS solution)
+  l$alpha <- solve(t(X_O) %*% X_O) %*% t(X_O) %*% Y_O # OLS solution
+  
+  ## ii. Variance components
+  ## Dispersion parameter depends on response; some require it to be 1. 
+  if (M@response %in% c("poisson", "bernoulli", "binomial", "negative-binomial")) {
+    l$phi <- 1
+  } else if (M@response == "gaussian") {
+    l$phi <- mean(diag(M@Ve))
+  } else {
+    ## Use the variance of the data as our estimate of the dispersion parameter.
+    ## This will almost certainly be an overestimate, as the mean-variance 
+    ## relationship is not considered.
+    l$phi <- var(Z0)
+  }
+  
+  l$sigma2  <- var(as.vector(Y_O)) * (0.1)^(0:(nres - 1))
+  l$tau     <- (1 / 3)^(1:nres)
+  if (M@K_type != "block-exponential") {
+    l$sigma2   <- 1 / exp(l$sigma2)
+    l$tau      <- 1 / exp(l$tau)
+  }
+  ## variance components of the basis function random weights
+  ## FIXME: Not sure what to do for time yet. 
+  ## FIXME: Also haven't really thought about when K_type = 'separable'. Possibly just don't include it. 
+  l$sigma2_t    <- 1
+  l$rho_t      <- 0.1
+  if (M@K_type == "separable") {
+    ## Separability means we have twice as many spatial basis function variance
+    ## components. So, just replicate the already defined parameters.
+    l$sigma2 <- rep(l$sigma2, 2)
+    l$tau <- rep(l$tau, 2)
+  }
+  
+
+  for (iteration_dummy in 1:5) {
+    
+    ## iii. Basis function random-effects 
+    regularising_weight <- if (!is.null(l$sigma2fs)) l$sigma2fs else l$sigma2[1] 
+    
+    QInit <- .sparse_Q_block_diag(M@basis@df, 
+                                  kappa = exp(l$sigma2), 
+                                  rho = exp(l$tau))$Q
+    
+    ## Matrix we need to invert
+    mat <- Matrix::t(S_O) %*% S_O / regularising_weight + QInit 
+    
+    ## Avoid full inverse if we have too many basis functions
+    if (r > 4000) { 
+      mat_L <- sparseinv::cholPermute(Q = mat) # Permuted Cholesky factor
+      ## Sparse-inverse-subset (a proxy for the inverse)
+      mat_inv <- sparseinv::Takahashi_Davis(Q = mat, cholQp = mat_L$Qpermchol, P = mat_L$P)
+    } else {
+      mat_inv <- solve(mat) 
+    }
+    
+    ## MAP estimate of eta
+    l$eta  <- (1 / regularising_weight) * mat_inv %*% Matrix::t(S_O)  %*% (Y_O - X_O %*% l$alpha)
+    
+    ## iv. Observed fine-scale random effects xi_O
+    l$xi_O <- Y_O - X_O %*% l$alpha - S_O %*% l$eta
+    
+    ## v. Fine-scale variance
+    l$sigma2fs <- var(as.vector(l$xi_O)) 
+  }
+
+  ## Return list of parameter initialisations for TMB
+  transform_minus_one_to_one_inverse <- function(x) -0.5 * log(2 / (x + 1) - 1)
+  return(list(
+    alpha = as.vector(l$alpha),
+    logphi = log(l$phi),
+    logsigma2 = log(l$sigma2),
+    logtau = log(l$tau),
+    logsigma2_t = log(l$sigma2_t),  
+    frho_t = transform_minus_one_to_one_inverse(l$rho_t),
+    logsigma2fs = log(l$sigma2fs),
+    random_effects = c(as.vector(l$eta), if(M@include_fs) as.vector(l$xi_O))
+  ))
+}
+
+
+.compute_Y_O <- function(M) {
+  
+  # ---- Set-up ----
   
   nres    <- max(M@basis@df$res)  # Number of basis function resolutions
   X_O     <- M@X_O
@@ -203,9 +348,7 @@
         mu_O[j] <- (k_BAU_O[j] / sum(k_BAU_O[idx])) * mu_Z[x]
     }
     ## Sanity check: any(mu_O > k_BAU_O)
-  }
-  
-  else {
+  } else {
     ## Use Moores-Penrose inverse to "solve" C_O mu_O = mu_Z. 
     ## NB: if C_O is m x m*, then Cp is m* x m.
     
@@ -225,12 +368,9 @@
       ## Sparsity of C_O and Cp: nnzero(C_O) / (m * mstar), nnzero(Cp) / (m * mstar)
     }
     mu_O <- as.vector(Cp %*% mu_Z)
-    ## Sanity check: max(abs(C_O %*% mu_O - mu_Z)) 
+    ## Sanity check: 
+    ## max(abs(C_O %*% mu_O - mu_Z)) 
     ## sum((C_O %*% mu_O - mu_Z)^2)
-    
-    ## Development: it may be better to use the QR factorisation so solve the
-    ## system C_O mu_O = mu_Z.
-    #system.time(tmp <- qr.solve(C_O, mu_Z)) # this takes a long time (~60s)
   }
   
   ## For some link functions, mu_0 = 0 causes NaNs; set these to a small positive value.
@@ -247,91 +387,6 @@
   } else {
     Y_O <- g(mu_O)
   } 
-  
-  
-  
-  # ---- Parameter and random effect initialisations ----
-  
-  ## Now that we have a crude estimate of Y_O, we may initialise the variance
-  ## components and random effects
-
-  ## i. Fixed effects alpha (OLS solution)
-  l$alpha <- solve(t(X_O) %*% X_O) %*% t(X_O) %*% Y_O # OLS solution
-  
-  ## ii. Variance components
-  ## Dispersion parameter depends on response; some require it to be 1. 
-  if (M@response %in% c("poisson", "bernoulli", "binomial", "negative-binomial")) {
-    l$phi <- 1
-  } else if (M@response == "gaussian") {
-    l$phi <- mean(diag(M@Ve))
-  } else {
-    ## Use the variance of the data as our estimate of the dispersion parameter.
-    ## This will almost certainly be an overestimate, as the mean-variance 
-    ## relationship is not considered.
-    l$phi <- var(Z0)
-  }
-  
-  l$sigma2  <- var(as.vector(Y_O)) * (0.1)^(0:(nres - 1))
-  l$tau     <- (1 / 3)^(1:nres)
-  if (M@K_type != "block-exponential") {
-    l$sigma2   <- 1 / exp(l$sigma2)
-    l$tau      <- 1 / exp(l$tau)
-  }
-  ## variance components of the basis function random weights
-  ## FIXME: Not sure what to do for time yet. Also haven't really thought about when K_type = 'separable'. 
-  l$sigma2_t    <- 1
-  l$rho_t      <- 0.1
-  if (M@K_type == "separable") {
-    ## Separability means we have twice as many spatial basis function variance
-    ## components. So, just replicate the already defined parameters.
-    l$sigma2 <- rep(l$sigma2, 2)
-    l$tau <- rep(l$tau, 2)
-  }
-  
-
-  for (iteration_dummy in 1:5) {
-    
-    ## iii. Basis function random-effects 
-    regularising_weight <- if (!is.null(l$sigma2fs)) l$sigma2fs else l$sigma2[1] 
-    
-    QInit <- .sparse_Q_block_diag(M@basis@df, 
-                                  kappa = exp(l$sigma2), 
-                                  rho = exp(l$tau))$Q
-    
-    ## Matrix we need to invert
-    mat <- Matrix::t(S_O) %*% S_O / regularising_weight + QInit 
-    
-    ## Avoid full inverse if we have too many basis functions
-    if (r > 4000) { 
-      mat_L <- sparseinv::cholPermute(Q = mat) # Permuted Cholesky factor
-      ## Sparse-inverse-subset (a proxy for the inverse)
-      mat_inv <- sparseinv::Takahashi_Davis(Q = mat, cholQp = mat_L$Qpermchol, P = mat_L$P)
-    } else {
-      mat_inv <- solve(mat) 
-    }
-    
-    ## MAP estimate of eta
-    l$eta  <- (1 / regularising_weight) * mat_inv %*% Matrix::t(S_O)  %*% (Y_O - X_O %*% l$alpha)
-    
-    ## iv. Observed fine-scale random effects xi_O
-    l$xi_O <- Y_O - X_O %*% l$alpha - S_O %*% l$eta
-    
-    ## v. Fine-scale variance
-    l$sigma2fs <- var(as.vector(l$xi_O)) 
-  }
-
-  ## Return list of parameter initialisations for TMB
-  transform_minus_one_to_one_inverse <- function(x) -0.5 * log(2 / (x + 1) - 1)
-  return(list(
-    alpha = as.vector(l$alpha),
-    logphi = log(l$phi),
-    logsigma2 = log(l$sigma2),
-    logtau = log(l$tau),
-    logsigma2_t = log(l$sigma2_t),  
-    frho_t = transform_minus_one_to_one_inverse(l$rho_t),
-    logsigma2fs = log(l$sigma2fs),
-    random_effects = c(as.vector(l$eta), if(M@include_fs) as.vector(l$xi_O))
-  ))
 }
 
 
@@ -754,7 +809,6 @@
 
   return(list(Q = Q, nnz = nnz))
 }
-
 
 
 ## Exctracts the covariate design matrix of the fixed effects at the BAU level.
