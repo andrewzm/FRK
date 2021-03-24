@@ -89,6 +89,13 @@
     
     ## If we are estimating a unique fine-scale variance at each spatial BAU, 
     ## simply replicate sigma2fs ns times. 
+    ## FIXME: Users should NOT set M@fs_by_spatial_BAU if we are in a spatial 
+    ## change of support settingwith some data supports spanning multiple BAUs  
+    ## and is.null(known_sigma2fs) (and hence we need the rough estimate of sigma2fs). 
+    ## Hence, should add a check and a stop() somewhere, like:
+    # if(fs_by_spatial_BAU && SOME_CHECK_OF_COS && is.null(known_sigma2fs)) {
+    #   stop("some error message")
+    # }
     if (M@fs_by_spatial_BAU) {
       ns <- dim(M@BAUs)[1]
       sigma2fs <- rep(sigma2fs, ns)
@@ -114,7 +121,7 @@
     
     
     
-    estimates$logsigma2fs <- log(sigma2fs) # FIXME: Have to check this works when M@fs_by_spatial_BAU == TRUE (i.e., for the Chicago example)
+    estimates$logsigma2fs <- log(sigma2fs) 
   }
 
   
