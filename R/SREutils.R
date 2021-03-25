@@ -1092,7 +1092,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
                      print_lik, optimiser = nlminb, known_sigma2fs, ...) {
   
   if(method == "EM") {
-    SRE_model <- .EM_fit(SRE_model = SRE_model)
+    SRE_model <- .EM_fit(SRE_model = SRE_model, n_EM = n_EM, lambda = lambda, tol = tol, print_lik = print_lik)
   } else if (method == "TMB") {
     SRE_model <- .TMB_fit(SRE_model, optimiser = optimiser, known_sigma2fs = known_sigma2fs, ...)
   } else {
@@ -1105,7 +1105,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 
 # ---- EM fitting functions ----
 
-.EM_fit <- function(SRE_model) {
+.EM_fit <- function(SRE_model, n_EM, lambda, tol, print_lik) {
   
   info_fit <- list()      # initialise info_fit
   
