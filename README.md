@@ -58,6 +58,9 @@ License: GPL (>= 2)
 Quick start
 ------------
 
+### Gaussian data
+
+
 ```r
 library("FRK")
 library("sp")
@@ -101,8 +104,11 @@ ggsave(
 )
 --->
 
-![(Left) Gaussian data. (Centre) Predictions. (Right) Standard errors.](/man/figures/Gaussian_data?raw=true)
+![(Left) Gaussian data. (Centre) Predictions. (Right) Standard errors.](/man/figures/Gaussian_data.png?raw=true)
 
+### Non-Gaussian data
+
+Here we use analyse simulated Poisson data. We signify a Poisson data model with a mean response that is modelled using the square-root link function by setting `response = "poisson"` and `link = "square-root"` in `FRK()`. Other non-Gaussian data models available in `FRK` are the binomial, negative-binomial, gamma, and inverse-Gaussian. 
 
 ```r
 # Simulate Poisson data, using the previous example to construct a mean 
