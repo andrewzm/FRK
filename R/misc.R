@@ -96,6 +96,32 @@
 }
 
 
+
+#' @rdname observed_BAUs
+setMethod("observed_BAUs", signature(SRE_model = "SRE"), function (SRE_model) {
+  
+  ## Note that Cmat maps BAUs to the observations. The dimension of SRE_model@Cmat is
+  ## (number of observations) * (number of BAUs).
+  Cmat <- as(SRE_model@Cmat, "dgTMatrix")
+  obsidx <- unique(Cmat@j) + 1 # unique() probably not necessary but want to be safe
+  
+  return(obsidx)
+})
+
+
+#' @rdname unobserved_BAUs
+setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
+  
+  ## Id of observed BAUs:
+  obsidx <- observed_BAUs(SRE_model)
+  
+  ## Id of unobserved BAUs (ncol(SRE_model@Cmat) is the total number of BAUs):
+  unobsidx <- (1:ncol(SRE_model@Cmat))[-obsidx]
+  
+  return(unobsidx)
+})
+
+
 ## Determine if the basis functions are in a regular rectangular grid
 ## Inspired by: https://stackoverflow.com/a/32916893
 .test_regular_grid <- function(x, y, rectangular) {
@@ -502,6 +528,8 @@
 
 
 
+
+
 # ---- BAU manipulation ----
 
 #' @rdname reverse_spatial_coords
@@ -696,27 +724,23 @@ setMethod("reverse_spatial_coords",signature(BAUs="STIDF"),function(BAUs) {
 }
 
 #' @rdname remove_BAUs
-#' @export
 setMethod("remove_BAUs",signature(BAUs="SpatialPoints"),function(BAUs, rmidx, redefine_index = FALSE) {
   return(.remove_spatial_BAUs(BAUs, rmidx, redefine_index))
 })
 
 
 #' @rdname remove_BAUs
-#' @export
 setMethod("remove_BAUs",signature(BAUs="SpatialPointsDataFrame"),function(BAUs, rmidx, redefine_index = FALSE) {
   return(.remove_spatial_BAUs(BAUs, rmidx, redefine_index))
 })
 
 
 #' @rdname remove_BAUs
-#' @export
 setMethod("remove_BAUs",signature(BAUs="SpatialPixelsDataFrame"),function(BAUs, rmidx, redefine_index = FALSE) {
   return(.remove_spatial_BAUs(BAUs, rmidx, redefine_index))
 })
 
 #' @rdname remove_BAUs
-#' @export
 setMethod("remove_BAUs",signature(BAUs="STFDF"),function(BAUs, rmidx, redefine_index = FALSE) {
   
   BAUs_orig <- BAUs # Backup of BAUs for checks later
@@ -749,7 +773,6 @@ setMethod("remove_BAUs",signature(BAUs="STFDF"),function(BAUs, rmidx, redefine_i
 
 
 #' @rdname remove_BAUs
-#' @export
 setMethod("remove_BAUs",signature(BAUs="STIDF"),function(BAUs, rmidx, redefine_index = FALSE) {
   
   BAUs_orig <- BAUs # Backup of BAUs for checks later
@@ -766,30 +789,4 @@ setMethod("remove_BAUs",signature(BAUs="STIDF"),function(BAUs, rmidx, redefine_i
   return(BAUs)
 })
 
-
-#' @rdname observed_BAUs
-#' @export
-setMethod("observed_BAUs", signature(SRE_model = "SRE"), function (SRE_model) {
-  
-  ## Note that Cmat maps BAUs to the observations. The dimension of SRE_model@Cmat is
-  ## (number of observations) * (number of BAUs).
-  Cmat <- as(SRE_model@Cmat, "dgTMatrix")
-  obsidx <- unique(Cmat@j) + 1 # unique() probably not necessary but want to be safe
-  
-  return(obsidx)
-})
-
-
-#' @rdname unobserved_BAUs
-#' @export
-setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
-  
-  ## Id of observed BAUs:
-  obsidx <- observed_BAUs(SRE_model)
-  
-  ## Id of unobserved BAUs (ncol(SRE_model@Cmat) is the total number of BAUs):
-  unobsidx <- (1:ncol(SRE_model@Cmat))[-obsidx]
-  
-  return(unobsidx)
-})
 

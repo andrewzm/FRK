@@ -226,59 +226,95 @@ EmptyTheme <- function() {
     return(worldmap)                                             # return fixed world map
 }
 
-
-
-## Plotting functions: These may be removed, haven't decided yet. 
-
-#' Plot non-Gaussian data and predictions.
-#'
-#' @inheritParams .plot_map
-#' @inheritParams .plot_data
-#' @param zdf A \code{dataframe} containing spatial coordinates (named "x" and "y") and the value of the observations (named "z").
-#' @param newdata A \code{dataframe} containing the sspatial coordinates (named "x" and "y"), and the predictions and uncertainty quantification.
-#' @return A list of ggplot() objects.
-.plot_all <- function(newdata = NULL, zdf = NULL, response = NULL, x = "x", y = "y") {
+#' Plot predictions from FRK analysis
+#' 
+#' 
+#' @param SRE_model \code{SRE} object 
+#' @param Pred result of a calling \code{predict} on \code{SRE_model}
+#' @param zdf a \code{data.frame} or \code{SpatialPointsDataFrame} containing the observations
+#' @return A list of \code{ggplot} objects consisting of the observed data, predictions, and standard errors. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.
+#' @export
+SRE.plot <- function(SRE_model, Pred, zdf = NULL) {
     
-    plots <- list()
+    plots <- list() # initialise plot list
     
-    ## data plot
-    if (!is.null(zdf)) plots$data <- .plot_data(zdf, response = response) + labs(colour = 'Z')
+    if (SRE_model@method == "TMB")
+        Pred <- Pred$newdata # If method = TMB, Pred is a list
     
-    ## Prediction and uncertainty plots
-    if (!is.null(newdata)) {
+    if(!is(Pred, "SpatialPixels")) 
+        stop("SRE.plot only implemented when predicting over spatial pixels")
+    
+    ## Extract names of coordinates
+    coord_names <- coordnames(Pred) 
+    
+    if (length(coord_names) != 2) 
+        stop("SRE.plot only implemented for two-dimensional Euclidean space")
+    
         
-        if ("p_Y" %in% names(newdata)) plots$p_Y <- .plot_map(newdata, col = "p_Y", x = x, y = y) + labs(fill = expression(widehat(p)[Y]["|"][bold(Z)]))
-        if ("RMSPE_Y" %in% names(newdata)) plots$RMSPE_Y <- .plot_map(newdata, x = x, y = y, col = "RMSPE_Y", uncertaintyMap = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[Y]["|"][bold(Z)], Y))))
-        if (all(c("Y_percentile_05","Y_percentile_95") %in% names(newdata))) {
-            newdata$interval_90 <- newdata$Y_percentile_95 - newdata$Y_percentile_05 
-            plots$interval_90_Y <-  .plot_map(newdata, x = x, y = y, col = "interval_90", uncertaintyMap = TRUE) + labs(fill = expression("90% Central \nInterval Width:" ~ Y))
+    if (!is.null(zdf)) {
+        
+        zdf <- data.frame(zdf)
+        
+        ## Extract name of response variable so we can plot 
+        response_name <- all.vars(SRE_model@f)[1]
+        
+        plots$data <- ggplot(zdf) + geom_point(
+            aes_string(x = coord_names[1], y = coord_names[2], colour = response_name)) + 
+            scale_colour_distiller(palette = "Spectral") + theme_bw() + coord_fixed()
+    }
+    
+    
+    ## Basic plot
+    xy <- data.frame(Pred)
+    
+    gg_basic <- ggplot(data = xy, 
+                       aes_string(x = coord_names[1], y = coord_names[2])) + 
+        theme_bw() + coord_fixed()
+    
+    
+    if (SRE_model@method == "EM") {
+
+        plots$mu <- gg_basic + geom_raster(aes(fill=mu)) + 
+            scale_fill_distiller(palette="Spectral")
+        plots$se <- gg_basic + geom_raster(aes(fill=sd)) + 
+            scale_fill_distiller(palette="BrBG", name = "se")
+        
+    } else if(SRE_model@method == "TMB") {
+        
+        
+        if ("p_Y" %in% names(xy)) plots$p_Y <- .plot_map(xy, col = "p_Y", x = coord_names[1], y = coord_names[2]) + labs(fill = expression(widehat(p)[Y]["|"][bold(Z)]))
+        if ("RMSPE_Y" %in% names(xy)) plots$RMSPE_Y <- .plot_map(xy, x = coord_names[1], y = coord_names[2], col = "RMSPE_Y", uncertaintyMap = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[Y]["|"][bold(Z)], Y))))
+        if (all(c("Y_percentile_05","Y_percentile_95") %in% names(xy))) {
+            xy$interval_90 <- xy$Y_percentile_95 - xy$Y_percentile_05 
+            plots$interval_90_Y <-  .plot_map(xy, x = coord_names[1], y = coord_names[2], col = "interval_90", uncertaintyMap = TRUE) + labs(fill = expression("90% Central \nInterval Width:" ~ Y))
         }
         
-        if ("p_mu" %in% names(newdata)) plots$p_mu <- .plot_map(newdata, x = x, y = y, col = "p_mu") + labs(fill = expression(widehat(p)[mu]["|"][bold(Z)]))
-        if ("RMSPE_mu" %in% names(newdata)) plots$RMSPE_mu <- .plot_map(newdata, x = x, y = y, col = "RMSPE_mu", uncertaintyMap = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[mu]["|"][bold(Z)], mu))))
-        if (all(c("mu_percentile_05","mu_percentile_95") %in% names(newdata))) {
-            newdata$interval_90 <- newdata$mu_percentile_95 - newdata$mu_percentile_05 
-            plots$interval_90_mu <-  .plot_map(newdata, x = x, y = y, col = "interval_90", uncertaintyMap = TRUE) + labs(fill = expression("90% Central \nInterval Width:" ~ mu))
+        if ("p_mu" %in% names(xy)) plots$p_mu <- .plot_map(xy, x = coord_names[1], y = coord_names[2], col = "p_mu") + labs(fill = expression(widehat(p)[mu]["|"][bold(Z)]))
+        if ("RMSPE_mu" %in% names(xy)) plots$RMSPE_mu <- .plot_map(xy, x = coord_names[1], y = coord_names[2], col = "RMSPE_mu", uncertaintyMap = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[mu]["|"][bold(Z)], mu))))
+        if (all(c("mu_percentile_05","mu_percentile_95") %in% names(xy))) {
+            xy$interval_90 <- xy$mu_percentile_95 - xy$mu_percentile_05 
+            plots$interval_90_mu <-  .plot_map(xy, x = coord_names[1], y = coord_names[2], col = "interval_90", uncertaintyMap = TRUE) + labs(fill = expression("90% Central \nInterval Width:" ~ mu))
         }
         
-        if ("p_prob" %in% names(newdata)) plots$p_prob <- .plot_map(newdata, x = x, y = y, col = "p_prob", diverging = TRUE, midpoint = 0.5) + labs(fill = expression(widehat(p)[pi]["|"][bold(Z)]))
-        if ("RMSPE_prob" %in% names(newdata)) plots$RMSPE_prob <- .plot_map(newdata, x = x, y = y, col = "RMSPE_prob", uncertaintyMap = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[pi]["|"][bold(Z)], pi))))
-        if (all(c("prob_percentile_05","prob_percentile_95") %in% names(newdata))) {
-            newdata$interval_90 <- newdata$prob_percentile_95 - newdata$prob_percentile_05 
-            plots$interval_90_prob <-  .plot_map(newdata, x = x, y = y, col = "interval_90", uncertaintyMap = TRUE) + labs(fill = expression("90% Central \nInterval Width:" ~ pi))
+        if ("p_prob" %in% names(xy)) plots$p_prob <- .plot_map(xy, x = coord_names[1], y = coord_names[2], col = "p_prob", diverging = TRUE, midpoint = 0.5) + labs(fill = expression(widehat(p)[pi]["|"][bold(Z)]))
+        if ("RMSPE_prob" %in% names(xy)) plots$RMSPE_prob <- .plot_map(xy, x = coord_names[1], y = coord_names[2], col = "RMSPE_prob", uncertaintyMap = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[pi]["|"][bold(Z)], pi))))
+        if (all(c("prob_percentile_05","prob_percentile_95") %in% names(xy))) {
+            xy$interval_90 <- xy$prob_percentile_95 - xy$prob_percentile_05 
+            plots$interval_90_prob <-  .plot_map(xy, x = coord_names[1], y = coord_names[2], col = "interval_90", uncertaintyMap = TRUE) + labs(fill = expression("90% Central \nInterval Width:" ~ pi))
         }    
         
-        if ("p_Z" %in% names(newdata)) plots$p_Z <- .plot_map(newdata, x = x, y = y, col = "p_Z") + labs(fill = expression(widehat(p)[Z]["|"][bold(Z)])) 
-        # if ("p_Z_empirical" %in% names(newdata)) plots$p_Z_empirical <- .plot_map(newdata, col = "p_Z_empirical") + labs(fill = expression(widehat(p)[Z]["|"][bold(Z)]~" (empirical)"))
-        if ("RMSPE_Z" %in% names(newdata)) plots$RMSPE_Z <- .plot_map(newdata, x = x, y = y, col = "RMSPE_Z", uncertaintyMap = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[Z]["|"][bold(Z)], Z))))
-        if (all(c("Z_percentile_05","Z_percentile_95") %in% names(newdata))) {
-            newdata$interval_90 <- newdata$Z_percentile_95 - newdata$Z_percentile_05 
-            plots$interval_90_Z <-  .plot_map(newdata, x = x, y = y, col = "interval_90", uncertaintyMap = TRUE) + labs(fill = expression("90% Central \nInterval Width:" ~ Z))
+        if ("p_Z" %in% names(xy)) plots$p_Z <- .plot_map(xy, x = coord_names[1], y = coord_names[2], col = "p_Z") + labs(fill = expression(widehat(p)[Z]["|"][bold(Z)])) 
+        if ("RMSPE_Z" %in% names(xy)) plots$RMSPE_Z <- .plot_map(xy, x = coord_names[1], y = coord_names[2], col = "RMSPE_Z", uncertaintyMap = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[Z]["|"][bold(Z)], Z))))
+        if (all(c("Z_percentile_05","Z_percentile_95") %in% names(xy))) {
+            xy$interval_90 <- xy$Z_percentile_95 - xy$Z_percentile_05 
+            plots$interval_90_Z <-  .plot_map(xy, x = coord_names[1], y = coord_names[2], col = "interval_90", uncertaintyMap = TRUE) + labs(fill = expression("90% Central \nInterval Width:" ~ Z))
         }    
+
     }
     
     return(plots)
 }
+
 
 #' Plot 2D spatial data
 #'

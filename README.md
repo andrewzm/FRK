@@ -80,19 +80,9 @@ S <- FRK(f = z ~ 1,                           # Formula to FRK
          n_EM = 10)                           # Max number of EM iterations
 Pred <- predict(S)                            # Prediction stage
 
-xy <- data.frame(coordinates(Pred))           # Extract info from predictions
-xy$mu <- Pred$mu
-xy$se <- Pred$sd
-
 ## Plotting
-data_plot <- ggplot(zdf) + geom_point(aes(x,y,colour=z)) + 
-  scale_colour_distiller(palette="Spectral") + theme_bw() + coord_fixed()
-pred_plot <- ggplot(xy) + geom_raster(aes(x,y,fill=mu)) + 
-  scale_fill_distiller(palette="Spectral") + theme_bw() + coord_fixed()
-se_plot <- ggplot(xy) + geom_tile(aes(x,y,fill=se)) + 
-  geom_point(data=zdf,aes(x,y),pch=46) +
-  scale_fill_distiller(palette = "BrBG", n.breaks = 3) + theme_bw() + coord_fixed() 
-ggarrange(data_plot, pred_plot, se_plot, nrow = 1, align = "hv", legend = "top")  
+plot_list <- SRE.plot(S, Pred, zdf)
+ggarrange(plotlist = plot_list, nrow = 1, align = "hv", legend = "top") 
 
 ```
 
@@ -111,7 +101,8 @@ ggsave(
 Here we use analyse simulated Poisson data. We signify a Poisson data model with a mean response that is modelled using the square-root link function by setting `response = "poisson"` and `link = "square-root"` in `FRK()`. Other non-Gaussian data models available in `FRK` are the binomial, negative-binomial, gamma, and inverse-Gaussian. 
 
 ```r
-# Simulate Poisson data, using the previous example to construct a mean 
+## Setup
+## Simulate Poisson data, using the data of the previous example to construct a mean 
 RNGversion("3.6.0"); set.seed(1)                          
 zdf$z <- Z$z <- rpois(m, lambda = Z$z^2)
 
@@ -122,19 +113,9 @@ S <- FRK(f = z ~ 1,                           # Formula to FRK
          link = "square-root")                # square-root link function
 Pred <- predict(S)                            # Prediction stage
 
-xy <- data.frame(coordinates(Pred$newdata))   # Extract info from predictions
-xy$mu <- Pred$newdata$p_mu
-xy$se <- Pred$newdata$RMSPE_mu
-
 ## Plotting
-data_plot <- ggplot(zdf) + geom_point(aes(x,y,colour=z)) + 
-  scale_colour_distiller(palette="Spectral") + theme_bw() + coord_fixed()
-pred_plot <- ggplot(xy) + geom_raster(aes(x,y,fill=mu)) + 
-  scale_fill_distiller(palette="Spectral") + theme_bw() + coord_fixed()
-se_plot <- ggplot(xy) + geom_tile(aes(x,y,fill=se)) + 
-  geom_point(data=zdf,aes(x,y),pch=46) +
-  scale_fill_distiller(palette = "BrBG", n.breaks = 4) + theme_bw() + coord_fixed() 
-ggarrange(data_plot, pred_plot, se_plot, nrow = 1, align = "hv", legend = "top")  
+plot_list <- SRE.plot(S, Pred, zdf)
+ggarrange(plotlist = plot_list, nrow = 1, align = "hv", legend = "top")
              
 ```    
 <!---
