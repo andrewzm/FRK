@@ -30,7 +30,7 @@ library("FRK")
 vignette("FRK_intro")
 ```
 
-A draft paper with more details, currently in press, is available from [here](https://arxiv.org/abs/1705.08105).
+A draft paper with more details, currently in press, is available from [here](https://arxiv.org/abs/1705.08105). A draft paper which details the approach to modelling non-Gaussian data is available **LINK TO FRK v2 PAPER**.
 
 Description
 ------------
@@ -49,8 +49,11 @@ Author: Andrew Zammit-Mangion, Matthew Sainsbury-Dale
 
 Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
 
-Description: Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling and prediction with large datasets. The approach, discussed in Cressie and Johannesson (2008), decomposes the field, and hence the covariance function, using a fixed set of *n* basis functions, where *n* is typically much smaller than the number of data points (or polygons) *m*. The method naturally allows for non-stationary, anisotropic covariance functions and the use of observations with varying support (with known error variance). The projected field is a key building block of the Spatial Random Effects (SRE) model, on which this package is based. The package FRK provides helper functions to model, fit, and predict using an SRE with relative ease. 
-Reference: Cressie, N., & Johannesson, G. (2008). Fixed rank kriging for very large spatial data sets. Journal of the Royal Statistical Society: Series B, 70, 209-226.
+Description: Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling and prediction with large datasets. The approach, discussed in Cressie and Johannesson (2008), decomposes the field, and hence the covariance function, using a fixed set of *r* basis functions, where *r* is typically much smaller than the number of data points (or polygons) *m*. The low-rank basis-function representation, combined with the use of sparse precision matrices, facilitates the modelling of big spatial/spatio-temporal data. The method naturally allows for non-stationary, anisotropic covariance functions, the use of observations with varying support, and any user-specified prediction regions. The package `FRK` employs a spatial generalised linear mixed model framework (Diggle et al., 1998) to cater for a range of non-Gaussian data models, including the Poisson, binomial, negative-binomial, gamma, and inverse-Gaussian distributions. In a non-Gaussian setting, `FRK` uses the package `TMB` (Kristensen et al., 2016) to make computationally efficient inferences through the use of Laplace approximations.  <!---The projected field is a key building block of the Spatial Random Effects (SRE) model, on which this package is based.---> `FRK` provides helper functions to model, fit, and predict <!---using an SRE model --->with relative ease. 
+
+* Cressie, N., & Johannesson, G. (2008). Fixed rank kriging for very large spatial data sets. Journal of the Royal Statistical Society: Series B, 70, 209–226.
+* Diggle, P. J. & Tawn, J. A. & Moyeed, R. A. (1998). Model-based geostatistics. Journal of the Royal Statistical Society, 47:299–350
+* Kristensen, K., Nielsen, A., Berg, C. W., Skaug, H., and Bell, B. M. (2016). TMB: Automatic differentiation and Laplace approximation. Journal of Statistical Software, 70:1–21.
 
 License: GPL (>= 2)
 
