@@ -499,3 +499,297 @@
   return(list(Q = Q, nnz = nnz))
 }
 
+
+
+
+# ---- BAU manipulation ----
+
+#' @rdname reverse_spatial_coords
+#' @export
+setMethod("reverse_spatial_coords",signature(BAUs="SpatialPixelsDataFrame"),function(BAUs) {
+  
+  ## Number of dimensions of the BAUs
+  n_coord <- dimensions(BAUs)
+  
+  ## Reverse the slots (must do this for each slot):
+  ## First, deal with the @data slot.
+  ## It is possible that there is additional data columns present, 
+  ## so we need to cater for this.
+  ## Desired coordinate order and their indices in the data:
+  new_coord_order <- rev(coordnames(BAUs))
+  coord_idx <- match(new_coord_order, names(BAUs@data), nomatch = 0)
+  
+  ## Indices of the remaining columns
+  remaining_idx <- which(!names(BAUs@data) %in% new_coord_order)
+  
+  ## Subset the data
+  BAUs@data <- BAUs@data[, c(coord_idx, remaining_idx)]
+  
+  ## Reverse the remaining slots
+  BAUs@coords <- BAUs@coords[, new_coord_order]
+  BAUs@bbox   <- BAUs@bbox[new_coord_order, ]
+  
+  ## Note that we cannot subset BAUs@grid (S4 method). 
+  ## Instead, we will manipulate the slots directly.
+  tmp <- BAUs@grid
+  tmp@cellcentre.offset <- tmp@cellcentre.offset[n_coord:1]
+  tmp@cellsize <- tmp@cellsize[n_coord:1]
+  tmp@cells.dim <- tmp@cells.dim[n_coord:1]
+  ## NB: note sure how to access the coordinate names of tmp directly as of now (GridTopology
+  ## objects have only an assignment method for coordnames, not a retrieval method). 
+  ## For now I will just use the coordinate names of the BAUs.
+  ## It doesn't seem to matter anyway, though, as it adjusts automatically.
+  coordnames(tmp) <- coordnames(BAUs)[n_coord:1]
+  
+  BAUs@grid <- tmp
+  
+  return(BAUs)
+})
+
+
+#' @rdname reverse_spatial_coords
+#' @export
+setMethod("reverse_spatial_coords",signature(BAUs="SpatialPointsDataFrame"),function(BAUs) {
+  
+  ## The documentation says that the @data slot may in fact contain the coordinates.
+  ## So, we need to allow for this possibility.
+  ## Desired coordinate order and their indices in the data:
+  new_coord_order <- rev(coordnames(BAUs))
+  coord_idx <- match(new_coord_order, names(BAUs@data), nomatch = 0)
+  
+  ## Indices of the remaining columns
+  remaining_idx <- which(!names(BAUs@data) %in% new_coord_order)
+  
+  ## Subset the data
+  BAUs@data <- BAUs@data[, c(coord_idx, remaining_idx), drop = FALSE]
+  
+  ## Reverse the order of the remaining slots:
+  BAUs@coords <- BAUs@coords[, new_coord_order]
+  BAUs@bbox   <- BAUs@bbox[new_coord_order, ]
+  
+  return(BAUs)
+})
+
+
+#' @rdname reverse_spatial_coords
+#' @export
+setMethod("reverse_spatial_coords",signature(BAUs="SpatialPoints"),function(BAUs) {
+  
+  ## The documentation does not explicitly say that coords can or cannot contain data, 
+  ## but for safety I will assume it can. 
+  ## For the spatial points object, I will simply reverse the coordinates matrix. 
+  ## Hence, if we have (lon, lat, z), the reversed order will be (z, lat, lon).
+  ## Desired coordinate order and their indices in the data:
+  new_coord_order <- rev(coordnames(BAUs))
+  
+  ## Subset the data
+  BAUs@coords <- BAUs@coords[, new_coord_order, drop = FALSE]
+  
+  ## Reverse the order of the remaining slot:
+  BAUs@bbox   <- BAUs@bbox[new_coord_order, ]
+  
+  return(BAUs)
+})
+
+
+#' @rdname reverse_spatial_coords
+#' @export
+setMethod("reverse_spatial_coords",signature(BAUs="SpatialPolygonsDataFrame"),function(BAUs) {
+  
+  
+  ## First, the @data slot:
+  ## (Note that both coordinate and data columns may be present - we will just reverse all)
+  new_coord_order <- 
+    BAUs@data <- BAUs@data[, rev(colnames(BAUs@data))]
+  
+  ## Second, the @bbox:
+  BAUs@bbox   <- BAUs@bbox[rev(row.names(BAUs@bbox)), ]
+  
+  ## Third, the @polygons
+  ## FIXME: Have to do this for each polygons list (use lapply or something)
+  tmp <- BAUs@polygons$`1` 
+  class(BAUs@polygons$`1`)
+  ## Swap the order of the label point ($labpt) slot:
+  tmp@labpt <- rev(tmp@labpt)
+  ## Swap the order of the coordinates ($coords) slot:
+  coordinates(tmp@Polygons)
+  coordinates(tmp)
+  ## FIXME: not sure how to access the coordinates of the polygons.
+  ## Don't want to spend any more time on this until Andrew says its worthwhile.
+  
+  return(BAUs)
+})
+
+
+
+#' @rdname reverse_spatial_coords
+#' @export
+setMethod("reverse_spatial_coords",signature(BAUs="STFDF"),function(BAUs) {
+  
+  ## FIXME: should allow for SpatialPolygonsDF and SpatialPolygons too
+  if(is(BAUs@sp, "SpatialPointsDataFrame") | 
+     is(BAUs@sp, "SpatialPixelsDataFrame") | 
+     is(BAUs@sp, "SpatialPoints"))
+    BAUs@sp <- reverse_spatial_coords(BAUs@sp)
+  else
+    stop("The underlying spatial object should be of class 'SpatialPointsDataFrame' or 'SpatialPixelsDataFrame'.")
+  
+  return(BAUs)
+})
+
+
+#' @rdname reverse_spatial_coords
+#' @export
+setMethod("reverse_spatial_coords",signature(BAUs="STIDF"),function(BAUs) {
+  
+  ## FIXME: should allow for SpatialPolygonsDF and SpatialPolygons too
+  if(is(BAUs@sp, "SpatialPointsDataFrame") | 
+     is(BAUs@sp, "SpatialPixelsDataFrame") | 
+     is(BAUs@sp, "SpatialPoints"))
+    BAUs@sp <- reverse_spatial_coords(BAUs@sp)
+  else
+    stop("The underlying spatial object should be of class 'SpatialPointsDataFrame', 'SpatialPixelsDataFrame', or 'SpatialPoints'.")
+  
+  return(BAUs)
+})
+
+
+## Code common to the removal of spatial BAUs across methods
+.remove_spatial_BAUs <- function(BAUs, rmidx, redefine_index = FALSE) {
+  ntot <- nrow(BAUs@coords)
+  if(!all(rmidx %in% 1:ntot))
+    stop("Please ensure indices are numeric and within
+             1 and the number of spatial BAUs.")
+  
+  BAUs_orig  <- BAUs
+  BAUs <- BAUs[-rmidx, ]
+  
+  ## Check for indexing columns in @data slot of BAU object
+  ## Note that the first check is for SpatialPoints and SpatialPolygons, each of which 
+  ## do not have a @data slot.
+  
+  if ("data" %in% slotNames(class(BAUs_orig)) & redefine_index) {
+    BAUs@data <- .redefine_indexing_variables(BAUs_orig@data, BAUs@data)
+  }
+  
+  
+  return(BAUs)
+}
+
+
+## Function to check if columns are "indexing variables".
+## Returns the indices of these variables in the column names of df.
+.redefine_indexing_variables <- function(data_orig, data_new) {
+  
+  ## Find the column indices of the indexing variables (if present)
+  indexing_variables_idx <- apply(data_orig, 2, function(x) all(x == 1:nrow(data_orig))) %>%
+    which()
+  
+  
+  ## if indexing variables are present, redefine the corresponding column.
+  if (length(indexing_variables_idx)) { 
+    print(paste0("Possible indexing variables present, which will be redefined to maintain indexing following the removal of BAUs: ", names(indexing_variables_idx)))
+    data_new[, indexing_variables_idx] <- 1:nrow(data_new)
+  } 
+  
+  return(data_new)
+}
+
+#' @rdname remove_BAUs
+#' @export
+setMethod("remove_BAUs",signature(BAUs="SpatialPoints"),function(BAUs, rmidx, redefine_index = FALSE) {
+  return(.remove_spatial_BAUs(BAUs, rmidx, redefine_index))
+})
+
+
+#' @rdname remove_BAUs
+#' @export
+setMethod("remove_BAUs",signature(BAUs="SpatialPointsDataFrame"),function(BAUs, rmidx, redefine_index = FALSE) {
+  return(.remove_spatial_BAUs(BAUs, rmidx, redefine_index))
+})
+
+
+#' @rdname remove_BAUs
+#' @export
+setMethod("remove_BAUs",signature(BAUs="SpatialPixelsDataFrame"),function(BAUs, rmidx, redefine_index = FALSE) {
+  return(.remove_spatial_BAUs(BAUs, rmidx, redefine_index))
+})
+
+#' @rdname remove_BAUs
+#' @export
+setMethod("remove_BAUs",signature(BAUs="STFDF"),function(BAUs, rmidx, redefine_index = FALSE) {
+  
+  BAUs_orig <- BAUs # Backup of BAUs for checks later
+  
+  ## Remove the spatial BAUs:
+  BAUs@sp <- .remove_spatial_BAUs(BAUs@sp, rmidx)
+  
+  ## SUBSET @data to adjust for the new spatial BAUs:
+  ## From the documentation, it says that @data is a data.frame containing
+  ## measured values; space index cycling first, and time order preserved. 
+  ## Hence, we should be able to remove the rows which correspond to rmidx
+  ## by adding time to rmidx. 
+  ## Also need to maintain space index cycling first. Achieve this by sorting the indcies.
+  n_time     <- length(BAUs@time) # number of temporal frames
+  n_spat     <- nrow(BAUs_orig@sp)      # ORIGINAL number of spatial BAUs
+  increment   <- n_spat * 0:(n_time - 1) # Terms to add to each rmidx
+  data_rmidx<- sort(c(outer(rmidx, increment, "+")))
+  
+  BAUs@data <- BAUs@data[-data_rmidx, ]
+  
+  ## Check for indexing columns in @data slot of BAU object
+  ## Note that the first check is for SpatialPoints and SpatialPolygons, each of which 
+  ## do not have a @data slot.
+  if ("data" %in% slotNames(class(BAUs_orig)) & redefine_index)
+    BAUs@data <- .redefine_indexing_variables(BAUs_orig@data, BAUs@data)
+  
+  return(BAUs)
+})
+
+
+
+#' @rdname remove_BAUs
+#' @export
+setMethod("remove_BAUs",signature(BAUs="STIDF"),function(BAUs, rmidx, redefine_index = FALSE) {
+  
+  BAUs_orig <- BAUs # Backup of BAUs for checks later
+  
+  ## Removal is straightforward for STIDF
+  suppressWarnings(BAUs <- BAUs[-rmidx, ])
+  
+  ## Check for indexing columns in @data slot of BAU object
+  ## Note that the first check is for SpatialPoints and SpatialPolygons, each of which 
+  ## do not have a @data slot.
+  if ("data" %in% slotNames(class(BAUs_orig)) & redefine_index)
+    BAUs@data <- .redefine_indexing_variables(BAUs_orig@data, BAUs@data)
+  
+  return(BAUs)
+})
+
+
+#' @rdname observed_BAUs
+#' @export
+setMethod("observed_BAUs", signature(SRE_model = "SRE"), function (SRE_model) {
+  
+  ## Note that Cmat maps BAUs to the observations. The dimension of SRE_model@Cmat is
+  ## (number of observations) * (number of BAUs).
+  Cmat <- as(SRE_model@Cmat, "dgTMatrix")
+  obsidx <- unique(Cmat@j) + 1 # unique() probably not necessary but want to be safe
+  
+  return(obsidx)
+})
+
+
+#' @rdname unobserved_BAUs
+#' @export
+setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
+  
+  ## Id of observed BAUs:
+  obsidx <- observed_BAUs(SRE_model)
+  
+  ## Id of unobserved BAUs (ncol(SRE_model@Cmat) is the total number of BAUs):
+  unobsidx <- (1:ncol(SRE_model@Cmat))[-obsidx]
+  
+  return(unobsidx)
+})
+
