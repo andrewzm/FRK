@@ -84,8 +84,8 @@ S <- FRK(f = z ~ 1,                           # Formula to FRK
 Pred <- predict(S)                            # Prediction stage
 
 ## Plotting
-plot_list <- SRE.plot(S, Pred, zdf)
-ggarrange(plotlist = plot_list, nrow = 1, align = "hv", legend = "top") 
+plot_list <- plot(S, Pred, zdf)
+ggarrange(plotlist = plot_list, nrow = 1, legend = "top")
 
 ```
 
@@ -117,8 +117,9 @@ S <- FRK(f = z ~ 1,                           # Formula to FRK
 Pred <- predict(S)                            # Prediction stage
 
 ## Plotting
-plot_list <- SRE.plot(S, Pred, zdf)
-ggarrange(plotlist = plot_list, nrow = 1, align = "hv", legend = "top")
+plot_list <- plot(S, Pred, zdf)
+ggarrange(plot_list$data, plot_list$p_mu, plot_list$interval_90_mu, 
+          nrow = 1, legend = "top")
              
 ```    
 <!---

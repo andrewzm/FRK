@@ -226,169 +226,252 @@ EmptyTheme <- function() {
     return(worldmap)                                             # return fixed world map
 }
 
-#' Plot predictions from FRK analysis
+# #' Plot predictions from FRK analysis.
+# #' 
+# #' @rdname SRE
+# #' @param object \code{SRE} object
+# #' @param Pred result of a calling \code{predict} on an \code{SRE} object
+# #' @param zdf a \code{data.frame}, \code{SpatialPointsDataFrame}, or \code{SpatialPolygonsDataFrame} containing the observations
+# #' @return A list of \code{ggplot} objects consisting of the observed data, predictions, and standard errors. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.
+# #' @export
+# # SRE.plot <- function(object, Pred, zdf = NULL) {
+# setMethod("plot", signature(object = "SRE"), function(object, Pred, zdf = NULL) {
+#     
+#     plots <- list() # initialise plot list
+#     
+#     if (object@method == "TMB")
+#         Pred <- Pred$newdata # If method = TMB, Pred is a list
+#     
+#     if(is(Pred, "ST"))
+#         stop("SRE.plot only implemented for spatial applications")
+#     
+#     ## Extract names of coordinates
+#     coord_names <- coordnames(Pred) 
+#     
+#     if (length(coord_names) != 2) 
+#         stop("SRE.plot only implemented for two-dimensional Euclidean space")
+#     
+#     if (!is.null(zdf)) 
+#         plots$data <- .plot_data(zdf, object, coord_names)
+#     
+#     if (is(Pred, "SpatialPixelsDataFrame")) {
+#         xy <- data.frame(Pred)
+#         sp_type <- "pixels"
+#     } else if (is(Pred, "SpatialPolygonsDataFrame")) {
+#         xy <- .SpatialPolygonsDataFrame_to_df(Pred)
+#         sp_type <- "polygons"
+#     } else {
+#         stop("Class of Pred is not recognised by SRE.plot().")
+#     }
+# 
+#     if (object@method == "EM") {
+#         plots$mu <- .plot_map(xy, coord_names, col = "mu", sp_type)
+#         plots$se <- .plot_map(xy, coord_names, col = "sd", sp_type, uncertainty = TRUE)
+#         
+#     } else if (object@method == "TMB") {
+#         
+#         ## Unfortunately, we don't know the value of type specified in predict().
+#         ## We will just check the existence of quantities using if statements. 
+#         ## Usually, people want prediction interval widths, but the output of predict
+#         ## doesn't give interval widths directly. Instead, it gives user-specified
+#         ## percentiles, so here we construct some interval widths assuming the user
+#         ## has specified the 5th and 95th percentiles (default).
+#         
+#         if ("p_Y" %in% names(xy)) plots$p_Y <- .plot_map(xy, coord_names, col = "p_Y", sp_type) + labs(fill = expression(widehat(p)[Y]["|"][bold(Z)]))
+#         if ("RMSPE_Y" %in% names(xy)) plots$RMSPE_Y <- .plot_map(xy, coord_names, col = "RMSPE_Y", sp_type, uncertainty = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[Y]["|"][bold(Z)], Y))))
+#         if (all(c("Y_percentile_5","Y_percentile_95") %in% names(xy))) {
+#             xy$interval_90 <- xy$Y_percentile_95 - xy$Y_percentile_5 
+#             plots$interval_90_Y <-  .plot_map(xy, coord_names, col = "interval_90", sp_type, uncertainty = TRUE) + 
+#                 labs(fill = eval(bquote(expression(
+#                     "Width of 90%\npredictive interval\nfor latent process Y(" *"\U00B7)"
+#                 )))) 
+#         }
+#         
+#         if ("p_mu" %in% names(xy)) plots$p_mu <- .plot_map(xy, coord_names, col = "p_mu", sp_type) + labs(fill = expression(widehat(p)[mu]["|"][bold(Z)]))
+#         if ("RMSPE_mu" %in% names(xy)) plots$RMSPE_mu <- .plot_map(xy, coord_names, col = "RMSPE_mu", sp_type, uncertainty = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[mu]["|"][bold(Z)], mu))))
+#         if (all(c("mu_percentile_5","mu_percentile_95") %in% names(xy))) {
+#             xy$interval_90 <- xy$mu_percentile_95 - xy$mu_percentile_5 
+#             plots$interval_90_mu <-  .plot_map(xy, coord_names, col = "interval_90", sp_type, uncertainty = TRUE) + 
+#                 labs(fill = eval(bquote(expression(
+#                     "Width of 90%\npredictive interval\nfor mean process " *mu *"(\U00B7)"
+#                 )))) 
+#         }
+#         
+#         if ("p_prob" %in% names(xy)) plots$p_prob <- .plot_map(xy, coord_names, col = "p_prob", sp_type) + labs(fill = expression(widehat(p)[pi]["|"][bold(Z)]))
+#         if ("RMSPE_prob" %in% names(xy)) plots$RMSPE_prob <- .plot_map(xy, coord_names, col = "RMSPE_prob", sp_type, uncertainty = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[pi]["|"][bold(Z)], pi))))
+#         if (all(c("prob_percentile_5","prob_percentile_95") %in% names(xy))) {
+#             xy$interval_90 <- xy$prob_percentile_95 - xy$prob_percentile_5 
+#             plots$interval_90_prob <-  .plot_map(xy, coord_names, col = "interval_90", sp_type, uncertainty = TRUE) + 
+#                 labs(fill = eval(bquote(expression(
+#                     "Width of 90%\npredictive interval\nfor probability process " *pi *"(\U00B7)"
+#                 )))) 
+#         }   
+#         
+#         if ("p_Z" %in% names(xy)) plots$p_Z <- .plot_map(xy, coord_names, col = "p_Z", sp_type) + labs(fill = expression(widehat(p)[Z]["|"][bold(Z)]))
+#         if ("RMSPE_Z" %in% names(xy)) plots$RMSPE_Z <- .plot_map(xy, coord_names, col = "RMSPE_Z", sp_type, uncertainty = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[Z]["|"][bold(Z)], Z))))
+#         if (all(c("Z_percentile_5","Z_percentile_95") %in% names(xy))) {
+#             xy$interval_90 <- xy$Z_percentile_95 - xy$Z_percentile_5 
+#             plots$interval_90_Z <-  .plot_map(xy, coord_names, col = "interval_90", sp_type, uncertainty = TRUE) + 
+#                 labs(fill = eval(bquote(expression(
+#                     "Width of 90%\npredictive interval\nfor data process " *Z *"(\U00B7)"
+#                 )))) 
+#         }
+#     }
+#     
+#     return(plots)
+# })
+
+
+#' Plot predictions from FRK analysis. 
 #' 
-#' 
-#' @param SRE_model \code{SRE} object 
-#' @param Pred result of a calling \code{predict} on \code{SRE_model}
-#' @param zdf a \code{data.frame} or \code{SpatialPointsDataFrame} containing the observations
+#' @rdname SRE
+#' @param object \code{SRE} object 
+#' @param y result of calling \code{predict} on an \code{SRE} object 
+#' @param zdf a \code{data.frame}, \code{SpatialPointsDataFrame}, or \code{SpatialPolygonsDataFrame} containing the observations
 #' @return A list of \code{ggplot} objects consisting of the observed data, predictions, and standard errors. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.
 #' @export
-SRE.plot <- function(SRE_model, Pred, zdf = NULL) {
+setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL) {
     
     plots <- list() # initialise plot list
     
-    if (SRE_model@method == "TMB")
-        Pred <- Pred$newdata # If method = TMB, Pred is a list
+    if (x@method == "TMB")
+        y <- y$newdata # If method = TMB, y is a list
     
-    if(!is(Pred, "SpatialPixels")) 
-        stop("SRE.plot only implemented when predicting over spatial pixels")
+    if(is(y, "ST"))
+        stop("SRE.plot only implemented for spatial applications")
     
     ## Extract names of coordinates
-    coord_names <- coordnames(Pred) 
+    coord_names <- coordnames(y) 
     
     if (length(coord_names) != 2) 
         stop("SRE.plot only implemented for two-dimensional Euclidean space")
     
-        
-    if (!is.null(zdf)) {
-        
-        zdf <- data.frame(zdf)
-        
-        ## Extract name of response variable so we can plot 
-        response_name <- all.vars(SRE_model@f)[1]
-        
-        plots$data <- ggplot(zdf) + geom_point(
-            aes_string(x = coord_names[1], y = coord_names[2], colour = response_name)) + 
-            scale_colour_distiller(palette = "Spectral") + theme_bw() + coord_fixed()
+    if (!is.null(zdf)) 
+        plots$data <- .plot_data(zdf, x, coord_names)
+    
+    if (is(y, "SpatialPixelsDataFrame")) {
+        df <- data.frame(y)
+        sp_type <- "pixels"
+    } else if (is(y, "SpatialPolygonsDataFrame")) {
+        df <- .SpatialPolygonsDataFrame_to_df(y)
+        sp_type <- "polygons"
+    } else {
+        stop("Class of y is not recognised by SRE.plot().")
     }
     
-    
-    ## Basic plot
-    xy <- data.frame(Pred)
-    
-    gg_basic <- ggplot(data = xy, 
-                       aes_string(x = coord_names[1], y = coord_names[2])) + 
-        theme_bw() + coord_fixed()
-    
-    
-    if (SRE_model@method == "EM") {
-
-        plots$mu <- gg_basic + geom_raster(aes(fill=mu)) + 
-            scale_fill_distiller(palette="Spectral")
-        plots$se <- gg_basic + geom_raster(aes(fill=sd)) + 
-            scale_fill_distiller(palette="BrBG", name = "se")
+    if (x@method == "EM") {
+        plots$mu <- .plot_map(df, coord_names, col = "mu", sp_type)
+        plots$se <- .plot_map(df, coord_names, col = "sd", sp_type, uncertainty = TRUE)
         
-    } else if(SRE_model@method == "TMB") {
+    } else if (x@method == "TMB") {
         
+        ## Unfortunately, we don't know the value of type specified in predict().
+        ## We will just check the existence of quantities using if statements. 
+        ## Usually, people want prediction interval widths, but the output of predict
+        ## doesn't give interval widths directly. Instead, it gives user-specified
+        ## percentiles, so here we construct some interval widths assuming the user
+        ## has specified the 5th and 95th percentiles (default).
         
-        if ("p_Y" %in% names(xy)) plots$p_Y <- .plot_map(xy, col = "p_Y", x = coord_names[1], y = coord_names[2]) + labs(fill = expression(widehat(p)[Y]["|"][bold(Z)]))
-        if ("RMSPE_Y" %in% names(xy)) plots$RMSPE_Y <- .plot_map(xy, x = coord_names[1], y = coord_names[2], col = "RMSPE_Y", uncertaintyMap = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[Y]["|"][bold(Z)], Y))))
-        if (all(c("Y_percentile_05","Y_percentile_95") %in% names(xy))) {
-            xy$interval_90 <- xy$Y_percentile_95 - xy$Y_percentile_05 
-            plots$interval_90_Y <-  .plot_map(xy, x = coord_names[1], y = coord_names[2], col = "interval_90", uncertaintyMap = TRUE) + labs(fill = expression("90% Central \nInterval Width:" ~ Y))
+        if ("p_Y" %in% names(df)) plots$p_Y <- .plot_map(df, coord_names, col = "p_Y", sp_type) + labs(fill = expression(widehat(p)[Y]["|"][bold(Z)]))
+        if ("RMSPE_Y" %in% names(df)) plots$RMSPE_Y <- .plot_map(df, coord_names, col = "RMSPE_Y", sp_type, uncertainty = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[Y]["|"][bold(Z)], Y))))
+        if (all(c("Y_percentile_5","Y_percentile_95") %in% names(df))) {
+            df$interval_90 <- df$Y_percentile_95 - df$Y_percentile_5 
+            plots$interval_90_Y <-  .plot_map(df, coord_names, col = "interval_90", sp_type, uncertainty = TRUE) + 
+                labs(fill = eval(bquote(expression(
+                    "Width of 90%\npredictive interval\nfor latent process Y(" *"\U00B7)"
+                )))) 
         }
         
-        if ("p_mu" %in% names(xy)) plots$p_mu <- .plot_map(xy, x = coord_names[1], y = coord_names[2], col = "p_mu") + labs(fill = expression(widehat(p)[mu]["|"][bold(Z)]))
-        if ("RMSPE_mu" %in% names(xy)) plots$RMSPE_mu <- .plot_map(xy, x = coord_names[1], y = coord_names[2], col = "RMSPE_mu", uncertaintyMap = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[mu]["|"][bold(Z)], mu))))
-        if (all(c("mu_percentile_05","mu_percentile_95") %in% names(xy))) {
-            xy$interval_90 <- xy$mu_percentile_95 - xy$mu_percentile_05 
-            plots$interval_90_mu <-  .plot_map(xy, x = coord_names[1], y = coord_names[2], col = "interval_90", uncertaintyMap = TRUE) + labs(fill = expression("90% Central \nInterval Width:" ~ mu))
+        if ("p_mu" %in% names(df)) plots$p_mu <- .plot_map(df, coord_names, col = "p_mu", sp_type) + labs(fill = expression(widehat(p)[mu]["|"][bold(Z)]))
+        if ("RMSPE_mu" %in% names(df)) plots$RMSPE_mu <- .plot_map(df, coord_names, col = "RMSPE_mu", sp_type, uncertainty = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[mu]["|"][bold(Z)], mu))))
+        if (all(c("mu_percentile_5","mu_percentile_95") %in% names(df))) {
+            df$interval_90 <- df$mu_percentile_95 - df$mu_percentile_5 
+            plots$interval_90_mu <-  .plot_map(df, coord_names, col = "interval_90", sp_type, uncertainty = TRUE) + 
+                labs(fill = eval(bquote(expression(
+                    "Width of 90%\npredictive interval\nfor mean process " *mu *"(\U00B7)"
+                )))) 
         }
         
-        if ("p_prob" %in% names(xy)) plots$p_prob <- .plot_map(xy, x = coord_names[1], y = coord_names[2], col = "p_prob", diverging = TRUE, midpoint = 0.5) + labs(fill = expression(widehat(p)[pi]["|"][bold(Z)]))
-        if ("RMSPE_prob" %in% names(xy)) plots$RMSPE_prob <- .plot_map(xy, x = coord_names[1], y = coord_names[2], col = "RMSPE_prob", uncertaintyMap = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[pi]["|"][bold(Z)], pi))))
-        if (all(c("prob_percentile_05","prob_percentile_95") %in% names(xy))) {
-            xy$interval_90 <- xy$prob_percentile_95 - xy$prob_percentile_05 
-            plots$interval_90_prob <-  .plot_map(xy, x = coord_names[1], y = coord_names[2], col = "interval_90", uncertaintyMap = TRUE) + labs(fill = expression("90% Central \nInterval Width:" ~ pi))
-        }    
+        if ("p_prob" %in% names(df)) plots$p_prob <- .plot_map(df, coord_names, col = "p_prob", sp_type) + labs(fill = expression(widehat(p)[pi]["|"][bold(Z)]))
+        if ("RMSPE_prob" %in% names(df)) plots$RMSPE_prob <- .plot_map(df, coord_names, col = "RMSPE_prob", sp_type, uncertainty = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[pi]["|"][bold(Z)], pi))))
+        if (all(c("prob_percentile_5","prob_percentile_95") %in% names(df))) {
+            df$interval_90 <- df$prob_percentile_95 - df$prob_percentile_5 
+            plots$interval_90_prob <-  .plot_map(df, coord_names, col = "interval_90", sp_type, uncertainty = TRUE) + 
+                labs(fill = eval(bquote(expression(
+                    "Width of 90%\npredictive interval\nfor probability process " *pi *"(\U00B7)"
+                )))) 
+        }   
         
-        if ("p_Z" %in% names(xy)) plots$p_Z <- .plot_map(xy, x = coord_names[1], y = coord_names[2], col = "p_Z") + labs(fill = expression(widehat(p)[Z]["|"][bold(Z)])) 
-        if ("RMSPE_Z" %in% names(xy)) plots$RMSPE_Z <- .plot_map(xy, x = coord_names[1], y = coord_names[2], col = "RMSPE_Z", uncertaintyMap = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[Z]["|"][bold(Z)], Z))))
-        if (all(c("Z_percentile_05","Z_percentile_95") %in% names(xy))) {
-            xy$interval_90 <- xy$Z_percentile_95 - xy$Z_percentile_05 
-            plots$interval_90_Z <-  .plot_map(xy, x = coord_names[1], y = coord_names[2], col = "interval_90", uncertaintyMap = TRUE) + labs(fill = expression("90% Central \nInterval Width:" ~ Z))
-        }    
-
+        if ("p_Z" %in% names(df)) plots$p_Z <- .plot_map(df, coord_names, col = "p_Z", sp_type) + labs(fill = expression(widehat(p)[Z]["|"][bold(Z)]))
+        if ("RMSPE_Z" %in% names(df)) plots$RMSPE_Z <- .plot_map(df, coord_names, col = "RMSPE_Z", sp_type, uncertainty = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[Z]["|"][bold(Z)], Z))))
+        if (all(c("Z_percentile_5","Z_percentile_95") %in% names(df))) {
+            df$interval_90 <- df$Z_percentile_95 - df$Z_percentile_5 
+            plots$interval_90_Z <-  .plot_map(df, coord_names, col = "interval_90", sp_type, uncertainty = TRUE) + 
+                labs(fill = eval(bquote(expression(
+                    "Width of 90%\npredictive interval\nfor data process " *Z *"(\U00B7)"
+                )))) 
+        }
     }
     
     return(plots)
+})
+
+
+
+## Plot of predictions or uncertainty quantification.
+.plot_map <- function(df, coord_names, col, sp_type, uncertainty = FALSE){
+    
+    ## Basic plot
+    gg <- ggplot(data = df, aes_string(x = coord_names[1], y = coord_names[2])) + 
+        theme_bw() + coord_fixed()
+    
+    ## Plot based on data type
+    if (sp_type == "pixels") {
+        gg <- gg + geom_raster(aes_string(fill = col))
+    } else if (sp_type == "polygons") {
+        gg <- gg + geom_polygon(aes_string(group = "id", fill = col), 
+                                colour = "black"
+                                ) 
+    }
+    
+    ## Colour scale
+    if (uncertainty) {
+        gg <- gg + scale_fill_distiller(palette = "BrBG", direction = -1)
+    } else {
+        gg <- gg + scale_fill_distiller(palette = "Spectral")
+    }
+    
+    
+    return(gg)
 }
 
 
-#' Plot 2D spatial data
-#'
-#' Plot 2D spatial data using a diverging red and blue palette if 
-#' \code{response == "bernoulli"}, and a spectral palette otherwise.
-#'
-#' @param zdf A \code{dataframe} containing spatial coordinates and the value of the response variable.
-#' @param response A character indicating the assumed response distribution.
-#' @param point_size Size of plotted points.
-#' @param lim Controls the limits of the colour scale.
-#' @param z A \code{string} indicating the data column.
-#' @param x A \code{string} indicating the name of the column containing x-locations.
-#' @param y A \code{string} indicating the name of the column containing the y-locations.
-#' @return A \code{ggplot} object.
-#' @seealso \code{\link{.plot_map}}, \code{\link{.plot_all}}
-.plot_data <- function(zdf,
-                       response,
-                       point_size = 1,
-                       lim = range(zdf[["z"]]), 
-                       z = "z", x = "x", y = "y"){
+## Plot 2D spatial data
+.plot_data <- function(zdf, object, coord_names){
     
-    ## Make ggplot() object
-    p <- ggplot(zdf) +
-        geom_point(aes_string(x = x, y = y, colour = z), size = point_size) +
-        theme_bw() + coord_fixed()
+    ## Extract name of response variable so we can plot 
+    response_name <- all.vars(object@f)[1]
     
-    ## Colour scale
-    if(response == "bernoulli"){
-        p <- p + scale_colour_gradient2(low = "blue", high = "red", midpoint = 0.5, breaks = c(0, 1), guide = "legend")
-    } else{
-        p <- p + scale_colour_distiller(palette="Spectral", limits = lim)
+    if (is(zdf, "data.frame") || is(zdf, "SpatialPointsDataFrame")) {
+        
+        zdf <- data.frame(zdf)
+        data_plot <- ggplot(zdf) + geom_point(
+            aes_string(x = coord_names[1], y = coord_names[2], colour = response_name)) + 
+            scale_colour_distiller(palette = "Spectral") + theme_bw() + coord_fixed()
+        
+    } else if (is(zdf, "SpatialPolygonsDataFrame")) {
+        
+        zdf <- .SpatialPolygonsDataFrame_to_df(zdf)
+        data_plot <- ggplot(zdf) +
+            geom_polygon(aes_string(
+                coord_names[1], y = coord_names[2], group = "id", fill = response_name), 
+                colour = "black") +
+            scale_fill_distiller(palette = "Spectral") +
+            coord_fixed() + theme_bw()
+        
+    } else {
+        stop("Class of zdf is not recognised by SRE.plot().")
     }
     
-    return(p)
-}
-
-
-
-#' Plot of spatial process.
-#'
-#' @inheritParams .plot_data
-#' @param df A \code{dataframe} containing spatial coordinates (named "x" and "y")
-#' and the value of the process (whose name is specified by the \code{col} argument).
-#' @param col A \code{string} indicating the name of the column containing the process values.
-#' @param diverging \code{logical}, indicating whether a diverging palette should be used.
-#' @param low Low colour (only applicable if \code{diverging == TRUE}).
-#' @param mid Mid colour (only applicable if \code{diverging == TRUE}).
-#' @param high High colour (only applicable if \code{diverging == TRUE}).
-#' @param midpoint Point at which colour \code{mid} is assigned. This is useful for
-#' uncertainty ratio maps (in which case a good midpoint is 1) and probability maps
-#' (in which case a good midpoint is 0.5).
-#' @param uncertaintyMap Logical indicating whether to use uncertainty colour scale.
-#' @return A \code{ggplot} object of the spatial process.
-#' @seealso \code{\link{.plot_data}}, \code{\link{.plot_all}}
-.plot_map <- function(df, col, x = "x", y = "y", 
-                      lim = range(df[[col]]), 
-                      diverging = FALSE,
-                      low = "blue", mid = "white", high = "red", midpoint = mean(df[[col]]),
-                      uncertaintyMap = FALSE){
-    
-    ## Basic ggplot() object
-    p <- ggplot(df) + geom_tile(aes_string(x = x, y = y, fill = col)) +
-        theme_bw() + coord_fixed()
-    
-    ## Colour scale
-    if (uncertaintyMap == TRUE & diverging == TRUE) {
-        p <- p + scale_fill_gradient2(low = "#01665E", mid = "white", midpoint = midpoint, high = "#8C510A", limits = lim)
-    } else if (uncertaintyMap == TRUE) {
-        p <- p + scale_fill_distiller(palette = "BrBG", direction = -1, limits = lim)
-    } else if (diverging == TRUE) {
-        p <- p + scale_fill_gradient2(low = low, mid = mid, midpoint = midpoint, high = high, limits = lim)
-    } else{
-        p <- p + scale_fill_distiller(palette="Spectral", limits = lim)
-    }
-    
-    return(p)
+    return(data_plot)
 }
