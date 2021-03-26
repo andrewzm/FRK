@@ -338,13 +338,13 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL) {
         y <- y$newdata # If method = TMB, y is a list
     
     if(is(y, "ST"))
-        stop("SRE.plot only implemented for spatial applications")
+        stop("plot only implemented for spatial applications")
     
     ## Extract names of coordinates
     coord_names <- coordnames(y) 
     
     if (length(coord_names) != 2) 
-        stop("SRE.plot only implemented for two-dimensional Euclidean space")
+        stop("plot only implemented for two-dimensional Euclidean space")
     
     if (!is.null(zdf)) 
         plots$data <- .plot_data(zdf, x, coord_names)

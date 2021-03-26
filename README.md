@@ -71,20 +71,20 @@ library("ggplot2")
 library("ggpubr")
 
 ## Setup
-m <- 1000                                                 # Sample size
-RNGversion("3.6.0"); set.seed(1)                          # Fix seed
-zdf <- Z <- data.frame(x = runif(m), y= runif(m))         # Generate random locs
-zdf$z <- Z$z <- sin(8*Z$x) + cos(8*Z$y) + 0.5*rnorm(m)    # Simulate Gaussian data
-coordinates(Z) = ~x+y                                     # Turn into sp object
+m <- 1000                                            # Sample size
+RNGversion("3.6.0"); set.seed(1)                     # Fix seed
+zdf <- data.frame(x = runif(m), y= runif(m))         # Generate random locs
+zdf$z <- sin(8*zdf$x) + cos(8*zdf$y) + 0.5*rnorm(m)  # Simulate Gaussian data
+coordinates(zdf) = ~x+y                              # Turn into sp object
 
 ## Run FRK
-S <- FRK(f = z ~ 1,                           # Formula to FRK
-         list(Z),                             # All datasets are supplied in list
-         n_EM = 10)                           # Max number of EM iterations
-Pred <- predict(S)                            # Prediction stage
+S <- FRK(f = z ~ 1,                     # Formula to FRK
+         list(zdf),                     # All datasets are supplied in list
+         n_EM = 10)                     # Max number of EM iterations
+pred <- predict(S)                      # prediction stage
 
 ## Plotting
-plot_list <- plot(S, Pred, zdf)
+plot_list <- plot(S, pred, zdf)
 ggarrange(plotlist = plot_list, nrow = 1, legend = "top")
 
 ```
@@ -107,17 +107,18 @@ Here we use analyse simulated Poisson data. We signify a Poisson data model with
 ## Setup
 ## Simulate Poisson data, using the data of the previous example to construct a mean 
 RNGversion("3.6.0"); set.seed(1)                          
-zdf$z <- Z$z <- rpois(m, lambda = Z$z^2)
+zdf$z <- rpois(m, lambda = Z$z^2)
 
 ## Run FRK
 S <- FRK(f = z ~ 1,                           # Formula to FRK
-         list(Z),                             # All datasets are supplied in list
+         list(zdf),                           # All datasets are supplied in list
          response = "poisson",                # Poisson data model
          link = "square-root")                # square-root link function
-Pred <- predict(S)                            # Prediction stage
+pred <- predict(S)                            # prediction stage
+
 
 ## Plotting
-plot_list <- plot(S, Pred, zdf)
+plot_list <- plot(S, pred, zdf)
 ggarrange(plot_list$data, plot_list$p_mu, plot_list$interval_90_mu, 
           nrow = 1, legend = "top")
              

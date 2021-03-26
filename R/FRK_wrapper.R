@@ -77,7 +77,8 @@ FRK <- function(f,                     # formula (compulsory)
                         data = data,
                         basis = basis,
                         BAUs = BAUs,
-                        est_error = est_error)
+                        est_error = est_error, 
+                        response = response)
     
     # check that the arguments are OK for SRE.fit
     .check_args2(n_EM = n_EM, tol = tol, method = method, print_lik = print_lik, 
@@ -225,7 +226,7 @@ FRK <- function(f,                     # formula (compulsory)
 
 ## The function below checks the arguments for the function FRK. The code is self-explanatory
 ## This is similar, but slightly different to, .check_args1()
-.check_args_wrapper <- function(f,data,basis,BAUs,est_error) {
+.check_args_wrapper <- function(f,data,basis,BAUs,est_error,response) {
     if(!is(f,"formula")) stop("f needs to be a formula.")
     if(!is(data,"list"))
         stop("Please supply a list of Spatial objects.")
