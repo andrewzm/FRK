@@ -101,7 +101,7 @@ ggsave(
 
 ### Non-Gaussian data
 
-Here we use analyse simulated Poisson data. We signify a Poisson data model with a mean response that is modelled using the square-root link function by setting `response = "poisson"` and `link = "square-root"` in `FRK()`. Other non-Gaussian data models available in `FRK` are the binomial, negative-binomial, gamma, and inverse-Gaussian. 
+Here we analyse simulated Poisson data. We signify a Poisson data model with a mean response that is modelled using the square-root link function by setting `response = "poisson"` and `link = "square-root"` in `FRK()`. Other non-Gaussian data models available in `FRK` are the binomial, negative-binomial, gamma, and inverse-Gaussian. 
 
 ```r
 ## Setup
@@ -132,8 +132,12 @@ ggsave(
 )
 --->
 
-![(Left) Poisson data. (Centre) Prediction of the mean response. (Right) Standard error of the mean response.](/man/figures/Poisson_data.png?raw=true)
+![(Left) Poisson data. (Centre) Prediction of the mean response. (Right) Prediction interval width of the mean response.](/man/figures/Poisson_data.png?raw=true)
 
+
+### Spatio-temporal data
+
+We now analyse spatio-temporal data, using the NOAA dataset.
 
 ```r
 ## Setup
@@ -173,6 +177,7 @@ ggsave(
 )
 --->
 
+![(Left) Prediction of spatio-temporal process. (Right) Prediction interval width.](/man/figures/ST_data.png?raw=true)
 
 
 [//]: # (Currently `FRK` is not installing on OSX with `build_vignettes=TRUE` as it fails to find `texi2dvi`. Set `build_vignettes=FALSE` to ensure installation. Then download the `.Rnw` file in the `vignettes` folder and compile the pdf file separately in `RStudio` with `knitr`. )
