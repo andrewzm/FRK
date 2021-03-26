@@ -147,12 +147,9 @@ Tmax <- within(Tmax, {time = as.Date(paste(year,month,day,sep="-"))})
 STObj <- stConstruct(x = Tmax, space = c("lon","lat"), time = "time", interval = TRUE)
 STObj$std <- 2
 
-## BAUs
-## Choose spatial BAUs as 1x1 pixels, temporal BAUs as 4 day intervals
-BAUs <- auto_BAUs(manifold = STplane(), 
-                       cellsize = c(1, 1, 4),    
-                       data=STObj, tunit = "days")
-BAUs$fs <- 1 # scale fine-scale variance matrix, implicit in previous examples
+## BAUs: set spatial BAUs as 1x1 pixels, temporal BAUs as 4 day intervals
+BAUs <- auto_BAUs(manifold = STplane(), cellsize = c(1, 1, 4), data = STObj, tunit = "days")
+BAUs$fs <- 1 # scalar fine-scale variance matrix, implicit in previous examples
 
 ## Basis functions
 G <- auto_basis(manifold = STplane(), data = STObj, nres = 1, tunit = "days")
