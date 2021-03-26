@@ -71,17 +71,17 @@ library("ggplot2")
 library("ggpubr")
 
 ## Setup
-m <- 1000                                            # Sample size
-RNGversion("3.6.0"); set.seed(1)                     # Fix seed
-zdf <- data.frame(x = runif(m), y= runif(m))         # Generate random locs
-zdf$z <- sin(8*zdf$x) + cos(8*zdf$y) + 0.5*rnorm(m)  # Simulate Gaussian data
-coordinates(zdf) = ~x+y                              # Turn into sp object
+m <- 1000                                                  # Sample size
+RNGversion("3.6.0"); set.seed(1)                           # Fix seed
+zdf <- data.frame(x = runif(m), y= runif(m))               # Generate random locs
+zdf$z <- sin(8 * zdf$x) + cos(8 * zdf$y) + 0.5 * rnorm(m)  # Simulate data
+coordinates(zdf) = ~x+y                                    # Turn into sp object
 
 ## Run FRK
-S <- FRK(f = z ~ 1,                     # Formula to FRK
-         list(zdf),                     # All datasets are supplied in list
-         n_EM = 10)                     # Max number of EM iterations
-pred <- predict(S)                      # prediction stage
+S <- FRK(f = z ~ 1,                         # Formula to FRK
+         list(zdf),                         # All datasets are supplied in list
+         n_EM = 10)                         # Max number of EM iterations
+pred <- predict(S)                          # Prediction stage
 
 ## Plotting
 plot_list <- plot(S, pred, zdf)
@@ -107,7 +107,7 @@ Here we use analyse simulated Poisson data. We signify a Poisson data model with
 ## Setup
 ## Simulate Poisson data, using the data of the previous example to construct a mean 
 RNGversion("3.6.0"); set.seed(1)                          
-zdf$z <- rpois(m, lambda = Z$z^2)
+zdf$z <- rpois(m, lambda = zdf$z^2)
 
 ## Run FRK
 S <- FRK(f = z ~ 1,                           # Formula to FRK
@@ -121,6 +121,7 @@ pred <- predict(S)                            # prediction stage
 plot_list <- plot(S, pred, zdf)
 ggarrange(plot_list$data, plot_list$p_mu, plot_list$interval_90_mu, 
           nrow = 1, legend = "top")
+
              
 ```    
 <!---
@@ -132,6 +133,46 @@ ggsave(
 --->
 
 ![(Left) Poisson data. (Centre) Prediction of the mean response. (Right) Standard error of the mean response.](/man/figures/Poisson_data.png?raw=true)
+
+
+```r
+## Setup
+data("NOAA_df_1990")
+Tmax <- subset(NOAA_df_1990, month %in% 7 & year == 1993)
+Tmax <- within(Tmax, {time = as.Date(paste(year,month,day,sep="-"))})
+STObj <- stConstruct(x = Tmax, space = c("lon","lat"), time = "time", interval = TRUE)
+STObj$std <- 2
+
+## BAUs
+## Choose spatial BAUs as 1x1 pixels, temporal BAUs as 4 day intervals
+BAUs <- auto_BAUs(manifold = STplane(), 
+                       cellsize = c(1, 1, 4),    
+                       data=STObj, tunit = "days")
+BAUs$fs <- 1 # scale fine-scale variance matrix, implicit in previous examples
+
+## Basis functions
+G <- auto_basis(manifold = STplane(), data = STObj, nres = 1, tunit = "days")
+
+## Run FRK
+S <- FRK(f = z ~ 1 + lat, data = list(STObj), 
+         basis = G, BAUs = BAUs, est_error = FALSE, method = "TMB")
+pred <- predict(S)
+
+## Plotting
+plot_list <- plot(S, pred) 
+ggarrange(plot_list$p_mu, plot_list$interval_90_mu, align = "hv", legend = "top")
+
+
+```
+
+<!---
+ggsave( 
+  filename = "ST_data.png", device = "png", 
+  width = 10, height = 4,
+  path = "~/Desktop/"
+)
+--->
+
 
 
 [//]: # (Currently `FRK` is not installing on OSX with `build_vignettes=TRUE` as it fails to find `texi2dvi`. Set `build_vignettes=FALSE` to ensure installation. Then download the `.Rnw` file in the `vignettes` folder and compile the pdf file separately in `RStudio` with `knitr`. )

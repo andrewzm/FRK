@@ -1669,15 +1669,21 @@ print.summary.SRE <- function(x, ...) {
     ## Matrix we need to invert
     mat <- Matrix::t(S_O) %*% S_O / regularising_weight + QInit 
     
-    ## Avoid full inverse if we have too many basis functions
-    if (r > 4000) { 
+    ## Invert the matrix
+    mat_inv <- tryCatch(expr = {
+      if (r > 4000) { # Avoid full inverse if we have too many basis functions
       mat_L <- sparseinv::cholPermute(Q = mat) # Permuted Cholesky factor
       ## Sparse-inverse-subset (a proxy for the inverse)
-      mat_inv <- sparseinv::Takahashi_Davis(Q = mat, cholQp = mat_L$Qpermchol, P = mat_L$P)
+      sparseinv::Takahashi_Davis(Q = mat, cholQp = mat_L$Qpermchol, P = mat_L$P)
     } else {
-      mat_inv <- solve(mat) 
-    }
-    
+      solve(mat) 
+    }}, 
+    error = function(w){
+      cat("Initialisation phase: could not invert mat, just using diag(r)\n")
+      diag(r)
+      }
+    )
+  
     ## MAP estimate of eta
     l$eta  <- (1 / regularising_weight) * mat_inv %*% Matrix::t(S_O)  %*% (Y_O - X_O %*% l$alpha)
     
