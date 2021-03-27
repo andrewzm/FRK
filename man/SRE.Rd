@@ -101,7 +101,7 @@ SRE.predict(
 
 loglik(SRE_model)
 
-\S4method{plot}{SRE,ANY}(x, y, zdf = NULL)
+\S4method{plot}{SRE,ANY}(x, y, zdf = NULL, map_layer = NULL, ...)
 }
 \arguments{
 \item{f}{\code{R} formula relating the dependent variable (or transformations thereof) to covariates}
@@ -174,13 +174,17 @@ loglik(SRE_model)
 
 \item{covariances}{logical variable indicating whether prediction covariances should be returned or not. If set to \code{TRUE}, a maximum of 4000 prediction locations or polygons are allowed.}
 
-\item{object}{\code{SRE} object}
+\item{object}{object of class \code{SRE}}
 
 \item{kriging}{A string indicating the kind of kriging (\code{"simple"} or \code{"universal"})}
 
-\item{y}{result of a calling \code{predict} on an \code{SRE} object}
+\item{x}{\code{SRE} object}
+
+\item{y}{result of calling \code{predict} on an \code{SRE} object}
 
 \item{zdf}{a \code{data.frame}, \code{SpatialPointsDataFrame}, or \code{SpatialPolygonsDataFrame} containing the observations}
+
+\item{map_layer}{a \code{ggplot} layer to add below the plotted layer, often a map}
 }
 \value{
 A list of \code{ggplot} objects consisting of the observed data, predictions, and standard errors. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.

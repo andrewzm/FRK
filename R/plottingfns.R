@@ -229,16 +229,16 @@ EmptyTheme <- function() {
 #' Plot predictions from FRK analysis. 
 #' 
 #' @rdname SRE
-#' @param object \code{SRE} object 
+#' @param x \code{SRE} object 
 #' @param y result of calling \code{predict} on an \code{SRE} object 
 #' @param zdf a \code{data.frame}, \code{SpatialPointsDataFrame}, or \code{SpatialPolygonsDataFrame} containing the observations
+#' @param map_layer a \code{ggplot} layer to add below the plotted layer, often a map
 #' @return A list of \code{ggplot} objects consisting of the observed data, predictions, and standard errors. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.
 #' @export
-setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL) {
+setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = NULL, ...) {
     
     SRE_model <- x
     pred_object <- y
-    plots <- list() # initialise plot list
     
     ## Check that pred_object is a result of a call to predict()
     if (SRE_model@method == "TMB") {
@@ -252,9 +252,46 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL) {
             stop("Since method = 'EM', y (the prediction object) should be a Spatial* or ST* object")
     }
         
+    
+    
+    ## Plot the predictions and UQ 
+    plots <- .plot_predictions_and_UQ(SRE_model, pred_object, map_layer, ...)
+    
+    
+    
     ## Plot the data if it was provided
-    if (!is.null(zdf)) 
-        plots$data <- .plot_data(zdf, SRE_model)
+    if (!is.null(zdf)) {
+        ## Extract name of response variable we wish to plot
+        response_name <- all.vars(SRE_model@f)[1]
+        plots$data <- .plot_data(zdf, response_name, map_layer, ...)
+    }
+        
+    
+
+    
+    return(plots)
+})
+
+## Restructure without having to pass zdf to .plot_data. This is so I can use 
+## .plot_data on any Spatial* object. 
+.plot_predictions_and_UQ <- function(SRE_model, pred_object, map_layer = NULL, ...) {
+    
+    plots <- list()
+    
+    ## FIXME: the only thing we need here from SRE_model is method (if we can get time_name from pred_object)
+    
+    ## Get the coordinate names from the pred_object
+    ## TODO: See if it makes sense to base the following segment on pred_object rather 
+    ## than BAUs. 
+    ## FIXME: there is a lot of repetition between this function and .plot_data.
+    coord_names <- coordnames(SRE_model@BAUs)
+    ## Remove the coordinate corresponding to time. coord_names is just spatial.
+    if(is(SRE_model@BAUs, "ST")) {
+        time_name <- coord_names[3]
+        coord_names <- coord_names[1:2]
+    } else {
+        time_name <- NULL
+    }
     
     ## Plot the predictions and uncertainty.
     ## Convert to data.frame for plotting. Do this here so we only have to do it 
@@ -276,9 +313,11 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL) {
         stop("Class of y (object from a call to predict) is not recognised by plot().")
     }
     
+    # df, col, coord_names, time_name, sp_type, map_layer
+    
     if (SRE_model@method == "EM") {
-        plots$mu <- .plot(df, SRE_model, col = "mu", sp_type) 
-        plots$se <- .plot(df, SRE_model, col = "sd", sp_type, uncertainty = TRUE) + labs(fill = "se")
+        plots$mu <- .plot(df, "mu", coord_names, time_name, sp_type, map_layer, ...) 
+        plots$se <- .plot(df, "sd", coord_names, time_name, sp_type, map_layer, uncertainty = TRUE, ...) + labs(fill = "se")
         
     } else if (SRE_model@method == "TMB") {
         
@@ -289,41 +328,41 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL) {
         ## percentiles, so here we construct some interval widths assuming the user
         ## has specified the 5th and 95th percentiles (default).
         
-        if ("p_Y" %in% names(df)) plots$p_Y <- .plot(df, SRE_model, col = "p_Y", sp_type) + labs(fill = expression(widehat(p)[Y]["|"][bold(Z)]))
-        if ("RMSPE_Y" %in% names(df)) plots$RMSPE_Y <- .plot(df, SRE_model, col = "RMSPE_Y", sp_type, uncertainty = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[Y]["|"][bold(Z)], Y))))
+        if ("p_Y" %in% names(df)) plots$p_Y <- .plot(df, "p_Y", coord_names, time_name, sp_type, map_layer, ...) + labs(fill = expression(widehat(p)[Y]["|"][bold(Z)]))
+        if ("RMSPE_Y" %in% names(df)) plots$RMSPE_Y <- .plot(df, "RMSPE_Y", coord_names, time_name, sp_type, map_layer, uncertainty = TRUE, map_layer = map_layer, ...) + labs(fill = expression(sqrt(MSPE(widehat(p)[Y]["|"][bold(Z)], Y))))
         if (all(c("Y_percentile_5","Y_percentile_95") %in% names(df))) {
             df$interval_90 <- df$Y_percentile_95 - df$Y_percentile_5 
-            plots$interval_90_Y <-  .plot(df, SRE_model, col = "interval_90", sp_type, uncertainty = TRUE) + 
+            plots$interval_90_Y <-  .plot(df, "interval_90", coord_names, time_name, sp_type, map_layer, uncertainty = TRUE, ...) + 
                 labs(fill = eval(bquote(expression(
                     "Width of 90%\npredictive interval\nfor latent process Y(" *"\U00B7)"
                 )))) 
         }
         
-        if ("p_mu" %in% names(df)) plots$p_mu <- .plot(df, SRE_model,  col = "p_mu", sp_type) + labs(fill = expression(widehat(p)[mu]["|"][bold(Z)]))
-        if ("RMSPE_mu" %in% names(df)) plots$RMSPE_mu <- .plot(df, SRE_model,  col = "RMSPE_mu", sp_type, uncertainty = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[mu]["|"][bold(Z)], mu))))
+        if ("p_mu" %in% names(df)) plots$p_mu <- .plot(df, "p_mu", coord_names, time_name, sp_type, map_layer, ...) + labs(fill = expression(widehat(p)[mu]["|"][bold(Z)]))
+        if ("RMSPE_mu" %in% names(df)) plots$RMSPE_mu <- .plot(df, "RMSPE_mu", coord_names, time_name, sp_type, map_layer, uncertainty = TRUE, ...) + labs(fill = expression(sqrt(MSPE(widehat(p)[mu]["|"][bold(Z)], mu))))
         if (all(c("mu_percentile_5","mu_percentile_95") %in% names(df))) {
             df$interval_90 <- df$mu_percentile_95 - df$mu_percentile_5 
-            plots$interval_90_mu <-  .plot(df, SRE_model,  col = "interval_90", sp_type, uncertainty = TRUE) + 
+            plots$interval_90_mu <-  .plot(df, "interval_90", coord_names, time_name, sp_type, map_layer, uncertainty = TRUE, ...) + 
                 labs(fill = eval(bquote(expression(
                     "Width of 90%\npredictive interval\nfor mean process " *mu *"(\U00B7)"
                 )))) 
         }
         
-        if ("p_prob" %in% names(df)) plots$p_prob <- .plot(df, SRE_model,  col = "p_prob", sp_type) + labs(fill = expression(widehat(p)[pi]["|"][bold(Z)]))
-        if ("RMSPE_prob" %in% names(df)) plots$RMSPE_prob <- .plot(df, SRE_model,  col = "RMSPE_prob", sp_type, uncertainty = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[pi]["|"][bold(Z)], pi))))
+        if ("p_prob" %in% names(df)) plots$p_prob <- .plot(df, "p_prob", coord_names, time_name, sp_type, map_layer, ...) + labs(fill = expression(widehat(p)[pi]["|"][bold(Z)]))
+        if ("RMSPE_prob" %in% names(df)) plots$RMSPE_prob <- .plot(df, "RMSPE_prob", coord_names, time_name, sp_type, map_layer, uncertainty = TRUE, ...) + labs(fill = expression(sqrt(MSPE(widehat(p)[pi]["|"][bold(Z)], pi))))
         if (all(c("prob_percentile_5","prob_percentile_95") %in% names(df))) {
             df$interval_90 <- df$prob_percentile_95 - df$prob_percentile_5 
-            plots$interval_90_prob <-  .plot(df, SRE_model,  col = "interval_90", sp_type, uncertainty = TRUE) + 
+            plots$interval_90_prob <-  .plot(df, "interval_90", coord_names, time_name, sp_type, map_layer, uncertainty = TRUE, ...) + 
                 labs(fill = eval(bquote(expression(
                     "Width of 90%\npredictive interval\nfor probability process " *pi *"(\U00B7)"
                 )))) 
         }   
         
-        if ("p_Z" %in% names(df)) plots$p_Z <- .plot(df, SRE_model,  col = "p_Z", sp_type) + labs(fill = expression(widehat(p)[Z]["|"][bold(Z)]))
-        if ("RMSPE_Z" %in% names(df)) plots$RMSPE_Z <- .plot(df, SRE_model,  col = "RMSPE_Z", sp_type, uncertainty = TRUE) + labs(fill = expression(sqrt(MSPE(widehat(p)[Z]["|"][bold(Z)], Z))))
+        if ("p_Z" %in% names(df)) plots$p_Z <- .plot(df, "p_Z", coord_names, time_name, sp_type, map_layer, ...) + labs(fill = expression(widehat(p)[Z]["|"][bold(Z)]))
+        if ("RMSPE_Z" %in% names(df)) plots$RMSPE_Z <- .plot(df, "RMSPE_Z", coord_names, time_name, sp_type, map_layer, uncertainty = TRUE, ...) + labs(fill = expression(sqrt(MSPE(widehat(p)[Z]["|"][bold(Z)], Z))))
         if (all(c("Z_percentile_5","Z_percentile_95") %in% names(df))) {
             df$interval_90 <- df$Z_percentile_95 - df$Z_percentile_5 
-            plots$interval_90_Z <-  .plot(df, SRE_model,  col = "interval_90", sp_type, uncertainty = TRUE) + 
+            plots$interval_90_Z <-  .plot(df, "interval_90", coord_names, time_name, sp_type, map_layer, uncertainty = TRUE, ...) + 
                 labs(fill = eval(bquote(expression(
                     "Width of 90%\npredictive interval\nfor data process " *Z *"(\U00B7)"
                 )))) 
@@ -331,47 +370,42 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL) {
     }
     
     return(plots)
-})
-
+    
+}
 
 
 ## Plot of predictions or uncertainty quantification.
-.plot <- function(df, SRE_model, col, sp_type, uncertainty = FALSE){
+.plot <- function(df, col, coord_names, time_name, sp_type, map_layer, uncertainty = FALSE, ...){
 
     ## Remove duplicate columns (can sometimes happen when we convert the Spatial* 
     ## object, if the coordinates are already present)
     df <- df[, unique(colnames(df))]
     
-    ## Get the coordinate names from the BAUs
-    coord_names <- coordnames(SRE_model@BAUs)
-
-    ## Remove the coordinate corresponding to time. coord_names is just spatial.
-    if(is(SRE_model@BAUs, "ST")) {
-        time_name <- coord_names[3]
-        coord_names <- coord_names[1:2]
-        ## Edit the time column so that the facets display t = ...
+    if (length(coord_names) != 2) 
+        stop("plot() only implemented for the 2D space")
+    
+    ## Edit the time column so that the facets display t = ...
+    if (!is.null(time_name)) 
         df[, time_name] <- factor(
             df[, time_name], ordered = TRUE,
             labels = paste(time_name, sort(unique(df[, time_name])), sep = " = ")
         )
-    } else {
-        time_name <- NULL
-    }
-    
-    if (length(coord_names) != 2) 
-        stop("plot() only implemented for the 2D space")
-    
+        
     ## Basic plot
     gg <- ggplot(data = df, aes_string(x = coord_names[1], y = coord_names[2])) + 
         theme_bw() + coord_fixed()
     
+    ## Add map_layer (if present)
+    if (!is.null(map_layer)) 
+        gg <- gg + map_layer
+    
     ## Plot based on data type
     if (sp_type == "points") { # this is only for the observations
-        gg <- gg + geom_point(aes_string(colour = col)) + scale_colour_distiller(palette = "Spectral")
+        gg <- gg + geom_point(aes_string(colour = col), ...) + scale_colour_distiller(palette = "Spectral")
     } else if (sp_type == "pixels") {
-        gg <- gg + geom_raster(aes_string(fill = col))
+        gg <- gg + geom_raster(aes_string(fill = col), ...)
     } else if (sp_type == "polygons") {
-        gg <- gg + geom_polygon(aes_string(group = "id", fill = col), colour = "black") 
+        gg <- gg + geom_polygon(aes_string(group = "id", fill = col), ...) 
     } 
     
     if (!is.null(time_name))
@@ -387,9 +421,31 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL) {
     return(gg)
 }
 
-.plot_data <- function(zdf, SRE_model){
+
+
+
+
+## TODO: could make this an exported function for plotting data. 
+## Would be useful in the Sydney example for making the SA2 plots. 
+## We would just need an additional argument, col, which allows one to specify 
+## which column to plot. 
+.plot_data <- function(zdf, response_name, map_layer = NULL, ...){
     
-    if (is(zdf, "data.frame") || is(zdf, "SpatialPointsDataFrame")) {
+    if (!is(zdf, "Spatial") && !is(zdf, "STFDF")) 
+        stop("zdf should be a Spatial*DataFrame or STFDF")
+    
+    ## Get the coordinate names 
+    coord_names <- coordnames(zdf)
+    
+    ## Remove the coordinate corresponding to time. coord_names is just spatial.
+    if(is(zdf, "ST")) {
+        time_name <- coord_names[3]
+        coord_names <- coord_names[1:2]
+    } else {
+        time_name <- NULL
+    }
+    
+    if (is(zdf, "SpatialPointsDataFrame")) {
         zdf <- data.frame(zdf)
         sp_type <- "points"
     } else if (is(zdf, "SpatialPolygonsDataFrame")) {
@@ -410,8 +466,5 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL) {
         stop("Class of zdf is not recognised by plot().")
     }
     
-    ## Extract name of response variable so we can plot 
-    response_name <- all.vars(SRE_model@f)[1]
-    
-    return(.plot(zdf, SRE_model, response_name, sp_type))
+    return(.plot(zdf, response_name, coord_names, time_name, sp_type, map_layer, ...))
 }
