@@ -243,13 +243,13 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = N
     ## Check that pred_object is a result of a call to predict()
     if (SRE_model@method == "TMB") {
         if (!is(pred_object, "list")) 
-            stop("Since method = 'TMB', y (the prediction object) should be a list")
+            stop("Since method = 'TMB', pred_object should be a list")
         if (is.null(pred_object$newdata)) 
-            stop("Since method = 'TMB', y (the prediction object) should be a list with an element called newdata")
+            stop("Since method = 'TMB', pred_object should be a list with an element called newdata")
         pred_object <- pred_object$newdata 
     } else if (SRE_model@method == "EM") {
         if(!is(pred_object, "Spatial") && !is(pred_object, "ST")) 
-            stop("Since method = 'EM', y (the prediction object) should be a Spatial* or ST* object")
+            stop("Since method = 'EM', pred_object should be a Spatial*DataFrame or STFDF")
     }
         
     
