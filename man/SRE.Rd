@@ -101,7 +101,7 @@ SRE.predict(
 
 loglik(SRE_model)
 
-\S4method{plot}{SRE,ANY}(x, y, zdf = NULL, map_layer = NULL, ...)
+\S4method{plot}{SRE,ANY}(x, y, zdf = NULL, map_layer = NULL, subset_time = NULL, ...)
 }
 \arguments{
 \item{f}{\code{R} formula relating the dependent variable (or transformations thereof) to covariates}
@@ -184,7 +184,9 @@ loglik(SRE_model)
 
 \item{zdf}{a \code{data.frame}, \code{SpatialPointsDataFrame}, or \code{SpatialPolygonsDataFrame} containing the observations}
 
-\item{map_layer}{a \code{ggplot} layer to add below the plotted layer, often a map}
+\item{map_layer}{(optional) a \code{ggplot} layer or object to add below the plotted layer, often a map}
+
+\item{subset_time}{(optional) a vector of times to be included; applicable only for \code{STFDF} objects}
 }
 \value{
 A list of \code{ggplot} objects consisting of the observed data, predictions, and standard errors. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.
