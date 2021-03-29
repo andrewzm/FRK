@@ -251,28 +251,32 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = N
         if(!is(pred_object, "Spatial") && !is(pred_object, "ST")) 
             stop("Since method = 'EM', pred_object should be a Spatial*DataFrame or STFDF")
     }
-        
-    ## Plot the predictions and UQ 
-    plots <- .plot_predictions_and_UQ(SRE_model@method, pred_object, map_layer, subset_time, ...)
-    
+
     ## Plot the data if it was provided
+    ## Note: I plot the data first, because I want it to be the first panel 
     if (!is.null(zdf)) {
         ## Extract name of response variable we wish to plot
         response_name <- all.vars(SRE_model@f)[1]
-        plots <- c(plots, plot_spatial_or_ST(zdf, response_name, map_layer, subset_time, ...))
+        plots <- plot_spatial_or_ST(zdf, response_name, map_layer, subset_time, ...)
+    } else {
+        plots <- list() # initialise empty list so c() works in the next line
     }
     
+    ## Plot the predictions and UQ 
+    plots <- c(plots, .plot_predictions_and_UQ(SRE_model@method, pred_object, map_layer, subset_time, ...))
+    
+
     return(plots)
 })
 
 
 .plot_predictions_and_UQ <- function(method, pred_object, map_layer = NULL, subset_time = NULL, ...) {
     
-    ## Determine columns we need to plot, and whether we should use an uncertainty or prediction scale
+    ## Determine columns we need to plot, and which palette to use
     if (method == "EM") {
         
         column_names <- c("mu", "sd")
-        uncertainty <- c(FALSE, TRUE)
+        palette <- c("Spectral", "BrBG")
         
     } else if (method == "TMB") {
         
@@ -296,13 +300,13 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = N
         ## Determine which quantities we are actually plotting
         QOI <- c("Y", "mu", "prob", "Z") # Possible Quantities of interest
         column_names <- paste0(rep(c("p_", "RMSPE_", "interval_90_"), each = length(QOI)), QOI)
-        uncertainty <- rep(c(FALSE, TRUE, TRUE), length(QOI))
-        keep_idx <- which(column_names %in% names(pred_object@data))
-        column_names <- column_names[keep_idx]
-        uncertainty  <-  uncertainty[keep_idx] 
+        palette <- rep(c("Spectral", "BrBG", "BrBG"), each = length(QOI)) 
+        keep <- column_names %in% names(pred_object@data)
+        column_names <- column_names[keep]
+        palette  <-  palette[keep] 
     }
     
-    plots <- plot_spatial_or_ST(pred_object, column_names, map_layer, subset_time, uncertainty, ...)
+    plots <- plot_spatial_or_ST(pred_object, column_names, map_layer, subset_time, palette, ...)
 
     ## Edit labels
     if (method == "EM") {
@@ -313,40 +317,59 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = N
         
     } else if (method == "TMB") {
         
-        if ("p_Y" %in% names(plots)) plots$p_Y <- plots$p_Y + labs(fill = expression(widehat(p)[Y]["|"][bold(Z)]))
-        if ("RMSPE_Y" %in% names(plots)) plots$RMSPE_Y <- plots$RMSPE_Y + labs(fill = expression(sqrt(MSPE(widehat(p)[Y]["|"][bold(Z)], Y))))
-        if ("interval_90_Y" %in% names(plots)) plots$interval_90_Y <- plots$interval_90_Y +
-                labs(fill = eval(bquote(expression("Width of 90% predictive\ninterval latent process Y(" *"\U00B7)"))))
+        lab_list <- list(
+            p_Y           = labs(fill = expression(widehat(p)[Y]["|"][bold(Z)])), 
+            RMSPE_Y       = labs(fill = expression(sqrt(MSPE(widehat(p)[Y]["|"][bold(Z)], Y)))),
+            interval_90_Y = labs(fill = eval(bquote(expression("Width of 90% predictive\ninterval latent process Y(" *"\U00B7)")))),
+            p_mu           = labs(fill = expression(widehat(p)[mu]["|"][bold(Z)])),
+            RMSPE_mu       = labs(fill = expression(sqrt(MSPE(widehat(p)[mu]["|"][bold(Z)], mu)))),
+            interval_90_mu = labs(fill = eval(bquote(expression("Width of 90% predictive\ninterval mean process " *mu *"(\U00B7)")))),
+            p_prob           = labs(fill = expression(widehat(p)[pi]["|"][bold(Z)])), 
+            RMSPE_prob       = labs(fill = expression(sqrt(MSPE(widehat(p)[pi]["|"][bold(Z)], pi)))),
+            interval_90_prob = labs(fill = eval(bquote(expression("Width of 90% predictive\ninterval probability process " *pi *"(\U00B7)")))),
+            p_Z           = labs(fill = expression(widehat(p)[Z]["|"][bold(Z)])),
+            RMSPE_Z       = labs(fill = expression(sqrt(MSPE(widehat(p)[Z]["|"][bold(Z)], Z)))),
+            interval_90_Z = labs(fill = eval(bquote(expression("Width of 90% predictive\ninterval data process " * Z *"(\U00B7)"))))
+        )
         
-        if ("p_mu" %in% names(plots)) plots$p_mu <- plots$p_mu + labs(fill = expression(widehat(p)[mu]["|"][bold(Z)]))
-        if ("RMSPE_mu" %in% names(plots)) plots$RMSPE_mu <- plots$RMSPE_mu + labs(fill = expression(sqrt(MSPE(widehat(p)[mu]["|"][bold(Z)], mu))))
-        if ("interval_90_mu" %in% names(plots)) plots$interval_90_mu <- plots$interval_90_mu +
-                labs(fill = eval(bquote(expression("Width of predictive90%\ninterval mean process " *mu *"(\U00B7)"))))
+        for (i in column_names) {
+            plots[[i]] <- plots[[i]] + lab_list[[i]]
+        }
         
-        if ("p_prob" %in% names(plots)) plots$p_prob <- plots$p_prob + labs(fill = expression(widehat(p)[pi]["|"][bold(Z)]))
-        if ("RMSPE_prob" %in% names(plots)) plots$RMSPE_prob <- plots$RMSPE_prob + labs(fill = expression(sqrt(MSPE(widehat(p)[pi]["|"][bold(Z)], pi))))
-        if ("interval_90_prob" %in% names(plots)) plots$interval_90_prob <- plots$interval_90_prob +
-                labs(fill = eval(bquote(expression("Width of predictive90%\ninterval probability process " *pi *"(\U00B7)"))))
-        
-        if ("p_Z" %in% names(plots)) plots$p_Z <- plots$p_Z + labs(fill = expression(widehat(p)[Z]["|"][bold(Z)]))
-        if ("RMSPE_Z" %in% names(plots)) plots$RMSPE_Z <- plots$RMSPE_Z + labs(fill = expression(sqrt(MSPE(widehat(p)[Z]["|"][bold(Z)], Z))))
-        if ("interval_90_Z" %in% names(plots)) plots$interval_90_Z <- plots$interval_90_Z +
-                labs(fill = eval(bquote(expression("Width of predictive90%\ninterval mean process " * Z *"(\U00B7)"))))
-        
+        # if ("p_Y" %in% names(plots)) plots$p_Y <- plots$p_Y + labs(fill = expression(widehat(p)[Y]["|"][bold(Z)]))
+        # if ("RMSPE_Y" %in% names(plots)) plots$RMSPE_Y <- plots$RMSPE_Y + labs(fill = expression(sqrt(MSPE(widehat(p)[Y]["|"][bold(Z)], Y))))
+        # if ("interval_90_Y" %in% names(plots)) plots$interval_90_Y <- plots$interval_90_Y +
+        #         labs(fill = eval(bquote(expression("Width of 90% predictive\ninterval latent process Y(" *"\U00B7)"))))
+        # 
+        # if ("p_mu" %in% names(plots)) plots$p_mu <- plots$p_mu + labs(fill = expression(widehat(p)[mu]["|"][bold(Z)]))
+        # if ("RMSPE_mu" %in% names(plots)) plots$RMSPE_mu <- plots$RMSPE_mu + labs(fill = expression(sqrt(MSPE(widehat(p)[mu]["|"][bold(Z)], mu))))
+        # if ("interval_90_mu" %in% names(plots)) plots$interval_90_mu <- plots$interval_90_mu +
+        #         labs(fill = eval(bquote(expression("Width of predictive90%\ninterval mean process " *mu *"(\U00B7)"))))
+        # 
+        # if ("p_prob" %in% names(plots)) plots$p_prob <- plots$p_prob + labs(fill = expression(widehat(p)[pi]["|"][bold(Z)]))
+        # if ("RMSPE_prob" %in% names(plots)) plots$RMSPE_prob <- plots$RMSPE_prob + labs(fill = expression(sqrt(MSPE(widehat(p)[pi]["|"][bold(Z)], pi))))
+        # if ("interval_90_prob" %in% names(plots)) plots$interval_90_prob <- plots$interval_90_prob +
+        #         labs(fill = eval(bquote(expression("Width of predictive90%\ninterval probability process " *pi *"(\U00B7)"))))
+        # 
+        # if ("p_Z" %in% names(plots)) plots$p_Z <- plots$p_Z + labs(fill = expression(widehat(p)[Z]["|"][bold(Z)]))
+        # if ("RMSPE_Z" %in% names(plots)) plots$RMSPE_Z <- plots$RMSPE_Z + labs(fill = expression(sqrt(MSPE(widehat(p)[Z]["|"][bold(Z)], Z))))
+        # if ("interval_90_Z" %in% names(plots)) plots$interval_90_Z <- plots$interval_90_Z +
+        #         labs(fill = eval(bquote(expression("Width of predictive90%\ninterval mean process " * Z *"(\U00B7)"))))
+        # 
     }
     
     return(plots)
 }
 
 #' Plot data from a Spatial*DataFrame or STFDF object
-#' @param object the Spatial*DataFrame or STFDF we wish to plot
+#' @param object Spatial*DataFrame or STFDF
 #' @param column_names a vector of strings indicating the columns of the data to plot
 #' @param map_layer (optional) a \code{ggplot} layer or object to add below the plotted layer, often a map
 #' @param subset_time (optional) a vector of times to be included; applicable only for \code{STFDF} objects
-#' @param uncertainty a logical indicating whether an uncertainty (green and brown) colour/fill scale is to be used; default is FALSE, so that a Spectral palette is used
+#' @param palette the palette supplied to scale_*_distiller()
 #' @param ... optional arguments passed on to whatever geom is appropriate for the data (geom_point, geom_raster, or geom_polygon)
 plot_spatial_or_ST <- function(object, column_names,  map_layer = NULL, 
-                               subset_time = NULL, uncertainty = FALSE, ...) {
+                               subset_time = NULL, palette = "Spectral", ...) {
     
     if (!is(object, "Spatial") && !is(object, "STFDF")) 
         stop("object should be a Spatial*DataFrame or STFDF")
@@ -369,6 +392,7 @@ plot_spatial_or_ST <- function(object, column_names,  map_layer = NULL,
     tmp <- .classify_sp_and_convert_to_df(object)
     df      <- tmp$df
     sp_type <- tmp$sp_type
+
     
     if(!all(column_names %in% names(df)))
         stop("Some of the columns you have requested are not in the data")
@@ -383,21 +407,20 @@ plot_spatial_or_ST <- function(object, column_names,  map_layer = NULL,
     #         labels = paste(time_name, sort(unique(df[, time_name])), sep = " = ")
     #     )
     
-    if (length(uncertainty) == 1) 
-        uncertainty <- rep(uncertainty, length(column_names))
+    if (length(palette) == 1) 
+        palette <- rep(palette, length(column_names))
     
     ## Plot the requested columns
     plots <- lapply(1:length(column_names), 
                     function(i, x, y, ...) {
                         .plot(df, x[i], coord_names, time_name, sp_type, map_layer, y[i], ...)
-                    }, x = column_names, y = uncertainty, ...)
+                    }, x = column_names, y = palette, ...)
     names(plots) <- column_names
     
     return(plots)
 }
 
-## Plot of predictions or uncertainty quantification.
-.plot <- function(df, column_name, coord_names, time_name, sp_type, map_layer, uncertainty, ...){
+.plot <- function(df, column_name, coord_names, time_name, sp_type, map_layer, palette, ...){
     
     ## Basic plot
     if (!is.null(map_layer)) {
@@ -424,43 +447,41 @@ plot_spatial_or_ST <- function(object, column_names,  map_layer = NULL,
     
     ## Plot based on data type
     if (sp_type == "points") { # this is only for observation data
-        gg <- gg + geom_point(aes_string(colour = column_name), ...) + scale_colour_distiller(palette = "Spectral")
-    } else if (sp_type == "pixels") {
-        gg <- gg + geom_raster(aes_string(fill = column_name), ...)
-    } else if (sp_type == "polygons") {
-        gg <- gg + geom_polygon(aes_string(group = "id", fill = column_name), ...) 
-    } 
+        gg <- gg + geom_point(aes_string(colour = column_name), ...) + scale_colour_distiller(palette = palette)
+    } else {
+        if (sp_type == "pixels") {
+            gg <- gg + geom_raster(aes_string(fill = column_name), ...)
+        } else if (sp_type == "polygons") {
+            gg <- gg + geom_polygon(aes_string(group = "id", fill = column_name), ...) 
+        }
+        gg <- gg + scale_fill_distiller(palette = palette)
+    }
     
     if (!is.null(time_name))
         gg <- gg + facet_wrap(as.formula(paste("~", time_name)))
-    
-    ## fill scale
-    if (uncertainty) {
-        gg <- gg + scale_fill_distiller(palette = "BrBG", direction = -1)
-    } else {
-        gg <- gg + scale_fill_distiller(palette = "Spectral")
-    }
-    
+
     return(gg)
 }
 
 
 .classify_sp_and_convert_to_df <- function(object) {
     
-    if (is(object, "SpatialPointsDataFrame")) {
+    ## NB: I don't use is() because is(object, "SpatialPointsDataFrame") returns 
+    ## TRUE when class(object) == "SpatialPixelsDataFrame"
+    if (class(object) == "SpatialPointsDataFrame") {
         df <- data.frame(object)
         sp_type <- "points"
-    } else if (is(object, "SpatialPixelsDataFrame")) {
+    } else if (class(object) == "SpatialPixelsDataFrame") {
         df <- data.frame(object)
         sp_type <- "pixels"
-    } else if (is(object, "SpatialPolygonsDataFrame")) {
+    } else if (class(object) == "SpatialPolygonsDataFrame") {
         df <- .SpatialPolygonsDataFrame_to_df(object)
         sp_type <- "polygons"
-    } else if (is(object, "STIDF")) {
+    } else if (class(object) == "STIDF") {
         stop("Plotting of STIDF not yet implemented.")
         df <- data.frame(object)
         sp_type <- "points"
-    } else if (is(object, "STFDF")) {
+    } else if (class(object) == "STFDF") {
         if (is(object@sp, "SpatialPolygons")) {
             sp_type <- "polygons"
         } else if (is(object@sp, "SpatialPixels")) {

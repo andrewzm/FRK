@@ -119,7 +119,7 @@ pred <- predict(S)                            # prediction stage
 
 ## Plotting
 plot_list <- plot(S, pred, zdf)
-ggarrange(plot_list$data, plot_list$p_mu, plot_list$interval_90_mu, 
+ggarrange(plot_list$z, plot_list$p_mu, plot_list$interval_90_mu, 
           nrow = 1, legend = "top")
 
              
@@ -147,21 +147,33 @@ Tmax <- within(Tmax, {time = as.Date(paste(year,month,day,sep="-"))})
 STObj <- stConstruct(x = Tmax, space = c("lon","lat"), time = "time", interval = TRUE)
 STObj$std <- 2
 
-## BAUs: set spatial BAUs as 1x1 pixels, temporal BAUs as 4 day intervals
-BAUs <- auto_BAUs(manifold = STplane(), cellsize = c(1, 1, 4), data = STObj, tunit = "days")
-BAUs$fs <- 1 # scalar fine-scale variance matrix, implicit in previous examples
+## BAUs
+## Choose spatial BAUs as 1x1 pixels, temporal BAUs as 1 day intervals
+BAUs <- auto_BAUs(manifold = STplane(), 
+                       cellsize = c(1, 1, 1),    
+                       data=STObj, tunit = "days")
+BAUs$fs <- 1 # scale fine-scale variance matrix, implicit in previous examples
 
 ## Basis functions
-G <- auto_basis(manifold = STplane(), data = STObj, nres = 1, tunit = "days")
+G <- auto_basis(manifold = STplane(), data = STObj, nres = 2, tunit = "days")
 
 ## Run FRK
 S <- FRK(f = z ~ 1 + lat, data = list(STObj), 
          basis = G, BAUs = BAUs, est_error = FALSE, method = "TMB")
 pred <- predict(S)
 
-## Plotting
-plot_list <- plot(S, pred) 
-ggarrange(plot_list$p_mu, plot_list$interval_90_mu, align = "hv", legend = "top")
+## Plotting: include only some times via the argument subset_time
+plot_list <- plot(S, pred, subset_time = c(1, 7, 13, 19, 25, 31)) 
+
+## Apply a labeller so the facet shows day x rather than just x
+facet_names <- paste0("day ", unique(pred$newdata$t))
+names(facet_names) <- unique(pred$newdata$t)
+plot_list <- lapply(
+  plot_list, 
+  function(gg) gg + facet_wrap(~t, labeller = as_labeller(facet_names)))
+
+## Plot the predictions and uncertainty
+ggarrange(plot_list$p_mu, plot_list$interval_90_mu, legend = "top") 
 
 
 ```
@@ -169,7 +181,7 @@ ggarrange(plot_list$p_mu, plot_list$interval_90_mu, align = "hv", legend = "top"
 <!---
 ggsave( 
   filename = "ST_data.png", device = "png", 
-  width = 10, height = 4,
+  width = 8.5, height = 3.8,
   path = "~/Desktop/"
 )
 --->

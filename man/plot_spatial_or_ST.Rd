@@ -9,12 +9,12 @@ plot_spatial_or_ST(
   column_names,
   map_layer = NULL,
   subset_time = NULL,
-  uncertainty = FALSE,
+  palette = "Spectral",
   ...
 )
 }
 \arguments{
-\item{object}{the Spatial*DataFrame or STFDF we wish to plot}
+\item{object}{Spatial*DataFrame or STFDF}
 
 \item{column_names}{a vector of strings indicating the columns of the data to plot}
 
@@ -22,7 +22,7 @@ plot_spatial_or_ST(
 
 \item{subset_time}{(optional) a vector of times to be included; applicable only for \code{STFDF} objects}
 
-\item{uncertainty}{a logical indicating whether an uncertainty (green and brown) colour/fill scale is to be used; default is FALSE, so that a Spectral palette is used}
+\item{palette}{the palette supplied to scale_*_distiller()}
 
 \item{...}{optional arguments passed on to whatever geom is appropriate for the data (geom_point, geom_raster, or geom_polygon)}
 }
