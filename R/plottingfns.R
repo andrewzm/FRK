@@ -383,6 +383,9 @@ plot_spatial_or_ST <- function(object, column_names,  map_layer = NULL,
     #         labels = paste(time_name, sort(unique(df[, time_name])), sep = " = ")
     #     )
     
+    if (length(uncertainty) == 1) 
+        uncertainty <- rep(uncertainty, length(column_names))
+    
     ## Plot the requested columns
     plots <- lapply(1:length(column_names), 
                     function(i, x, y, ...) {
@@ -402,7 +405,7 @@ plot_spatial_or_ST <- function(object, column_names,  map_layer = NULL,
         ## having to provide data. Will add this if I have an example where it is needed. 
         if ("ggplot" %in% class(map_layer)) {
             ## Do it this way, because we cannot add map_layer to a ggplot object if
-            ## map_layer is a ggobject itself (e.g., if map_layer is a result from a
+            ## map_layer is a gg object itself (e.g., if map_layer is a result from a
             ## call to ggmap(), which is often the case)
             gg <- map_layer 
             gg <- gg %+% df # change the default data to df
