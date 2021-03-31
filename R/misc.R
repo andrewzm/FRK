@@ -417,7 +417,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 #' equal to 1/l if basis functions i and j are lth order neighbours (provided \code{l <= order}), and 0 otherwise.
 #' Diagonal elements indicate the row sums.
 .neighbour_matrix <- function(df, loc1 = "loc1", loc2 = "loc2", order = 1, diag_neighbours = FALSE) {
-  
+  ## TODO: need to rewrite these precision matrix functions for any number of spatial dimensions. 
   A <- matrix(0, nrow = nrow(df), ncol = nrow(df))
   
   ## absolute difference in x- and y-coordinate
@@ -432,9 +432,17 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
   x_distances <- sort(unique(abs_diff_x[1, ]))
   y_distances <- sort(unique(abs_diff_y[1, ]))
   
+  # FIXME: This is where the error comes from. The problem is that when the 
+  ## basis functions have the same x coordinate, x_distances contains only a single
+  ## element, so x_distances[i + 1] doesn't work (results in NA). 
+  ## Tomorrow, I will try to rewrite this function to be more defensive, and more 
+  ## general for any number of spatial dimensions. 
+  ## FIXME: I'd also like to think about how to use irregular basis functions. 
   for (i in 1:order) { ## Order will usually be 1
-    x_min <- x_distances[i + 1] # x distance we are focused on for this order
-    y_min <- y_distances[i + 1] # y distance we are focused on for this order
+    
+    ## FIXME: quick hack for now 
+    x_min <- if (length(x_distances) == 1) 0 else x_distances[i + 1] # x distance we are focused on for this order 
+    y_min <- if (length(y_distances) == 1) 0 else y_distances[i + 1] # y distance we are focused on for this order 
     
     ## Find the "horizontal" neighbours
     ## This produces a matrix with (i, j)th entry equal to 1 if i and j are 
@@ -503,7 +511,8 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 #' @seealso \code{\link{.sparse_Q}}, \code{\link{.neighbour_matrix}}
 .sparse_Q_block_diag <- function(df, kappa, rho, order = 1, diag_neighbours = FALSE) {
   
-  
+  if (!("res" %in% names(df)))
+    stop("To construct the sparse precision matrix, the basis-function dataframe must contain a column named res, indicating the resolution of the corresponding basis function.")
   nres <- max(df$res)
   if (length(kappa) == 1) kappa <- rep(kappa, nres)
   if (length(rho) == 1) rho <- rep(rho, nres)

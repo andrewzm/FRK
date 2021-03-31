@@ -1482,10 +1482,46 @@ print.summary.SRE <- function(x, ...) {
     parameters$logsigma2fs <- log(known_sigma2fs) 
   }
   
-  ## Don't want to pass in variance components that are "too small"
-  parameters$logsigma2 <- pmax(parameters$logsigma2, -3)
-  parameters$logsigma2_t <- pmax(parameters$logsigma2_t, -3)
-  parameters$logtau <- pmax(parameters$logtau, -3)
+  ## Don't want to pass in variance components that are "too small" or "too big". 
+  ## This has caused TMB to explode and cause R to crash in the past, with no 
+  ## explaination as to why the crash occured.
+  parameters$logsigma2 <- pmin(pmax(parameters$logsigma2, -4), 8)
+  parameters$logsigma2_t <- pmin(pmax(parameters$logsigma2_t, -4), 8)
+  parameters$logtau <- pmin(pmax(parameters$logtau, -4), 8)
+  parameters$logsigma2fs <- pmin(pmax(parameters$logsigma2fs, -4), 8)
+  data$sigma2fs_hat <- pmin(pmax(data$sigma2fs_hat, exp(-4)), exp(8))
+  
+  
+  ## Checks here to try to catch catastrophic errors. 
+  ## If we allow non-sensical values into TMB, R will crash without providing
+  ## an informative warning. 
+  
+  if (any(sapply(data, function(x) any(is.na(x)))))
+    stop("Something has gone wrong in the data preparation for TMB: Please contact the package maintainer.")
+  ## na_idx <- which(sapply(data, function(x) any(is.na(x))))
+  
+  if (any(sapply(parameters, function(x) any(is.na(x)))))
+    stop("Something has gone wrong in the parameter initialisation for TMB: Please contact the package maintainer.")
+  ## na_idx <- which(sapply(parameters, function(x) any(is.na(x))))
+  
+  if (any(data$nnz < 0) || any(data$col_indices < 0) || any(data$row_indices < 0))
+    stop("Something has gone wrong in construction of the precision matrix of the basis-function coefficients: Please contact package maintainer. ")
+  
+  len_x <- length(data$x)
+  if (!all.equal(len_x, length(data$col_indices), length(data$row_indices), sum(data$nnz))) 
+    stop("Something has gone wrong in construction of the precision matrix of the basis-function coefficients: Please contact package maintainer. ")
+
+  m <- length(M@Z)
+  if(!all.equal(m, length(data$Z), nrow(data$C_O), nrow(data$X_O) , nrow(data$S_O)))
+    stop("Something has gone wrong in the data preparation for TMB: Please contact the package maintainer.")
+
+  r <- nbasis(M@basis)
+  if(!all.equal(r, max(data$row_indices + 1), max(data$col_indices + 1), sum(data$r_si)))
+    stop("Something has gone wrong in the data preparation for TMB: Please contact the package maintainer.")
+  
+  # cat("Trying simple random effects initialisation.\n")
+  # parameters$random_effects <- rnorm(length(parameters$random_effects))
+  
   
   ## TMB model compilation
   obj <- MakeADFun(data = data,
@@ -1496,6 +1532,7 @@ print.summary.SRE <- function(x, ...) {
   
   ## The following means we want to print every parameter passed to obj$fn.
   obj$env$tracepar <- TRUE
+
   
   # ---- Model fitting ----
   
@@ -1637,13 +1674,14 @@ print.summary.SRE <- function(x, ...) {
     ## relationship is not considered.
     l$phi <- var(Z0)
   }
+
   
   ## Variance components of the spatial basis-function coefficients
   l$sigma2  <- var(as.vector(Y_O)) * (0.1)^(0:(nres - 1))
   l$tau     <- (1 / 3)^(1:nres)
   if (M@K_type != "block-exponential") {
-    l$sigma2   <- 1 / exp(l$sigma2)
-    l$tau      <- 1 / exp(l$tau)
+    l$sigma2   <- 1 / l$sigma2
+    l$tau      <- 1 / l$tau
   }
   if (M@K_type == "separable") {
     ## Separability means we have twice as many spatial basis function variance
@@ -1652,10 +1690,11 @@ print.summary.SRE <- function(x, ...) {
     l$tau    <- rep(l$tau, 2)
   }
   
+  
+  
   ## Variance components of temporal basis-function coefficients
   l$sigma2_t    <- 1
   l$rho_t       <- 0.1
-  
   
   for (iteration_dummy in 1:5) {
     
@@ -1683,7 +1722,16 @@ print.summary.SRE <- function(x, ...) {
       diag(r)
       }
     )
-  
+    
+    ## Quick fix:
+    ## TODO: explore why this happens
+    ## FIXME: Error in if (regularising_weight == 0) { : missing value where TRUE/FALSE needed 
+    ## Get to the bottom of this tomorrow...
+    if (regularising_weight == 0) {
+      warning("In initialisation stage, the regularising_weight is 0; setting it to 1. This is probably not an issue, but feel free to contact the package maintainer.")
+      regularising_weight <- 1
+    }
+    
     ## MAP estimate of eta
     l$eta  <- (1 / regularising_weight) * mat_inv %*% Matrix::t(S_O)  %*% (Y_O - X_O %*% l$alpha)
     
