@@ -7,7 +7,7 @@
 .sparse_Q(A, kappa, rho)
 }
 \arguments{
-\item{A}{A "neighbour" matrix with element (i, j), for i not equal to j,
+\item{A}{"neighbour" matrix with element (i, j), for i not equal to j,
 equal to 1 if basis functions i and j are neighbours, and 0 otherwise,
 diagonal elements indicating the number of neighbours for that basis function.}
 

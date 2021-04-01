@@ -7,18 +7,18 @@
 .sparse_Q_block_diag(df, kappa, rho, order = 1, diag_neighbours = FALSE)
 }
 \arguments{
-\item{df}{A dataframe containing the spatial coordinates (named "loc1" and "loc2") and a blocking column (named "res").}
+\item{df}{dataframe containing the spatial coordinates (named "loc1" and "loc2", etc.) and a column indicating the resolution of each basis function (named "res").}
 
 \item{kappa}{Quantity to add to the diagonal elements. This must be positive if Q is to be positive definite.}
 
 \item{rho}{Quantity to multiply matrix by. This must be positive if Q is to be positive definite.}
 
-\item{order}{If order == 1, only first order neighbours are considered. If order == 2, second order neighbours are also considered, and so on.}
+\item{order}{If order == 1, only first order neighbours are considered. If order == 2, second order neighbours are also considered, and so on}
 
-\item{diag_neighbours}{Indicates whether to consider the diagonal neighbours. If FALSE (the default), only the horizontal and vertical neighbours are considered.}
+\item{diag_neighbours}{Indicates whether to consider the diagonal neighbours. If FALSE (default), only the horizontal and vertical neighbours are considered}
 }
 \value{
-A list containing the sparse block-diagonal precision matrix (Q) of class "dgCMatrix", and the number of non-zero elements (nnz) at each resolution.
+list containing the sparse block-diagonal precision matrix (Q) of class "dgCMatrix", and the number of non-zero elements (nnz) at each resolution.
 }
 \description{
 Creates a block-diagonal sparse precision matrix, where the blocks are created

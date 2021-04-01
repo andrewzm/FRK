@@ -406,62 +406,67 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 #' there \emph{must} be constant spacing between basis functions in a given
 #' direction (horizontal and vertical spacing can be different).
 #'
-#' @seealso \code{\link{.sparse_Q}}
+#' @seealso \code{\link{.sparse_Q}}, \code{\link{.sparse_Q_block_diag}}
 #'
-#' @param df A dataframe containing spatial coordinates.
-#' @param loc1 A string indicating the name of the column storing the x-coordinate.
-#' @param loc2 A string indicating the name of the column storing the y-coordinate.
-#' @param order If order == 1, only first order neighbours are considered. If order == 2, second order neighbours are also considered, and so on.
-#' @param diag_neighbours Indicates whether to consider the diagonal neighbours. If FALSE (the default), only the horizontal and vertical neighbours are considered.
-#' @return A "neighbour" matrix with element (i, j), for i not equal to j,
-#' equal to 1/l if basis functions i and j are lth order neighbours (provided \code{l <= order}), and 0 otherwise.
-#' Diagonal elements indicate the row sums.
-.neighbour_matrix <- function(df, loc1 = "loc1", loc2 = "loc2", order = 1, diag_neighbours = FALSE) {
-  ## TODO: need to rewrite these precision matrix functions for any number of spatial dimensions. 
+#' @param df a dataframe containing the spatial coordinates
+#' @param order If order == 1, only first order neighbours are considered. If order == 2, second order neighbours are also considered, and so on
+#' @param diag_neighbours Indicates whether to consider the diagonal neighbours. If FALSE (default), only the horizontal and vertical neighbours are considered
+#' @return A "neighbour" matrix with element (i, j), for i not equal to j, equal to 1/l if basis functions i and j are lth order neighbours (provided \code{l <= order}), and 0 otherwise. Diagonal elements indicate the row sums
+.neighbour_matrix <- function(df, order = 1, diag_neighbours = FALSE) {
+   
   A <- matrix(0, nrow = nrow(df), ncol = nrow(df))
   
-  ## absolute difference in x- and y-coordinate
-  abs_diff_x <- abs(outer(df[, loc1], df[, loc1], "-"))
-  abs_diff_y <- abs(outer(df[, loc2], df[, loc2], "-"))
+  ## absolute difference in each dimension for each knot
+  abs_diff <- lapply(df, function(x) abs(outer(x, x, "-")))
   
   ## Vectors containing all x and y distances. 
   ## Note that the first elements in each vector is 0. 
   ## Note also that we only use 1 row from the abs_diff matrices (this helps 
   ## to prevents problems with unique() and floating point accuracy and is a 
   ## bit faster)
-  x_distances <- sort(unique(abs_diff_x[1, ]))
-  y_distances <- sort(unique(abs_diff_y[1, ]))
-  
-  # FIXME: This is where the error comes from. The problem is that when the 
-  ## basis functions have the same x coordinate, x_distances contains only a single
-  ## element, so x_distances[i + 1] doesn't work (results in NA). 
-  ## Tomorrow, I will try to rewrite this function to be more defensive, and more 
-  ## general for any number of spatial dimensions. 
-  ## FIXME: I'd also like to think about how to use irregular basis functions. 
-  for (i in 1:order) { ## Order will usually be 1
+  distances <- lapply(abs_diff, function(X) sort(unique(X[1, ])))
+
+  ## TODO: I'd like to think about how to use irregular basis functions. 
+  for (current_order in 1:order) { ## Order is experimental, and is hard-coded to be 1 for now
     
-    ## FIXME: quick hack for now 
-    x_min <- if (length(x_distances) == 1) 0 else x_distances[i + 1] # x distance we are focused on for this order 
-    y_min <- if (length(y_distances) == 1) 0 else y_distances[i + 1] # y distance we are focused on for this order 
-    
-    ## Find the "horizontal" neighbours
-    ## This produces a matrix with (i, j)th entry equal to 1 if i and j are 
-    ## horizontal neighbours, and zero otherwise.
-    ## Similarly, find the "vertical" neighbours.
-    horizontal_neighbours <- .equal_within_tol(abs_diff_x, x_min) & .equal_within_tol(abs_diff_y, 0) 
-    vertical_neighbours   <- .equal_within_tol(abs_diff_y, y_min) & .equal_within_tol(abs_diff_x, 0)
+    ## Extract the smallest distance which is not zero, provided the basis functions 
+    ## are not in a straight line. 
+    ## If the basis functions have the same coordinate in a given dimension, the 
+    ## corresponding entry in distances will contain only a single element (0), 
+    ## so x[i + 1] doesn't work (results in NA). 
+    min_d <- lapply(distances, function(x) if(length(x) == 1) 0 else x[current_order + 1])
+
+    ## Find the neighbours. This is based on the idea that, provided the basis
+    ## functions are regularly spaced, neighbours in a given dimension should be 
+    ## separated by the minimum distance between basis functions of that dimension (condition1), 
+    ## and have the same coordinates for the other dimensions (condition2). 
+    d <- length(abs_diff) # number of spatial coordinates
+    neighbours <- lapply(seq_along(abs_diff), function(i) {
+      condition1 <- .equal_within_tol(abs_diff[[i]], min_d[[i]])
+      if (d > 1) {
+        condition2 <- lapply((1:d)[-i], function(j) .equal_within_tol(abs_diff[[j]], 0))
+        condition2 <- Reduce("&", condition2) # Convert list of matrices to a single matrix
+      } else {
+        condition2 <- TRUE
+      }
+      return(condition1 & condition2)
+    })
     
     ## Consider the diagonal neighbours, if specified.
     if (diag_neighbours == TRUE) {
-      ## Two conditions which must be met for basis functions to be diagonal neighours
-      diagonal_neighbours <- .equal_within_tol(abs_diff_y, y_min) & .equal_within_tol(abs_diff_x, x_min)
+      ## For basis-functions to be diagonal neighbours, they need to have the minimum
+      ## (non-zero distance) between them in each spatial coordinate.
+      diagonal_neighbours <- lapply(seq_along(abs_diff), function(i) {
+        .equal_within_tol(abs_diff[[i]], min_d[[i]])
+      })
+     
+      diagonal_neighbours <-  Reduce("&", diagonal_neighbours) # Convert list of matrices to a single matrix
       ## Update A
-      A <- A + 1/i * diagonal_neighbours
+      A <- A + 1/current_order * diagonal_neighbours
     }
-    
     ## Update neighbour matrix (with zeros along the diagonal)
-    ## We weight the neighbours by their order. 
-    A <- A + 1/i * vertical_neighbours + 1/i * horizontal_neighbours
+    ## We weight the neighbours by their order.
+    A <- A + 1/current_order * Reduce("+", neighbours)
   }
   
   ## Add the sums of each row to the diagonal (required for use in the 
@@ -480,7 +485,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 #' The diagonal elements are equal to the number of neighbours for that basis
 #' function, plus some amount given by \code{kappa}.
 #'
-#' @param A A "neighbour" matrix with element (i, j), for i not equal to j,
+#' @param A "neighbour" matrix with element (i, j), for i not equal to j,
 #' equal to 1 if basis functions i and j are neighbours, and 0 otherwise,
 #' diagonal elements indicating the number of neighbours for that basis function.
 #' @param kappa Quantity to add to the diagonal elements. This must be positive if Q is to be positive definite.
@@ -506,22 +511,25 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 #'
 #' @inheritParams .sparse_Q
 #' @inheritParams .neighbour_matrix
-#' @param df A dataframe containing the spatial coordinates (named "loc1" and "loc2") and a blocking column (named "res").
-#' @return A list containing the sparse block-diagonal precision matrix (Q) of class "dgCMatrix", and the number of non-zero elements (nnz) at each resolution.
+#' @param df dataframe containing the spatial coordinates (named "loc1" and "loc2", etc.) and a column indicating the resolution of each basis function (named "res").
+#' @return list containing the sparse block-diagonal precision matrix (Q) of class "dgCMatrix", and the number of non-zero elements (nnz) at each resolution.
 #' @seealso \code{\link{.sparse_Q}}, \code{\link{.neighbour_matrix}}
 .sparse_Q_block_diag <- function(df, kappa, rho, order = 1, diag_neighbours = FALSE) {
   
   if (!("res" %in% names(df)))
     stop("To construct the sparse precision matrix, the basis-function dataframe must contain a column named res, indicating the resolution of the corresponding basis function.")
-  nres <- max(df$res)
+  nres <- length(unique(df$res))
   if (length(kappa) == 1) kappa <- rep(kappa, nres)
   if (length(rho) == 1) rho <- rep(rho, nres)
+  
+  ## Find the location columns (should be called loc1, loc2, etc.)
+  loc_idx <- grep("loc", names(df))
   
   ## Construct the blocks
   Q_matrices  <- list()
   nnz <- c()
-  for (i in 1:nres) {
-    A_i <- .neighbour_matrix(df[df$res == i, ], order = order, diag_neighbours = diag_neighbours)
+  for (i in unique(df$res)) { 
+    A_i <- .neighbour_matrix(df[df$res == i, loc_idx], order = order, diag_neighbours = diag_neighbours)
     Q_matrices[[i]] <- .sparse_Q(A = A_i,
                                  kappa = kappa[i],
                                  rho = rho[i])

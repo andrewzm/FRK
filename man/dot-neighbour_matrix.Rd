@@ -4,29 +4,17 @@
 \alias{.neighbour_matrix}
 \title{Neighbour matrix.}
 \usage{
-.neighbour_matrix(
-  df,
-  loc1 = "loc1",
-  loc2 = "loc2",
-  order = 1,
-  diag_neighbours = FALSE
-)
+.neighbour_matrix(df, order = 1, diag_neighbours = FALSE)
 }
 \arguments{
-\item{df}{A dataframe containing spatial coordinates.}
+\item{df}{a dataframe containing the spatial coordinates}
 
-\item{loc1}{A string indicating the name of the column storing the x-coordinate.}
+\item{order}{If order == 1, only first order neighbours are considered. If order == 2, second order neighbours are also considered, and so on}
 
-\item{loc2}{A string indicating the name of the column storing the y-coordinate.}
-
-\item{order}{If order == 1, only first order neighbours are considered. If order == 2, second order neighbours are also considered, and so on.}
-
-\item{diag_neighbours}{Indicates whether to consider the diagonal neighbours. If FALSE (the default), only the horizontal and vertical neighbours are considered.}
+\item{diag_neighbours}{Indicates whether to consider the diagonal neighbours. If FALSE (default), only the horizontal and vertical neighbours are considered}
 }
 \value{
-A "neighbour" matrix with element (i, j), for i not equal to j,
-equal to 1/l if basis functions i and j are lth order neighbours (provided \code{l <= order}), and 0 otherwise.
-Diagonal elements indicate the row sums.
+A "neighbour" matrix with element (i, j), for i not equal to j, equal to 1/l if basis functions i and j are lth order neighbours (provided \code{l <= order}), and 0 otherwise. Diagonal elements indicate the row sums
 }
 \description{
 Creates a matrix \eqn{A} with elements \eqn{A_{i, j}} equal to 1 if basis
@@ -43,5 +31,5 @@ there \emph{must} be constant spacing between basis functions in a given
 direction (horizontal and vertical spacing can be different).
 }
 \seealso{
-\code{\link{.sparse_Q}}
+\code{\link{.sparse_Q}}, \code{\link{.sparse_Q_block_diag}}
 }
