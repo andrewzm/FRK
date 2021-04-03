@@ -39,7 +39,7 @@
 # #' @param use_centroid flag indicating whether the basis functions are averaged over the BAU, or whether the basis functions are evaluated at the BAUs centroid in order to construct the matrix \eqn{S}. The flag can safely be set when the basis functions are approximately constant over the BAUs in order to reduce computational time
 #' @param object object of class \code{SRE}
 #' @param newdata object of class \code{SpatialPoylgons}, \code{SpatialPoints}, or \code{STI}, indicating the regions or points over which prediction will be carried out. The BAUs are used if this option is not specified. 
-#' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error; indicated by \code{obs_fs = TRUE}) or in the process model (process fine-scale variation; indicated by \code{obs_fs = FALSE}, default)
+#' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error; indicated by \code{obs_fs = TRUE}) or in the process model (process fine-scale variation; indicated by \code{obs_fs = FALSE}, default). For non-Gaussian data models, and/or non-identity link functions, if \code{obs_fs = TRUE}, then the the fine-scale variation is removed from the latent process \eqn{Y}; however, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}
 #' @param pred_polys deprecated. Please use \code{newdata} instead
 #' @param pred_time vector of time indices at which prediction will be carried out. All time points are used if this option is not specified
 #' @param covariances logical variable indicating whether prediction covariances should be returned or not. If set to \code{TRUE}, a maximum of 4000 prediction locations or polygons are allowed.
@@ -2440,7 +2440,7 @@ print.summary.SRE <- function(x, ...) {
 #' @param X The design matrix of the covariates at the BAU level (often simply an Nx1 column vector of 1's)
 #' @param type A character string (possibly vector) indicating the quantities which are the focus of inference. Note: unlike in the predict() function, \emph{all} computed quantities are returned. That is, the latent \eqn{Y} process samples are always provided; If \code{"mean"} \emph{OR} \code{"response"} is in \code{type}, then the samples of \eqn{Y}, the conditonal mean \eqn{\mu}, and the probability parameter (if applicable) are provided. If \code{"response"} is in \code{type}, the response variable \eqn{Z} samples, and the samples of all other quantities are provided
 #' @param n_MC A postive integer indicating the number of MC samples at each location
-#' @param obs_fs Logical indicating whether the fine-scale variation is included in the latent Y process. If \code{obs_fs = FALSE} (the default), then the fine-scale variation term \eqn{\xi} is included in the latent \eqn{Y} process. If \code{obs_fs = TRUE}, then the the fine-scale variation terms \eqn{\xi} are removed from the latent Y process; \emph{however}, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}
+#' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error; indicated by \code{obs_fs = TRUE}) or in the process model (process fine-scale variation; indicated by \code{obs_fs = FALSE}, default). For non-Gaussian data models, and/or non-identity link functions, if \code{obs_fs = TRUE}, then the the fine-scale variation is removed from the latent process \eqn{Y}; however, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}
 #' @param k vector of size parameters at each BAU (applicable only for binomial and negative-binomial data)
 #' @param Q_L A list containing the Cholesky factor of the permuted precision matrix (stored as \code{Q$Qpermchol}) and the associated permutationmatrix (stored as \code{Q_L$P})
 #' @param predict_BAUs logical, indicating whether we are predicting over the BAUs
@@ -2618,6 +2618,8 @@ print.summary.SRE <- function(x, ...) {
     mu_samples   <- k * ginv(Y_samples)
     f            <- .link_fn(kind = "mu_to_prob", response = M@response)
     prob_samples <- f(mu = mu_samples, k = k)
+  } else if (M@response == "gaussian" && M@link == "identity" && obs_fs) {
+    mu_samples <- Y_smooth_samples
   } else {
     mu_samples <- ginv(Y_samples)
   }
@@ -2656,6 +2658,15 @@ print.summary.SRE <- function(x, ...) {
     } else {
       sigma2e <- M@Ve[1, 1]
     }
+    
+    ## If obs_fs = TRUE, it's a bit awkward, because we need to add the fine-scale 
+    ## variance here, and possibly aggregate over prediction regions
+    if(M@link == "identity" && obs_fs) {
+      mu_samples <- Y_samples # This is the smooth process Y (equivalent to mu, because link = identity) + fine-scale variation
+      if (!predict_BAUs) 
+        mu_samples <- as.matrix(CP %*% mu_samples)
+    }
+    
     Z_samples <- rnorm(n, mean = c(t(mu_samples)), sd = sqrt(sigma2e))
   } else if (M@response == "bernoulli") {
     Z_samples <- rbinom(n, size = 1, prob = c(t(mu_samples)))
