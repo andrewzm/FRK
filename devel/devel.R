@@ -66,7 +66,7 @@ setClass("SRE2",representation(data="list",
 #' @param method parameter estimation method to employ. Currently only ``EM'' is supported
 #' @param print_lik flag indicating whether likelihood should be printed or not on convergence of the estimation algorithm
 # #' @param use_centroid flag indicating whether the basis functions are averaged over the BAU, or whether the basis functions are evaluated at the BAUs centroid in order to construct the matrix \eqn{S}. The flag can safely be set when the basis functions are approximately constant over the BAUs in order to reduce computational time
-#' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error) or in the process model (process fine-scale variation, default)
+#' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error; indicated by \code{obs_fs = TRUE}) or in the process model (process fine-scale variation; indicated by \code{obs_fs = FALSE}, default)
 #' @param pred_polys object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified
 #' @param pred_time vector of time indices at which we wish to predict. All time points are used if this option is not specified
 #' @param vgm_model an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm} containing the variogram model to fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified the variogram used is \code{gstat::vgm(1, "Lin", d, 1)} where \code{d} is approximately one third of the maximum distance between any two points

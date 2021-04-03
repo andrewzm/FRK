@@ -8,13 +8,6 @@
 }
 \arguments{
 \item{M}{An object of class \code{SRE}.
-The \code{SRE} object slots particularly relevant to \code{FRKTMB_fit} are
-\describe{
-  \item{\code{K_type}}{A string indicating the desired formulation of the prior variance/precision matrix of eta.}
-  \item{\code{response}}{A string indicating the assumed distribution of the response variable.}
-  \item{\code{link}}{A string indicating the desired link function.}
-  \item{\code{taper}}{A positve numeric indicating the strength of the covariance tapering (only applicable if \code{K_type == "covariance"}).}
-}
 Furthermore in the case of binomial or negative-binomial response variables,
 the \code{data} slot of \code{M} must contain a column named \code{k}
 which contains the 'known-constant' parameters for each observation

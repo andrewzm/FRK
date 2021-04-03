@@ -88,11 +88,12 @@ Type objective_function<Type>::operator() ()
   PARAMETER_VECTOR(alpha);
   PARAMETER(logphi);          Type phi      = exp(logphi);
   
-  // Variance components relating to eta
+  // Variance components relating to the basis-function coefficients
   PARAMETER_VECTOR(logsigma2);  vector<Type> sigma2 = exp(logsigma2);
   PARAMETER_VECTOR(logtau);     // The transformation we apply to tau depends on which K_type is used
   PARAMETER(logsigma2_t);       Type sigma2_t       = exp(logsigma2_t);
   PARAMETER(frho_t);            Type rho_t          = transform_minus_one_to_one(frho_t);
+  PARAMETER_VECTOR(logdelta);   vector<Type> delta  = exp(logdelta); // only for K_type == "precision-block-exponential"
   
   
   // Fine-scale variation variance parameter
@@ -205,18 +206,33 @@ Type objective_function<Type>::operator() ()
       std::vector<T> tripletList;    // Create a vector of triplet lists, called 'tripletList'
       tripletList.reserve(nnz[k]);   // Reserve number of non-zeros in the matrix
       
+      // Vector to store the row sums (only applicable for K_type == "precision-block-exponential")
+      vector<Type> rowSums(r_si[k]);
+      rowSums.fill(0);
       
       // Compute the matrix coefficients and store them in the triplet list.
       if (K_type == "neighbour") {
         for (int j = start_x; j < start_x + nnz[k]; j++) {  
-          //(row_indices[j] == col_indices[j]) ? coef = tau[k] * (x[j] + sigma2[k] + epsilon) : coef = tau[k] * x[j];
-          (row_indices[j] == col_indices[j]) ? coef = tau[k] * (x[j] + sigma2[k] + epsilon) : coef = -tau[k];
+          (row_indices[j] == col_indices[j]) ? coef = tau[k] * (x[j] + sigma2[k] + epsilon) : coef = -tau[k] * x[j]; // x[j] will usually be 1
           tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
         }
       } else if (K_type == "block-exponential") {
         for (int j = start_x; j < start_x + nnz[k]; j++) {  
           coef = (sigma2[k] + epsilon) * exp( -x[j] / (tau[k] + epsilon) ) * pow( 1.0 - x[j] / beta[k], 2.0) * ( 1.0 + x[j] / (2.0 * beta[k]));
           tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
+        }
+      } else if (K_type == "precision-block-exponential") {
+        
+        for (int j = start_x; j < start_x + nnz[k]; j++){ 
+          if (col_indices[j] != row_indices[j]) {
+            coef = -sigma2[k] * exp( -x[j] / tau[k] ) * pow(1.0 - x[j] / beta[k], 2.0) * ( 1.0 + x[j] / (2.0 * beta[k]));
+            tripletList.push_back(T(row_indices[j] - start_eta, col_indices[j] - start_eta, coef));
+            rowSums[row_indices[j] - start_eta] += coef;
+          }
+        }
+        // Add the diagonal elements (these depend on the row sums)
+        for (int j = 0; j < r_si[k]; j++) {
+          tripletList.push_back(T(j, j, delta[k] - rowSums[j]));
         }
       }
       

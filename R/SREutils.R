@@ -39,7 +39,7 @@
 # #' @param use_centroid flag indicating whether the basis functions are averaged over the BAU, or whether the basis functions are evaluated at the BAUs centroid in order to construct the matrix \eqn{S}. The flag can safely be set when the basis functions are approximately constant over the BAUs in order to reduce computational time
 #' @param object object of class \code{SRE}
 #' @param newdata object of class \code{SpatialPoylgons}, \code{SpatialPoints}, or \code{STI}, indicating the regions or points over which prediction will be carried out. The BAUs are used if this option is not specified. 
-#' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error, Case 1) or in the process model (fine-scale process variation, Case 2, default)
+#' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error; indicated by \code{obs_fs = TRUE}) or in the process model (process fine-scale variation; indicated by \code{obs_fs = FALSE}, default)
 #' @param pred_polys deprecated. Please use \code{newdata} instead
 #' @param pred_time vector of time indices at which prediction will be carried out. All time points are used if this option is not specified
 #' @param covariances logical variable indicating whether prediction covariances should be returned or not. If set to \code{TRUE}, a maximum of 4000 prediction locations or polygons are allowed.
@@ -119,7 +119,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                 sum_variables = NULL,
                 normalise_wts = TRUE,
                 fs_model = "ind", vgm_model = NULL, 
-                K_type = c("block-exponential", "neighbour", "unstructured", "separable"), 
+                K_type = c("block-exponential", "neighbour", "unstructured", "separable", "precision-block-exponential"), 
                 normalise_basis = TRUE, 
                 response = c("gaussian", "poisson", "bernoulli", "gamma",
                              "inverse-gaussian", "negative-binomial", "binomial"), 
@@ -1437,13 +1437,6 @@ print.summary.SRE <- function(x, ...) {
 #' (performed internally with \code{\link{.SRE.predict_TMB}}).
 #'
 #' @param M An object of class \code{SRE}.
-#' The \code{SRE} object slots particularly relevant to \code{FRKTMB_fit} are
-#' \describe{
-#'   \item{\code{K_type}}{A string indicating the desired formulation of the prior variance/precision matrix of eta.}
-#'   \item{\code{response}}{A string indicating the assumed distribution of the response variable.}
-#'   \item{\code{link}}{A string indicating the desired link function.}
-#'   \item{\code{taper}}{A positve numeric indicating the strength of the covariance tapering (only applicable if \code{K_type == "covariance"}).}
-#' }
 #' Furthermore in the case of binomial or negative-binomial response variables,
 #' the \code{data} slot of \code{M} must contain a column named \code{k}
 #' which contains the 'known-constant' parameters for each observation
@@ -1688,6 +1681,12 @@ print.summary.SRE <- function(x, ...) {
     ## components. So, just replicate the already defined parameters.
     l$sigma2 <- rep(l$sigma2, 2)
     l$tau    <- rep(l$tau, 2)
+    l$logdelta <- 1 # Dummy value
+  } else if (M@K_type == "precision-block-exponential") {
+    ## Precision exp requires one extra parameter
+    l$logdelta <- rnorm(nres)
+  } else {
+    l$logdelta <- 1 # Dummy value
   }
   
   
@@ -1749,6 +1748,7 @@ print.summary.SRE <- function(x, ...) {
     logphi = log(l$phi),
     logsigma2 = log(l$sigma2),
     logtau = log(l$tau),
+    logdelta = l$logdelta,
     logsigma2_t = log(l$sigma2_t),  
     frho_t = transform_minus_one_to_one_inverse(l$rho_t),
     logsigma2fs = log(l$sigma2fs),
@@ -1890,7 +1890,7 @@ print.summary.SRE <- function(x, ...) {
   data$beta <- data$nnz <- data$row_indices <- data$col_indices <- 
     data$x <- data$n_r <- data$n_c  <- -1 
   
-  if (M@K_type == "block-exponential") {
+  if (M@K_type %in% c("block-exponential", "precision-block-exponential")) {
     tmp         <- .cov_tap(spatial_dist_matrix, taper = M@taper)
     data$beta   <- tmp$beta 
     R            <- as(tmp$D_tap, "dgTMatrix")
@@ -1915,6 +1915,7 @@ print.summary.SRE <- function(x, ...) {
       data$n_c[i] <- length(unique(tmp$loc2))
     }
   } 
+  
   
   ## Create a data entry of sigma2fs_hat (one that will stay constant if we are 
   ## not estimating sigma2fs within TMB)
@@ -2940,7 +2941,7 @@ print.summary.SRE <- function(x, ...) {
              the std field must contain only positive numbers")
 
     
-    if(!(K_type %in% c("block-exponential", "neighbour", "unstructured", "separable"))) 
+    if(!(K_type %in% c("block-exponential", "neighbour", "unstructured", "separable", "precision-block-exponential")))
         stop("Invalid K_type argument. Please select from 'block-exponential', 'neighbour', 'unstructured', or 'separable'")
     if(K_type == "unstructured" & response != "gaussian")
         stop("The unstructured covariance matrix (K_type = 'unstructured') is not implemented for non-Gaussian response (more specifically, when method = 'TMB')")

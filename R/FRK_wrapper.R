@@ -25,7 +25,7 @@ FRK <- function(f,                     # formula (compulsory)
                 normalise_wts = TRUE,
                 fs_model = "ind",      # fine-scale variation component
                 vgm_model = NULL,      # variogram model for error estimation
-                K_type = c("block-exponential", "neighbour", "unstructured", "separable"), # type of K matrix
+                K_type = c("block-exponential", "neighbour", "unstructured", "separable", "precision-block-exponential"), # type of K matrix
                 n_EM = 100,            # max. no. of EM iterations
                 tol = 0.01,            # tolerance at which EM is assumed to have converged
                 method = c("EM", "TMB"),         # method for parameter estimation
@@ -41,6 +41,7 @@ FRK <- function(f,                     # formula (compulsory)
                 percentiles = c(5, 95),  # Desired percentiles of the quantitity of interest
                 fs_by_spatial_BAU = FALSE,
                 known_sigma2fs = NULL, 
+                taper = 4, 
                 ...)                   # other arguments for BAUs/basis-function construction, or 
 {
 
@@ -69,8 +70,10 @@ FRK <- function(f,                     # formula (compulsory)
         method <- "TMB"
     }
     if (method == "TMB") {
-        if (K_type != "neighbour") cat("For computational efficiency, setting K_type = 'neighbour', because method = 'TMB'; if you really want to use the K_type = 'block-exponential' with method = 'TMB', use SRE() and SRE.fit().\n")
-        K_type <- "neighbour"
+        if (K_type != "neighbour" && K_type != "precision-block-exponential") {
+            cat("For computational efficiency, setting K_type = 'neighbour', because method = 'TMB'; if you really want to use the K_type = 'block-exponential' with method = 'TMB', use SRE() and SRE.fit().\n")
+            K_type <- "neighbour"
+        }
     }
     
     .check_args_wrapper(f = f,              # check that the arguments are OK for SRE
@@ -205,7 +208,8 @@ FRK <- function(f,                     # formula (compulsory)
              K_type = K_type,                  # "block-exponential", "unstructured", "neighbour", "separable"
              response = response, 
              link = link, 
-             fs_by_spatial_BAU = fs_by_spatial_BAU)                  
+             fs_by_spatial_BAU = fs_by_spatial_BAU, 
+             taper = taper)                  
 
     ## After constructing SRE model, fit it
     cat("Fitting SRE model...\n")
