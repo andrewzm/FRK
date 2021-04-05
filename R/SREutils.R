@@ -39,20 +39,24 @@
 # #' @param use_centroid flag indicating whether the basis functions are averaged over the BAU, or whether the basis functions are evaluated at the BAUs centroid in order to construct the matrix \eqn{S}. The flag can safely be set when the basis functions are approximately constant over the BAUs in order to reduce computational time
 #' @param object object of class \code{SRE}
 #' @param newdata object of class \code{SpatialPoylgons}, \code{SpatialPoints}, or \code{STI}, indicating the regions or points over which prediction will be carried out. The BAUs are used if this option is not specified. 
-#' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error; indicated by \code{obs_fs = TRUE}) or in the process model (process fine-scale variation; indicated by \code{obs_fs = FALSE}, default). For non-Gaussian data models, and/or non-identity link functions, if \code{obs_fs = TRUE}, then the the fine-scale variation is removed from the latent process \eqn{Y}; however, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}
+#' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error; indicated by \code{obs_fs = TRUE}) or in the process model (process fine-scale variation; indicated by \code{obs_fs = FALSE}, default). For non-Gaussian data models, and/or non-identity link functions, if \code{obs_fs = TRUE}, then the fine-scale variation is removed from the latent process \eqn{Y}; however, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}
 #' @param pred_polys deprecated. Please use \code{newdata} instead
 #' @param pred_time vector of time indices at which prediction will be carried out. All time points are used if this option is not specified
 #' @param covariances logical variable indicating whether prediction covariances should be returned or not. If set to \code{TRUE}, a maximum of 4000 prediction locations or polygons are allowed.
-#' @param response A character string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "bernoulli", "gamma","inverse-gaussian", "negative-binomial", or "binomial".
-#' @param link A character string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted. 
-#' @param taper A positive numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "block-exponential"} and \code{TMB} is used to fit the data)
+#' @param response string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "bernoulli", "gamma","inverse-gaussian", "negative-binomial", or "binomial".
+#' @param link  string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted. 
+#' @param taper positive numeric indicating the strength of the covariance tapering. Only applicable if \code{K_type = "block-exponential"} and \code{TMB} is used to fit the data
 #' @inheritParams .SRE.predict_TMB
 #' @param optimiser the optimising function used for model fitting when \code{method = 'TMB'} (default is \code{nlminb}). Users may pass in a function object or a string corresponding to a named function. Optional parameters may be passed to \code{optimiser} via \code{...}. The only requirement of \code{optimiser} is that the first three arguments correspond to the initial parameters, the objective function, and the gradient, respectively (note that this may be achieved by rearranging the order of the arguments before passing into \code{optimiser}) 
 #' @param known_sigma2fs known value of the fine-scale variance. If \code{NULL} (the default), the fine-scale variance \eqn{\sigma^2_\xi} is estimated as usual. If \code{known_sigma2fs} is not \code{NULL}, the fine-scale variance is fixed to the supplied value; this may be a scalar, or vector of length equal to the number of spatial BAUs (if fs_by_spatial_BAU = TRUE)
 #' @param ... other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling \code{FRK}, or the user specified \code{optimiser} function when calling \code{FRK} or \code{SRE.fit}
-#' @details \code{SRE()} is the main function in the package: It constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of Basic Areal Units (BAUs). The function first takes each object in the list \code{data} and maps it to the BAUs -- this entails binning the point-referenced data into the BAUs (and averaging within the BAU) if \code{average_in_BAU = TRUE}, and finding which BAUs are influenced by the polygon datasets. Following this, the incidence matrix \code{Cmat} is constructed, which appears in the observation model \eqn{Z = CY + C\delta + e}, where \eqn{C} is the incidence matrix and \eqn{\delta} is systematic error at the BAU level.
+#' @details \code{SRE()} is the main function in the package: It constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of Basic Areal Units (BAUs). The function first takes each object in the list \code{data} and maps it to the BAUs -- this entails binning point-referenced data into the BAUs (and averaging within the BAU) if \code{average_in_BAU = TRUE}, and finding which BAUs are influenced by the polygon datasets. Following this, the incidence matrix, \eqn{C}, is constructed. In a Gaussian setting, \eqn{C} appears in the observation model \eqn{Z = CY + C\delta + e}, where \eqn{\delta} is systematic error at the BAU level. In a non-Gaussian setting, \eqn{C} appears in \eqn{Z ~ EF(\mu_Z)}; \eqn{\mu_Z = C\mu}, where \eqn{EF(\cdot)} denotes an exponential family member with mean parameter \eqn{\mu_Z}, and \eqn{\mu} is the mean process evaluated over the BAUs. 
 #'
-#' The SRE model for the hidden process is given by \eqn{Y = T\alpha + S\eta + \xi}, where \eqn{T} are the covariates at the BAU level, \eqn{\alpha} are the regression coefficients, \eqn{S} are the basis functions evaluated at the BAU level, \eqn{\eta} are the basis-function coefficients, and \eqn{\xi} is the fine scale variation (at the BAU level). The covariance matrix of \eqn{\xi} is diagonal, with its diagonal elements proportional to the field `fs' in the BAUs (typically set to one). The constant of proportionality is estimated in the EM algorithm. All required matrices (\eqn{S,T} etc.) are initialised using sensible defaults and returned as part of the object, please see \code{\link{SRE-class}} for more details.
+#' The SRE model for the hidden process is given by 
+#' \deqn{Y = T\alpha + S\eta + \xi,} 
+#' where \eqn{T} are the covariates at the BAU level, \eqn{\alpha} are the regression coefficients, \eqn{S} are the basis functions evaluated at the BAU level, \eqn{\eta} are the basis-function coefficients, and \eqn{\xi} is the fine scale variation (at the BAU level). The covariance matrix of \eqn{\xi} is diagonal, with its diagonal elements proportional to the field `fs' in the BAUs (typically set to one). The constant of proportionality is estimated during model fitting. All required matrices (\eqn{S,T} etc.) are initialised using sensible defaults and returned as part of the object, please see \code{\link{SRE-class}} for more details.
+#'
+#' The hidden process is used to construct the mean process via \eqn{g(\mu) = Y}
 #'
 #'\code{SRE.fit()} takes an object of class \code{SRE} and estimates all unknown parameters, namely the covariance matrix \eqn{K}, the fine scale variance (\eqn{\sigma^2_{\xi}} or \eqn{\sigma^2_{\delta}}, depending on whether Case 1 or Case 2 is chosen; see the vignette) and the regression parameters \eqn{\alpha}. The only method currently implemented is the Expectation Maximisation (EM) algorithm, which the user configures through \code{n_EM} and \code{tol}. The log-likelihood (given in Section 2.2 of the vignette) is evaluated at each iteration at the current parameter estimate, and convergence is assumed to have been reached when this quantity stops changing by more than \code{tol}.
 #'
@@ -63,7 +67,7 @@
 #'Once the parameters are fitted, the \code{SRE} object is passed onto the function \code{predict()} in order to carry out optimal predictions over the same BAUs used to construct the SRE model with \code{SRE()}. The first part of the prediction process is to construct the matrix \eqn{S} over the prediction polygons. This is made computationally efficient by treating the prediction over polygons as that of the prediction over a combination of BAUs. This will yield valid results only if the BAUs are relatively small. Once the matrix \eqn{S} is found, a standard Gaussian inversion (through conditioning) using the estimated parameters is used for prediction.
 #'
 #'\code{predict} returns the BAUs, which are of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame}, or \code{STFDF}, with two added attributes, \code{mu} and \code{var}. These can then be easily plotted using \code{spplot} or \code{ggplot2} (possibly in conjunction with \code{\link{SpatialPolygonsDataFrame_to_df}}) as shown in the package vignettes.
-#' @seealso \code{\link{SRE-class}} for details on the SRE object internals, \code{\link{auto_basis}} for automatically constructing basis functions, and \code{\link{auto_BAUs}} for automatically constructing BAUs. See also the paper \url{https://arxiv.org/abs/1705.08105} for details on code operation.
+#' @seealso \code{\link{SRE-class}} for details on the SRE object internals, \code{\link{auto_basis}} for automatically constructing basis functions, \code{\link{auto_BAUs}} for automatically constructing BAUs, and \code{\link{plot}} for plotting results. See also the paper \url{https://arxiv.org/abs/1705.08105} for details on code operation.
 #' @keywords spatial
 #' @export
 #' @examples
@@ -348,7 +352,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                        ". As you have selected to fit a unique fine-scale variance at each spatial BAU (i.e., fs_by_spatial_BAU = TRUE), please consider if this is a sufficient number of observations."))
       }
       
-      ## Throw a warning if the the number of spatial BAUs (and hence number 
+      ## Throw a warning if the number of spatial BAUs (and hence number 
       ## of fine-scale variance parameters) is very large
       if(ns > 500) warning(paste0("The number of spatial BAUs is relatively large (",ns,"). As you have chosen to fit a separate fine-scale variance parameter at each spatial BAU, there will be ",ns," fine-scale variance parameters to estimate, which may result in difficulties in model fitting. (However, it may not be an issue.)"))
     } 
@@ -2140,11 +2144,11 @@ print.summary.SRE <- function(x, ...) {
 #' @inheritParams .MC_sampler
 #' @inheritParams .concat_percentiles_to_df
 #' @param newdata object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified
-#' @param CP Polygon prediction matrix
-#' @param predict_BAUs Logical indicating whether or not we are predicting over the BAUs
+#' @param CP polygon prediction matrix
+#' @param predict_BAUs logical indicating whether or not we are predicting over the BAUs
 #' @param pred_time vector of time indices at which prediction will be carried out. All time points are used if this option is not specified
-#' @param type A character string (possibly vector) indicating the quantities for which predictions and prediction uncertainty is desired. If \code{"link"} is in \code{type}, the latent \eqn{Y} process is included; If \code{"mean"} is in \code{type}, the conditional mean \eqn{\mu} is included (and the probability parameter if applicable); If \code{"response"} is in \code{type}, the response variable \eqn{Z} is included. Note that any combination of these character strings can be provided. For example, if \code{type = c("link", "response")}, then predictions of the latent \eqn{Y} process and the response variable \eqn{Z} are provided
-#' @param kriging A string indicating the kind of kriging (\code{"simple"} or \code{"universal"})
+#' @param type string (possibly vector) indicating the quantities for which predictions and prediction uncertainty is desired. If \code{"link"} is in \code{type}, the latent \eqn{Y} process is included; If \code{"mean"} is in \code{type}, the conditional mean \eqn{\mu} is included (and the probability parameter if applicable); If \code{"response"} is in \code{type}, the response variable \eqn{Z} is included. Note that any combination of these character strings can be provided. For example, if \code{type = c("link", "response")}, then predictions of the latent \eqn{Y} process and the response variable \eqn{Z} are provided
+#' @param kriging string indicating the kind of kriging: \code{"simple"} ignnores uncertanity due to estimation of the fixed effects, while \code{"universal"} accounts for this source of uncertainty
 #' @return A list object containing:
 #' \describe{
 #'   \item{newdata}{An object of class \code{newdata}, with predictions and prediction uncertainty at each prediction location of the latent \eqn{Y} process, the conditional mean of the data \eqn{\mu}, the probability of success parameter \eqn{\pi} (if applicable), and the response variable \eqn{Z}}
@@ -2440,7 +2444,7 @@ print.summary.SRE <- function(x, ...) {
 #' @param X The design matrix of the covariates at the BAU level (often simply an Nx1 column vector of 1's)
 #' @param type A character string (possibly vector) indicating the quantities which are the focus of inference. Note: unlike in the predict() function, \emph{all} computed quantities are returned. That is, the latent \eqn{Y} process samples are always provided; If \code{"mean"} \emph{OR} \code{"response"} is in \code{type}, then the samples of \eqn{Y}, the conditonal mean \eqn{\mu}, and the probability parameter (if applicable) are provided. If \code{"response"} is in \code{type}, the response variable \eqn{Z} samples, and the samples of all other quantities are provided
 #' @param n_MC A postive integer indicating the number of MC samples at each location
-#' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error; indicated by \code{obs_fs = TRUE}) or in the process model (process fine-scale variation; indicated by \code{obs_fs = FALSE}, default). For non-Gaussian data models, and/or non-identity link functions, if \code{obs_fs = TRUE}, then the the fine-scale variation is removed from the latent process \eqn{Y}; however, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}
+#' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error; indicated by \code{obs_fs = TRUE}) or in the process model (process fine-scale variation; indicated by \code{obs_fs = FALSE}, default). For non-Gaussian data models, and/or non-identity link functions, if \code{obs_fs = TRUE}, then the fine-scale variation is removed from the latent process \eqn{Y}; however, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}
 #' @param k vector of size parameters at each BAU (applicable only for binomial and negative-binomial data)
 #' @param Q_L A list containing the Cholesky factor of the permuted precision matrix (stored as \code{Q$Qpermchol}) and the associated permutationmatrix (stored as \code{Q_L$P})
 #' @param predict_BAUs logical, indicating whether we are predicting over the BAUs
@@ -2882,7 +2886,7 @@ print.summary.SRE <- function(x, ...) {
             OK <- tryCatch({vgm.fit = gstat::fit.variogram(v, model = vgm_model); OK <- 1},warning=function(w) 0)
         }
 
-        ## If we still have problems, then just take the first point of the the empirical semivariogram and
+        ## If we still have problems, then just take the first point of the empirical semivariogram and
         ## throw a warning that this estimate is probably not very good
         if(vgm.fit$psill[1] <= 0 | attributes(vgm.fit)$singular | !OK) {
             vgm.fit$psill[1] <- v$gamma[1]

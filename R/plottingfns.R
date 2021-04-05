@@ -228,7 +228,7 @@ EmptyTheme <- function() {
 
 #' Plot predictions from FRK analysis. 
 #' 
-#' @rdname SRE
+# #' @rdname SRE
 #' @param x \code{SRE} object 
 #' @param y result of calling \code{predict} on an \code{SRE} object 
 #' @param zdf a \code{data.frame}, \code{SpatialPointsDataFrame}, or \code{SpatialPolygonsDataFrame} containing the observations
