@@ -188,7 +188,7 @@ The SRE model for the hidden process is given by
 \deqn{Y = T\alpha + S\eta + \xi,} 
 where \eqn{T} are the covariates at the BAU level, \eqn{\alpha} are the regression coefficients, \eqn{S} are the basis functions evaluated at the BAU level, \eqn{\eta} are the basis-function coefficients, and \eqn{\xi} is the fine scale variation (at the BAU level). The covariance matrix of \eqn{\xi} is diagonal, with its diagonal elements proportional to the field `fs' in the BAUs (typically set to one). The constant of proportionality is estimated during model fitting. All required matrices (\eqn{S,T} etc.) are initialised using sensible defaults and returned as part of the object, please see \code{\link{SRE-class}} for more details.
 
-The hidden process is used to construct the mean of the data via \eqn{g(\mu) = Y}
+The hidden process is used to construct the mean process via \eqn{g(\mu) = Y}
 
 \code{SRE.fit()} takes an object of class \code{SRE} and estimates all unknown parameters, namely the covariance matrix \eqn{K}, the fine scale variance (\eqn{\sigma^2_{\xi}} or \eqn{\sigma^2_{\delta}}, depending on whether Case 1 or Case 2 is chosen; see the vignette) and the regression parameters \eqn{\alpha}. The only method currently implemented is the Expectation Maximisation (EM) algorithm, which the user configures through \code{n_EM} and \code{tol}. The log-likelihood (given in Section 2.2 of the vignette) is evaluated at each iteration at the current parameter estimate, and convergence is assumed to have been reached when this quantity stops changing by more than \code{tol}.
 
