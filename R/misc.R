@@ -543,14 +543,25 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 }
 
 
+# ---- Basis manipulation ----
 
-
+remove_basis_outside_polygon <- function(basis_object, polygon) {
+  sp_df <- basis_object@df
+  coordinates(sp_df) <- ~ loc1 + loc2
+  keep <- which(!is.na(over(sp_df, polygon)))
+  
+  basis_object@fn <- basis_object@fn[keep]
+  basis_object@pars <- basis_object@pars[keep]
+  basis_object@df <- basis_object@df[keep, ]
+  basis_object@n <- length(keep)
+  
+  return(basis_object)
+}
 
 
 # ---- BAU manipulation ----
 
-#' @rdname reverse_spatial_coords
-#' @export
+
 setMethod("reverse_spatial_coords",signature(BAUs="SpatialPixelsDataFrame"),function(BAUs) {
   
   ## Number of dimensions of the BAUs
@@ -592,8 +603,6 @@ setMethod("reverse_spatial_coords",signature(BAUs="SpatialPixelsDataFrame"),func
 })
 
 
-#' @rdname reverse_spatial_coords
-#' @export
 setMethod("reverse_spatial_coords",signature(BAUs="SpatialPointsDataFrame"),function(BAUs) {
   
   ## The documentation says that the @data slot may in fact contain the coordinates.
@@ -616,8 +625,6 @@ setMethod("reverse_spatial_coords",signature(BAUs="SpatialPointsDataFrame"),func
 })
 
 
-#' @rdname reverse_spatial_coords
-#' @export
 setMethod("reverse_spatial_coords",signature(BAUs="SpatialPoints"),function(BAUs) {
   
   ## The documentation does not explicitly say that coords can or cannot contain data, 
@@ -637,8 +644,6 @@ setMethod("reverse_spatial_coords",signature(BAUs="SpatialPoints"),function(BAUs
 })
 
 
-#' @rdname reverse_spatial_coords
-#' @export
 setMethod("reverse_spatial_coords",signature(BAUs="SpatialPolygonsDataFrame"),function(BAUs) {
   
   
@@ -666,9 +671,6 @@ setMethod("reverse_spatial_coords",signature(BAUs="SpatialPolygonsDataFrame"),fu
 })
 
 
-
-#' @rdname reverse_spatial_coords
-#' @export
 setMethod("reverse_spatial_coords",signature(BAUs="STFDF"),function(BAUs) {
   
   ## FIXME: should allow for SpatialPolygonsDF and SpatialPolygons too
@@ -683,8 +685,6 @@ setMethod("reverse_spatial_coords",signature(BAUs="STFDF"),function(BAUs) {
 })
 
 
-#' @rdname reverse_spatial_coords
-#' @export
 setMethod("reverse_spatial_coords",signature(BAUs="STIDF"),function(BAUs) {
   
   ## FIXME: should allow for SpatialPolygonsDF and SpatialPolygons too
@@ -740,24 +740,19 @@ setMethod("reverse_spatial_coords",signature(BAUs="STIDF"),function(BAUs) {
   return(data_new)
 }
 
-#' @rdname remove_BAUs
 setMethod("remove_BAUs",signature(BAUs="SpatialPoints"),function(BAUs, rmidx, redefine_index = FALSE) {
   return(.remove_spatial_BAUs(BAUs, rmidx, redefine_index))
 })
 
 
-#' @rdname remove_BAUs
 setMethod("remove_BAUs",signature(BAUs="SpatialPointsDataFrame"),function(BAUs, rmidx, redefine_index = FALSE) {
   return(.remove_spatial_BAUs(BAUs, rmidx, redefine_index))
 })
 
-
-#' @rdname remove_BAUs
 setMethod("remove_BAUs",signature(BAUs="SpatialPixelsDataFrame"),function(BAUs, rmidx, redefine_index = FALSE) {
   return(.remove_spatial_BAUs(BAUs, rmidx, redefine_index))
 })
 
-#' @rdname remove_BAUs
 setMethod("remove_BAUs",signature(BAUs="STFDF"),function(BAUs, rmidx, redefine_index = FALSE) {
   
   BAUs_orig <- BAUs # Backup of BAUs for checks later
@@ -786,24 +781,3 @@ setMethod("remove_BAUs",signature(BAUs="STFDF"),function(BAUs, rmidx, redefine_i
   
   return(BAUs)
 })
-
-
-
-#' @rdname remove_BAUs
-setMethod("remove_BAUs",signature(BAUs="STIDF"),function(BAUs, rmidx, redefine_index = FALSE) {
-  
-  BAUs_orig <- BAUs # Backup of BAUs for checks later
-  
-  ## Removal is straightforward for STIDF
-  suppressWarnings(BAUs <- BAUs[-rmidx, ])
-  
-  ## Check for indexing columns in @data slot of BAU object
-  ## Note that the first check is for SpatialPoints and SpatialPolygons, each of which 
-  ## do not have a @data slot.
-  if ("data" %in% slotNames(class(BAUs_orig)) & redefine_index)
-    BAUs@data <- .redefine_indexing_variables(BAUs_orig@data, BAUs@data)
-  
-  return(BAUs)
-})
-
-
