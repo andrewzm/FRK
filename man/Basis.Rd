@@ -4,7 +4,7 @@
 \alias{Basis}
 \title{Generic basis-function constructor}
 \usage{
-Basis(manifold, n, fn, pars, df)
+Basis(manifold, n, fn, pars, df, regular = FALSE)
 }
 \arguments{
 \item{manifold}{object of class \code{manifold}, for example, \code{sphere}}
@@ -20,6 +20,8 @@ and returns a vector which contains the basis function evaluations at \code{s}.}
 to location and scale parameters.}
 
 \item{df}{A data frame containing one row per basis function, typically for providing informative summaries.}
+
+\item{regular}{logical indicating if the basis functions (of each resolution) are in a regular grid}
 }
 \description{
 This function is meant to be used for manual construction of arbitrary basis functions. For

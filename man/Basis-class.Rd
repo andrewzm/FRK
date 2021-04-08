@@ -24,6 +24,8 @@ Basis functions are a central component of \code{FRK}, and the package is design
 \item{\code{pars}}{a list of parameters where the \eqn{i}-th item in the list contains the parameters of the \eqn{i}-th basis function, \code{fn[[i]]}}
 
 \item{\code{df}}{a data frame containing other attributes specific to each basis function (for example the geometric centre of the local basis function)}
+
+\item{\code{regular}}{logical indicating if the basis functions (of each resolution) are in a regular grid}
 }}
 
 \seealso{

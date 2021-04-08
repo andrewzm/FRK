@@ -7,13 +7,13 @@
 reverse_spatial_coords(BAUs)
 }
 \arguments{
-\item{BAUs}{An object of class \code{SpatialPixelsDataFrame}.}
+\item{BAUs}{An object of class \code{SpatialPixelsDataFrame}, \code{SpatialPolygonsDataFrame}, or \code{STFDF}.}
 }
 \value{
 \code{BAUs} with the reversed coordinate order.
 }
 \description{
-Reverses the coordinate order (and all relevant slots) of a spatial BAU object (an object of class \code{SpatialPixelsDataFrame}). This is useful when comparing BAU objects to \code{SpatialPolygon} objects, for instance, when one wishes to trim BAUs based on some polygon.
+Reverses the coordinate order (and all relevant slots) of a BAU object. This is useful when comparing BAU objects to \code{SpatialPolygon} objects, for instance, when one wishes to trim BAUs based on some polygon.
 }
 \examples{
 library(sp)

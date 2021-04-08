@@ -28,7 +28,7 @@
 #' @param fs_by_spatial_BAU if \code{TRUE}, then each spatial BAU is associated with its own fine-scale variance parameter (only allowed if method = 'TMB'). Otherwise, a single fine-scale variance parameter is used
 #' @param fs_model if "ind" then the fine-scale variation is independent at the BAU level. If "ICAR", then an ICAR model for the fine-scale variation is placed on the BAUs
 #' @param vgm_model an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm}. This object contains the variogram model that will be fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified, the variogram used is \code{gstat::vgm(1, "Lin", d, 1)}, where \code{d} is approximately one third of the maximum distance between any two data points
-#' @param K_type the parameterisation used for the \code{K} matrix. If the EM algorithm is used for model fitting, \code{K_type} can be "unstructured" or "block-exponential". If TMB is used for model fitting, \code{K_type} can be "neighbour" or "block-exponential". The default is "block-exponential"
+#' @param K_type the parameterisation used for the \code{K} matrix. If the EM algorithm is used for model fitting, \code{K_type} can be "unstructured" or "block-exponential". If TMB is used for model fitting, \code{K_type} can be "precision" or "block-exponential". The default is "block-exponential"
 #' @param normalise_basis flag indicating whether to normalise the basis functions so that they reproduce a stochastic process with approximately constant variance spatially
 #' @param SRE_model object returned from the constructor \code{SRE()} containing all the parameters and information on the SRE model
 #' @param n_EM maximum number of iterations for the EM algorithm
@@ -123,7 +123,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                 sum_variables = NULL,
                 normalise_wts = TRUE,
                 fs_model = "ind", vgm_model = NULL, 
-                K_type = c("block-exponential", "neighbour", "unstructured", "separable", "precision-block-exponential"), 
+                K_type = c("block-exponential", "precision", "unstructured", "separable"), 
                 normalise_basis = TRUE, 
                 response = c("gaussian", "poisson", "bernoulli", "gamma",
                              "inverse-gaussian", "negative-binomial", "binomial"), 
@@ -145,8 +145,8 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     link     <- match.arg(link)
     
     ## The weights of the BAUs only really matter if the data are SpatialPolygons. 
-    ## However, we still need a 1 for all other kinds, so we still want to set them to 1.
-    ## only produce a warning if we have areal data.
+    ## However, we still need a 1 for all other kinds; only produce a warning if 
+    ## we have areal data.
     if (is.null(BAUs$wts)) {
         BAUs$wts <- 1
         if (any(sapply(data, function(x) is(x, "SpatialPolygons"))) &&
@@ -456,11 +456,11 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
         SRE_model@sigma2fshat <- known_sigma2fs
     
     if (method == "TMB" & SRE_model@K_type == "block-exponential") {
-      tmp <- readline(cat("You have selected method = 'TMB' and K_type = 'block-exponential'. Whilst this combination is allowed, it is significantly more computationally demanding than K_type = 'neighbour'. Please enter Y if you would like to continue with the block-exponential formulation, or N if you would like to change to the more efficient neighbour based sparse precision matrix formulation."))
+      tmp <- readline(cat("You have selected method = 'TMB' and K_type = 'block-exponential'. Whilst this combination is allowed, it is significantly more computationally demanding than K_type = 'precision'. Please enter Y if you would like to continue with the block-exponential formulation, or N if you would like to change to the more efficient precision based sparse precision matrix formulation."))
       if (tmp != "Y" && tmp != "N") {
         stop("You did not enter Y or N.")
       } else if (tmp == "N") {
-        SRE_model@K_type <- "neighbour"
+        SRE_model@K_type <- "precision"
       }
     }
     
@@ -1460,9 +1460,22 @@ print.summary.SRE <- function(x, ...) {
 #' }
 .TMB_fit <- function(M, optimiser, known_sigma2fs, ...) {
   
+  ## If we are using a precision matrix formulation, determine if we can use the
+  ## neighbour formulation, or if we need to use the precision-block-exponential.
+  ## This depends on whether the *spatial* basis is regular, or not.
+  ## TODO: Could add checks here that the basis is indeed regular. See .test_regular_grid().
+  K_type <- M@K_type
+  if (K_type == "precision") {
+    if (is(M@basis,"TensorP_Basis")) {
+      K_type <- if (M@basis@Basis1@regular) "neighbour" else "precision-block-exponential"
+    } else {
+      K_type <- if (M@basis@regular) "neighbour" else "precision-block-exponential"
+    }
+  }
+
   ## Parameter and data preparation for TMB
-  parameters <- .TMB_initialise(M)
-  data <- .TMB_data_prep(M, sigma2fs_hat = exp(parameters$logsigma2fs))
+  parameters <- .TMB_initialise(M, K_type = K_type)
+  data <- .TMB_data_prep(M, sigma2fs_hat = exp(parameters$logsigma2fs), K_type = K_type)
   
   ## If we are estimating a unique fine-scale variance at each spatial BAU, 
   ## simply replicate sigma2fs ns times. 
@@ -1516,10 +1529,6 @@ print.summary.SRE <- function(x, ...) {
   if(!all.equal(r, max(data$row_indices + 1), max(data$col_indices + 1), sum(data$r_si)))
     stop("Something has gone wrong in the data preparation for TMB: Please contact the package maintainer.")
   
-  # cat("Trying simple random effects initialisation.\n")
-  # parameters$random_effects <- rnorm(length(parameters$random_effects))
-  
-  
   ## TMB model compilation
   obj <- MakeADFun(data = data,
                    parameters = parameters,
@@ -1544,51 +1553,6 @@ print.summary.SRE <- function(x, ...) {
   par <- obj$env$last.par.best
   estimates <- split(par, names(par)) # convert to named list object
   
-  
-  if (data$fix_sigma2fs && is.null(known_sigma2fs)) {
-    ## Observed fine-scale random effects xi_O
-    Y_O <- .compute_Y_O(M)
-    xi_O <- Y_O - M@X_O %*% as(estimates$alpha, "Matrix") - M@S_O %*% as(estimates$random_effects[1:nbasis(M)], "Matrix")
-    
-    ## Fine-scale variance
-    sigma2fs <- var(as.vector(xi_O)) 
-    
-    ## If we are estimating a unique fine-scale variance at each spatial BAU, 
-    ## simply replicate sigma2fs ns times. 
-    ## FIXME: Users should NOT set M@fs_by_spatial_BAU if we are in a spatial 
-    ## change of support settingwith some data supports spanning multiple BAUs  
-    ## and is.null(known_sigma2fs) (and hence we need the rough estimate of sigma2fs). 
-    ## Hence, should add a check and a stop() somewhere, like:
-    # if(fs_by_spatial_BAU && SOME_CHECK_OF_COS && is.null(known_sigma2fs)) {
-    #   stop("some error message")
-    # }
-    if (M@fs_by_spatial_BAU) {
-      ns <- dim(M@BAUs)[1]
-      sigma2fs <- rep(sigma2fs, ns)
-    }
-    
-    # ## Repeat model fitting. 
-    ## set intitial values to best estimates
-    # obj$env$last.par.best["logsigma2fs"] <- log(sigma2fs)
-    # ## Update data version too (this is what we actually use to fix sigma in the C++ template)
-    # data$sigma2fs_hat <- sigma2fs
-    # parameters <- obj$env$last.par.best
-    # ## TMB model compilation
-    # rm(obj)
-    # ## Unfortunately, this doesn't work, as R simply crashes.
-    # obj <- MakeADFun(data = data,
-    #                  parameters = parameters,
-    #                  random = c("random_effects"),
-    #                  DLL = "FRK", 
-    #                  silent = TRUE) # hide the gradient information during fitting
-    # ## The following means we want to print every parameter passed to obj$fn.
-    # obj$env$tracepar <- TRUE
-    # fit <- optimiser(obj$par, obj$fn, obj$gr, ...)
-    
-    
-    
-    estimates$logsigma2fs <- log(sigma2fs) 
-  }
   
   # ---- Joint precision/covariance matrix of random effects ----
   
@@ -1638,7 +1602,7 @@ print.summary.SRE <- function(x, ...) {
 
 
 ## Initalise the fixed effects, random effects, and parameters for method = 'TMB'
-.TMB_initialise <- function(M) {   
+.TMB_initialise <- function(M, K_type) {   
   
   nres    <- max(M@basis@df$res) 
   X_O     <- M@X_O
@@ -1676,17 +1640,17 @@ print.summary.SRE <- function(x, ...) {
   ## Variance components of the spatial basis-function coefficients
   l$sigma2  <- var(as.vector(Y_O)) * (0.1)^(0:(nres - 1))
   l$tau     <- (1 / 3)^(1:nres)
-  if (M@K_type != "block-exponential") {
+  if (K_type != "block-exponential") {
     l$sigma2   <- 1 / l$sigma2
     l$tau      <- 1 / l$tau
   }
-  if (M@K_type == "separable") {
+  if (K_type == "separable") {
     ## Separability means we have twice as many spatial basis function variance
     ## components. So, just replicate the already defined parameters.
     l$sigma2 <- rep(l$sigma2, 2)
     l$tau    <- rep(l$tau, 2)
     l$logdelta <- 1 # Dummy value
-  } else if (M@K_type == "precision-block-exponential") {
+  } else if (K_type == "precision-block-exponential") {
     ## Precision exp requires one extra parameter
     l$logdelta <- rnorm(nres)
   } else {
@@ -1858,7 +1822,7 @@ print.summary.SRE <- function(x, ...) {
 }
 
 
-.TMB_data_prep <- function (M, sigma2fs_hat) {
+.TMB_data_prep <- function (M, sigma2fs_hat, K_type) {
   
   obsidx <- observed_BAUs(M)       # Indices of observed BAUs
   
@@ -1868,7 +1832,7 @@ print.summary.SRE <- function(x, ...) {
   ## Data passed to TMB which is common to all
   data <- list(Z = as.vector(M@Z),  # Binned data
                X_O = M@X_O, S_O = M@S_O, C_O = M@C_O,
-               K_type = M@K_type, response = M@response, link = M@link,
+               K_type = K_type, response = M@response, link = M@link,
                k_BAU_O = M@k_BAU_O, k_Z = M@k_Z,         
                temporal = as.integer(is(M@basis,"TensorP_Basis")), 
                fs_by_spatial_BAU = M@fs_by_spatial_BAU, sigma2e = sigma2e, 
@@ -1894,7 +1858,7 @@ print.summary.SRE <- function(x, ...) {
   data$beta <- data$nnz <- data$row_indices <- data$col_indices <- 
     data$x <- data$n_r <- data$n_c  <- -1 
   
-  if (M@K_type %in% c("block-exponential", "precision-block-exponential")) {
+  if (K_type %in% c("block-exponential", "precision-block-exponential")) {
     tmp         <- .cov_tap(spatial_dist_matrix, taper = M@taper)
     data$beta   <- tmp$beta 
     R            <- as(tmp$D_tap, "dgTMatrix")
@@ -1903,7 +1867,7 @@ print.summary.SRE <- function(x, ...) {
     data$col_indices <- R@j
     data$x           <- R@x
     
-  } else if (M@K_type == "neighbour") {
+  } else if (K_type == "neighbour") {
     tmp <- .sparse_Q_block_diag(spatial_basis@df, kappa = 0, rho = 1)
     R <- as(tmp$Q, "dgTMatrix")
     data$nnz         <- tmp$nnz
@@ -1911,7 +1875,7 @@ print.summary.SRE <- function(x, ...) {
     data$col_indices <- R@j
     data$x           <- R@x
     
-  } else if (M@K_type == "separable") {
+  } else if (K_type == "separable") {
     ## Compute number of basis functions in each row (n_r) and each column (n_c)
     for (i in unique(spatial_basis@df$res)) {
       tmp <- spatial_basis@df[spatial_basis@df$res == i, ]
@@ -2956,34 +2920,32 @@ print.summary.SRE <- function(x, ...) {
              the std field must contain only positive numbers")
 
     
-    if(!(K_type %in% c("block-exponential", "neighbour", "unstructured", "separable", "precision-block-exponential")))
-        stop("Invalid K_type argument. Please select from 'block-exponential', 'neighbour', 'unstructured', or 'separable'")
+    if(!(K_type %in% c("block-exponential", "precision", "unstructured")))
+        stop("Invalid K_type argument. Please select from 'block-exponential', 'precision', 'unstructured', or 'separable'")
     if(K_type == "unstructured" & response != "gaussian")
         stop("The unstructured covariance matrix (K_type = 'unstructured') is not implemented for non-Gaussian response (more specifically, when method = 'TMB')")
     if (K_type == "block-exponential" & response != "gaussian")
-        warning("Using the block-exponential covariance matrix (K_type = 'block-exponential') is computationally inefficient with a non-Gaussian response (more specifically, when method = 'TMB'). For these situations, consider using K_type = 'neighbour' or K_type = 'separable'.")
+        warning("Using the block-exponential covariance matrix (K_type = 'block-exponential') is computationally inefficient with a non-Gaussian response (more specifically, when method = 'TMB'). For these situations, consider using K_type = 'precision'.")
     
+  # if (K_type == "separable" & is(basis,"TensorP_Basis"))
+    # stop("K_type = 'separable' is not yet implemented in a space-time setting.")
   
-  if (K_type == "separable" & is(basis,"TensorP_Basis"))
-    stop("K_type = 'separable' is not yet implemented in a space-time setting.")
+  # ## If K_type == separable, the basis functions must be in a regular rectangular lattice
+  # if (K_type == "separable") 
+  #   for (i in unique(basis@df$res)) {
+  #     temp <- basis@df[basis@df$res == i, ]
+  #     if (!.test_regular_grid(temp$loc1, temp$loc2, rectangular = TRUE) ) 
+  #       stop("Basis functions must be arranged in a regular rectangular lattice when K_type = 'separable'.")
+  #   }
   
-  ## If K_type == separable, the basis functions must be in a regular rectangular lattice
-  if (K_type == "separable") 
-    for (i in unique(basis@df$res)) {
-      temp <- basis@df[basis@df$res == i, ]
-      if (!.test_regular_grid(temp$loc1, temp$loc2, rectangular = TRUE) ) 
-        stop("Basis functions must be arranged in a regular rectangular lattice when K_type = 'separable'.")
-    }
-  
-  
-  ## If K_type == "neighbour", we just need basis functions to be in a regular 
-  ## lattice (does not need to be rectangular)
-    if (K_type == "neighbour") 
-      for (i in unique(basis@df$res)) {
-        temp <- basis@df[basis@df$res == i, ]
-        if (!.test_regular_grid(temp$loc1, temp$loc2, rectangular = FALSE) ) 
-          stop("Basis functions must be arranged in a regular lattice when K_type = 'neighbour'.")
-      }  
+  # ## If K_type == "neighbour", we just need basis functions to be in a regular 
+  # ## lattice (does not need to be rectangular)
+  #   if (K_type == "neighbour") 
+  #     for (i in unique(basis@df$res)) {
+  #       temp <- basis@df[basis@df$res == i, ]
+  #       if (!.test_regular_grid(temp$loc1, temp$loc2, rectangular = FALSE) ) 
+  #         stop("Basis functions must be arranged in a regular lattice when K_type = 'precision'.")
+  #     }  
   
     ## Check that valid data model and link function have been chosen
     if (!(response %in% c("gaussian", "poisson", "bernoulli", "gamma", "inverse-gaussian", "negative-binomial", "binomial")))
@@ -3076,7 +3038,7 @@ print.summary.SRE <- function(x, ...) {
     
     if(method == "EM" & !(response == "gaussian")) stop("The EM algorithm is only available for response = 'gaussian'. Please use method = 'TMB' for all other assumed response distributions.")
     if(method == "EM" & !(link == "identity")) stop("The EM algorithm is only available for link = 'identity'. Please use method = 'TMB' for all other link functions.")
-    if(method == "EM" & K_type == "neighbour") stop("The neighbour matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
+    if(method == "EM" & K_type == "precision") stop("The precision matrix formulation of the model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
     if(method == "EM" & K_type == "separable") stop("The separable spatial model is not implemented for method = 'EM'. Please choose K_type to be 'block-exponential' or 'unstructured'.")
     if(method == "TMB" & K_type == "unstructured") stop("The unstructured covariance matrix (K_type = 'unstructured') is not implemented for method = 'TMB'")
     if(method != "TMB" & fs_by_spatial_BAU) stop("fs_by_spatial_BAU can only be TRUE if method = 'TMB'. Please set method = 'TMB', or fs_by_spatial_BAU = FALSE.")

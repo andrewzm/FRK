@@ -25,6 +25,7 @@
 #' @param pars A list containing a list of parameters for each function. For local basis functions these would correspond
 #' to location and scale parameters.
 #' @param df A data frame containing one row per basis function, typically for providing informative summaries.
+#' @param regular logical indicating if the basis functions (of each resolution) are in a regular grid
 #' @details This constructor checks that all the parameters are valid before constructing the basis functions
 #' using \code{new}. The requirement that every function is encapsulated is tedious, but necessary for
 #' FRK to work with a large range of basis functions in the future. Please see the example below which exemplifies
@@ -47,7 +48,7 @@
 #' \dontrun{
 #' eval_basis(G, s = matrix(seq(0,1, by = 0.1), 11, 1))}
 #' @export
-Basis <- function(manifold, n, fn, pars, df) {
+Basis <- function(manifold, n, fn, pars, df, regular = FALSE) {
     if(!is(manifold, "manifold")) stop("manifold needs to be of class manifold")
     if(!is.numeric(n)) stop("n needs to be of class numeric")
     if(ceiling(n) <= 0) stop("n needs to be greated than 0")
@@ -61,8 +62,12 @@ Basis <- function(manifold, n, fn, pars, df) {
         stop("manifold needs to be in the environment of every function")
     if(!all(sapply(fn, function(f) names(formals(f)) == "s")))
         stop("all functions need to take s as input argument")
+    
+    # if(!is.logical(regular)) stop("regular should be of class logical")
+    ## regular has been coded to 0 and 1. So, convert to numeric before constructing.
+    regular <- as.numeric(regular)
 
-    new("Basis", manifold = manifold,  n = n, fn = fn, pars = pars, df = df)
+    new("Basis", manifold = manifold,  n = n, fn = fn, pars = pars, df = df, regular = regular)
 }
 
 #' @title Construct a set of local basis functions
@@ -72,6 +77,7 @@ Basis <- function(manifold, n, fn, pars, df) {
 #' @param scale vector of length \code{n} containing the scale parameters of the basis functions; see details
 #' @param type either ``bisquare'', ``Gaussian'', ``exp'', or ``Matern32''
 #' @param res vector of length \code{n} containing the resolutions of the basis functions
+#' @param regular logical indicating if the basis functions (of each resolution) are in a regular grid
 #' @details This functions lays out local basis functions in a domain of interest based on pre-specified location and scale parameters. If \code{type} is ``bisquare'', then
 #'\deqn{\phi(u) = \left(1- \left(\frac{\| u \|}{R}\right)^2\right)^2 I(\|u\| < R),}
 #' and \code{scale} is given by \eqn{R}, the range of support of the bisquare function. If \code{type} is ``Gaussian'', then
@@ -95,8 +101,10 @@ local_basis <- function(manifold=sphere(),          # default manifold is sphere
                         loc=matrix(c(1,0),nrow=1),  # one centroid at (1,0)
                         scale = 1,                    # std = 1, and Gaussian RBF
                         type=c("bisquare","Gaussian","exp","Matern32"), 
-                        res = 1) {
+                        res = 1, 
+                        regular = FALSE) {
   
+    regular <- as.numeric(regular)
     
     ## Basic checks
     if(!is.matrix(loc)) stop("loc needs to be a matrix")
@@ -129,7 +137,7 @@ local_basis <- function(manifold=sphere(),          # default manifold is sphere
     df <- data.frame(loc, scale, res = res)
 
     ## Create new basis function, using the manifold, n, functions, parameters list, and data frame.
-    this_basis <- Basis(manifold = manifold,  n = n, fn = fn, pars = pars, df = df)
+    this_basis <- Basis(manifold = manifold,  n = n, fn = fn, pars = pars, df = df, regular = regular)
     return(this_basis)
 }
 
@@ -258,7 +266,7 @@ auto_basis <- function(manifold = plane(),
      B_temporal <- local_basis(manifold = real_line(),     
                                type = "Gaussian",          
                                loc = matrix(seq(0, end_loc, length.out = 10)), 
-                               scale = rep(end_loc / 10, 10))   
+                               scale = rep(end_loc / 10, 10), regular = TRUE)   
      
      ## Spatio-temporal basis functions generated with a tensor product
      B <- TensorP(B_spatial, B_temporal) 
@@ -308,8 +316,8 @@ auto_basis <- function(manifold = plane(),
                              isea3h_lo = isea3h_lo,
                              bndary = bndary,
                              scale_aperture = scale_aperture,
-                             verbose = 0)  # force verbose to 0 for this procedure of finding the
-            # number of basis functions
+                             verbose = 0) # force verbose to 0 for this procedure of finding the  number of basis functions
+                             
             tot_basis <- nbasis(G)      # record the number of basis functions
         }
         nres <- nres - 1  # nres resolutions was too much, deduct by one
@@ -343,7 +351,7 @@ auto_basis <- function(manifold = plane(),
 
     ## Irregular basis function placement can only proceed with INLA. Throw an error
     ## if INLA is not installed
-    if(is(m,"plane") & regular == 0 & is.null(bndary)) {
+    if(is(m,"plane") & !regular & is.null(bndary)) {
         if(!requireNamespace("INLA"))
             stop("For irregularly-placed basis-function generation INLA needs to be installed
                  for constructing basis function centres. Please install it
@@ -363,7 +371,7 @@ auto_basis <- function(manifold = plane(),
     ## If we are on the plane and want an irregular function placement, then call INLA
     ## and find a nonconvex hull in which the basis functions can be enclosed. If
     ## a boundary is supplied as a matrix, convert it an inla.mesh.segment object.
-    if(is(m,"plane") & regular == 0) {
+    if(is(m,"plane") & !regular) {
         if(is.null(bndary)) {
             bndary_seg = INLA::inla.nonconvex.hull(coords,concave = 0)
         } else {
@@ -379,7 +387,7 @@ auto_basis <- function(manifold = plane(),
     ## the aspect ratio < 1, or number of basis functions in x = regular
     ## if the aspect ratio >= 1. The number of basis functions in the other
     ## axis is then amplified by 1/aspect ratio, or aspect ratio, respectively
-    if(is(m,"plane") & regular > 0) {
+    if(is(m,"plane") & regular) {
         asp_ratio <- diff(yrange) / diff(xrange)
         if(asp_ratio < 1) {
             ny <- regular
@@ -409,7 +417,7 @@ auto_basis <- function(manifold = plane(),
     for(i in 1:nres) {
 
         ## If we are on the plane and we do not want a regular set
-        if(is(m,"plane") & (regular == 0)) {
+        if(is(m,"plane") & !regular) {
             ## Generate mesh using INLA and use the triangle vertices as notes
             ## The maximum and minimum triangle edges are a function of i
             ## The exact constants were found to be suitable by trial and error
@@ -423,7 +431,7 @@ auto_basis <- function(manifold = plane(),
             this_res_locs <- unique(this_res_locs)
 
             ## If we want a regular set of basis functions
-        } else if(is(m,"plane") & (regular > 0)) {
+        } else if(is(m,"plane") & regular) {
             ## Make a grid that gets more dense as i increases
             xgrid <- seq(xrange[1], xrange[2], length = round(nx*(3^(i)))) # x coordinates of centroids
             ygrid <- seq(yrange[1], yrange[2], length = round(ny*(3^(i)))) # y coordinates of centroids
@@ -472,7 +480,7 @@ auto_basis <- function(manifold = plane(),
             this_res_basis <- local_basis(manifold = m,
                                           loc=this_res_locs,
                                           scale=ifelse(type=="bisquare",1.5,0.7)*this_res_scales,
-                                          type=type)
+                                          type=type, regular = regular)
 
             ## Now refine/prune these basis functions
             if(prune > 0 & nrow(D)>0) {
@@ -509,22 +517,20 @@ auto_basis <- function(manifold = plane(),
             G[[i]] <-  local_basis(manifold = m,
                                    loc=this_res_locs,
                                    scale=ifelse(type=="bisquare",1.5,0.7)*this_res_scales,
-                                   type=type)
+                                   type=type, regular = regular)
             G[[i]]$res=i  # put resolution in the basis function data frame
         }
     }
 
     ## Finally concatenate all the basis functions together using the S4 method concat
-    G_basis <- Reduce("concat",G)
+    G_basis <- Reduce("concat", G)
     
     ## Add a buffer if requested (note that this is only allowed if regular == 1, 
     ## which has already been checked at this stage of the function, i.e., if 
     ## the user specifies a non-zero buffer with regular == 0, an error is 
     ## thrown upon entry of auto_basis)
-    if (buffer != 0) {
-      G_basis <- .buffer(G_basis, buffer = buffer, type = type)  
-    }
-
+    if (buffer != 0) G_basis <- .buffer(G_basis, buffer = buffer, type = type)  
+  
     return(G_basis)
 }
 

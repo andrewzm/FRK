@@ -68,13 +68,14 @@ setClass("STsphere",representation(radius="numeric"),contains="STmanifold")
 #' @slot fn a list of length \code{n}, with each item the function of a specific basis function
 #' @slot pars a list of parameters where the \eqn{i}-th item in the list contains the parameters of the \eqn{i}-th basis function, \code{fn[[i]]}
 #' @slot df a data frame containing other attributes specific to each basis function (for example the geometric centre of the local basis function)
+#' @slot regular logical indicating if the basis functions (of each resolution) are in a regular grid
 #' @details Basis functions are a central component of \code{FRK}, and the package is designed to work with user-defined specifications of these. For convenience, however, several functions are available to aid the user to construct a basis set for a given set of data points. Please see \code{\link{auto_basis}} for more details. The function \code{\link{local_basis}} helps the user construct a set of local basis functions (e.g., bisquare functions) from a collection of location and scale parameters.
 #' @seealso \code{\link{auto_basis}} for automatically constructing basis functions and \code{\link{show_basis}} for visualising basis functions.
 #' @rdname Basis-class
 setClass("Basis_obj", representation(n = "numeric","VIRTUAL"))
 
 #' @rdname Basis-class
-setClass("Basis",contains="Basis_obj", representation(manifold="manifold",fn="list",pars="list", df="data.frame"))
+setClass("Basis",contains="Basis_obj", representation(manifold="manifold",fn="list",pars="list", df="data.frame", regular = "numeric"))
 
 #' @rdname Basis-class
 setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Basis2="Basis",n = "integer", df = "data.frame"))

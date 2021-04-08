@@ -10,7 +10,8 @@ local_basis(
   loc = matrix(c(1, 0), nrow = 1),
   scale = 1,
   type = c("bisquare", "Gaussian", "exp", "Matern32"),
-  res = 1
+  res = 1,
+  regular = FALSE
 )
 
 radial_basis(
@@ -30,6 +31,8 @@ radial_basis(
 \item{type}{either ``bisquare'', ``Gaussian'', ``exp'', or ``Matern32''}
 
 \item{res}{vector of length \code{n} containing the resolutions of the basis functions}
+
+\item{regular}{logical indicating if the basis functions (of each resolution) are in a regular grid}
 }
 \description{
 Construct a set of local basis functions based on pre-specified location and scale parameters.

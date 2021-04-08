@@ -20,8 +20,7 @@ FRK(
   normalise_wts = TRUE,
   fs_model = "ind",
   vgm_model = NULL,
-  K_type = c("block-exponential", "neighbour", "unstructured", "separable",
-    "precision-block-exponential"),
+  K_type = c("block-exponential", "precision", "unstructured"),
   n_EM = 100,
   tol = 0.01,
   method = c("EM", "TMB"),
@@ -53,8 +52,7 @@ SRE(
   normalise_wts = TRUE,
   fs_model = "ind",
   vgm_model = NULL,
-  K_type = c("block-exponential", "neighbour", "unstructured", "separable",
-    "precision-block-exponential"),
+  K_type = c("block-exponential", "precision", "unstructured", "separable"),
   normalise_basis = TRUE,
   response = c("gaussian", "poisson", "bernoulli", "gamma", "inverse-gaussian",
     "negative-binomial", "binomial"),
@@ -124,7 +122,7 @@ loglik(SRE_model)
 
 \item{vgm_model}{an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm}. This object contains the variogram model that will be fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified, the variogram used is \code{gstat::vgm(1, "Lin", d, 1)}, where \code{d} is approximately one third of the maximum distance between any two data points}
 
-\item{K_type}{the parameterisation used for the \code{K} matrix. If the EM algorithm is used for model fitting, \code{K_type} can be "unstructured" or "block-exponential". If TMB is used for model fitting, \code{K_type} can be "neighbour" or "block-exponential". The default is "block-exponential"}
+\item{K_type}{the parameterisation used for the \code{K} matrix. If the EM algorithm is used for model fitting, \code{K_type} can be "unstructured" or "block-exponential". If TMB is used for model fitting, \code{K_type} can be "precision" or "block-exponential". The default is "block-exponential"}
 
 \item{n_EM}{maximum number of iterations for the EM algorithm}
 

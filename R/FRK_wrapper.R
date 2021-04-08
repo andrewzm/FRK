@@ -25,7 +25,7 @@ FRK <- function(f,                     # formula (compulsory)
                 normalise_wts = TRUE,
                 fs_model = "ind",      # fine-scale variation component
                 vgm_model = NULL,      # variogram model for error estimation
-                K_type = c("block-exponential", "neighbour", "unstructured", "separable", "precision-block-exponential"), # type of K matrix
+                K_type = c("block-exponential", "precision", "unstructured"), # type of K matrix
                 n_EM = 100,            # max. no. of EM iterations
                 tol = 0.01,            # tolerance at which EM is assumed to have converged
                 method = c("EM", "TMB"),         # method for parameter estimation
@@ -64,16 +64,16 @@ FRK <- function(f,                     # formula (compulsory)
     
     ## FRK() is intended to be used for a novice user; simply enforce 
     ## method = "TMB" for non-Gaussian data or when a link other than the 
-    ## identity is used, and enforce K_type = "neighbour" when method = "TMB"
+    ## identity is used, and enforce K_type = "precision" when method = "TMB"
     if (response != "gaussian" || link != "identity") {
-        if (method != "TMB") cat("Setting method = 'TMB', as a non-Gaussian data model or a non-identity link function has been chosen.\n")
+        if (method != "TMB") 
+            cat("Setting method = 'TMB', as a non-Gaussian data model or a non-identity link function has been chosen.\n")
         method <- "TMB"
     }
     if (method == "TMB") {
-        if (K_type != "neighbour" && K_type != "precision-block-exponential") {
-            cat("For computational efficiency, setting K_type = 'neighbour', because method = 'TMB'; if you really want to use the K_type = 'block-exponential' with method = 'TMB', use SRE() and SRE.fit().\n")
-            K_type <- "neighbour"
-        }
+        if (K_type != "precision") 
+            cat("For computational efficiency, setting K_type = 'precision', because method = 'TMB'; if you really want to use the K_type = 'block-exponential' with method = 'TMB', use SRE() and SRE.fit().\n")
+        K_type <- "precision"
     }
     
     .check_args_wrapper(f = f,              # check that the arguments are OK for SRE
@@ -205,7 +205,7 @@ FRK <- function(f,                     # formula (compulsory)
              sum_variables = sum_variables,  
              fs_model = fs_model,              # fs model (only "ind" for now)
              vgm_model = vgm_model,            # vgm model for error estimation
-             K_type = K_type,                  # "block-exponential", "unstructured", "neighbour", "separable"
+             K_type = K_type,                  # "block-exponential", "unstructured", "precision"
              response = response, 
              link = link, 
              fs_by_spatial_BAU = fs_by_spatial_BAU, 
