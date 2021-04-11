@@ -32,9 +32,6 @@ FRK(
   link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse",
     "inverse-squared"),
   optimiser = nlminb,
-  n_MC = 400,
-  type = "mean",
-  k = NULL,
   percentiles = c(5, 95),
   fs_by_spatial_BAU = FALSE,
   known_sigma2fs = NULL,
@@ -109,7 +106,7 @@ loglik(SRE_model)
 
 \item{basis}{object of class \code{Basis} (or \code{TensorP_Basis})}
 
-\item{BAUs}{object of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame}, \code{STIDF}, or \code{STFDF}. The object's data frame must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality. If the function \code{FRK} is used directly, then BAUs are created automatically, but only coordinates can then be used as covariates}
+\item{BAUs}{object of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame}, \code{STIDF}, or \code{STFDF}. The object's data frame must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality. If the function \code{FRK()} is used directly, then BAUs are created automatically, but only coordinates can then be used as covariates}
 
 \item{est_error}{flag indicating whether the measurement-error variance should be estimated from variogram techniques (only applicable for a Gaussian response). If this is set to 0, then \code{data} must contain a field \code{std}. Measurement-error estimation is currently not implemented for spatio-temporal datasets}
 
@@ -147,7 +144,7 @@ loglik(SRE_model)
 
 \item{taper}{positive numeric indicating the strength of the covariance tapering. Only applicable if \code{K_type = "block-exponential"} and \code{TMB} is used to fit the data}
 
-\item{...}{other parameters passed on to \code{auto_basis} and \code{auto_BAUs} when calling \code{FRK}, or the user specified \code{optimiser} function when calling \code{FRK} or \code{SRE.fit}}
+\item{...}{other parameters passed on to \code{auto_basis()} and \code{auto_BAUs()} when calling \code{FRK()}, or the user specified function \code{optimiser} when calling \code{FRK()} or \code{SRE.fit()}}
 
 \item{normalise_basis}{flag indicating whether to normalise the basis functions so that they reproduce a stochastic process with approximately constant variance spatially}
 
@@ -171,28 +168,128 @@ loglik(SRE_model)
 The Spatial Random Effects (SRE) model is the central object in FRK. The function \code{FRK} provides a wrapper for the construction and estimation of the SRE object from data, using the functions \code{SRE} (the object constructor) and \code{SRE.fit} (for fitting it to the data). Please see \code{\link{SRE-class}} for more details on the SRE object's properties and methods.
 }
 \details{
-\code{SRE()} is the main function in the package: It constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of Basic Areal Units (BAUs). The function first takes each object in the list \code{data} and maps it to the BAUs -- this entails binning point-referenced data into the BAUs (and averaging within the BAU) if \code{average_in_BAU = TRUE}, and finding which BAUs are influenced by the polygon datasets. Following this, the incidence matrix, \eqn{C}, is constructed. In a Gaussian setting, \eqn{C} appears in the observation model \eqn{Z = CY + C\delta + e}, where \eqn{\delta} is systematic error at the BAU level. In a non-Gaussian setting, \eqn{C} appears in \eqn{Z ~ EF(\mu_Z)}; \eqn{\mu_Z = C\mu}, where \eqn{EF(\cdot)} denotes an exponential family member with mean parameter \eqn{\mu_Z}, and \eqn{\mu} is the mean process evaluated over the BAUs. 
+\strong{Model description}
 
-The SRE model for the hidden process is given by 
-\deqn{Y = T\alpha + S\eta + \xi,} 
-where \eqn{T} are the covariates at the BAU level, \eqn{\alpha} are the regression coefficients, \eqn{S} are the basis functions evaluated at the BAU level, \eqn{\eta} are the basis-function coefficients, and \eqn{\xi} is the fine scale variation (at the BAU level). The covariance matrix of \eqn{\xi} is diagonal, with its diagonal elements proportional to the field `fs' in the BAUs (typically set to one). The constant of proportionality is estimated during model fitting. All required matrices (\eqn{S,T} etc.) are initialised using sensible defaults and returned as part of the object, please see \code{\link{SRE-class}} for more details.
+The hierarchical model implemented in \code{FRK} is a spatial generalised 
+linear mixed model (GLMM), which may be summarised as
+\deqn{Z_j \mid \mu_{Z,j}, \psi \sim EF(\mu_{Z, j}, \psi)}
+\deqn{\mu_Z = C\mu}
+\deqn{g(\mu) = Y}
+\deqn{Y = T\alpha + S\eta + \xi}
+\deqn{\alpha \mid \theta \sim N(0, K)}
+\deqn{\xi \mid \sigma^2_\xi \sim N(0, \sigma^2_\xi V),}
+where \eqn{Z_j} denotes a datum, \eqn{EF(\cdot)} denotes an exponential 
+family member with mean parameter \eqn{\mu_{Z, j}}, \eqn{\mu} is the mean 
+process evaluated over the BAUs, \eqn{g(\cdot)} is a link function that links
+the mean process \eqn{\mu(\cdot)} to the latent Gaussian process \eqn{Y(\cdot)},  
+\eqn{Y} is the latent Gaussian process evaluated over the BAUs, \eqn{T} are 
+regression covariates at the BAU level associated with regression parameters
+\eqn{\alpha}, \eqn{S} is a matrix of basis function evaluations over the BAUs, 
+\eqn{\eta} are the random coefficients associated with the basis functions, and \eqn{\xi} is 
+a vector containing fine-scale variation at the BAU level. The prior 
+distribution of the basis-function coefficients, \eqn{\eta}, are formulated 
+using either a covariance or precision matrix, depending on the argument 
+\code{K_type}; the parameters of these matrices are estimated during model 
+fitting. The covariance matrix of \eqn{\xi} is diagonal, with its 
+diagonal elements proportional to the field `fs' in the 
+BAUs (typically set to one). The constant of proportionality is estimated 
+during model fitting. 
 
-The hidden process is used to construct the mean process via \eqn{g(\mu) = Y}
+When the data is Gaussian, and an identity link function is used, the preceding 
+model simplifies considerably: specifically,
+\deqn{Z = CY + C\delta + e,} 
+where \eqn{Z} is the data vector, \eqn{\delta} is systematic error at the 
+BAU level, and \eqn{e} represent independent measurement error.  
 
-\code{SRE.fit()} takes an object of class \code{SRE} and estimates all unknown parameters, namely the covariance matrix \eqn{K}, the fine scale variance (\eqn{\sigma^2_{\xi}} or \eqn{\sigma^2_{\delta}}, depending on whether Case 1 or Case 2 is chosen; see the vignette) and the regression parameters \eqn{\alpha}. The only method currently implemented is the Expectation Maximisation (EM) algorithm, which the user configures through \code{n_EM} and \code{tol}. The log-likelihood (given in Section 2.2 of the vignette) is evaluated at each iteration at the current parameter estimate, and convergence is assumed to have been reached when this quantity stops changing by more than \code{tol}.
+\strong{Set-up}
 
-The actual computations for the E-step and M-step are relatively straightforward. The E-step contains an inverse of an \eqn{r \times r} matrix, where \code{r} is the number of basis functions which should not exceed 2000. The M-step first updates the matrix \eqn{K}, which only depends on the sufficient statistics of the basis-function coefficients \eqn{\eta}. Then, the regression parameter \eqn{\alpha} is updated and a simple optimisation routine (a line search) is used to update the fine-scale variance \eqn{\sigma^2_{\delta}} or \eqn{\sigma^2_{\xi}}. If the fine-scale errors and measurement random errors are homoscedastic, then a closed-form solution is available for the update of \eqn{\sigma^2_{\xi}} or \eqn{\sigma^2_{\delta}}. Irrespectively, since the udpates of \eqn{\alpha}, and \eqn{\sigma^2_{\delta}} or \eqn{\sigma^2_{\xi}}, are dependent, these two updates are iterated until the change in \eqn{\sigma^2_{\cdot}} is no more than 0.1\%. Information on the fitting (convergence etc.) can be extracted using \code{info_fit(SRE_model)}.
+\code{SRE()} 
+constructs a spatial random effects model from the user-defined formula, data object (a list 
+of spatially-referenced data), basis functions and a set of Basic Areal Units (BAUs). 
+It first takes each object in the list \code{data} and maps it to the BAUs -- this 
+entails binning point-referenced data into the BAUs (and averaging within the 
+BAU if \code{average_in_BAU = TRUE}), and finding which BAUs are associated 
+with observations. Following this, the incidence matrix, \eqn{C}, is 
+constructed. 
+All required matrices (\eqn{S}, \eqn{T}, \eqn{C}, etc.) 
+are constructed within \code{SRE()} and returned as part of the \code{SRE} object. 
+\code{SRE()} also intitialises the parameters and random effects using 
+sensible defaults. Please see 
+\code{\link{SRE-class}} for more details.
 
-The function \code{FRK} acts as a wrapper for the functions \code{SRE} and \code{SRE.fit}. An added advantage of using \code{FRK} directly is that it automatically generates BAUs and basis functions based on the data. Hence \code{FRK} can be called using only a list of data objects and an \code{R} formula, although the \code{R} formula can only contain space or time as covariates when BAUs are not explicitly supplied with the covariate data.
+\strong{Model fitting}
 
-Once the parameters are fitted, the \code{SRE} object is passed onto the function \code{predict()} in order to carry out optimal predictions over the same BAUs used to construct the SRE model with \code{SRE()}. The first part of the prediction process is to construct the matrix \eqn{S} over the prediction polygons. This is made computationally efficient by treating the prediction over polygons as that of the prediction over a combination of BAUs. This will yield valid results only if the BAUs are relatively small. Once the matrix \eqn{S} is found, a standard Gaussian inversion (through conditioning) using the estimated parameters is used for prediction.
+\code{SRE.fit()} takes an object of class \code{SRE} and estimates all unknown
+parameters, namely the covariance matrix \eqn{K}, the fine scale variance
+(\eqn{\sigma^2_{\xi}} or \eqn{\sigma^2_{\delta}}, depending on whether Case 1
+or Case 2 is chosen; see the vignette) and the regression parameters \eqn{\alpha}.
+There are two methods of model fitting currently implemented.
+\itemize{
+ \item{Maximum likelihhod estimation (MLE) via the expectation maximisation
+ (EM) algorithm. }{This method is implemented only
+ for Gaussian data and an identity link function.
+ The log-likelihood (given in Section 2.2 of the vignette) is evaluated at each
+iteration at the current parameter estimate. Optimation continues until
+convergence is reached (when the log-likelihood stops changing by more than
+\code{tol}), or when the number of EM iterations reaches \code{n_EM}.
+The actual computations for the E-step and M-step are relatively straightforward.
+The E-step contains an inverse of an \eqn{r \times r} matrix, where \code{r}
+is the number of basis functions which should not exceed 2000. The M-step
+first updates the matrix \eqn{K}, which only depends on the sufficient
+statistics of the basis-function coefficients \eqn{\eta}. Then, the regression
+parameters \eqn{\alpha} are updated and a simple optimisation routine
+(a line search) is used to update the fine-scale variance
+\eqn{\sigma^2_{\delta}} or \eqn{\sigma^2_{\xi}}. If the fine-scale errors and
+measurement random errors are homoscedastic, then a closed-form solution is
+available for the update of \eqn{\sigma^2_{\xi}} or \eqn{\sigma^2_{\delta}}.
+Irrespectively, since the updates of \eqn{\alpha}, and \eqn{\sigma^2_{\delta}}
+or \eqn{\sigma^2_{\xi}}, are dependent, these two updates are iterated until
+the change in \eqn{\sigma^2_{\cdot}} is no more than 0.1\%.}
+ \item{MLE via \code{TMB}. }{This method is implemented for
+ all available data models and link functions offered by \code{FRK}. Furthermore,
+ this method faciliates the inclusion of many more basis function than possible
+ with the EM algorithm (in excess of 10,000). \code{TMB} applies
+ the Laplace approximation to integrate out the latent random effects from the
+ complete-data likelihood. The resulting approximation of the marginal
+ log-likelihood, and its derivatives with respect to the parameters, are then
+ called from within \code{R} using the optimising function \code{optimiser}
+ (default \code{nlminb()}).}
+}
 
-\code{predict} returns the BAUs, which are of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame}, or \code{STFDF}, with two added attributes, \code{mu} and \code{var}. These can then be easily plotted using \code{spplot} or \code{ggplot2} (possibly in conjunction with \code{\link{SpatialPolygonsDataFrame_to_df}}) as shown in the package vignettes.
+\emph{Wrapper for set-up and model fitting}
+
+The function \code{FRK()} acts as a wrapper for the functions \code{SRE()} and 
+\code{SRE.fit()}. An added advantage of using \code{FRK()} directly is that it 
+automatically generates BAUs and basis functions based on the data. Hence 
+\code{FRK()} can be called using only a list of data objects and an \code{R} 
+formula, although the \code{R} formula can only contain space or time as 
+covariates when BAUs are not explicitly supplied with the covariate data.
+
+
+\strong{Prediction}
+
+Once the parameters are estimated, the \code{SRE} object is passed onto the 
+function \code{predict()} in order to carry out optimal predictions over the 
+same BAUs used to construct the SRE model with \code{SRE()}. The first part 
+of the prediction process is to construct the matrix \eqn{S} over the 
+prediction polygons. This is made computationally efficient by treating the 
+prediction over polygons as that of the prediction over a combination of BAUs. 
+This will yield valid results only if the BAUs are relatively small. Once the 
+matrix \eqn{S} is found, a standard Gaussian inversion (through conditioning) 
+using the estimated parameters is used for prediction.
+
+\code{predict} returns the BAUs (or an object specified in \code{newdata}), 
+which are of class \code{SpatialPixelsDataFrame}, \code{SpatialPolygonsDataFrame}, 
+or \code{STFDF}, with predictions and 
+uncertainty quantification added. 
+If \code{method = "TMB"}, the returned object is a list, containing the 
+previously described predictions, and a list of Monte Carlo samples. 
+The predictions and uncertainties can be easily plotted using \code{\link{plot}}.
 }
 \examples{
 library(sp)
 
-### Generate process and data
+## Generate process and data
 n <- 100
 sim_process <- data.frame(x = seq(0.005,0.995,length=n))
 sim_process$y <- 0
@@ -206,7 +303,7 @@ grid_BAUs <- auto_BAUs(manifold=real_line(),data=sim_data,
                        nonconvex_hull=FALSE,cellsize = c(0.01),type="grid")
 grid_BAUs$fs = 1
 
-### Set up SRE model
+## Set up SRE model
 G <- auto_basis(manifold = real_line(),
                 data=sim_data,
                 nres = 2,
@@ -218,16 +315,16 @@ S <- SRE(f,list(sim_data),G,
          grid_BAUs,
          est_error = FALSE)
 
-### Fit with 5 EM iterations so as not to take too much time
+## Fit with 5 EM iterations so as not to take too much time
 S <- SRE.fit(S,n_EM = 5,tol = 0.01,print_lik=TRUE)
 
-### Check fit info
+## Check fit info
 
 
-### Predict over BAUs
+## Predict over BAUs
 grid_BAUs <- predict(S)
 
-### Plot
+## Plot
 \dontrun{
 library(ggplot2)
 X <- slot(grid_BAUs,"data")
@@ -240,6 +337,11 @@ X <- subset(X, x >= 0 & x <= 1)
  print(g1)}
 }
 \seealso{
-\code{\link{SRE-class}} for details on the SRE object internals, \code{\link{auto_basis}} for automatically constructing basis functions, \code{\link{auto_BAUs}} for automatically constructing BAUs, and \code{\link{plot}} for plotting results. See also the paper \url{https://arxiv.org/abs/1705.08105} for details on code operation.
+\code{\link{SRE-class}} for details on the SRE object internals, 
+\code{\link{auto_basis}} for automatically constructing basis functions, 
+\code{\link{auto_BAUs}} for automatically constructing BAUs, 
+\code{\link{info_fit}} for extracting information on the fitting (convergence, etc.), 
+and \code{\link{plot}} for plotting results. 
+See also the paper \url{https://arxiv.org/abs/1705.08105} for details on code operation.
 }
 \keyword{spatial}

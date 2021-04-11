@@ -142,7 +142,7 @@ local_basis <- function(manifold=sphere(),          # default manifold is sphere
 }
 
 #' @title Automatic basis-function placement
-#' @description Generate automatically a set of local basis functions in the domain, and automatically prune in regions of sparse data.
+#' @description Automatically generate a set of local basis functions in the domain, and automatically prune in regions of sparse data.
 #' @param manifold object of class \code{manifold}, for example, \code{sphere} or \code{plane}
 #' @param data object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame} containing the data on which basis-function placement is based, or a list of these; see details
 #' @param regular an integer indicating the number of regularly-placed basis functions at the first resolution. In two dimensions, this dictates the smallest number of basis functions in a row or column at the coarsest resolution. If \code{regular=0}, an irregular grid is used, one that is based on the triangulation of the domain with increased mesh density in areas of high data density; see details
@@ -155,8 +155,8 @@ local_basis <- function(manifold=sphere(),          # default manifold is sphere
 #' @param scale_aperture the aperture (in the case of the bisquare, but similar interpretation for other basis) width of the basis function is the minimum distance between all the basis function centroids multiplied by \code{scale_aperture}. Typically this ranges between 1 and 1.5 and is defaulted to 1 on the sphere and 1.25 on the other manifolds.
 #' @param bndary a \code{matrix} containing points containing the boundary. If \code{regular == 0} this can be used to define a boundary in which irregularly-spaced basis functions are placed
 #' @param verbose a logical variable indicating whether to output a summary of the basis functions created or not
-#' @param buffer a numeric between 0 and 0.5 indicating the size of the buffer of basis functions along the boundary. The buffer is added by computing the number of basis functions in each dimension, and increasing this number by a factor of \code{buffer}. A buffer may be needed when the prior of the basis function random weights, eta,  is formulated in terms of a precision matrix
-#' @param tunit temporal unit when requiring space-time basis. Should be the same as used for the BAUs. Can be "secs", "mins", "hours", "days", "years", etc.
+#' @param buffer a numeric between 0 and 0.5 indicating the size of the buffer of basis functions along the boundary. The buffer is added by computing the number of basis functions in each dimension, and increasing this number by a factor of \code{buffer}. A buffer may be needed when the prior distribution of the basis-function coefficients is formulated in terms of a precision matrix
+#' @param tunit temporal unit, required when constructing a spatio-temporal basis. Should be the same as used for the BAUs. Can be "secs", "mins", "hours", "days", "years", etc.
 #' @param ... unused
 #' @details This function automatically places basis functions within the domain of interest. If the domain is a plane or the real line, then the object \code{data} is used to establish the domain boundary.
 #'
@@ -177,13 +177,13 @@ local_basis <- function(manifold=sphere(),          # default manifold is sphere
 #'
 #' If the manifold is the surface of a sphere, then basis functions are placed on the centroids of the discrete global grid (DGG), with the first basis resolution corresponding to the third resolution of the DGG (ISEA3H resolution 2, which yields 92 basis functions globally).  It is not recommended to go above \code{nres == 3} (ISEA3H resolutions 2--4) for the whole sphere; \code{nres=3} yields a total of 1176 basis functions. Up to ISEA3H resolution 6 is available with \code{FRK}; for finer resolutions; please install \code{dggrids} from \code{https://github.com/andrewzm/dggrids} using \code{devtools}.
 #'
-#' Basis functions that are not influenced by data points may hinder convergence of the EM algorithm when \code{K_type = ``unstructured''}, since the associated hidden states are, by and large, unidentifiable. We hence provide a means to automatically remove such basis functions through the parameter \code{prune}. The final set only contains basis functions for which the column sums in the associated matrix \eqn{S} (which, recall, is the value/average of the basis functions at/over the data points/polygons) is greater than \code{prune}. If \code{prune == 0}, no basis functions are removed from the original design.
+#' Basis functions that are not influenced by data points may hinder convergence of the EM algorithm when \code{K_type = "unstructured"}, since the associated hidden states are, by and large, unidentifiable. We hence provide a means to automatically remove such basis functions through the parameter \code{prune}. The final set only contains basis functions for which the column sums in the associated matrix \eqn{S} (which, recall, is the value/average of the basis functions at/over the data points/polygons) is greater than \code{prune}. If \code{prune == 0}, no basis functions are removed from the original design.
 #' @examples
 #' \dontrun{
 #' library(sp)
 #' library(ggplot2)
 #'
-#' ### Create a synthetic dataset
+#' ## Create a synthetic dataset
 #' set.seed(1)
 #' d <- data.frame(lon = runif(n=1000,min = -179, max = 179),
 #'                 lat = runif(n=1000,min = -90, max = 90),
@@ -191,13 +191,13 @@ local_basis <- function(manifold=sphere(),          # default manifold is sphere
 #' coordinates(d) <- ~lon + lat
 #' proj4string(d)=CRS("+proj=longlat +ellps=sphere")
 #'
-#' ### Now create basis functions over sphere
+#' ## Now create basis functions over sphere
 #' G <- auto_basis(manifold = sphere(),data=d,
 #'                 nres = 2,prune=15,
 #'                 type = "bisquare",
 #'                 subsamp = 20000)
 #'
-#' ### Plot
+#' ## Plot
 #' show_basis(G,draw_world())
 #' }
 #' @export

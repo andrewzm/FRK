@@ -47,14 +47,14 @@ auto_basis(
 
 \item{verbose}{a logical variable indicating whether to output a summary of the basis functions created or not}
 
-\item{buffer}{a numeric between 0 and 0.5 indicating the size of the buffer of basis functions along the boundary. The buffer is added by computing the number of basis functions in each dimension, and increasing this number by a factor of \code{buffer}. A buffer may be needed when the prior of the basis function random weights, eta,  is formulated in terms of a precision matrix}
+\item{buffer}{a numeric between 0 and 0.5 indicating the size of the buffer of basis functions along the boundary. The buffer is added by computing the number of basis functions in each dimension, and increasing this number by a factor of \code{buffer}. A buffer may be needed when the prior distribution of the basis-function coefficients is formulated in terms of a precision matrix}
 
-\item{tunit}{temporal unit when requiring space-time basis. Should be the same as used for the BAUs. Can be "secs", "mins", "hours", "days", "years", etc.}
+\item{tunit}{temporal unit, required when constructing a spatio-temporal basis. Should be the same as used for the BAUs. Can be "secs", "mins", "hours", "days", "years", etc.}
 
 \item{...}{unused}
 }
 \description{
-Generate automatically a set of local basis functions in the domain, and automatically prune in regions of sparse data.
+Automatically generate a set of local basis functions in the domain, and automatically prune in regions of sparse data.
 }
 \details{
 This function automatically places basis functions within the domain of interest. If the domain is a plane or the real line, then the object \code{data} is used to establish the domain boundary.
@@ -76,14 +76,14 @@ If the manifold is a plane, and \code{regular > 0}, then basis functions are pla
 
 If the manifold is the surface of a sphere, then basis functions are placed on the centroids of the discrete global grid (DGG), with the first basis resolution corresponding to the third resolution of the DGG (ISEA3H resolution 2, which yields 92 basis functions globally).  It is not recommended to go above \code{nres == 3} (ISEA3H resolutions 2--4) for the whole sphere; \code{nres=3} yields a total of 1176 basis functions. Up to ISEA3H resolution 6 is available with \code{FRK}; for finer resolutions; please install \code{dggrids} from \code{https://github.com/andrewzm/dggrids} using \code{devtools}.
 
-Basis functions that are not influenced by data points may hinder convergence of the EM algorithm when \code{K_type = ``unstructured''}, since the associated hidden states are, by and large, unidentifiable. We hence provide a means to automatically remove such basis functions through the parameter \code{prune}. The final set only contains basis functions for which the column sums in the associated matrix \eqn{S} (which, recall, is the value/average of the basis functions at/over the data points/polygons) is greater than \code{prune}. If \code{prune == 0}, no basis functions are removed from the original design.
+Basis functions that are not influenced by data points may hinder convergence of the EM algorithm when \code{K_type = "unstructured"}, since the associated hidden states are, by and large, unidentifiable. We hence provide a means to automatically remove such basis functions through the parameter \code{prune}. The final set only contains basis functions for which the column sums in the associated matrix \eqn{S} (which, recall, is the value/average of the basis functions at/over the data points/polygons) is greater than \code{prune}. If \code{prune == 0}, no basis functions are removed from the original design.
 }
 \examples{
 \dontrun{
 library(sp)
 library(ggplot2)
 
-### Create a synthetic dataset
+## Create a synthetic dataset
 set.seed(1)
 d <- data.frame(lon = runif(n=1000,min = -179, max = 179),
                 lat = runif(n=1000,min = -90, max = 90),
@@ -91,13 +91,13 @@ d <- data.frame(lon = runif(n=1000,min = -179, max = 179),
 coordinates(d) <- ~lon + lat
 proj4string(d)=CRS("+proj=longlat +ellps=sphere")
 
-### Now create basis functions over sphere
+## Now create basis functions over sphere
 G <- auto_basis(manifold = sphere(),data=d,
                 nres = 2,prune=15,
                 type = "bisquare",
                 subsamp = 20000)
 
-### Plot
+## Plot
 show_basis(G,draw_world())
 }
 }
