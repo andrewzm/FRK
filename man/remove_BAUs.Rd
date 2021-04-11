@@ -7,19 +7,15 @@
 remove_BAUs(BAUs, rmidx, redefine_index = FALSE)
 }
 \arguments{
-\item{BAUs}{BAU object.}
+\item{BAUs}{BAU object  (an object of class \code{SpatialPixelsDataFrame}, \code{SpatialPolygonsDataFrame}, or \code{STFDF})}
 
-\item{rmidx}{indices of spatial basis functions to remove. If the BAUs are of class \code{STFDF}, the indices of the spatial BAUs (\code{BAUs@sp}) must be provided.}
-
-\item{redefine_index}{Logical indicating whether indexing columns (columns with every element equal to their corresponding row number) of the \code{@data} slot should be redefined post BAU removal to remain as indexing columns. 
-That is, if \code{redefine_index = TRUE}, then indexing columns will be redefined post BAU removal to index the newly created BAUs. Otherwise, the original values of detected indexing columns will be left unchanged.}
+\item{rmidx}{indices of spatial basis functions to remove. If the BAUs are of class \code{STFDF}, the indices of the spatial BAUs (\code{BAUs@sp}) must be provided, and the spatio-temporal BAUs associated with these spatial BAUs will be removed}
 }
 \value{
 \code{BAUs} with specified spatial BAUs removed.
 }
 \description{
-Takes a \code{BAU} object returns the \code{BAU} object with selected BAUs removed specified by \code{rmidx}.
-For spatio-temporal BAUs, the indices of the spatial BAUs (\code{BAUs@sp}) must be provided, and the spatio-temporal BAUs corresponding to these spatial BAUs will be removed.
+Takes a BAU object and returns the BAU object with selected BAUs removed
 }
 \examples{
 library("sp")

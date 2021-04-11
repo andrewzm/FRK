@@ -1,32 +1,32 @@
-#' Link and inverse-link function generator.
-#'
-#' Create the link function \eqn{g}  and inverse-link function \eqn{\psi},
-#' which link the conditional mean of the data \eqn{\mu} to the latent
-#' geostatistical process \eqn{Y} such that \eqn{g(\mu) = Y} and
-#' \eqn{\mu = \psi(Y)}, respectively.
-#'
-#' For families lacking a "known constant" parameter,
-#' \code{.link_fn} generates the functions linking
-#' the conditional mean of the data \eqn{\mu} to the latent
-#' geostatistical process \eqn{Y}. However, for families with a "known constant"
-#' parameter (such as the "binomial" and "negative-binomial"), \code{.link_fn} generate the functions linking
-#' the probability parameter \eqn{p} to the latent
-#' geostatistical process \eqn{Y}, and then the parameter \eqn{p} to the conditional mean \eqn{\mu}.
-#'
-#' @param kind A character string indicating which kind of link function is desired. 
-#' Valid values are 
-#' \describe{
-#'   \item{\code{"Y_to_mu"}}{Provides the function \eqn{\psi} such that \eqn{\mu = \psi(Y)}.}
-#'   \item{\code{"mu_to_Y"}}{Provides the function \eqn{g} such that \eqn{g(\mu) = Y}.}
-#'   \item{\code{"Y_to_prob"}}{Provides the function \eqn{\zeta} such that \eqn{p = \zeta(Y)}.}
-#'   \item{\code{"prob_to_Y"}}{Provides the function \eqn{h} such that \eqn{h(p) = Y}.}
-#'   \item{\code{"prob_to_mu"}}{Provides the function \eqn{\chi} such that \eqn{\mu = \chi(p)}.}
-#'   \item{\code{"mu_to_prob"}}{Provides the function \eqn{f} such that \eqn{f(\mu) = p}.}
-#' }
-#' Note that the latter four values are relevant only to the binomial and negative-binomial distributions with logit, probit, or cloglog link functions. 
-#' @param link A character string indicating the assumed link function. \emph{Not} required if \code{kind} is \code{"prob_to_mu"} or \code{"mu_to_prob"}. 
-#' @param response A character string indicating the assumed response distribution. \emph{Only} required if \code{kind} is \code{"prob_to_mu"} or \code{"mu_to_prob"}.
-#' @return A function.
+## #' Link and inverse-link function generator.
+## #'
+## #' Create the link function \eqn{g}  and inverse-link function \eqn{\psi},
+## #' which link the conditional mean of the data \eqn{\mu} to the latent
+## #' geostatistical process \eqn{Y} such that \eqn{g(\mu) = Y} and
+## #' \eqn{\mu = \psi(Y)}, respectively.
+## #'
+## #' For families lacking a "known constant" parameter,
+## #' \code{.link_fn} generates the functions linking
+## #' the conditional mean of the data \eqn{\mu} to the latent
+## #' geostatistical process \eqn{Y}. However, for families with a "known constant"
+## #' parameter (such as the "binomial" and "negative-binomial"), \code{.link_fn} generate the functions linking
+## #' the probability parameter \eqn{p} to the latent
+## #' geostatistical process \eqn{Y}, and then the parameter \eqn{p} to the conditional mean \eqn{\mu}.
+## #'
+## #' @param kind A character string indicating which kind of link function is desired. 
+## #' Valid values are 
+## #' \describe{
+## #'   \item{\code{"Y_to_mu"}}{Provides the function \eqn{\psi} such that \eqn{\mu = \psi(Y)}.}
+## #'   \item{\code{"mu_to_Y"}}{Provides the function \eqn{g} such that \eqn{g(\mu) = Y}.}
+## #'   \item{\code{"Y_to_prob"}}{Provides the function \eqn{\zeta} such that \eqn{p = \zeta(Y)}.}
+## #'   \item{\code{"prob_to_Y"}}{Provides the function \eqn{h} such that \eqn{h(p) = Y}.}
+## #'   \item{\code{"prob_to_mu"}}{Provides the function \eqn{\chi} such that \eqn{\mu = \chi(p)}.}
+## #'   \item{\code{"mu_to_prob"}}{Provides the function \eqn{f} such that \eqn{f(\mu) = p}.}
+## #' }
+## #' Note that the latter four values are relevant only to the binomial and negative-binomial distributions with logit, probit, or cloglog link functions. 
+## #' @param link A character string indicating the assumed link function. \emph{Not} required if \code{kind} is \code{"prob_to_mu"} or \code{"mu_to_prob"}. 
+## #' @param response A character string indicating the assumed response distribution. \emph{Only} required if \code{kind} is \code{"prob_to_mu"} or \code{"mu_to_prob"}.
+## #' @return A function.
 .link_fn <- function (kind, link, response) {
   
   if (kind == "Y_to_mu") {
@@ -148,22 +148,22 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 }
 
 
-#' Test equality within a given tolerance.
-#'
-#' Tests equality between objects \code{x} and \code{y} (within a given tolerance, \code{tol}).
-#' The primary purpose of this function is to avoid deeming objects to be unequal if they differ
-#' by some very tiny amount due to floating point inaccuracies.
-#' Of particular note is that the function can accept a matrix argument for \code{x} and a single numeric
-#' for \code{y}, and the output will be a matrix with elements 1 and 0 if elements of \code{x} are equal to
-#' \code{y} or not, respectively; i.e., it does elementwise comparisons.
-#'
-#' @param x \code{R} object.
-#' @param y \code{R} object we wish to compare to \code{x}.
-#' @param tol Tolerance.
-#' @return If \code{x} and \code{y} are single numbers, then the function
-#' returns 1 if \code{x} and \code{y} are equal (within \code{tol}), and 0
-#' otherwise. However matrices may also be passed, in which case the function
-#' returns a matrix of equal size with elementwise comparisons.
+## #' Test equality within a given tolerance.
+## #'
+## #' Tests equality between objects \code{x} and \code{y} (within a given tolerance, \code{tol}).
+## #' The primary purpose of this function is to avoid deeming objects to be unequal if they differ
+## #' by some very tiny amount due to floating point inaccuracies.
+## #' Of particular note is that the function can accept a matrix argument for \code{x} and a single numeric
+## #' for \code{y}, and the output will be a matrix with elements 1 and 0 if elements of \code{x} are equal to
+## #' \code{y} or not, respectively; i.e., it does elementwise comparisons.
+## #'
+## #' @param x \code{R} object.
+## #' @param y \code{R} object we wish to compare to \code{x}.
+## #' @param tol Tolerance.
+## #' @return If \code{x} and \code{y} are single numbers, then the function
+## #' returns 1 if \code{x} and \code{y} are equal (within \code{tol}), and 0
+## #' otherwise. However matrices may also be passed, in which case the function
+## #' returns a matrix of equal size with elementwise comparisons.
 ## Examples:
 ## Note that .equal_within_tol is not exported, so it cannot be used in the 
 ## usual roxygen @examples format. We could use FRK:::.equal_within_tol, 
@@ -182,17 +182,17 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 
 
 
-#' Computation and concatenation of percentiles to a dataframe.
-#'
-#' Computes the percentiles or HPD interval bounds at each prediction location and appends 
-#' the result to \code{data}. Note that we use percentiles rather than quantiles
-#' because we including a "dot" (corresponding to the decimal place) in the 
-#' dataframe column name may cause issues. 
-#'
-#' @param data The dataframe we will append percentiles to; the number of rows of the matrices in \code{MC} and  in \code{data} must be equal
-#' @param MC List of matrices containing Monte Carlo samples
-#' @param percentiles a vector of scalars in [0, 100] specifying the desired percentiles; if \code{percentiles = NULL}, no percentiles are computed 
-#' @return The dataframe \code{data} with appended percentiles
+## #' Computation and concatenation of percentiles to a dataframe.
+## #'
+## #' Computes the percentiles or HPD interval bounds at each prediction location and appends 
+## #' the result to \code{data}. Note that we use percentiles rather than quantiles
+## #' because we including a "dot" (corresponding to the decimal place) in the 
+## #' dataframe column name may cause issues. 
+## #'
+## #' @param data The dataframe we will append percentiles to; the number of rows of the matrices in \code{MC} and  in \code{data} must be equal
+## #' @param MC List of matrices containing Monte Carlo samples
+## #' @param percentiles a vector of scalars in [0, 100] specifying the desired percentiles; if \code{percentiles = NULL}, no percentiles are computed 
+## #' @return The dataframe \code{data} with appended percentiles
 .concat_percentiles_to_df <- function (data, MC, percentiles) {
   
   if (!is.null(percentiles)) {
@@ -207,6 +207,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
   
   return(data)
 }
+
 
 
 ## Since we will use ggplot2 we will first convert our objects to data frames.
@@ -250,31 +251,31 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 
 # ---- Various matrix construction functions ----
 
-#' Covariance tapering based on distances.
-#'
-#' Computes the covariance tapering parameters \eqn{\beta} (which are dependent
-#' on resolution), number of non-zeros in each block of the tapered
-#' covariance matrix K_tap, and the tapered distance matrix whereby some distances
-#' have been set to zero post tapering (although the remaining non-zero distances 
-#' are unchanged).
-#'
-#' \code{taper} determines how strong the covariance tapering is; the ith taper parameter
-#' \eqn{\beta_i} is equal to \code{taper[i]} * \code{minDist[i]}, where
-#' \code{minDist[i]} is the minimum distance between basis functions at the
-#' \code{i}th resolution.
-#'
-#' @param D_matrices A list of distance matrices corresponding to each resolution.
-#' @param taper The strength of the taper (either a vector or a single number).
-#'
-#' @return A list containing:
-#' \describe{
-#'   \item{beta}{A vector of taper parameters.}
-#'   \item{nnz}{A vector containing the number of non-zeros in each block of the 
-#'   tapered prior covariance matrix, K_tap.}
-#'   \item{D_tap}{A sparse block-diagonal matrix containing the distances with 
-#'   some distances set to zero post tapering. }
-#' }
-#' @seealso \code{\link{.K_matrix}}
+## #' Covariance tapering based on distances.
+## #'
+## #' Computes the covariance tapering parameters \eqn{\beta} (which are dependent
+## #' on resolution), number of non-zeros in each block of the tapered
+## #' covariance matrix K_tap, and the tapered distance matrix whereby some distances
+## #' have been set to zero post tapering (although the remaining non-zero distances 
+## #' are unchanged).
+## #'
+## #' \code{taper} determines how strong the covariance tapering is; the ith taper parameter
+## #' \eqn{\beta_i} is equal to \code{taper[i]} * \code{minDist[i]}, where
+## #' \code{minDist[i]} is the minimum distance between basis functions at the
+## #' \code{i}th resolution.
+## #'
+## #' @param D_matrices A list of distance matrices corresponding to each resolution.
+## #' @param taper The strength of the taper (either a vector or a single number).
+## #'
+## #' @return A list containing:
+## #' \describe{
+## #'   \item{beta}{A vector of taper parameters.}
+## #'   \item{nnz}{A vector containing the number of non-zeros in each block of the 
+## #'   tapered prior covariance matrix, K_tap.}
+## #'   \item{D_tap}{A sparse block-diagonal matrix containing the distances with 
+## #'   some distances set to zero post tapering. }
+## #' }
+## #' @seealso \code{\link{.K_matrix}}
 .cov_tap <- function(D_matrices, taper = 8){
   
   ri <- sapply(D_matrices, nrow) # No. of basis functions at each res
@@ -310,16 +311,16 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 
 
 
-#' K matrix, the un-tapered prior covariance matrix.
-#'
-#' Construct the prior covariance matrix of the random effects (NOT-TAPERED).
-#'
-#' @param D_matrices A list of distance matrices corresponding to each resolution.
-#' @param sigma2 The variance components: a vector with length equal to the number
-#' of resolutions i.e. \code{length(D_matrices)}.
-#' @param tau The correlation components: a vector with length equal to the number
-#' of resolutions i.e. \code{length(D_matrices)}.
-#' @return The block-diagonal (class \code{dgCmatrix}) prior covariance matrix, K.
+## #' K matrix, the un-tapered prior covariance matrix.
+## #'
+## #' Construct the prior covariance matrix of the random effects (NOT-TAPERED).
+## #'
+## #' @param D_matrices A list of distance matrices corresponding to each resolution.
+## #' @param sigma2 The variance components: a vector with length equal to the number
+## #' of resolutions i.e. \code{length(D_matrices)}.
+## #' @param tau The correlation components: a vector with length equal to the number
+## #' of resolutions i.e. \code{length(D_matrices)}.
+## #' @return The block-diagonal (class \code{dgCmatrix}) prior covariance matrix, K.
 .K_matrix <- function(D_matrices, sigma2, tau){
   
   exp_cov_function <- function(dist_matrix, sigma2, tau) {
@@ -344,18 +345,18 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
   return(K)
 }
 
-#' \eqn{K_\beta} matrix, the taper matrix.
-#'
-#' Constructs \eqn{K_\beta}, the taper matrix, using the Spherical taper.
-#'
-#' Denoting by \eqn{d(s,s^*)} the distance between two spatial locations,
-#' the Spherical taper is given by:
-#' \deqn{C_\beta(s, s^*) = (1-\frac{d(s,s^*)}{\beta})^2_{+}  (1+\frac{d(s,s^*)}{2\beta}), }
-#' where \eqn{x_+ = max(x, 0)}.
-#'
-#' @param D_matrices A list of distance matrices corresponding to each resolution.
-#' @param beta The taper parameters (which vary based on resolution).
-#' @return A taper matrix, which is block-diagonal and of class \code{dgCmatrix}.
+## #' \eqn{K_\beta} matrix, the taper matrix.
+## #'
+## #' Constructs \eqn{K_\beta}, the taper matrix, using the Spherical taper.
+## #'
+## #' Denoting by \eqn{d(s,s^*)} the distance between two spatial locations,
+## #' the Spherical taper is given by:
+## #' \deqn{C_\beta(s, s^*) = (1-\frac{d(s,s^*)}{\beta})^2_{+}  (1+\frac{d(s,s^*)}{2\beta}), }
+## #' where \eqn{x_+ = max(x, 0)}.
+## #'
+## #' @param D_matrices A list of distance matrices corresponding to each resolution.
+## #' @param beta The taper parameters (which vary based on resolution).
+## #' @return A taper matrix, which is block-diagonal and of class \code{dgCmatrix}.
 .K_beta_matrix <- function(D_matrices, beta){
   
   spherical_taper <- function(matrix, beta) {
@@ -373,14 +374,14 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
   return(K_beta)
 }
 
-#' K_tap, the tapered prior covariance matrix.
-#'
-#' Construct K_tap, the \emph{tapered} prior covariance matrix, using the Spherical taper.
-#'
-#' @inheritParams .K_matrix
-#' @inheritParams .K_beta_matrix
-#' @return The \emph{tapered} prior covariance matrix, which is
-#' block-diagonal and of class \code{dgCmatrix}.
+## #' K_tap, the tapered prior covariance matrix.
+## #'
+## #' Construct K_tap, the \emph{tapered} prior covariance matrix, using the Spherical taper.
+## #'
+## #' @inheritParams .K_matrix
+## #' @inheritParams .K_beta_matrix
+## #' @return The \emph{tapered} prior covariance matrix, which is
+## #' block-diagonal and of class \code{dgCmatrix}.
 .K_tap_matrix <- function(D_matrices, beta, sigma2, tau){
   
   K <- .K_matrix(D_matrices, sigma2, tau)
@@ -392,26 +393,26 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 }
 
 
-#' Neighbour matrix.
-#'
-#' Creates a matrix \eqn{A} with elements \eqn{A_{i, j}} equal to 1 if basis
-#' functions i and j (i not equal to j) are first order neighbours, 1/2 if they are second order neighbours, and so on.
-#' Neighbours with a larger order than specified by \code{order} have 0 in this matrix.
-#' The diagonal elements of \eqn{A} (i.e. \eqn{A_{i, i}}) indicate the row sums (if 
-#' the \code{order == 1}, then it is the totalnumber of first order neighbours associated with basis function i).
-#'
-#' This function is only designed for basis functions
-#' at \emph{one resolution}. It also assumes the basis functions are in a
-#' regularly-spaced lattice; the shape of the lattice is not important, however
-#' there \emph{must} be constant spacing between basis functions in a given
-#' direction (horizontal and vertical spacing can be different).
-#'
-#' @seealso \code{\link{.sparse_Q}}, \code{\link{.sparse_Q_block_diag}}
-#'
-#' @param df a dataframe containing the spatial coordinates
-#' @param order If order == 1, only first order neighbours are considered. If order == 2, second order neighbours are also considered, and so on
-#' @param diag_neighbours Indicates whether to consider the diagonal neighbours. If FALSE (default), only the horizontal and vertical neighbours are considered
-#' @return A "neighbour" matrix with element (i, j), for i not equal to j, equal to 1/l if basis functions i and j are lth order neighbours (provided \code{l <= order}), and 0 otherwise. Diagonal elements indicate the row sums
+## #' Neighbour matrix.
+## #'
+## #' Creates a matrix \eqn{A} with elements \eqn{A_{i, j}} equal to 1 if basis
+## #' functions i and j (i not equal to j) are first order neighbours, 1/2 if they are second order neighbours, and so on.
+## #' Neighbours with a larger order than specified by \code{order} have 0 in this matrix.
+## #' The diagonal elements of \eqn{A} (i.e. \eqn{A_{i, i}}) indicate the row sums (if 
+## #' the \code{order == 1}, then it is the totalnumber of first order neighbours associated with basis function i).
+## #'
+## #' This function is only designed for basis functions
+## #' at \emph{one resolution}. It also assumes the basis functions are in a
+## #' regularly-spaced lattice; the shape of the lattice is not important, however
+## #' there \emph{must} be constant spacing between basis functions in a given
+## #' direction (horizontal and vertical spacing can be different).
+## #'
+## #' @seealso \code{\link{.sparse_Q}}, \code{\link{.sparse_Q_block_diag}}
+## #'
+## #' @param df a dataframe containing the spatial coordinates
+## #' @param order If order == 1, only first order neighbours are considered. If order == 2, second order neighbours are also considered, and so on
+## #' @param diag_neighbours Indicates whether to consider the diagonal neighbours. If FALSE (default), only the horizontal and vertical neighbours are considered
+## #' @return A "neighbour" matrix with element (i, j), for i not equal to j, equal to 1/l if basis functions i and j are lth order neighbours (provided \code{l <= order}), and 0 otherwise. Diagonal elements indicate the row sums
 .neighbour_matrix <- function(df, order = 1, diag_neighbours = FALSE) {
    
   A <- matrix(0, nrow = nrow(df), ncol = nrow(df))
@@ -478,20 +479,20 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 
 
 
-#' Sparse precision matrix.
-#'
-#' Creates a sparse precision matrix \eqn{Q} with off diagonal elements equal
-#' to -1 if the basis functions are neighbours, and zero otherwise.
-#' The diagonal elements are equal to the number of neighbours for that basis
-#' function, plus some amount given by \code{kappa}.
-#'
-#' @param A "neighbour" matrix with element (i, j), for i not equal to j,
-#' equal to 1 if basis functions i and j are neighbours, and 0 otherwise,
-#' diagonal elements indicating the number of neighbours for that basis function.
-#' @param kappa Quantity to add to the diagonal elements. This must be positive if Q is to be positive definite.
-#' @param rho Quantity to multiply matrix by. This must be positive if Q is to be positive definite.
-#' @return A sparse precision matrix of class \code{dgCMatrix}.
-#' @seealso \code{\link{.neighbour_matrix}}, \code{\link{.sparse_Q_block_diag}}
+## #' Sparse precision matrix.
+## #'
+## #' Creates a sparse precision matrix \eqn{Q} with off diagonal elements equal
+## #' to -1 if the basis functions are neighbours, and zero otherwise.
+## #' The diagonal elements are equal to the number of neighbours for that basis
+## #' function, plus some amount given by \code{kappa}.
+## #'
+## #' @param A "neighbour" matrix with element (i, j), for i not equal to j,
+## #' equal to 1 if basis functions i and j are neighbours, and 0 otherwise,
+## #' diagonal elements indicating the number of neighbours for that basis function.
+## #' @param kappa Quantity to add to the diagonal elements. This must be positive if Q is to be positive definite.
+## #' @param rho Quantity to multiply matrix by. This must be positive if Q is to be positive definite.
+## #' @return A sparse precision matrix of class \code{dgCMatrix}.
+## #' @seealso \code{\link{.neighbour_matrix}}, \code{\link{.sparse_Q_block_diag}}
 .sparse_Q <- function(A, kappa, rho) {
   
   Q <- -A
@@ -504,16 +505,16 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 
 
 
-#' Block-diagonal sparse precision matrix.
-#'
-#' Creates a block-diagonal sparse precision matrix, where the blocks are created
-#' using \code{sparse_Q}.
-#'
-#' @inheritParams .sparse_Q
-#' @inheritParams .neighbour_matrix
-#' @param df dataframe containing the spatial coordinates (named "loc1" and "loc2", etc.) and a column indicating the resolution of each basis function (named "res").
-#' @return list containing the sparse block-diagonal precision matrix (Q) of class "dgCMatrix", and the number of non-zero elements (nnz) at each resolution.
-#' @seealso \code{\link{.sparse_Q}}, \code{\link{.neighbour_matrix}}
+## #' Block-diagonal sparse precision matrix.
+## #'
+## #' Creates a block-diagonal sparse precision matrix, where the blocks are created
+## #' using \code{sparse_Q}.
+## #'
+## #' @inheritParams .sparse_Q
+## #' @inheritParams .neighbour_matrix
+## #' @param df dataframe containing the spatial coordinates (named "loc1" and "loc2", etc.) and a column indicating the resolution of each basis function (named "res").
+## #' @return list containing the sparse block-diagonal precision matrix (Q) of class "dgCMatrix", and the number of non-zero elements (nnz) at each resolution.
+## #' @seealso \code{\link{.sparse_Q}}, \code{\link{.neighbour_matrix}}
 .sparse_Q_block_diag <- function(df, kappa, rho, order = 1, diag_neighbours = FALSE) {
   
   if (!("res" %in% names(df)))
@@ -545,6 +546,7 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 
 # ---- Basis manipulation ----
 
+## Only works for spatial 
 remove_basis_outside_polygon <- function(basis_object, polygon) {
   sp_df <- basis_object@df
   coordinates(sp_df) <- ~ loc1 + loc2
@@ -562,149 +564,147 @@ remove_basis_outside_polygon <- function(basis_object, polygon) {
 # ---- BAU manipulation ----
 
 
-setMethod("reverse_spatial_coords",signature(BAUs="SpatialPixelsDataFrame"),function(BAUs) {
-  
-  ## Number of dimensions of the BAUs
-  n_coord <- dimensions(BAUs)
-  
-  ## Reverse the slots (must do this for each slot):
-  ## First, deal with the @data slot.
-  ## It is possible that there is additional data columns present, 
-  ## so we need to cater for this.
-  ## Desired coordinate order and their indices in the data:
-  new_coord_order <- rev(coordnames(BAUs))
-  coord_idx <- match(new_coord_order, names(BAUs@data), nomatch = 0)
-  
-  ## Indices of the remaining columns
-  remaining_idx <- which(!names(BAUs@data) %in% new_coord_order)
-  
-  ## Subset the data
-  BAUs@data <- BAUs@data[, c(coord_idx, remaining_idx)]
-  
-  ## Reverse the remaining slots
-  BAUs@coords <- BAUs@coords[, new_coord_order]
-  BAUs@bbox   <- BAUs@bbox[new_coord_order, ]
-  
-  ## Note that we cannot subset BAUs@grid (S4 method). 
-  ## Instead, we will manipulate the slots directly.
-  tmp <- BAUs@grid
-  tmp@cellcentre.offset <- tmp@cellcentre.offset[n_coord:1]
-  tmp@cellsize <- tmp@cellsize[n_coord:1]
-  tmp@cells.dim <- tmp@cells.dim[n_coord:1]
-  ## NB: note sure how to access the coordinate names of tmp directly as of now (GridTopology
-  ## objects have only an assignment method for coordnames, not a retrieval method). 
-  ## For now I will just use the coordinate names of the BAUs.
-  ## It doesn't seem to matter anyway, though, as it adjusts automatically.
-  coordnames(tmp) <- coordnames(BAUs)[n_coord:1]
-  
-  BAUs@grid <- tmp
-  
-  return(BAUs)
-})
-
-
-setMethod("reverse_spatial_coords",signature(BAUs="SpatialPointsDataFrame"),function(BAUs) {
-  
-  ## The documentation says that the @data slot may in fact contain the coordinates.
-  ## So, we need to allow for this possibility.
-  ## Desired coordinate order and their indices in the data:
-  new_coord_order <- rev(coordnames(BAUs))
-  coord_idx <- match(new_coord_order, names(BAUs@data), nomatch = 0)
-  
-  ## Indices of the remaining columns
-  remaining_idx <- which(!names(BAUs@data) %in% new_coord_order)
-  
-  ## Subset the data
-  BAUs@data <- BAUs@data[, c(coord_idx, remaining_idx), drop = FALSE]
-  
-  ## Reverse the order of the remaining slots:
-  BAUs@coords <- BAUs@coords[, new_coord_order]
-  BAUs@bbox   <- BAUs@bbox[new_coord_order, ]
-  
-  return(BAUs)
-})
-
-
-setMethod("reverse_spatial_coords",signature(BAUs="SpatialPoints"),function(BAUs) {
-  
-  ## The documentation does not explicitly say that coords can or cannot contain data, 
-  ## but for safety I will assume it can. 
-  ## For the spatial points object, I will simply reverse the coordinates matrix. 
-  ## Hence, if we have (lon, lat, z), the reversed order will be (z, lat, lon).
-  ## Desired coordinate order and their indices in the data:
-  new_coord_order <- rev(coordnames(BAUs))
-  
-  ## Subset the data
-  BAUs@coords <- BAUs@coords[, new_coord_order, drop = FALSE]
-  
-  ## Reverse the order of the remaining slot:
-  BAUs@bbox   <- BAUs@bbox[new_coord_order, ]
-  
-  return(BAUs)
-})
-
-
-setMethod("reverse_spatial_coords",signature(BAUs="SpatialPolygonsDataFrame"),function(BAUs) {
-  
-  
-  ## First, the @data slot:
-  ## (Note that both coordinate and data columns may be present - we will just reverse all)
-  new_coord_order <- 
-    BAUs@data <- BAUs@data[, rev(colnames(BAUs@data))]
-  
-  ## Second, the @bbox:
-  BAUs@bbox   <- BAUs@bbox[rev(row.names(BAUs@bbox)), ]
-  
-  ## Third, the @polygons
-  ## FIXME: Have to do this for each polygons list (use lapply or something)
-  tmp <- BAUs@polygons$`1` 
-  class(BAUs@polygons$`1`)
-  ## Swap the order of the label point ($labpt) slot:
-  tmp@labpt <- rev(tmp@labpt)
-  ## Swap the order of the coordinates ($coords) slot:
-  coordinates(tmp@Polygons)
-  coordinates(tmp)
-  ## FIXME: not sure how to access the coordinates of the polygons.
-  ## Don't want to spend any more time on this until Andrew says its worthwhile.
-  
-  return(BAUs)
-})
-
-
-setMethod("reverse_spatial_coords",signature(BAUs="STFDF"),function(BAUs) {
-  
-  ## FIXME: should allow for SpatialPolygonsDF and SpatialPolygons too
-  if(is(BAUs@sp, "SpatialPointsDataFrame") | 
-     is(BAUs@sp, "SpatialPixelsDataFrame") | 
-     is(BAUs@sp, "SpatialPoints"))
-    BAUs@sp <- reverse_spatial_coords(BAUs@sp)
-  else
-    stop("The underlying spatial object should be of class 'SpatialPointsDataFrame' or 'SpatialPixelsDataFrame'.")
-  
-  return(BAUs)
-})
-
-
-setMethod("reverse_spatial_coords",signature(BAUs="STIDF"),function(BAUs) {
-  
-  ## FIXME: should allow for SpatialPolygonsDF and SpatialPolygons too
-  if(is(BAUs@sp, "SpatialPointsDataFrame") | 
-     is(BAUs@sp, "SpatialPixelsDataFrame") | 
-     is(BAUs@sp, "SpatialPoints"))
-    BAUs@sp <- reverse_spatial_coords(BAUs@sp)
-  else
-    stop("The underlying spatial object should be of class 'SpatialPointsDataFrame', 'SpatialPixelsDataFrame', or 'SpatialPoints'.")
-  
-  return(BAUs)
-})
+# setMethod("reverse_spatial_coords",signature(BAUs="SpatialPixelsDataFrame"),function(BAUs) {
+#   
+#   ## Number of dimensions of the BAUs
+#   n_coord <- dimensions(BAUs)
+#   
+#   ## Reverse the slots (must do this for each slot):
+#   ## First, deal with the @data slot.
+#   ## It is possible that there is additional data columns present, 
+#   ## so we need to cater for this.
+#   ## Desired coordinate order and their indices in the data:
+#   new_coord_order <- rev(coordnames(BAUs))
+#   coord_idx <- match(new_coord_order, names(BAUs@data), nomatch = 0)
+#   
+#   ## Indices of the remaining columns
+#   remaining_idx <- which(!names(BAUs@data) %in% new_coord_order)
+#   
+#   ## Subset the data
+#   BAUs@data <- BAUs@data[, c(coord_idx, remaining_idx)]
+#   
+#   ## Reverse the remaining slots
+#   BAUs@coords <- BAUs@coords[, new_coord_order]
+#   BAUs@bbox   <- BAUs@bbox[new_coord_order, ]
+#   
+#   ## Note that we cannot subset BAUs@grid (S4 method). 
+#   ## Instead, we will manipulate the slots directly.
+#   tmp <- BAUs@grid
+#   tmp@cellcentre.offset <- tmp@cellcentre.offset[n_coord:1]
+#   tmp@cellsize <- tmp@cellsize[n_coord:1]
+#   tmp@cells.dim <- tmp@cells.dim[n_coord:1]
+#   ## NB: note sure how to access the coordinate names of tmp directly as of now (GridTopology
+#   ## objects have only an assignment method for coordnames, not a retrieval method). 
+#   ## For now I will just use the coordinate names of the BAUs.
+#   ## It doesn't seem to matter anyway, though, as it adjusts automatically.
+#   coordnames(tmp) <- coordnames(BAUs)[n_coord:1]
+#   
+#   BAUs@grid <- tmp
+#   
+#   return(BAUs)
+# })
+# 
+# 
+# setMethod("reverse_spatial_coords",signature(BAUs="SpatialPointsDataFrame"),function(BAUs) {
+#   
+#   ## The documentation says that the @data slot may in fact contain the coordinates.
+#   ## So, we need to allow for this possibility.
+#   ## Desired coordinate order and their indices in the data:
+#   new_coord_order <- rev(coordnames(BAUs))
+#   coord_idx <- match(new_coord_order, names(BAUs@data), nomatch = 0)
+#   
+#   ## Indices of the remaining columns
+#   remaining_idx <- which(!names(BAUs@data) %in% new_coord_order)
+#   
+#   ## Subset the data
+#   BAUs@data <- BAUs@data[, c(coord_idx, remaining_idx), drop = FALSE]
+#   
+#   ## Reverse the order of the remaining slots:
+#   BAUs@coords <- BAUs@coords[, new_coord_order]
+#   BAUs@bbox   <- BAUs@bbox[new_coord_order, ]
+#   
+#   return(BAUs)
+# })
+# 
+# 
+# setMethod("reverse_spatial_coords",signature(BAUs="SpatialPoints"),function(BAUs) {
+#   
+#   ## The documentation does not explicitly say that coords can or cannot contain data, 
+#   ## but for safety I will assume it can. 
+#   ## For the spatial points object, I will simply reverse the coordinates matrix. 
+#   ## Hence, if we have (lon, lat, z), the reversed order will be (z, lat, lon).
+#   ## Desired coordinate order and their indices in the data:
+#   new_coord_order <- rev(coordnames(BAUs))
+#   
+#   ## Subset the data
+#   BAUs@coords <- BAUs@coords[, new_coord_order, drop = FALSE]
+#   
+#   ## Reverse the order of the remaining slot:
+#   BAUs@bbox   <- BAUs@bbox[new_coord_order, ]
+#   
+#   return(BAUs)
+# })
+# 
+# 
+# setMethod("reverse_spatial_coords",signature(BAUs="SpatialPolygonsDataFrame"),function(BAUs) {
+#   
+#   ## First, the @data slot:
+#   ## (Note that both coordinate and data columns may be present - we will just reverse all)
+#   new_coord_order <- 
+#     BAUs@data <- BAUs@data[, rev(colnames(BAUs@data))]
+#   
+#   ## Second, the @bbox:
+#   BAUs@bbox   <- BAUs@bbox[rev(row.names(BAUs@bbox)), ]
+#   
+#   ## Third, the @polygons
+#   ## FIXME: Have to do this for each polygons list (use lapply or something)
+#   tmp <- BAUs@polygons$`1` 
+#   class(BAUs@polygons$`1`)
+#   ## Swap the order of the label point ($labpt) slot:
+#   tmp@labpt <- rev(tmp@labpt)
+#   ## Swap the order of the coordinates ($coords) slot:
+#   coordinates(tmp@Polygons)
+#   coordinates(tmp)
+#   ## FIXME: not sure how to access the coordinates of the polygons.
+#   ## Don't want to spend any more time on this until Andrew says its worthwhile.
+#   
+#   return(BAUs)
+# })
+# 
+# 
+# setMethod("reverse_spatial_coords",signature(BAUs="STFDF"),function(BAUs) {
+#   
+#   ## Should allow for SpatialPolygonsDF and SpatialPolygons too
+#   if(is(BAUs@sp, "SpatialPointsDataFrame") | 
+#      is(BAUs@sp, "SpatialPixelsDataFrame") | 
+#      is(BAUs@sp, "SpatialPoints"))
+#     BAUs@sp <- reverse_spatial_coords(BAUs@sp)
+#   else
+#     stop("The underlying spatial object should be of class 'SpatialPointsDataFrame' or 'SpatialPixelsDataFrame'.")
+#   
+#   return(BAUs)
+# })
+# 
+# 
+# setMethod("reverse_spatial_coords",signature(BAUs="STIDF"),function(BAUs) {
+#   
+#   ## Should allow for SpatialPolygonsDF and SpatialPolygons too
+#   if(is(BAUs@sp, "SpatialPointsDataFrame") | 
+#      is(BAUs@sp, "SpatialPixelsDataFrame") | 
+#      is(BAUs@sp, "SpatialPoints"))
+#     BAUs@sp <- reverse_spatial_coords(BAUs@sp)
+#   else
+#     stop("The underlying spatial object should be of class 'SpatialPointsDataFrame', 'SpatialPixelsDataFrame', or 'SpatialPoints'.")
+#   
+#   return(BAUs)
+# })
 
 
 ## Code common to the removal of spatial BAUs across methods
-.remove_spatial_BAUs <- function(BAUs, rmidx, redefine_index = FALSE) {
+.remove_spatial_BAUs <- function(BAUs, rmidx, redefine_index = TRUE) {
   ntot <- nrow(BAUs@coords)
   if(!all(rmidx %in% 1:ntot))
-    stop("Please ensure indices are numeric and within
-             1 and the number of spatial BAUs.")
+    stop("Please ensure indices are numeric and within 1 and the number of spatial BAUs.")
   
   BAUs_orig  <- BAUs
   BAUs <- BAUs[-rmidx, ]
@@ -739,11 +739,6 @@ setMethod("reverse_spatial_coords",signature(BAUs="STIDF"),function(BAUs) {
   
   return(data_new)
 }
-
-setMethod("remove_BAUs",signature(BAUs="SpatialPoints"),function(BAUs, rmidx, redefine_index = FALSE) {
-  return(.remove_spatial_BAUs(BAUs, rmidx, redefine_index))
-})
-
 
 setMethod("remove_BAUs",signature(BAUs="SpatialPointsDataFrame"),function(BAUs, rmidx, redefine_index = FALSE) {
   return(.remove_spatial_BAUs(BAUs, rmidx, redefine_index))

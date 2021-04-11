@@ -12,12 +12,9 @@ observed_BAUs(SRE_model)
 \arguments{
 \item{SRE_model}{object of class \code{SRE}}
 }
-\value{
-The indices (a numeric vector) of the observed BAUs
-}
 \description{
-Takes an object of class \code{SRE} and returns the indices of the observed BAUs
+Computes the indices (a numeric vector) of the observed BAUs
 }
 \seealso{
-See \code{\link{unobserved_BAUs}}.
+\code{\link{unobserved_BAUs}}
 }

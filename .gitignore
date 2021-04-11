@@ -27,3 +27,4 @@ Permissions
 *.Rnw
 *.bib
 FRKTMB_paper
+.DS_Store

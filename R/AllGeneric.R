@@ -209,39 +209,36 @@ setGeneric("remove_basis", function(Basis,rmidx)
     standardGeneric("remove_basis"))
 
 
-#' @title Reverses spatial coordinates 
-#' @description Reverses the coordinate order (and all relevant slots) of a BAU object. This is useful when comparing BAU objects to \code{SpatialPolygon} objects, for instance, when one wishes to trim BAUs based on some polygon. 
-#' @param BAUs An object of class \code{SpatialPixelsDataFrame}, \code{SpatialPolygonsDataFrame}, or \code{STFDF}.
-#' @export
-#' @return \code{BAUs} with the reversed coordinate order.
-#' @examples
-#' library(sp)
-#' RNGversion("3.6.0")
-#' set.seed(1)
-#' data <- data.frame(lon = runif(10, 0, 10), 
-#'                    lat = runif(10, 0, 40), 
-#'                    z   = rnorm(10))
-#' ## Create SpatialPixelsDataFrame:
-#' coordinates(data) <- ~ lon + lat
-#' BAUs <- auto_BAUs(manifold = plane(), 
-#'                   cellsize = 0.5, 
-#'                   data=data)
-#' BAUs@bbox # lon comes before lat
-#' \dontrun{plot(BAUs)}
-#' BAUs <- reverse_spatial_coords(BAUs)
-#' BAUs@bbox # lat comes before lon
-#' \dontrun{plot(BAUs)}
-setGeneric("reverse_spatial_coords", function(BAUs)
-    standardGeneric("reverse_spatial_coords"))
+## #' @title Reverses spatial coordinates 
+## #' @description Reverses the coordinate order (and all relevant slots) of a BAU object. This is useful when comparing BAU objects to \code{SpatialPolygon} objects, for instance, when one wishes to trim BAUs based on some polygon. 
+## #' @param BAUs An object of class \code{SpatialPixelsDataFrame}, \code{SpatialPolygonsDataFrame}, or \code{STFDF}.
+## #' @export
+## #' @return \code{BAUs} with the reversed coordinate order.
+## #' @examples
+## #' library(sp)
+## #' RNGversion("3.6.0")
+## #' set.seed(1)
+## #' data <- data.frame(lon = runif(10, 0, 10), 
+## #'                    lat = runif(10, 0, 40), 
+## #'                    z   = rnorm(10))
+## #' ## Create SpatialPixelsDataFrame:
+## #' coordinates(data) <- ~ lon + lat
+## #' BAUs <- auto_BAUs(manifold = plane(), 
+## #'                   cellsize = 0.5, 
+## #'                   data=data)
+## #' BAUs@bbox # lon comes before lat
+## #' \dontrun{plot(BAUs)}
+## #' BAUs <- reverse_spatial_coords(BAUs)
+## #' BAUs@bbox # lat comes before lon
+## #' \dontrun{plot(BAUs)}
+## setGeneric("reverse_spatial_coords", function(BAUs)
+##    standardGeneric("reverse_spatial_coords"))
 
 
 #' @title Remove BAUs 
-#' @description Takes a \code{BAU} object returns the \code{BAU} object with selected BAUs removed specified by \code{rmidx}.
-#' For spatio-temporal BAUs, the indices of the spatial BAUs (\code{BAUs@sp}) must be provided, and the spatio-temporal BAUs corresponding to these spatial BAUs will be removed.
-#' @param BAUs BAU object.
-#' @param rmidx indices of spatial basis functions to remove. If the BAUs are of class \code{STFDF}, the indices of the spatial BAUs (\code{BAUs@sp}) must be provided.
-#' @param redefine_index Logical indicating whether indexing columns (columns with every element equal to their corresponding row number) of the \code{@data} slot should be redefined post BAU removal to remain as indexing columns. 
-#' That is, if \code{redefine_index = TRUE}, then indexing columns will be redefined post BAU removal to index the newly created BAUs. Otherwise, the original values of detected indexing columns will be left unchanged.
+#' @description Takes a BAU object and returns the BAU object with selected BAUs removed
+#' @param BAUs BAU object  (an object of class \code{SpatialPixelsDataFrame}, \code{SpatialPolygonsDataFrame}, or \code{STFDF})
+#' @param rmidx indices of spatial basis functions to remove. If the BAUs are of class \code{STFDF}, the indices of the spatial BAUs (\code{BAUs@sp}) must be provided, and the spatio-temporal BAUs associated with these spatial BAUs will be removed
 #' @export
 #' @return \code{BAUs} with specified spatial BAUs removed.
 #' @examples
@@ -304,22 +301,18 @@ setGeneric("remove_BAUs", function(BAUs,rmidx,redefine_index = FALSE)
 
 
 #' @title Indices of observed BAUs
-#' @description Takes an object of class \code{SRE} and returns the indices of the observed BAUs 
+#' @description Computes the indices (a numeric vector) of the observed BAUs
 #' @param SRE_model object of class \code{SRE}
-#' @return The indices (a numeric vector) of the observed BAUs
 #' @export
-#' @seealso See \code{\link{unobserved_BAUs}}.
+#' @seealso \code{\link{unobserved_BAUs}}
 setGeneric("observed_BAUs", function(SRE_model)
     standardGeneric("observed_BAUs"))
 
-
-
 #' @title Indices of unobserved BAUs
-#' @description Takes an object of class \code{SRE} and returns the indices of the unobserved BAUs 
+#' @description Computes the indices (a numeric vector) of the unobserved BAUs
 #' @param SRE_model object of class \code{SRE}
-#' @return The indices (a numeric vector) of the unobserved BAUs
 #' @export
-#' @seealso See \code{\link{observed_BAUs}}.
+#' @seealso \code{\link{observed_BAUs}}
 setGeneric("unobserved_BAUs", function(SRE_model)
     standardGeneric("unobserved_BAUs"))
 
