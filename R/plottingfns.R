@@ -320,16 +320,16 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = N
         lab_list <- list(
             p_Y           = labs(fill = expression(widehat(p)[Y]["|"][bold(Z)])), 
             RMSPE_Y       = labs(fill = expression(sqrt(MSPE(widehat(p)[Y]["|"][bold(Z)], Y)))),
-            interval_90_Y = labs(fill = eval(bquote(expression("Width of 90% predictive\ninterval latent process Y(" *"\U00B7)")))),
+            interval_90_Y = labs(fill = eval(bquote(expression("90% predictive\ninterval width for Y(" *"\U00B7)")))),
             p_mu           = labs(fill = expression(widehat(p)[mu]["|"][bold(Z)])),
             RMSPE_mu       = labs(fill = expression(sqrt(MSPE(widehat(p)[mu]["|"][bold(Z)], mu)))),
-            interval_90_mu = labs(fill = eval(bquote(expression("Width of 90% predictive\ninterval mean process " *mu *"(\U00B7)")))),
+            interval_90_mu = labs(fill = eval(bquote(expression("90% predictive\ninterval width for " *mu *"(\U00B7)")))),
             p_prob           = labs(fill = expression(widehat(p)[pi]["|"][bold(Z)])), 
             RMSPE_prob       = labs(fill = expression(sqrt(MSPE(widehat(p)[pi]["|"][bold(Z)], pi)))),
-            interval_90_prob = labs(fill = eval(bquote(expression("Width of 90% predictive\ninterval probability process " *pi *"(\U00B7)")))),
+            interval_90_prob = labs(fill = eval(bquote(expression("90% predictive\ninterval width for " *pi *"(\U00B7)")))),
             p_Z           = labs(fill = expression(widehat(p)[Z]["|"][bold(Z)])),
             RMSPE_Z       = labs(fill = expression(sqrt(MSPE(widehat(p)[Z]["|"][bold(Z)], Z)))),
-            interval_90_Z = labs(fill = eval(bquote(expression("Width of 90% predictive\ninterval data process " * Z *"(\U00B7)"))))
+            interval_90_Z = labs(fill = eval(bquote(expression("90% predictive\ninterval width for " * Z *"(\U00B7)"))))
         )
         
         for (i in column_names) {
