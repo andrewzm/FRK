@@ -745,10 +745,10 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
                    parameters = parameters,
                    random = c("random_effects"),
                    DLL = "FRK", 
-                   silent = TRUE) # hide the gradient information during fitting
+                   silent = !opts_FRK$get("verbose")) # hide the gradient information during fitting
   
   ## The following means we want to print every parameter passed to obj$fn.
-  # obj$env$tracepar <- TRUE
+  obj$env$tracepar <- opts_FRK$get("verbose")
 
   
   # ---- Model fitting ----
@@ -1098,6 +1098,8 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   if (!any(tabulate(M@Cmat@i + 1) == 1)) {
     cat("There no observations are associated with a single BAU (i.e., all observations are associated with multiple BAUs). This makes the fine-scale variance parameter very difficult to estimate, so we will estimate it offline and fix for the remainder of model fitting; this estimate may be inaccurate.\n")
     data$fix_sigma2fs <- as.integer(1)
+    if (M@fs_by_spatial_BAU) 
+      stop("We do not allow each spatial BAU to have its own fine-scale variance parameter when there no observations associated with a single BAU (i.e., all observations are associated with multiple BAUs).")
   } else {
     data$fix_sigma2fs <- as.integer(0)
     if (!all(tabulate(M@Cmat@i + 1) == 1)) 
