@@ -745,15 +745,15 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
                    parameters = parameters,
                    random = c("random_effects"),
                    DLL = "FRK", 
-                   silent = TRUE) # hide the gradient information during fitting
+                   silent = !opts_FRK$get("verbose")) # hide the gradient information during fitting
   
   ## The following means we want to print every parameter passed to obj$fn.
-  # obj$env$tracepar <- TRUE
+  obj$env$tracepar <- opts_FRK$get("verbose")
 
   
   # ---- Model fitting ----
   
-  cat("Fitting the model:\n")
+  cat("Optimising with TMB ...\n")
   
   ## The optimiser should have arguments: start, objective, gradient. 
   ## The remaining arguments can be whatever.
@@ -837,7 +837,6 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   
   ## i. Fixed effects alpha (OLS solution)
   l$alpha <- solve(t(X_O) %*% X_O) %*% t(X_O) %*% Y_O # OLS solution
-  
   ## ii. Variance components
   ## Dispersion parameter depends on response; some require it to be 1. 
   if (M@response %in% c("poisson", "bernoulli", "binomial", "negative-binomial")) {
@@ -857,8 +856,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   if (K_type != "block-exponential") {
     l$sigma2   <- 1 / l$sigma2
     l$tau      <- 1 / l$tau
-  }
-  if (K_type == "separable") {
+  } else if (K_type == "separable") {
     ## Separability means we have twice as many spatial basis function variance
     ## components. So, just replicate the already defined parameters.
     l$sigma2 <- rep(l$sigma2, 2)
@@ -881,8 +879,8 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     regularising_weight <- if (!is.null(l$sigma2fs)) l$sigma2fs else l$sigma2[1] 
     
     QInit <- .sparse_Q_block_diag(M@basis@df, 
-                                  kappa = exp(l$sigma2), 
-                                  rho = exp(l$tau))$Q
+                                  kappa = l$sigma2, 
+                                  rho = l$tau)$Q
     
     ## Matrix we need to invert
     mat <- Matrix::t(S_O) %*% S_O / regularising_weight + QInit 
@@ -901,12 +899,8 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
       diag(r)
       }
     )
-    
-    ## Quick fix:
-    ## TODO: explore why this happens
-    ## FIXME: Error in if (regularising_weight == 0) { : missing value where TRUE/FALSE needed 
-    ## Get to the bottom of this tomorrow...
-    if (regularising_weight == 0) {
+
+    if (regularising_weight == 0) { # avoid division by zero
       warning("In initialisation stage, the regularising_weight is 0; setting it to 1. This is probably not an issue, but feel free to contact the package maintainer.")
       regularising_weight <- 1
     }
@@ -1101,12 +1095,18 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   data$sigma2fs_hat <- sigma2fs_hat
   ## Only estimate sigma2fs if all the observations are associated with exactly 
   ## one BAU; otherwise, we must fix sigma2fs, or else TMB will explode.
-  if (!all(tabulate(M@Cmat@i + 1) == 1) ) {
-    cat("Some observations are associated with multiple BAUs: fixing the fine-scale variance during model fitting.\n")
+  if (!any(tabulate(M@Cmat@i + 1) == 1)) {
+    cat("There no observations are associated with a single BAU (i.e., all observations are associated with multiple BAUs). This makes the fine-scale variance parameter very difficult to estimate, so we will estimate it offline and fix for the remainder of model fitting; this estimate may be inaccurate.\n")
     data$fix_sigma2fs <- as.integer(1)
+    if (M@fs_by_spatial_BAU) 
+      stop("We do not allow each spatial BAU to have its own fine-scale variance parameter when there no observations associated with a single BAU (i.e., all observations are associated with multiple BAUs).")
   } else {
     data$fix_sigma2fs <- as.integer(0)
-  }
+    if (!all(tabulate(M@Cmat@i + 1) == 1)) 
+      cat("Some (but not all) observations are associated with multiple BAUs. Estimation of the fine-scale variance parameter will be done using TMB, but note that there should be a reasonable number of fine unit observations so that TMB can get a handle of the fine-scale variance parameter.\n")
+  } 
+  
+  
   
   data$include_fs   <- as.integer(M@include_fs)
   
