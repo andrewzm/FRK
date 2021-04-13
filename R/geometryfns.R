@@ -201,28 +201,21 @@ gc_dist_time <- function(R=NULL) {
 #' D <- distR(A,A[-3,])
 distR <- function (x1, x2 = NULL)  {
     ## Try to coerce to matrix
-    if (!is.matrix(x1)) {
-        x1 <- as.matrix(x1)
-    }
+    if (!is.matrix(x1)) x1 <- as.matrix(x1)
 
-    ## If x2 is not specified set it equatl to x1
-    if (is.null(x2)) {
-        x2 <- x1
-    }
+    ## If x2 is not specified set it equal to x1
+    if (is.null(x2)) x2 <- x1
 
     ## If it is specified, coerce it to matrix
-    if (!is.matrix(x2)) {
-        x2 <- as.matrix(x2)
-    }
+    if (!is.matrix(x2)) x2 <- as.matrix(x2)
 
     ## Basic check
     if(!(ncol(x1) == ncol(x2)))
         stop("x1 and x2 have to have same number of columns")
 
     ## Compute the distance in C (distR_C is a wrapper)
-    ## distR_C(x1,x2)  ## Currently not used due to conflict with compiling TMB
     sqdisps <- lapply(1:ncol(x1), function(i) outer(x1[,i], x2[,i], FUN = '-')^2)
-    sqrt(Reduce("+", sqdisps))
+    return(sqrt(Reduce("+", sqdisps)))
 }
 
 ## Retrieve the border points

@@ -232,9 +232,6 @@
   if(!is.null(newdata) & !is.null(pred_time))
     stop("Only one of newdata and pred_time can be not NULL")
   
-  if(!is.null(pred_polys))
-    warning("pred_polys is deprecated. Please use newdata instead")
-  
   if(!(is.integer(pred_time) | is.null(pred_time))) stop("pred_time needs to be of class integer")
   if(!is.logical(covariances)) stop("covariances needs to be TRUE or FALSE")
   

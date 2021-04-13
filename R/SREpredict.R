@@ -1,17 +1,13 @@
-#' @rdname SRE
+## FIXME: Need to document to avoid warnings
 #' @export
 SRE.predict <- function(SRE_model, obs_fs = FALSE, newdata = NULL, pred_polys = NULL,
                         pred_time = NULL, covariances = FALSE) {
-  warning("SRE.predict is deprecated. Please use predict.")
-  predict(SRE_model, obs_fs = obs_fs, newdata = newdata,
-          pred_polys = pred_polys, pred_time = pred_time,
-          covariances = covariances)
-  
+  stop("SRE.predict() is deprecated. Please use predict().")
 }
 
 #' @rdname SRE
 #' @export
-setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = FALSE, pred_polys = NULL,
+setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = FALSE,
                                                pred_time = NULL, covariances = FALSE, 
                                                n_MC = 400, type = "mean", k = NULL, 
                                                percentiles = c(5, 95), 
@@ -19,9 +15,6 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   
   
   SRE_model <- object
-  ## Deprecation coercion
-  if(!is.null(pred_polys))
-    newdata <- pred_polys
   
   ## Need to add prediction and uncertainty at each location, and so newdata 
   ## must be a Spatial*DataFrame (not just a Spatial* object).
@@ -405,43 +398,27 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   }
 }
 
-## #'Prediction stage of non-Gaussian FRK.
-## #'
-## #'@inheritParams .Y_var
-## #'@inheritParams .MC_sampler
-## #'@inheritParams .concat_percentiles_to_df
-## #'@param newdata object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified
 ## #'@param CP polygon prediction matrix
 ## #'@param predict_BAUs logical indicating whether or not we are predicting over the BAUs
 ## #'@param pred_time vector of time indices at which prediction will be carried out. All time points are used if this option is not specified
-## #'@param type string (possibly vector) indicating the quantities for which predictions and prediction uncertainty is desired. If \code{"link"} is in \code{type}, the latent \eqn{Y} process is included; If \code{"mean"} is in \code{type}, the conditional mean \eqn{\mu} is included (and the probability parameter if applicable); If \code{"response"} is in \code{type}, the response variable \eqn{Z} is included. Note that any combination of these character strings can be provided. For example, if \code{type = c("link", "response")}, then predictions of the latent \eqn{Y} process and the response variable \eqn{Z} are provided
-## #'@param kriging string indicating the kind of kriging: \code{"simple"} ignnores uncertanity due to estimation of the fixed effects, while \code{"universal"} accounts for this source of uncertainty
 ## #'@return A list object containing:
 ## #'\describe{
 ## #'  \item{newdata}{An object of class \code{newdata}, with predictions and prediction uncertainty at each prediction location of the latent \eqn{Y} process, the conditional mean of the data \eqn{\mu}, the probability of success parameter \eqn{\pi} (if applicable), and the response variable \eqn{Z}}
 ## #'  \item{MC}{A list with each element being an \code{N * n_MC} matrix of Monte Carlo samples of the quantities specified by \code{type} (some combination of \eqn{Y}, \eqn{\mu}, \eqn{p} (if applicable), and \eqn{Z}) at each prediction location}
 ## #'}
-## #'Note that for all link functions other than the log- and identity-link functions, the predictions and prediction uncertainty of \eqn{\mu} contained in \code{newdata} are computed using the Monte Carlo samples contained in \code{MC}.
-## #'When the log- or identity-link functions are used, the expectation and variance of the \eqn{\mu} may be computed exactly.
 .SRE.predict_TMB <- function(M, newdata, CP, predict_BAUs, pred_time, type, n_MC, 
                              obs_fs, k, percentiles, kriging) {
   
-  
-  # ---- Create objects needed thoughout the function ----
-  
-  ## Id of observed BAUs
-  obsidx <- observed_BAUs(M)
-  
-  ## The covariate design matrix, X (at the BAU level i.e. for all BAUs)
-  X <- as(.extract_BAU_X_matrix(formula = M@f, BAUs = M@BAUs), "matrix")
-  
+  ## Covariate design matrix at the BAU level
+  X     <- as(.extract_BAU_X_matrix(formula = M@f, BAUs = M@BAUs), "matrix")
+  obsidx <- observed_BAUs(M) # index of observed BAUs
+  p     <- length(M@alphahat)       # number of fixed regression effects
+  mstar <- length(obsidx)           # number of observed BAUs
+  r     <- nbasis(M)                # number of basis-function coefficients
+  ## Total number of random effects (fine-scale only included if include_fs = T)
+  s     <- r + mstar * M@include_fs 
   
   # ---- Compute the Cholesky factor of the permuted precision matrix ----
-  
-  p <- length(M@alphahat) # Number of fixed regression effects
-  mstar <- length(obsidx) # Number of observed BAUs
-  r <- nbasis(M)         
-  s <- r + mstar * M@include_fs # Total number of random effects (fine-scale variation only included if include_fs = TRUE)
   
   ## Permuted Cholesky factor. If we are doing universal kriging, keep the joint precision 
   ## matrix of the fixed and random effects. Otherwise, if we are doing simple kriging, 
@@ -452,7 +429,6 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     Q_posterior <- M@Q_posterior[-(1:p), -(1:p)]
   }
   Q_L <- sparseinv::cholPermute(Q = Q_posterior)
-  
   
   # ------ Latent process Y prediction and Uncertainty ------
   
@@ -469,10 +445,8 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   ## Posterior variance of Y at each prediction location.
   ## Note that MSPE(E(Y|Z), Y) is approximated by var(Y|Z).
   
-  
   # Analytic <- TRUE
   # MSPE_Y  <- .Y_var(M = M, Q_posterior = Q_posterior, Q_L = Q_L, obsidx = obsidx, X = X, kriging = kriging)
-  
   
   
   # ------ Monte Carlo sampling ------
@@ -483,15 +457,12 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                     predict_BAUs = predict_BAUs, CP = CP, kriging = kriging)
   
   ## We do not allow aggregation of the Y-process when predicting over arbitrary polygons
-  if(!predict_BAUs)
-    MC$Y_samples <- NULL
+  if(!predict_BAUs) MC$Y_samples <- NULL
   
-  ## Remove other quantities if the user is not interested in them
-  if(!("link" %in% type)) 
-    MC$Y_samples <- NULL
+  ## Remove other quantities if the user has not requested them
+  if(!("link" %in% type)) MC$Y_samples <- NULL
   
-  if(!("mean" %in% type)) 
-    MC$mu_samples <- MC$prob_samples <- NULL
+  if(!("mean" %in% type)) MC$mu_samples <- MC$prob_samples <- NULL
   
   
   # ------ Create Prediction data ------
@@ -571,21 +542,23 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
 
 
 
-## #'Posterior variance of the latent Y process.
-#'
-## #'Computes the variance of the latent process \eqn{Y} at every BAU. Note that MSPE(E(Y|Z), Y) is approximated by var(Y|Z).
-## #'
-## #'To compute the prediction uncertainty of Y we require the joint
-## #'covariance matrix of the random effects \eqn{(\eta', \xi_O')'}. \code{TMB}
-## #'provides an approximation of the joint \emph{precision} matrix of
-## #'\eqn{(\eta', \xi_O')'}, which we must invert to obtain the approximate
-## #'covariance matrix. However, due to the potentially very large number of
-## #'random effects (the number of observations \eqn{m} is not restricted),
-## #'in practice we compute the sparse-inverse-subset of the joint precision matrix,
-## #'\emph{not} the true joint covariance matrix.
-## #'
-## #'Note that as we are using E(\eqn{Y|Z}) to predict \eqn{Y}, the posterior variance acts as an approximation of the mean-squared prediction error (see pg. 72 of Honours thesis).
-## #'
+## Posterior variance of the latent Y process.
+## Computes the variance of the latent process \eqn{Y} at every BAU. 
+## Note that MSPE(E(Y|Z), Y) is approximated by var(Y|Z).
+## 
+## To compute the prediction uncertainty of Y we require the joint
+## covariance matrix of the random effects \eqn{(\eta', \xi_O')'}. \code{TMB}
+## provides an approximation of the joint \emph{precision} matrix of
+## \eqn{(\eta', \xi_O')'}, which we must invert to obtain the approximate
+## covariance matrix. However, due to the potentially very large number of
+## random effects (the number of observations \eqn{m} is not restricted),
+## in practice we compute the sparse-inverse-subset of the joint precision matrix,
+## \emph{not} the true joint covariance matrix.
+## 
+## Note that as we are using E(\eqn{Y|Z}) to predict \eqn{Y}, 
+## the posterior variance acts as an approximation of the mean-squared 
+## prediction error (see pg. 72 of Honours thesis).
+## 
 ## #'@param M An object of class SRE.
 ## #'@param Q_L A list containing the Cholesky factor of the permuted precision matrix (stored as \code{Q$Qpermchol}) and the associated permutationmatrix (stored as \code{Q_L$P}).
 ## #'@param Q_posterior the posterior precision matrix of the fixed and random effects
@@ -685,11 +658,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     
   }
   
-  
-  # ---- Output ----
-  
-  ## Return variance of Y
-  return(vY)
+  return(vY) # Return variance of Y
 }
 
 

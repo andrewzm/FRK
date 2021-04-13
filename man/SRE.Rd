@@ -5,7 +5,6 @@
 \alias{FRK}
 \alias{SRE}
 \alias{SRE.fit}
-\alias{SRE.predict}
 \alias{predict,SRE-method}
 \alias{loglik}
 \title{Construct SRE object, fit and predict}
@@ -74,20 +73,10 @@ SRE.fit(
   ...
 )
 
-SRE.predict(
-  SRE_model,
-  obs_fs = FALSE,
-  newdata = NULL,
-  pred_polys = NULL,
-  pred_time = NULL,
-  covariances = FALSE
-)
-
 \S4method{predict}{SRE}(
   object,
   newdata = NULL,
   obs_fs = FALSE,
-  pred_polys = NULL,
   pred_time = NULL,
   covariances = FALSE,
   n_MC = 400,
@@ -132,19 +121,21 @@ loglik(SRE_model)
 
 \item{print_lik}{flag indicating whether likelihood value should be printed or not after convergence of the EM estimation algorithm}
 
-\item{response}{string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "bernoulli", "gamma","inverse-gaussian", "negative-binomial", or "binomial".}
+\item{response}{string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "bernoulli", "gamma","inverse-gaussian", "negative-binomial", or "binomial"}
 
-\item{link}{string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted.}
+\item{link}{string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted}
 
-\item{optimiser}{the optimising function used for model fitting when \code{method = 'TMB'} (default is \code{nlminb}). Users may pass in a function object or a string corresponding to a named function. Optional parameters may be passed to \code{optimiser} via \code{...}. The only requirement of \code{optimiser} is that the first three arguments correspond to the initial parameters, the objective function, and the gradient, respectively (note that this may be achieved by rearranging the order of the arguments before passing into \code{optimiser})}
+\item{optimiser}{the optimising function used for model fitting when \code{method = "TMB"} (default is \code{nlminb}). Users may pass in a function object or a string corresponding to a named function. Optional parameters may be passed to \code{optimiser} via \code{...}. The only requirement of \code{optimiser} is that the first three arguments correspond to the initial parameters, the objective function, and the gradient, respectively (this may be achieved by simply constructing a wrapper function)}
 
-\item{fs_by_spatial_BAU}{if \code{TRUE}, then each spatial BAU is associated with its own fine-scale variance parameter (only allowed if method = 'TMB'). Otherwise, a single fine-scale variance parameter is used}
+\item{percentiles}{a vector of scalars in [0, 100] specifying the desired percentiles of the posterior predictive distribution; if \code{NULL}, no percentiles are computed. Only applicable if \code{method = "TMB"}}
+
+\item{fs_by_spatial_BAU}{if \code{TRUE}, then each spatial BAU is associated with its own fine-scale variance parameter; otherwise, a single fine-scale variance parameter is used. Only applicable in a spatio-temporal setting and if \code{method = "TMB"}}
 
 \item{known_sigma2fs}{known value of the fine-scale variance. If \code{NULL} (the default), the fine-scale variance \eqn{\sigma^2_\xi} is estimated as usual. If \code{known_sigma2fs} is not \code{NULL}, the fine-scale variance is fixed to the supplied value; this may be a scalar, or vector of length equal to the number of spatial BAUs (if fs_by_spatial_BAU = TRUE)}
 
-\item{taper}{positive numeric indicating the strength of the covariance tapering. Only applicable if \code{K_type = "block-exponential"} and \code{TMB} is used to fit the data}
+\item{taper}{positive numeric indicating the strength of the covariance/partial-correlation tapering}
 
-\item{...}{other parameters passed on to \code{auto_basis()} and \code{auto_BAUs()} when calling \code{FRK()}, or the user specified function \code{optimiser} when calling \code{FRK()} or \code{SRE.fit()}}
+\item{...}{other parameters passed on to \code{auto_basis()} and \code{auto_BAUs()} when calling \code{FRK()}, or the user specified function \code{optimiser()} when calling \code{FRK()} or \code{SRE.fit()}}
 
 \item{normalise_basis}{flag indicating whether to normalise the basis functions so that they reproduce a stochastic process with approximately constant variance spatially}
 
@@ -152,17 +143,23 @@ loglik(SRE_model)
 
 \item{SRE_model}{object returned from the constructor \code{SRE()} containing all the parameters and information on the SRE model}
 
-\item{obs_fs}{flag indicating whether the fine-scale variation sits in the observation model (systematic error; indicated by \code{obs_fs = TRUE}) or in the process model (process fine-scale variation; indicated by \code{obs_fs = FALSE}, default). For non-Gaussian data models, and/or non-identity link functions, if \code{obs_fs = TRUE}, then the fine-scale variation is removed from the latent process \eqn{Y}; however, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}}
+\item{object}{object of class \code{SRE}}
 
 \item{newdata}{object of class \code{SpatialPoylgons}, \code{SpatialPoints}, or \code{STI}, indicating the regions or points over which prediction will be carried out. The BAUs are used if this option is not specified.}
 
-\item{pred_polys}{deprecated. Please use \code{newdata} instead}
+\item{obs_fs}{flag indicating whether the fine-scale variation sits in the observation model (systematic error; indicated by \code{obs_fs = TRUE}) or in the process model (process fine-scale variation; indicated by \code{obs_fs = FALSE}, default). For non-Gaussian data models, and/or non-identity link functions, if \code{obs_fs = TRUE}, then the fine-scale variation is removed from the latent process \eqn{Y}; however, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}}
 
 \item{pred_time}{vector of time indices at which prediction will be carried out. All time points are used if this option is not specified}
 
-\item{covariances}{logical variable indicating whether prediction covariances should be returned or not. If set to \code{TRUE}, a maximum of 4000 prediction locations or polygons are allowed.}
+\item{covariances}{logical variable indicating whether prediction covariances should be returned or not. If set to \code{TRUE}, a maximum of 4000 prediction locations or polygons are allowed}
 
-\item{object}{object of class \code{SRE}}
+\item{n_MC}{A postive integer indicating the number of MC samples at each location. Only applicable if \code{method = "TMB"}}
+
+\item{type}{vector of strings indicating the quantities for which inference is desired. If \code{"link"} is in \code{type}, inference on the latent Gaussian process \eqn{Y(\cdot)} is included; If \code{"mean"} is in \code{type}, inference on the mean process \eqn{\mu(\cdot)} is included (and the probability process, \eqn{\pi(\cdot)},  if applicable); If \code{"response"} is in \code{type}, inference on the noisy data process \eqn{Z} is included. Only applicable if \code{method = "TMB"}}
+
+\item{k}{vector of size parameters at each BAU. Applicable only if we have binomial or negative-binomial data and \code{method = "TMB"}}
+
+\item{kriging}{string indicating the kind of kriging: \code{"simple"} ignores uncertanity due to estimation of the fixed effects, while \code{"universal"} accounts for this source of uncertainty. Only applicable if \code{method = "TMB"}}
 }
 \description{
 The Spatial Random Effects (SRE) model is the central object in FRK. The function \code{FRK} provides a wrapper for the construction and estimation of the SRE object from data, using the functions \code{SRE} (the object constructor) and \code{SRE.fit} (for fitting it to the data). Please see \code{\link{SRE-class}} for more details on the SRE object's properties and methods.

@@ -14,7 +14,6 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details. */
 
 #include <stdlib.h>
-#include "distR.h"
 #include <R.h>
 #include <Rinternals.h>
 #include <R_ext/Rdynload.h>
