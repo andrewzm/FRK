@@ -418,16 +418,13 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   ## Total number of random effects (fine-scale only included if include_fs = T)
   s     <- r + mstar * M@include_fs 
   
-  # ---- Compute the Cholesky factor of the permuted precision matrix  ----
-  
+  ## Compute the Cholesky factor of the permuted precision matrix.
   ## If we are doing universal kriging, use the full joint precision 
   ## matrix of the fixed and random effects. If we are doing simple kriging, 
   ## use only the random effect block of the precision matrix.
-  Q_posterior <- M@Q_posterior
-  if (kriging == "simple") Q_posterior <- Q_posterior[-(1:p), -(1:p)]
+  if (kriging == "universal") Q_posterior <- M@Q_posterior
+  if (kriging == "simple")    Q_posterior <- M@Q_posterior[-(1:p), -(1:p)]
   Q_L <- sparseinv::cholPermute(Q = Q_posterior)
-  
-  # ------ Monte Carlo sampling ------
   
   ## Generate Monte Carlo samples at all BAUs
   MC <- .MC_sampler(M = M, X = X, type = type, obs_fs = obs_fs, 
@@ -441,9 +438,6 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   if(!("link" %in% type)) MC$Y_samples <- NULL
   
   if(!("mean" %in% type)) MC$mu_samples <- MC$prob_samples <- NULL
-  
-  
-  # ------ Create Prediction data ------
   
   ## Produce prediction and RMSPE matrices. 
   ## The columns are the quantity of interest (Y, mu, prob, or Z), and the rows are prediction locations.
@@ -795,7 +789,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
 #   }
 #   
 #   
-#   # ---- Inverse of Q  ----
+#   # ---- Inverse of Q  
 #   
 #   ## Use the sparse-inverse-subset (acting as a proxy for the true covariance matrix)
 #   ## if we have too many random effects
@@ -821,7 +815,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
 #   }
 #   
 #   
-#   # ----- Uncertainty: Posterior variance of Y at each BAU ------
+#   # ----- Uncertainty: Posterior variance of Y at each BAU
 #   
 #   ## To extract the variances of eta|Z, we need diag(S0 %*% Sigma_eta %*% t(S0)).
 #   ## Also, to extract the covariance terms, we need: diag(S %*% COV_{eta, xi}).

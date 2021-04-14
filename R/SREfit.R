@@ -40,17 +40,17 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 
 
 
-##################################
-#### NOT EXPORTED ################
-##################################
+
+# ---- NOT EXPORTED ----
 
 .SRE.fit <- function(SRE_model, n_EM, tol, method, lambda, 
-                     print_lik, optimiser = nlminb, known_sigma2fs, ...) {
+                     print_lik, optimiser, known_sigma2fs, ...) {
   
   if(method == "EM") {
-    SRE_model <- .EM_fit(SRE_model = SRE_model, n_EM = n_EM, lambda = lambda, tol = tol, print_lik = print_lik)
+    SRE_model <- .EM_fit(SRE_model = SRE_model, n_EM = n_EM, lambda = lambda, 
+                         tol = tol, print_lik = print_lik, known_sigma2fs = known_sigma2fs)
   } else if (method == "TMB") {
-    SRE_model <- .TMB_fit(SRE_model, optimiser = optimiser, known_sigma2fs = known_sigma2fs, ...)
+    SRE_model <- .TMB_fit(SRE_model, optimiser = optimiser, known_sigma2fs = known_sigma2fs, print_lik = print_lik, ...)
   } else {
     stop("No other estimation method implemented yet. Please use method = 'EM' or method = 'TMB'.")
   }
@@ -61,14 +61,14 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 
 # ---- EM fitting functions ----
 
-.EM_fit <- function(SRE_model, n_EM, lambda, tol, print_lik) {
+.EM_fit <- function(SRE_model, n_EM, lambda, tol, print_lik, known_sigma2fs) {
   
   info_fit <- list()      # initialise info_fit
   
   n <- nbasis(SRE_model)  # number of basis functions
   X <- SRE_model@X        # covariates
   
-  info_fit$method <- "EM" # updated info_fit
+  info_fit$method <- "EM"  # updated info_fit
   llk <- rep(0,n_EM)       # log-likelihood
   
   ## If user wishes to show progress show progress bar
@@ -79,12 +79,12 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   for(i in 1:n_EM) {
     llk[i] <- loglik(SRE_model)                          # compute the log-lik
     SRE_model <- .SRE.Estep(SRE_model)                   # compute E-step
-    SRE_model <- .SRE.Mstep(SRE_model, lambda = lambda)  # compute M-step
+    SRE_model <- .SRE.Mstep(SRE_model, lambda, known_sigma2fs) # compute M-step
     if(opts_FRK$get("progress"))
-      utils::setTxtProgressBar(pb, i)                  # update progress bar
+      utils::setTxtProgressBar(pb, i)                    # update progress bar
     if(i>1)                                              # If we're not on first iteration
       if(abs(llk[i] - llk[i-1]) < tol) {                 # Compute change in log-lik
-        cat("Minimum tolerance reached\n")           # and stop if less than tol
+        cat("Minimum tolerance reached\n")               # and stop if less than tol
         break
       }
   }
@@ -194,16 +194,16 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 }
 
 ## M-step
-.SRE.Mstep <- function(Sm, lambda = 0) {
+.SRE.Mstep <- function(Sm, lambda = 0, known_sigma2fs) {
     # This is structured this way so that extra models for fs-variation
     # can be implemented later
     if(Sm@fs_model == "ind")
-        Sm <- .SRE.Mstep.ind(Sm, lambda = lambda)
+        Sm <- .SRE.Mstep.ind(Sm, lambda = lambda, known_sigma2fs = known_sigma2fs)
     else stop("M-step only for independent fs-variation model currently implemented")
 }
 
 ## E-step for independent fs-variation model
-.SRE.Estep.ind <- function(Sm) {
+.SRE.Estep.ind <- function(Sm, known_sigma2fs) {
     alpha <- Sm@alphahat           # current regression coefficients estimates
     K <- Sm@Khat                   # current random effects covariance matrix estimate
     Kinv <- Sm@Khat_inv            # current random effects precision matrix estimate
@@ -226,17 +226,6 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     S_eta <- chol2inv(chol(Q_eta))  # we can invert since we are low rank in FRK
     mu_eta <- (S_eta) %*%(t(Sm@S) %*% Dinv %*% (Sm@Z - Sm@X %*% alpha))
 
-    ## Deprecated:
-    # if(!is(Q_eta,"dsCMatrix")) Q_eta <- as(Q_eta,"dsCMatrix")
-    # chol_Q_eta <- cholPermute(Q_eta)
-    # mu_eta <- cholsolve(Q_eta,(t(Sm@S) %*% Dinv %*% (Sm@Z - Sm@X %*% alpha)),
-    #                     perm=TRUE, cholQp = chol_Q_eta$Qpermchol,P = chol_Q_eta$P)
-    # S_eta <- Matrix()
-
-    ## Deprecated:
-    # S_eta <- chol2inv(chol(crossprod(t(cholDinv) %*% Sm@S) + Kinv))
-    # mu_eta <- S_eta %*% (t(Sm@S) %*% Dinv %*% (Sm@Z - Sm@X %*% alpha))
-
     Sm@mu_eta <- mu_eta  # update conditional mean
     Sm@S_eta <- S_eta    # update conditional covariance
     Sm@Q_eta <- Q_eta    # update conditional precision
@@ -244,7 +233,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 }
 
 ## M-step for the indepdent fine-scale variation model
-.SRE.Mstep.ind <- function(Sm, lambda = 0) {
+.SRE.Mstep.ind <- function(Sm, lambda = 0, known_sigma2fs) {
 
     mu_eta <- Sm@mu_eta              # current cond. mean of random effects
     S_eta <- Sm@S_eta                # current cond. cov. matrix of random effects
@@ -258,22 +247,19 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     ## If the measurement and fs. variational covariance matricies
     ## are proportional to the identity then we have the
     ## special case of homoscedasticity
-    if(all((a <- diag(Sm@Ve)) == a[1]) &
-       all((b <- diag(Sm@Vfs)) == b[1]) &
-       isDiagonal(Sm@Vfs))    {
-        homoscedastic <- TRUE
-    } else {
-        homoscedastic <- FALSE
-    }
+    homoscedastic <- all((a <- diag(Sm@Ve)) == a[1]) & 
+      all((b <- diag(Sm@Vfs)) == b[1]) &
+      isDiagonal(Sm@Vfs)   
 
     ## If the measurement and fs. variational covariance matricies
     ## are diagonal then we have another special case
-    if(isDiagonal(Sm@Ve) & isDiagonal(Sm@Vfs))    {
-        diagonal_mats <- TRUE
-    } else {
-        diagonal_mats <- FALSE
-    }
-
+    diagonal_mats <- isDiagonal(Sm@Ve) & isDiagonal(Sm@Vfs)  
+    
+    ## If the user has supplied a known value for the fine-scale variance, we 
+    ## don't need to estimate sigma2fs.
+    ## TODO: Implement this
+    est_sigma2fs <- is.null(known_sigma2fs)
+      
     ## If we have some fine-scale variation terms
     if(!all(diag(Sm@Vfs) == 0))
         ## And we're not in the diagonal case (this is the most comp. intensive)
@@ -333,9 +319,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 
                     ## Since DinvV and Dinv are diagonal and we only want the trace,
                     ## we only need the diagonal elements of Omega in the following
-                    -(-0.5*tr(DinvV) +
-                          0.5*tr(DinvV %*% Dinv %*% Omega_diag)
-                    )
+                    return(-(-0.5*tr(DinvV) + 0.5*tr(DinvV %*% Dinv %*% Omega_diag)))
                 }
             }
         }
@@ -411,7 +395,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     Sm@sigma2fshat <- sigma2fs_new
 
     ## Return SRE model
-    Sm
+    return(Sm)
 }
 
 ## This routine updates the covariance matrix of the random effects
@@ -674,7 +658,27 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 # ---- TMB fitting functions ----
 
 ## Fitting stage of non-Gaussian FRK (more generally, for method  = 'TMB').
-.TMB_fit <- function(M, optimiser, known_sigma2fs, ...) {
+.TMB_fit <- function(M, optimiser, known_sigma2fs, print_lik, ...) {
+  
+  
+  info_fit <- list()      # initialise info_fit
+  
+  info_fit$method <- "TMB"  # updated info_fit
+  # llk <- rep(0,n_EM)        # log-likelihood
+  # 
+  # ## Plot log-lik vs EM iteration plot
+  # info_fit$plot_lik <- list(x = 1:i, llk = llk[1:i],
+  #                           ylab = "log likelihood",
+  #                           xlab = "EM iteration")
+  # 
+  # ## If user wants to see the log-lik vs EM iteration plot, plot it
+  # if(print_lik & !is.na(tol)) {
+  #   plot(1:i, llk[1:i],
+  #        ylab = "log likelihood",
+  #        xlab = "EM iteration")
+  # }
+  # 
+  
   
   ## If we are using a precision matrix formulation, determine if we can use the
   ## neighbour formulation, or if we need to use the precision-block-exponential.
@@ -751,13 +755,16 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   obj$env$tracepar <- opts_FRK$get("verbose")
 
   
-  # ---- Model fitting ----
-  
   cat("Optimising with TMB ...\n")
   
   ## The optimiser should have arguments: start, objective, gradient. 
   ## The remaining arguments can be whatever.
   fit <- optimiser(obj$par, obj$fn, obj$gr, ...)
+  
+  ## TODO: could add this information to info_fit
+  if (!is.null(fit$iterations)) info_fit$iterations <- fit$iterations
+  if (!is.null(fit$convergence)) info_fit$convergence <- fit$convergence
+  if (!is.null(fit$message)) info_fit$message <- fit$message
   
   cat("Optimisation completed.\n")
   cat("Extracting parameter estimates and the estimated joint precision matrix of the random effects from TMB...\n")
@@ -811,6 +818,21 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   
   ## Log-likeihood (negative of the negative-log-likelihood)
   M@log_likelihood <- -obj$fn() # could also use -fit$objective
+  
+  ## If zero fine-scale variation detected just make sure user knows.
+  ## This can be symptomatic of poor fitting
+  if(M@sigma2fshat == 0) {
+    info_fit$sigma2fshat_equal_0 <- 1
+    if(opts_FRK$get("verbose") > 0)
+      message("sigma2fs is being estimated to zero.
+      This might because of an incorrect binning procedure or because too much 
+      measurement error is being assumed (or because the latent field is indeed 
+              that smooth, but unlikely).")
+  } else {
+    info_fit$sigma2fshat_equal_0 <- 0
+  }
+  
+  M@info_fit <- info_fit
 
   return(M)
 }

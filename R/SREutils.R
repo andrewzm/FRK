@@ -176,7 +176,7 @@ print.summary.SRE <- function(x, ...) {
 .est_obs_error <- function(sp_pts,variogram.formula,vgm_model = NULL,BAU_width = NULL) {
   
   ## Notify user (even if not verbose == TRUE)
-  cat("... Fitting variogram for estimating measurement error\n")
+  cat("Fitting variogram for estimating measurement error...\n")
   
   ## Basic checks
   if(!is(variogram.formula,"formula"))
@@ -296,10 +296,8 @@ print.summary.SRE <- function(x, ...) {
                     in the data object if known.")
     }
   }
-  cat("sigma2e estimate = ",vgm.fit$psill[1],"\n")
   
   ## Return the sqrt of the psill as the measurement error
   sp_pts$std <- sqrt(vgm.fit$psill[1])
   sp_pts
-  
 }

@@ -141,7 +141,7 @@ SRE2 <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mod
 
     S <- Ve <- Vfs <- X <- Z <- Cmat <- list()
 
-    print("Normalising basis function evaluations at BAU level ...")
+    print("Normalising basis function evaluations at BAU level...")
     S0 <- eval_basis(basis,.polygons_to_points(BAUs))
     xx <- sqrt(rowSums((S0) * S0))
     xx <- xx + 1*(xx == 0) ## Where there are no basis functions do not divide zero by zero..
@@ -159,7 +159,7 @@ SRE2 <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mod
         }
 
 
-        print("Binning data ...")
+        print("Binning data...")
         data_proc <- map_data_to_BAUs(data[[i]],
                                       BAUs,
                                       av_var = av_var,
@@ -497,12 +497,12 @@ SRE.fit2 <- function(SRE_model,n_EM = 100L, tol = 0.01, lambda = 0, method="EM",
 
         # Still in development:
         # if(i == 2) {
-        #     print("Normalising basis function evaluations at BAUs ...")
+        #     print("Normalising basis function evaluations at BAUs...")
         #     S0 <- eval_basis(SRE_model@basis,as.matrix(SRE_model@BAUs[coordnames(SRE_model@data[[1]])]@data))
         #     xx <<- sqrt(rowSums((S0 %*% SRE_model@S_eta) * S0))
         #     S0 <- S0/xx
         #     SRE_model@S <- SRE_model@Cmat %*% S0
-        #     print("Done ...")
+        #     print("Done...")
         # }
 
         SRE_model <- .SRE.Estep(SRE_model)
@@ -949,11 +949,11 @@ clip_polygons_lonlat <- function(d,key) {
 SRE.simulate <- function(S,obs_fs) {
 
     ## Still in development:
-    print("Normalising basis function evaluations at BAUs ...")
+    print("Normalising basis function evaluations at BAUs...")
     xx <- sqrt(rowSums(S0* S0))
     xx <- xx + 1*(xx == 0) ## Where there are no basis functions do not divide zero by zero..
     S0 <- S0/xx
-    print("Done ...")
+    print("Done...")
 
 }
 

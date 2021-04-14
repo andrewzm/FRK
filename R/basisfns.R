@@ -300,7 +300,7 @@ auto_basis <- function(manifold = plane(),
     ## we need to add resolutions iteratively and stop when exceed the maximum
     ## of basis functions
     if(!is.null(max_basis)) {
-        cat("...Automatically choosing number of functions...\n")
+        cat("Automatically choosing number of functions...\n")
         tot_basis <- 0                  # start of with 0 basis functions
         tot_data <- length(data)        # number of data points
         nres <- 1                       # start off with one resolution (we have a minimum of one resolution)

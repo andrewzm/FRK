@@ -187,7 +187,7 @@ FRK <- function(f,                     # formula (compulsory)
         G <- basis  # If user has provided basis functions, just use these
     }
 
-    cat("Modelling using",nbasis(G),"basis functions\n")
+    cat("Modelling using",nbasis(G),"basis functions.\n")
     cat("Constructing SRE model...\n")
 
 
