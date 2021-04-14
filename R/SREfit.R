@@ -760,6 +760,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   fit <- optimiser(obj$par, obj$fn, obj$gr, ...)
   
   cat("Optimisation completed.\n")
+  cat("Extracting parameter estimates and the estimated joint precision matrix of the random effects from TMB...\n")
   
   ## Re-estimate the fine-scale variance using better estimates. 
   ## Need to refit the model using the final results and the new version of sigma2fs,
