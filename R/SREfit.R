@@ -81,6 +81,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   if (!is.null(taper)) {
     beta   <- .tapering_params(D_matrices = SRE_model@D_basis, taper = taper)
     T_beta <- .T_beta_taper_matrix(D_matrices = SRE_model@D_basis, beta = beta)
+    info_fit$taper <- "NULL"
   } else {
     T_beta <- 1 
   }
@@ -680,9 +681,10 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     
   info_fit$method <- "TMB" 
   
-  if (is.null(taper)) {
-    cat("taper not specified: Since we are using TMB, we have to use tapering for computaitonal reasons. Setting taper = 4.")
+  if (is.null(taper) && (M@K_type == "block-exponential" || !M@basis@regular)) {
+    cat("The argument taper was not specified. Since we are using TMB, we must use tapering for computational reasons: Setting taper = 4.\n")
     taper <- 4
+    info_fit$taper <- taper
   }
   
   ## If we are using a precision matrix formulation, determine if we can use the
