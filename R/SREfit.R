@@ -63,7 +63,9 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 
 .EM_fit <- function(SRE_model, n_EM, lambda, tol, print_lik, known_sigma2fs) {
   
-  info_fit <- list()      # initialise info_fit
+  info_fit <- list()      
+  
+  info_fit$time <- system.time({
   
   n <- nbasis(SRE_model)  # number of basis functions
   X <- SRE_model@X        # covariates
@@ -74,6 +76,13 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   ## If user wishes to show progress show progress bar
   if(opts_FRK$get("progress"))
     pb <- utils::txtProgressBar(min = 0, max = n_EM, style = 3)
+  
+  ## If the user has requested covariance tapering, construct the taper matrix
+  if (!is.null(taper)) {
+    K_beta <-.K_tap_matrix()
+  } else {
+    K_beta <- 1 # 
+  }
   
   ## For each EM iteration step
   for(i in 1:n_EM) {
@@ -127,7 +136,8 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
          xlab = "EM iteration")
     
   }
-  
+  }) # system.time brackets
+
   SRE_model@info_fit <- info_fit
   
   return(SRE_model)
@@ -204,6 +214,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 
 ## E-step for independent fs-variation model
 .SRE.Estep.ind <- function(Sm, known_sigma2fs) {
+  
     alpha <- Sm@alphahat           # current regression coefficients estimates
     K <- Sm@Khat                   # current random effects covariance matrix estimate
     Kinv <- Sm@Khat_inv            # current random effects precision matrix estimate
@@ -240,6 +251,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     alpha <- Sm@alphahat             # regression coefficients
     sigma2fs <- Sm@sigma2fshat       # fine-scale variance
 
+    ## TAPER
     K <- .update_K(Sm,method=Sm@K_type,  # update the prior covariance matrix K
                    lambda = lambda)
     Khat_inv <- chol2inv(chol(K))        # compute the precision
@@ -514,7 +526,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
                 Ki_inv <- chol2inv(chol(Ki))  # inverse
             }
 
-            ## derivative of log-likelihodd w.r.t tau_1 (spatial)
+            ## derivative of log-likelihood w.r.t tau_1 (spatial)
             tau_i1 <- -(-0.5*sum(diag2(dKi,Ki_inv)) +
                             0.5*omega[[i]]*sum(diag2(eta2[[i]]%*% Ki_inv,
                                                      dKi %*% Ki_inv)))
@@ -616,9 +628,9 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
         }
 
     }
-
+    
     ## Return the estimated matrix
-    K
+    return(K)
 }
 
 ## The function below regularises the K matrix when the K_type is "unstructured"
@@ -661,23 +673,11 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 .TMB_fit <- function(M, optimiser, known_sigma2fs, print_lik, ...) {
   
   
-  info_fit <- list()      # initialise info_fit
+  info_fit <- list()      
   
-  info_fit$method <- "TMB"  # updated info_fit
-  # llk <- rep(0,n_EM)        # log-likelihood
-  # 
-  # ## Plot log-lik vs EM iteration plot
-  # info_fit$plot_lik <- list(x = 1:i, llk = llk[1:i],
-  #                           ylab = "log likelihood",
-  #                           xlab = "EM iteration")
-  # 
-  # ## If user wants to see the log-lik vs EM iteration plot, plot it
-  # if(print_lik & !is.na(tol)) {
-  #   plot(1:i, llk[1:i],
-  #        ylab = "log likelihood",
-  #        xlab = "EM iteration")
-  # }
-  # 
+  info_fit$time <- system.time({
+    
+  info_fit$method <- "TMB" 
   
   
   ## If we are using a precision matrix formulation, determine if we can use the
@@ -831,6 +831,8 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   } else {
     info_fit$sigma2fshat_equal_0 <- 0
   }
+  
+  })
   
   M@info_fit <- info_fit
 
