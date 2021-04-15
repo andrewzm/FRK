@@ -341,6 +341,9 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
   
   T_beta <- Matrix::bdiag(T_beta)
   
+  ## Sanity check:
+  # nnzero(T_beta) == nnzero(zapsmall(T_beta))
+  
   return(T_beta)
 }
 
