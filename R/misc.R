@@ -251,145 +251,97 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
 
 # ---- Various matrix construction functions ----
 
-## #' Covariance tapering based on distances.
-## #'
-## #' Computes the covariance tapering parameters \eqn{\beta} (which are dependent
-## #' on resolution), number of non-zeros in each block of the tapered
-## #' covariance matrix K_tap, and the tapered distance matrix whereby some distances
-## #' have been set to zero post tapering (although the remaining non-zero distances 
-## #' are unchanged).
-## #'
-## #' \code{taper} determines how strong the covariance tapering is; the ith taper parameter
-## #' \eqn{\beta_i} is equal to \code{taper[i]} * \code{minDist[i]}, where
-## #' \code{minDist[i]} is the minimum distance between basis functions at the
-## #' \code{i}th resolution.
-## #'
-## #' @param D_matrices A list of distance matrices corresponding to each resolution.
-## #' @param taper The strength of the taper (either a vector or a single number).
-## #'
-## #' @return A list containing:
-## #' \describe{
-## #'   \item{beta}{A vector of taper parameters.}
-## #'   \item{nnz}{A vector containing the number of non-zeros in each block of the 
-## #'   tapered prior covariance matrix, K_tap.}
-## #'   \item{D_tap}{A sparse block-diagonal matrix containing the distances with 
-## #'   some distances set to zero post tapering. }
-## #' }
-## #' @seealso \code{\link{.K_matrix}}
-.cov_tap <- function(D_matrices, taper = 8){
-  
-  ri <- sapply(D_matrices, nrow) # No. of basis functions at each res
-  nres <- length(ri)
+.tapering_params <- function(D_matrices, taper) {
   
   ## Minimum distance between neighbouring basis functions.
   ## (add a large number to the diagonal, which would otherwise be 0)
-  ## FIXME: This approach is flawed. What if we have a very skinny rectangle for the domain of interest?
-  minDist <- vector()
-  for(i in 1:nres) minDist[i] <- min(D_matrices[[i]] + 10^8 * diag(ri[i]))
+  minDist <- sapply(D_matrices, function(D) min(D + 10^8 * diag(nrow(D))))
+
+  return(taper * minDist)
+}
+
+## Covariance tapering based on distances.
+##
+## Computes the covariance tapering parameters \eqn{\beta} (which are dependent
+## on resolution), number of non-zeros in each block of the tapered
+## covariance matrix K_tap, and the tapered distance matrix whereby some distances
+## have been set to zero post tapering (although the remaining non-zero distances 
+## are unchanged).
+##
+## \code{taper} determines how strong the covariance tapering is; the ith taper parameter
+## \eqn{\beta_i} is equal to \code{taper[i]} * \code{minDist[i]}, where
+## \code{minDist[i]} is the minimum distance between basis functions at the
+## \code{i}th resolution.
+##
+## @param D_matrices a list of distance matrices corresponding to each resolution of basis function.
+## @param taper the strength of the taper (either a vector or a single number).
+##
+## @return A list containing:
+## \describe{
+##   \item{beta}{A vector of taper parameters.}
+##   \item{nnz}{A vector containing the number of non-zeros in each block of the 
+##   tapered prior covariance matrix, K_tap.}
+##   \item{D_tap}{A sparse block-diagonal matrix containing the distances with 
+##   some distances set to zero post tapering.}
+## }
+.cov_tap <- function(D_matrices, taper){
+
+  if (class(D_matrices) != "list") 
+    stop("D_matrices should be a list of matrices giving the distance between basis functions at each resolution")
   
   ## Taper parameters
-  beta   <- taper * minDist
+  beta   <- .tapering_params(D_matrices = D_matrices, taper = taper)
   
-  ## Construct D matrix with elements set to zero after tapering
-  D_tap <- list()
-  nnz <- c()
-  for (i in 1:nres) {
-    indices    <- D_matrices[[i]] < beta[i]
-    D_tap[[i]] <- as(D_matrices[[i]] * indices, "sparseMatrix")
-    
-    # Add explicit zeros
-    D_tap[[i]] <- D_tap[[i]] + sparseMatrix(i = 1:ri[i], j = 1:ri[i], x = 0) 
-    
-    # Number of non-zeros in tapered covariance matrix at each resolution
-    nnz[i] <- length(D_tap[[i]]@x) # Note that this approach DOES count explicit zeros
-  }
+  ## Construct D matrix with elements set to zero after tapering (non-zero entries
+  ## are the untapered distances)
+  D_tap <- .tapered_dist_matrices_nonzeroes_untouched(D_matrices, beta)
+  
+  ## Number of non-zeros in tapered covariance matrix at each resolution
+  nnz <- sapply(D_tap, function(D) length(D@x))
   
   D_tap <- Matrix::bdiag(D_tap)
-  
+
   return(list("beta" = beta, "nnz" = nnz, "D_tap" = D_tap))
 }
 
-
-
-## #' K matrix, the un-tapered prior covariance matrix.
-## #'
-## #' Construct the prior covariance matrix of the random effects (NOT-TAPERED).
-## #'
-## #' @param D_matrices A list of distance matrices corresponding to each resolution.
-## #' @param sigma2 The variance components: a vector with length equal to the number
-## #' of resolutions i.e. \code{length(D_matrices)}.
-## #' @param tau The correlation components: a vector with length equal to the number
-## #' of resolutions i.e. \code{length(D_matrices)}.
-## #' @return The block-diagonal (class \code{dgCmatrix}) prior covariance matrix, K.
-.K_matrix <- function(D_matrices, sigma2, tau){
+.tapered_dist_matrices_nonzeroes_untouched <- function(D_matrices, beta) {
   
-  exp_cov_function <- function(dist_matrix, sigma2, tau) {
-    sigma2 * exp(- dist_matrix / tau)
-  }
+  D_tap <- lapply(1:length(D_matrices), function(i, D, beta) {
+    D[[i]] <- as(D[[i]] * (D[[i]] < beta[i]), "sparseMatrix")
+    
+    ## Add explicit zeros to diagonal
+    D <- D[[i]] + sparseMatrix(i = 1:nrow(D[[i]]), j = 1:nrow(D[[i]]), x = 0) 
+  }, D = D_matrices, beta = beta)
   
-  if (class(D_matrices) == "list") {
-    
-    ## Construct the individual blocks of the K-matrix
-    K_matrices <- mapply(exp_cov_function,
-                         dist_matrix = D_matrices,
-                         sigma2 = sigma2, tau = tau,
-                         SIMPLIFY = FALSE)
-    
-    ## Construct the full K-matrix
-    K <- Matrix::bdiag(K_matrices)
-    
-  } else {
-    K <- exp_cov_function(D_matrices, sigma2 = sigma2, tau  = tau)
-  }
-  
-  return(K)
+  return(D_tap)
 }
 
-## #' \eqn{K_\beta} matrix, the taper matrix.
-## #'
-## #' Constructs \eqn{K_\beta}, the taper matrix, using the Spherical taper.
-## #'
-## #' Denoting by \eqn{d(s,s^*)} the distance between two spatial locations,
-## #' the Spherical taper is given by:
-## #' \deqn{C_\beta(s, s^*) = (1-\frac{d(s,s^*)}{\beta})^2_{+}  (1+\frac{d(s,s^*)}{2\beta}), }
-## #' where \eqn{x_+ = max(x, 0)}.
-## #'
-## #' @param D_matrices A list of distance matrices corresponding to each resolution.
-## #' @param beta The taper parameters (which vary based on resolution).
-## #' @return A taper matrix, which is block-diagonal and of class \code{dgCmatrix}.
-.K_beta_matrix <- function(D_matrices, beta){
+## Constructs \eqn{T_\beta}, the taper matrix, using the Spherical taper.
+##
+## Takes a list of distance matrices, and compute the spherical taper function
+## for each matrix. Returns a list object. This is only used in the EM side; 
+## for tapering within TMB, we compute the taper function within the C++ template.
+## Denoting by \eqn{d(s,s^*)} the distance between two spatial locations,
+## the Spherical taper is given by:
+## \deqn{C_\beta(s, s^*) = (1-\frac{d(s,s^*)}{\beta})^2_{+}  (1+\frac{d(s,s^*)}{2\beta}), }
+##  where \eqn{x_+ = max(x, 0)}.
+## 
+## @param beta The taper parameters (which vary based on resolution).
+## @return A taper matrix, which is block-diagonal and of class \code{dgCmatrix}.
+.T_beta_taper_matrix <- function(D_matrices, beta) {
   
-  spherical_taper <- function(matrix, beta) {
-    apply(matrix, c(1,2), function(h){(1 + h / (2 * beta)) * (max(1 - h / beta, 0))^2})
+  if (class(D_matrices) != "list") 
+    stop("D_matrices should be a list of matrices giving the distance between basis functions at each resolution")
+  
+  spherical_taper <- function(D, beta) {
+    apply(D, c(1,2), function(d){(1 + d / (2 * beta)) * (max(1 - d / beta, 0))^2})
   }
   
-  if (class(D_matrices) == "list") {
-    K_beta <- mapply(spherical_taper, matrix = D_matrices, beta = beta, SIMPLIFY = FALSE)
-  } else {
-    K_beta <- spherical_taper(matrix = D_matrices, beta = beta)
-  }
+  T_beta <- mapply(spherical_taper, D = D_matrices, beta = beta, SIMPLIFY = FALSE)
   
-  K_beta <- Matrix::bdiag(K_beta)
+  T_beta <- Matrix::bdiag(T_beta)
   
-  return(K_beta)
-}
-
-## #' K_tap, the tapered prior covariance matrix.
-## #'
-## #' Construct K_tap, the \emph{tapered} prior covariance matrix, using the Spherical taper.
-## #'
-## #' @inheritParams .K_matrix
-## #' @inheritParams .K_beta_matrix
-## #' @return The \emph{tapered} prior covariance matrix, which is
-## #' block-diagonal and of class \code{dgCmatrix}.
-.K_tap_matrix <- function(D_matrices, beta, sigma2, tau){
-  
-  K <- .K_matrix(D_matrices, sigma2, tau)
-  K_beta <- .K_beta_matrix(D_matrices, beta)
-  
-  K_tap <- K * K_beta
-  
-  return(K_tap)
+  return(T_beta)
 }
 
 

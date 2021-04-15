@@ -113,7 +113,6 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot info_fit information on fitting (convergence etc.)
 #' @slot response A character string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "bernoulli", "gamma","inverse-gaussian", "negative-binomial", or "binomial".
 #' @slot link A character string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted. 
-#' @slot taper A positve numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "covariance"} and \code{TMB} is used to fit the data)
 #' @slot mu_xi updated expectation of the fine-scale random effects at all BAUs (estimated)
 #' @slot Q_posterior updated joint precision matrix of the basis function random effects and observed fine-scale random effects (estimated)
 #' @slot log_likelihood the log likelihood of the fitted model
@@ -155,7 +154,6 @@ setClass("SRE",representation(data="list",
                               info_fit = "list", 
                               response = "character", 
                               link = "character", 
-                              taper = "numeric", 
                               mu_xi = "Matrix",
                               Q_posterior = "dsCMatrix",
                               log_likelihood = "numeric", 

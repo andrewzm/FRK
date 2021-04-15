@@ -2,7 +2,7 @@
 
 ## Checks arguments for the SRE() function. Code is self-explanatory
 .check_args1 <- function(f, data,basis, BAUs, est_error, 
-                         K_type, response, link, taper, fs_by_spatial_BAU, normalise_wts, 
+                         K_type, response, link, fs_by_spatial_BAU, normalise_wts, 
                          sum_variables, average_in_BAU) {
   
   if(!is(f,"formula")) stop("f needs to be a formula.")
@@ -101,13 +101,6 @@
     warning("Due to the implied range of the mean function, and the permitted support of the mean for the specified response, nonsensical results are possible with the chosen link function. Consider using a link function which ensures the mean is mapped to the correct support.")
   }
   
-  ## Check taper (applicable to block-exponential when method = TMB)
-  if (!(class(taper) %in% c("numeric", "integer"))) {
-    stop("taper, the argument controlling the coveriance taper, must be numeric or integer.")
-  } else if (taper <= 0) {
-    stop("taper, the argument controlling the coveriance taper, must be positive.")
-  }
-  
   ## Check k_Z (size parameter for data)
   if (response %in% c("binomial", "negative-binomial")) {
     if (!all(sapply(data, function(l) "k_Z" %in% names(l)))) {
@@ -155,7 +148,7 @@
 ## Checks arguments for the SRE.fit() function. Code is self-explanatory
 .check_args2 <- function(n_EM, tol, lambda, method, print_lik, optimiser, 
                          response, K_type, link, fs_by_spatial_BAU, known_sigma2fs, 
-                         BAUs, ...) {
+                         BAUs, taper, ...) {
   
   if(!is.numeric(n_EM)) stop("n_EM needs to be an integer")
   if(!(n_EM <- round(n_EM)) > 0) stop("n_EM needs to be greater than 0")
@@ -216,6 +209,16 @@
     msg2 <- names(l)[!(names(l) %in% valid_param_names)]
     stop(paste(c(msg1, msg2), collapse = " "))
   }
+  
+  ## Check taper
+  if (!is.null(taper)) {
+    if (!(class(taper) %in% c("numeric", "integer"))) {
+      stop("taper, the argument controlling the coveriance taper, must be numeric or integer.")
+    } else if (taper <= 0) {
+      stop("taper, the argument controlling the coveriance taper, must be positive.")
+    }
+  }
+
 }
 
 ## Checks arguments for the predict() function. Code is self-explanatory

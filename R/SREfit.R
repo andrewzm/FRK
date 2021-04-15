@@ -2,7 +2,7 @@
 #' @export
 SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
                     lambda = 0, print_lik = FALSE, optimiser = nlminb, 
-                    known_sigma2fs = NULL, ...) {
+                    known_sigma2fs = NULL, taper = NULL, ...) {
 
     method <- match.arg(method)
     optimiser <- match.fun(optimiser)
@@ -29,12 +29,12 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
                  response = SRE_model@response, K_type = SRE_model@K_type, link = SRE_model@link, 
                  known_sigma2fs = known_sigma2fs,
                  BAUs = SRE_model@BAUs,
-                 optimiser = optimiser, ...) # control parameters to optimiser() 
+                 optimiser = optimiser, taper = taper, ...) # control parameters to optimiser() 
     
     ## Call internal fitting function with checked arguments
     SRE_model <- .SRE.fit(SRE_model = SRE_model, n_EM = n_EM, tol = tol, 
                           method = method, lambda = lambda, print_lik = print_lik, 
-                          optimiser = optimiser, known_sigma2fs = known_sigma2fs, ...)
+                          optimiser = optimiser, known_sigma2fs = known_sigma2fs, taper = taper, ...)
     return(SRE_model)
 }
 
@@ -44,13 +44,13 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 # ---- NOT EXPORTED ----
 
 .SRE.fit <- function(SRE_model, n_EM, tol, method, lambda, 
-                     print_lik, optimiser, known_sigma2fs, ...) {
+                     print_lik, optimiser, known_sigma2fs, taper, ...) {
   
   if(method == "EM") {
     SRE_model <- .EM_fit(SRE_model = SRE_model, n_EM = n_EM, lambda = lambda, 
-                         tol = tol, print_lik = print_lik, known_sigma2fs = known_sigma2fs)
+                         tol = tol, print_lik = print_lik, known_sigma2fs = known_sigma2fs, taper = taper)
   } else if (method == "TMB") {
-    SRE_model <- .TMB_fit(SRE_model, optimiser = optimiser, known_sigma2fs = known_sigma2fs, print_lik = print_lik, ...)
+    SRE_model <- .TMB_fit(SRE_model, optimiser = optimiser, known_sigma2fs = known_sigma2fs, taper = taper, ...)
   } else {
     stop("No other estimation method implemented yet. Please use method = 'EM' or method = 'TMB'.")
   }
@@ -61,7 +61,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 
 # ---- EM fitting functions ----
 
-.EM_fit <- function(SRE_model, n_EM, lambda, tol, print_lik, known_sigma2fs) {
+.EM_fit <- function(SRE_model, n_EM, lambda, tol, print_lik, known_sigma2fs, taper) {
   
   info_fit <- list()      
   
@@ -79,16 +79,17 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   
   ## If the user has requested covariance tapering, construct the taper matrix
   if (!is.null(taper)) {
-    K_beta <-.K_tap_matrix()
+    beta   <- .tapering_params(D_matrices = SRE_model@D_basis, taper = taper)
+    T_beta <- .T_beta_taper_matrix(D_matrices = SRE_model@D_basis, beta = beta)
   } else {
-    K_beta <- 1 # 
+    T_beta <- 1 
   }
   
   ## For each EM iteration step
   for(i in 1:n_EM) {
     llk[i] <- loglik(SRE_model)                          # compute the log-lik
     SRE_model <- .SRE.Estep(SRE_model)                   # compute E-step
-    SRE_model <- .SRE.Mstep(SRE_model, lambda, known_sigma2fs) # compute M-step
+    SRE_model <- .SRE.Mstep(SRE_model, lambda, known_sigma2fs, T_beta) # compute M-step
     if(opts_FRK$get("progress"))
       utils::setTxtProgressBar(pb, i)                    # update progress bar
     if(i>1)                                              # If we're not on first iteration
@@ -204,11 +205,11 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 }
 
 ## M-step
-.SRE.Mstep <- function(Sm, lambda = 0, known_sigma2fs) {
+.SRE.Mstep <- function(Sm, lambda = 0, known_sigma2fs, T_beta) {
     # This is structured this way so that extra models for fs-variation
     # can be implemented later
     if(Sm@fs_model == "ind")
-        Sm <- .SRE.Mstep.ind(Sm, lambda = lambda, known_sigma2fs = known_sigma2fs)
+        Sm <- .SRE.Mstep.ind(Sm, lambda = lambda, known_sigma2fs = known_sigma2fs, T_beta = T_beta)
     else stop("M-step only for independent fs-variation model currently implemented")
 }
 
@@ -244,16 +245,16 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 }
 
 ## M-step for the indepdent fine-scale variation model
-.SRE.Mstep.ind <- function(Sm, lambda = 0, known_sigma2fs) {
+.SRE.Mstep.ind <- function(Sm, lambda = 0, known_sigma2fs, T_beta) {
 
     mu_eta <- Sm@mu_eta              # current cond. mean of random effects
     S_eta <- Sm@S_eta                # current cond. cov. matrix of random effects
     alpha <- Sm@alphahat             # regression coefficients
     sigma2fs <- Sm@sigma2fshat       # fine-scale variance
 
-    ## TAPER
     K <- .update_K(Sm,method=Sm@K_type,  # update the prior covariance matrix K
                    lambda = lambda)
+    K <- K * T_beta # apply covariance taper, or just multiply by 1 if taper is not requested
     Khat_inv <- chol2inv(chol(K))        # compute the precision
 
     ## If the measurement and fs. variational covariance matricies
@@ -670,7 +671,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 # ---- TMB fitting functions ----
 
 ## Fitting stage of non-Gaussian FRK (more generally, for method  = 'TMB').
-.TMB_fit <- function(M, optimiser, known_sigma2fs, print_lik, ...) {
+.TMB_fit <- function(M, optimiser, known_sigma2fs, taper, ...) {
   
   
   info_fit <- list()      
@@ -679,6 +680,10 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     
   info_fit$method <- "TMB" 
   
+  if (is.null(taper)) {
+    cat("taper not specified: Since we are using TMB, we have to use tapering for computaitonal reasons. Setting taper = 4.")
+    taper <- 4
+  }
   
   ## If we are using a precision matrix formulation, determine if we can use the
   ## neighbour formulation, or if we need to use the precision-block-exponential.
@@ -691,7 +696,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 
   ## Parameter and data preparation for TMB
   parameters <- .TMB_initialise(M, K_type = K_type)
-  data <- .TMB_data_prep(M, sigma2fs_hat = exp(parameters$logsigma2fs), K_type = K_type)
+  data <- .TMB_data_prep(M, sigma2fs_hat = exp(parameters$logsigma2fs), K_type = K_type, taper = taper)
   
   ## If we are estimating a unique fine-scale variance at each spatial BAU, 
   ## simply replicate sigma2fs ns times. 
@@ -1053,7 +1058,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 }
 
 
-.TMB_data_prep <- function (M, sigma2fs_hat, K_type) {
+.TMB_data_prep <- function (M, sigma2fs_hat, K_type, taper = taper) {
   
   obsidx <- observed_BAUs(M)       # Indices of observed BAUs
   
@@ -1090,7 +1095,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     data$x <- data$n_r <- data$n_c  <- -1 
   
   if (K_type %in% c("block-exponential", "precision-block-exponential")) {
-    tmp         <- .cov_tap(spatial_dist_matrix, taper = M@taper)
+    tmp         <- .cov_tap(spatial_dist_matrix, taper = taper)
     data$beta   <- tmp$beta 
     R            <- as(tmp$D_tap, "dgTMatrix")
     data$nnz         <- tmp$nnz 

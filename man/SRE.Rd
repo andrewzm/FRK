@@ -34,7 +34,7 @@ FRK(
   percentiles = c(5, 95),
   fs_by_spatial_BAU = FALSE,
   known_sigma2fs = NULL,
-  taper = 4,
+  taper = NULL,
   ...
 )
 
@@ -55,7 +55,6 @@ SRE(
     "negative-binomial", "binomial"),
   link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse",
     "inverse-squared"),
-  taper = 4,
   include_fs = TRUE,
   fs_by_spatial_BAU = FALSE,
   ...
@@ -70,6 +69,7 @@ SRE.fit(
   print_lik = FALSE,
   optimiser = nlminb,
   known_sigma2fs = NULL,
+  taper = NULL,
   ...
 )
 
@@ -133,7 +133,7 @@ loglik(SRE_model)
 
 \item{known_sigma2fs}{known value of the fine-scale variance. If \code{NULL} (the default), the fine-scale variance \eqn{\sigma^2_\xi} is estimated as usual. If \code{known_sigma2fs} is not \code{NULL}, the fine-scale variance is fixed to the supplied value; this may be a scalar, or vector of length equal to the number of spatial BAUs (if fs_by_spatial_BAU = TRUE)}
 
-\item{taper}{positive numeric indicating the strength of the covariance/partial-correlation tapering}
+\item{taper}{positive numeric indicating the strength of the covariance/partial-correlation tapering. Only applicable if \code{K_type = "block-exponential"} or if the basis-functions are irregular and \code{K_type = "precision"}. If \code{taper} is \code{NULL} (default) and \code{method = "EM"}, no tapering is applied; if \code{method = "TMB"}, tapering must be applied (for computational reasons), and we set it to 4 if it is unspecified}
 
 \item{...}{other parameters passed on to \code{auto_basis()} and \code{auto_BAUs()} when calling \code{FRK()}, or the user specified function \code{optimiser()} when calling \code{FRK()} or \code{SRE.fit()}}
 

@@ -47,7 +47,7 @@
 #' @param covariances logical variable indicating whether prediction covariances should be returned or not. If set to \code{TRUE}, a maximum of 4000 prediction locations or polygons are allowed
 #' @param response string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "bernoulli", "gamma","inverse-gaussian", "negative-binomial", or "binomial"
 #' @param link  string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted
-#' @param taper positive numeric indicating the strength of the covariance/partial-correlation tapering
+#' @param taper positive numeric indicating the strength of the covariance/partial-correlation tapering. Only applicable if \code{K_type = "block-exponential"} or if the basis-functions are irregular and \code{K_type = "precision"}. If \code{taper} is \code{NULL} (default) and \code{method = "EM"}, no tapering is applied; if \code{method = "TMB"}, tapering must be applied (for computational reasons), and we set it to 4 if it is unspecified
 #' @param optimiser the optimising function used for model fitting when \code{method = "TMB"} (default is \code{nlminb}). Users may pass in a function object or a string corresponding to a named function. Optional parameters may be passed to \code{optimiser} via \code{...}. The only requirement of \code{optimiser} is that the first three arguments correspond to the initial parameters, the objective function, and the gradient, respectively (this may be achieved by simply constructing a wrapper function) 
 #' @param known_sigma2fs known value of the fine-scale variance. If \code{NULL} (the default), the fine-scale variance \eqn{\sigma^2_\xi} is estimated as usual. If \code{known_sigma2fs} is not \code{NULL}, the fine-scale variance is fixed to the supplied value; this may be a scalar, or vector of length equal to the number of spatial BAUs (if fs_by_spatial_BAU = TRUE)
 #' @param kriging string indicating the kind of kriging: \code{"simple"} ignores uncertanity due to estimation of the fixed effects, while \code{"universal"} accounts for this source of uncertainty. Only applicable if \code{method = "TMB"}
@@ -240,7 +240,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                 response = c("gaussian", "poisson", "bernoulli", "gamma",
                              "inverse-gaussian", "negative-binomial", "binomial"), 
                 link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"), 
-                taper = 4, include_fs = TRUE, fs_by_spatial_BAU = FALSE,
+                include_fs = TRUE, fs_by_spatial_BAU = FALSE,
                 ...) {
   
   # stop()
@@ -278,7 +278,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   
   ## Check that the arguments are OK
   .check_args1(f = f, data = data, basis = basis, BAUs = BAUs, est_error = est_error, 
-               response = response, link = link, taper = taper, K_type = K_type, 
+               response = response, link = link, K_type = K_type, 
                fs_by_spatial_BAU = fs_by_spatial_BAU, normalise_wts = normalise_wts, 
                sum_variables = sum_variables, average_in_BAU = average_in_BAU) 
   
@@ -521,7 +521,6 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
       info_fit = info_fit, 
       response = response, 
       link = link, 
-      taper = taper, 
       mu_xi = l$mu_xi_init,
       k_Z = as.numeric(k_Z), 
       k_BAU_O = as.numeric(k_BAU_O), 

@@ -71,8 +71,6 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 
 \item{\code{link}}{A character string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted.}
 
-\item{\code{taper}}{A positve numeric indicating the strength of the covariance tapering (only applicable if \code{K_type = "covariance"} and \code{TMB} is used to fit the data)}
-
 \item{\code{mu_xi}}{updated expectation of the fine-scale random effects at all BAUs (estimated)}
 
 \item{\code{Q_posterior}}{updated joint precision matrix of the basis function random effects and observed fine-scale random effects (estimated)}
