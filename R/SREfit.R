@@ -11,11 +11,12 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
         SRE_model@sigma2fshat <- known_sigma2fs
     
     if (method == "TMB" & SRE_model@K_type == "block-exponential") {
-      tmp <- readline(cat("You have selected method = 'TMB' and K_type = 'block-exponential'. Whilst this combination is allowed, it is significantly more computationally demanding than K_type = 'precision'. Please enter Y if you would like to continue with the block-exponential formulation, or N if you would like to change to the more efficient precision based sparse precision matrix formulation."))
+      tmp <- readline(cat("You have selected method = 'TMB' and K_type = 'block-exponential'. Whilst this combination is allowed, it is significantly more computationally demanding than K_type = 'precision'. Please enter Y if you would like to continue with the block-exponential formulation, or N if you would like to change to the sparse precision matrix formulation."))
       if (tmp != "Y" && tmp != "N") {
         stop("You did not enter Y or N.")
       } else if (tmp == "N") {
         SRE_model@K_type <- "precision"
+        cat("Setting K-type = 'precision'.\n")
       }
     }
     
@@ -671,6 +672,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 
 # ---- TMB fitting functions ----
 
+
 ## Fitting stage of non-Gaussian FRK (more generally, for method  = 'TMB').
 .TMB_fit <- function(M, optimiser, known_sigma2fs, taper, ...) {
   
@@ -682,8 +684,8 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   info_fit$method <- "TMB" 
   
   if (is.null(taper) && (M@K_type == "block-exponential" || !M@basis@regular)) {
-    cat("The argument taper was not specified. Since we are using TMB, we must use tapering for computational reasons: Setting taper = 4.\n")
-    taper <- 4
+    cat("The argument taper was not specified. Since we are using TMB, and we are using either a covariance matrix (K_type = 'block-exponential') or irregular basis functions (SRE_model@basis@regular = 0), we must use tapering for computational reasons: Setting taper = 3.\n")
+    taper <- 3
     info_fit$taper <- taper
   }
   
@@ -723,34 +725,25 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   parameters$logdelta <- pmin(pmax(parameters$logdelta, -4), 8)
   parameters$logsigma2_t <- pmin(pmax(parameters$logsigma2_t, -4), 8)
   
-  
-  ## Checks here to try to catch catastrophic errors. 
-  ## If we allow non-sensical values into TMB, R will crash without providing
+  ## Checks to catch catastrophic errors. 
+  ## If we allow nonsensical values into TMB, R will crash without providing
   ## an informative warning. 
-  
-  if (any(sapply(data, function(x) any(is.na(x)))))
-    stop("Something has gone wrong in the data preparation for TMB: Please contact the package maintainer.")
-  ## na_idx <- which(sapply(data, function(x) any(is.na(x))))
-  
-  if (any(sapply(parameters, function(x) any(is.na(x)))))
-    stop("Something has gone wrong in the parameter initialisation for TMB: Please contact the package maintainer.")
-  ## na_idx <- which(sapply(parameters, function(x) any(is.na(x))))
-  
+  if (any(sapply(data, function(x) any(length(x) == 0) || any(is.na(x)) || any(is.null(x)))))
+    stop("Something has gone wrong in the data preparation for TMB: Some entries are numeric(0), NA, or NULL. Please contact the package maintainer.")
+  if (any(sapply(parameters, function(x) any(length(x) == 0) || any(is.na(x)) || any(is.null(x)))))
+    stop("Something has gone wrong in the parameter initialisation for TMB: Some entries are numeric(0), NA, or NULL. Please contact the package maintainer.")
   if (any(data$nnz < 0) || any(data$col_indices < 0) || any(data$row_indices < 0))
-    stop("Something has gone wrong in construction of the precision matrix of the basis-function coefficients: Please contact package maintainer. ")
-  
-  len_x <- length(data$x)
-  if (!all.equal(len_x, length(data$col_indices), length(data$row_indices), sum(data$nnz))) 
-    stop("Something has gone wrong in construction of the precision matrix of the basis-function coefficients: Please contact package maintainer. ")
+    stop("Something has gone wrong in construction of the precision matrix of the basis-function coefficients: We have negative row-indices, col-indices, or total non-zeros: Please contact the package maintainer. ")
+  if (!all.equal(length(data$x), length(data$col_indices), length(data$row_indices), sum(data$nnz))) 
+    stop("Something has gone wrong in construction of the precision matrix of the basis-function coefficients: The number of row-indices, col-indices, or non-zeros is inconsistent. Please contact the package maintainer. ")
+  if(!all.equal(length(M@Z), length(data$Z), nrow(data$C_O), nrow(data$X_O) , nrow(data$S_O)))
+    stop("Something has gone wrong in the data preparation for TMB: The dimensions of the C, X, or S matrix is inconsistent with the number of observations. Please contact the package maintainer.")
+  if(!all.equal(nbasis(M@basis), max(data$row_indices + 1), max(data$col_indices + 1), sum(data$r_si)))
+    stop("Something has gone wrong in the data preparation for TMB: The number of basis functions and the matrix indices are inconsistent. Please contact the package maintainer.")
+  if (!(K_type %in% c("neighbour", "block-exponential", "precision-block-exponential")))
+    stop("Internal error: K_type is not one of neighbour, block-exponential, or precision-block-exponential. Please contact the package maintainer.")
 
-  m <- length(M@Z)
-  if(!all.equal(m, length(data$Z), nrow(data$C_O), nrow(data$X_O) , nrow(data$S_O)))
-    stop("Something has gone wrong in the data preparation for TMB: Please contact the package maintainer.")
 
-  r <- nbasis(M@basis)
-  if(!all.equal(r, max(data$row_indices + 1), max(data$col_indices + 1), sum(data$r_si)))
-    stop("Something has gone wrong in the data preparation for TMB: Please contact the package maintainer.")
-  
   ## TMB model compilation
   obj <- MakeADFun(data = data,
                    parameters = parameters,
@@ -763,6 +756,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 
   
   cat("Optimising with TMB...\n")
+
   
   ## The optimiser should have arguments: start, objective, gradient. 
   ## The remaining arguments can be whatever.
@@ -848,7 +842,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 
 
 
-## Initalise the fixed effects, random effects, and parameters for method = 'TMB'
+## Initialise the fixed effects, random effects, and parameters for method = 'TMB'
 .TMB_initialise <- function(M, K_type) {   
   
   nres    <- max(M@basis@df$res) 
@@ -882,20 +876,25 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     l$phi <- var(Z0)
   }
 
+  
+  
   ## Variance components of the spatial basis-function coefficients
   l$sigma2  <- var(as.vector(Y_O)) * (0.1)^(0:(nres - 1))
   l$tau     <- (1 / 3)^(1:nres)
   if (K_type != "block-exponential") {
-    l$sigma2   <- 1 / l$sigma2
-    l$tau      <- 1 / l$tau
-  } else if (K_type == "separable") {
+    l$sigma2   <- 1 / exp(l$sigma2) 
+    l$tau      <- 1 / exp(l$tau)
+  } 
+  
+  
+  if (K_type == "separable") {
     ## Separability means we have twice as many spatial basis function variance
     ## components. So, just replicate the already defined parameters.
     l$sigma2 <- rep(l$sigma2, 2)
     l$tau    <- rep(l$tau, 2)
     l$logdelta <- 1 # Dummy value
   } else if (K_type == "precision-block-exponential") {
-    ## Precision exp requires one extra parameter
+    ## Precision exp requires one extra parameter per resolution
     l$logdelta <- rnorm(nres)
   } else {
     l$logdelta <- 1 # Dummy value
@@ -911,8 +910,8 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     regularising_weight <- if (!is.null(l$sigma2fs)) l$sigma2fs else l$sigma2[1] 
     
     QInit <- .sparse_Q_block_diag(M@basis@df, 
-                                  kappa = l$sigma2, 
-                                  rho = l$tau)$Q
+                                  kappa = exp(l$sigma2), 
+                                  rho = exp(l$tau))$Q
     
     ## Matrix we need to invert
     mat <- Matrix::t(S_O) %*% S_O / regularising_weight + QInit 
@@ -1059,7 +1058,6 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   } 
 }
 
-
 .TMB_data_prep <- function (M, sigma2fs_hat, K_type, taper = taper) {
   
   obsidx <- observed_BAUs(M)       # Indices of observed BAUs
@@ -1121,6 +1119,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
       data$n_c[i] <- length(unique(tmp$loc2))
     }
   } 
+
   
   ## Create a data entry of sigma2fs_hat (one that will stay constant if we are 
   ## not estimating sigma2fs within TMB)
