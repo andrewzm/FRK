@@ -217,7 +217,10 @@ auto_basis <- function(manifold = plane(),
                        tunit = NULL,
                        ...) {      # currently unused
   
-  
+   ## If called from FRK(), ... may contain regular and buffer.
+   if("buffer" %in% names(list(...))) buffer <- list(...)$buffer
+   if("regular" %in% names(list(...))) regular <- list(...)$regular
+   
    ## If the data is spatio-temporal, construct spatio-temporal basis functions
    ## using the tensor product of spatial and temporal basis functions. 
    ## Note that we put this here, because there is a call to auto_basis() 
@@ -296,6 +299,7 @@ auto_basis <- function(manifold = plane(),
     if (buffer != 0 & regular != 1)
       stop("A buffer of basis functions along the boundary can only be computed if regular == 1")
 
+    
     ## If the user has specified a maximum number of basis functions then
     ## we need to add resolutions iteratively and stop when exceed the maximum
     ## of basis functions
@@ -305,7 +309,7 @@ auto_basis <- function(manifold = plane(),
         tot_data <- length(data)        # number of data points
         nres <- 1                       # start off with one resolution (we have a minimum of one resolution)
         while(tot_basis <= max_basis) { # while we have less basis than the max
-            nres <- nres + 1            # incremement the res number
+            nres <- nres + 1            # increment the res number
             G <- .auto_basis(manifold = manifold,  # arguments as described above
                              data = data,
                              prune = prune,
@@ -324,10 +328,11 @@ auto_basis <- function(manifold = plane(),
     }
 
     ## Now call the local function with checked parameters
-    .auto_basis(manifold = manifold, data = data, regular = regular, nres = nres,
+    return(.auto_basis(manifold = manifold, data = data, regular = regular, nres = nres,
                 prune = prune, subsamp = subsamp, type = type, isea3h_lo = isea3h_lo,
                 bndary = bndary, scale_aperture = scale_aperture, verbose = verbose, 
-                buffer = buffer)
+                buffer = buffer))
+  
 }
 
 
@@ -343,6 +348,7 @@ auto_basis <- function(manifold = plane(),
                         scale_aperture = ifelse(is(manifold,"sphere"),1,1.25),
                         verbose = 0L, 
                         buffer = 0) {
+
 
     type <- match.arg(type)            # match type
     m <- manifold                      # abbreviate for convenience
@@ -530,7 +536,7 @@ auto_basis <- function(manifold = plane(),
     ## the user specifies a non-zero buffer with regular == 0, an error is 
     ## thrown upon entry of auto_basis)
     if (buffer != 0) G_basis <- .buffer(G_basis, buffer = buffer, type = type)  
-  
+    
     return(G_basis)
 }
 
@@ -597,7 +603,8 @@ auto_basis <- function(manifold = plane(),
                               loc = basis_locs, 
                               scale = scale, 
                               type = type, 
-                              res = res)
+                              res = res, 
+                              regular = basis@regular)
   return(basis_buffer)
 }
 
@@ -955,6 +962,7 @@ setMethod("count_res",signature="TensorP_Basis", # Returns count by resolution f
 print.Basis <- function(x,...) {
     cat("Number of basis functions:",nbasis(x),"\n")
     cat("Number of resolutions:",nres(x),"\n")
+    cat("Regular:",x@regular,"\n")
     cat("Type of manifold:",type(manifold(x)),"\n")
     cat("Dimension of manifold:",dimensions(manifold(x)),"\n")
     cat("First basis function:\n",deparse(x@fn[[1]]),"\n")

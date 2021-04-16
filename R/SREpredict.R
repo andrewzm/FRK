@@ -501,7 +501,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
 ## #' @param CP the prediction incidence matrix
 ## #' @param kriging whether we wish to perform "simple" or "universal" kriging
 ## #' @param obsidx A vector containing the indices of observed BAUs
-## #' @return A list containing Monte Carlo samples of various quantites of interest. The list elements are (N x n_MC) matrices, whereby the ith row of each matrix corresponds to \code{n_MC} samples of the given quantity at the ith BAU. The available quantities are:
+## #' @return A list containing Monte Carlo samples of various quantities of interest. The list elements are (N x n_MC) matrices, whereby the ith row of each matrix corresponds to \code{n_MC} samples of the given quantity at the ith BAU. The available quantities are:
 ## #' \describe{
 ## #'   \item{Y_samples}{Samples of the latent, Gaussian scale Y process}
 ## #'   \item{mu_samples}{Samples of the conditional mean of the data}
@@ -673,10 +673,6 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   
   # ---- Predicting over arbitrary polygons ----
   
-  
-  ## FIXME: Should add some checks for this. The user should only provide 
-  ## "mean" or "response" in \code{type} if they wish to predict over 
-  ## arbitrary polygons other than the BAUs.
   if (!predict_BAUs) 
     mu_samples <- as.matrix(CP %*% mu_samples)
   

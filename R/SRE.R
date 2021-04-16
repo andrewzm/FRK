@@ -173,7 +173,8 @@
 #' uncertainty quantification added. 
 #' If \code{method = "TMB"}, the returned object is a list, containing the 
 #' previously described predictions, and a list of Monte Carlo samples. 
-#' The predictions and uncertainties can be easily plotted using \code{\link{plot}}.
+#' The predictions and uncertainties can be easily plotted using \code{\link{plot}}
+#' or \code{spplot} from the package \code{sp}.
 #' @seealso \code{\link{SRE-class}} for details on the SRE object internals, 
 #' \code{\link{auto_basis}} for automatically constructing basis functions, 
 #' \code{\link{auto_BAUs}} for automatically constructing BAUs, 
@@ -305,7 +306,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   ## Normalise basis functions for the prior process to have constant variance. This was seen to pay dividends in
   ## latticekrig, however we only do it once initially
   if(normalise_basis) {
-    cat("Normalising basis function evaluations at BAU level ...\n")
+    cat("Normalising basis function evaluations at BAU level...\n")
     xx <- sqrt(rowSums((S0) * S0))                        # Find the standard deviation (assuming unit basis function weight)
     xx <- xx + 1*(xx == 0)                                # In the rare case all basis functions evaluate to zero don't do anything
     S0 <- S0 / (as.numeric(xx))                           # Normalise the S matrix
@@ -340,7 +341,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     ## The next step is to allocate all data (both point and polygon referenced) to BAUs. 
     ## We can either average data points falling in the same 
     ## BAU (average_in_BAU == TRUE) or not (average_in_BAU == FALSE).
-    cat("Binning data ...\n")
+    cat("Binning data...\n")
     
     ## sum_variables is a vector of variable names which are to be summed
     ## rather than averaged. Typically, we will wish to sum the data/size parameter 

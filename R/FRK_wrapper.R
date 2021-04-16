@@ -142,7 +142,7 @@ FRK <- function(f,                     # formula (compulsory)
         if(!(grepl("ST",class(manifold)))) {         # If we are NOT in a space-time scenario
 
             G <- auto_basis(manifold =manifold,      # Automatically generate basis functions using
-                            data=data[[d]],          # data with largest spatal extent
+                            data=data[[d]],          # data with largest spatial extent
                             ...,
                             max_basis = max_sp_basis) # max. number of basis functions
 
@@ -190,8 +190,6 @@ FRK <- function(f,                     # formula (compulsory)
     cat("Modelling using",nbasis(G),"basis functions.\n")
     cat("Constructing SRE model...\n")
 
-
-    
     S <- SRE(f = f,                            # formula
              data = data,                      # list of datasets
              basis = G,                        # basis functions
@@ -205,8 +203,7 @@ FRK <- function(f,                     # formula (compulsory)
              K_type = K_type,                  # "block-exponential", "unstructured", "precision"
              response = response, 
              link = link, 
-             fs_by_spatial_BAU = fs_by_spatial_BAU, 
-             taper = taper)                  
+             fs_by_spatial_BAU = fs_by_spatial_BAU)                  
 
     ## After constructing SRE model, fit it
     cat("Fitting SRE model...\n")
@@ -217,7 +214,8 @@ FRK <- function(f,                     # formula (compulsory)
                  lambda = lambda,     # regularisation parameter
                  print_lik = print_lik, # print log-likelihood at each iteration
                  optimiser = optimiser, 
-                 known_sigma2fs = known_sigma2fs, 
+                 known_sigma2fs = known_sigma2fs,
+                 taper = taper,
                  ...) 
 
     ## Return fitted SRE model

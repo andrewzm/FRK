@@ -762,7 +762,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   obj$env$tracepar <- opts_FRK$get("verbose")
 
   
-  cat("Optimising with TMB ...\n")
+  cat("Optimising with TMB...\n")
   
   ## The optimiser should have arguments: start, objective, gradient. 
   ## The remaining arguments can be whatever.
