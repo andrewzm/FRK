@@ -882,8 +882,10 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   l$sigma2  <- var(as.vector(Y_O)) * (0.1)^(0:(nres - 1))
   l$tau     <- (1 / 3)^(1:nres)
   if (K_type != "block-exponential") {
-    l$sigma2   <- 1 / exp(l$sigma2) 
-    l$tau      <- 1 / exp(l$tau)
+    # l$sigma2   <- 1 / exp(l$sigma2) 
+    # l$tau      <- 1 / exp(l$tau)   
+    l$sigma2   <- 1 / l$sigma2
+    l$tau      <- 1 / l$tau
   } 
   
   
@@ -910,8 +912,10 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     regularising_weight <- if (!is.null(l$sigma2fs)) l$sigma2fs else l$sigma2[1] 
     
     QInit <- .sparse_Q_block_diag(M@basis@df, 
-                                  kappa = exp(l$sigma2), 
-                                  rho = exp(l$tau))$Q
+                                  # kappa = exp(l$sigma2), 
+                                  # rho = exp(l$tau))$Q      
+                                  kappa = l$sigma2, 
+                                  rho = l$tau)$Q
     
     ## Matrix we need to invert
     mat <- Matrix::t(S_O) %*% S_O / regularising_weight + QInit 
