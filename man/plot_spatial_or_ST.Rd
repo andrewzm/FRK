@@ -14,7 +14,7 @@ plot_spatial_or_ST(
 )
 }
 \arguments{
-\item{object}{Spatial*DataFrame or STFDF}
+\item{object}{a Spatial*DataFrame or STFDF}
 
 \item{column_names}{a vector of strings indicating the columns of the data to plot}
 
@@ -26,6 +26,12 @@ plot_spatial_or_ST(
 
 \item{...}{optional arguments passed on to whatever geom is appropriate for the data (geom_point, geom_raster, or geom_polygon)}
 }
+\value{
+a list of \code{ggplot} objects corresponding to the provided \code{column_names}. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}
+}
 \description{
 Plot data from a Spatial*DataFrame or STFDF object
+}
+\seealso{
+\code{\link{plot}}
 }

@@ -20,8 +20,11 @@
 \item{...}{optional arguments passed on to whatever geom is appropriate for the data (geom_point, geom_raster, or geom_polygon)}
 }
 \value{
-A list of \code{ggplot} objects consisting of the observed data, predictions, and standard errors. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.
+a list of \code{ggplot} objects consisting of the observed data, predictions, and standard errors. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.
 }
 \description{
 Plot predictions from FRK analysis.
+}
+\seealso{
+\code{\link{plot_spatial_or_ST}}
 }

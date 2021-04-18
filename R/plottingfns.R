@@ -233,7 +233,8 @@ EmptyTheme <- function() {
 #' @param y result of calling \code{predict} on an \code{SRE} object 
 #' @param zdf a \code{data.frame}, \code{SpatialPointsDataFrame}, or \code{SpatialPolygonsDataFrame} containing the observations
 #' @inheritParams plot_spatial_or_ST
-#' @return A list of \code{ggplot} objects consisting of the observed data, predictions, and standard errors. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.
+#' @return a list of \code{ggplot} objects consisting of the observed data, predictions, and standard errors. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.
+#' @seealso \code{\link{plot_spatial_or_ST}}
 #' @export
 setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = NULL, subset_time = NULL,  ...) {
     
@@ -366,12 +367,15 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = N
 }
 
 #' Plot data from a Spatial*DataFrame or STFDF object
-#' @param object Spatial*DataFrame or STFDF
+#' @param object a Spatial*DataFrame or STFDF
 #' @param column_names a vector of strings indicating the columns of the data to plot
 #' @param map_layer (optional) a \code{ggplot} layer or object to add below the plotted layer, often a map
 #' @param subset_time (optional) a vector of times to be included; applicable only for \code{STFDF} objects
 #' @param palette the palette supplied to scale_*_distiller()
 #' @param ... optional arguments passed on to whatever geom is appropriate for the data (geom_point, geom_raster, or geom_polygon)
+#' @return a list of \code{ggplot} objects corresponding to the provided \code{column_names}. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}
+#' @seealso \code{\link{plot}}
+#' @export
 plot_spatial_or_ST <- function(object, column_names,  map_layer = NULL, 
                                subset_time = NULL, palette = "Spectral", ...) {
     

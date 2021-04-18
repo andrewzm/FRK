@@ -281,7 +281,8 @@ or \code{STFDF}, with predictions and
 uncertainty quantification added. 
 If \code{method = "TMB"}, the returned object is a list, containing the 
 previously described predictions, and a list of Monte Carlo samples. 
-The predictions and uncertainties can be easily plotted using \code{\link{plot}}.
+The predictions and uncertainties can be easily plotted using \code{\link{plot}}
+or \code{spplot} from the package \code{sp}.
 }
 \examples{
 library(sp)
