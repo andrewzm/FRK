@@ -647,13 +647,15 @@ setMethod("TensorP",signature(Basis1="Basis",Basis2="Basis"),function(Basis1,Bas
       warning("Tensor product has resulted in more than 5000 functions.
       Please reduce the number of spatial or temporal basis functions.")
 
-
+    regular <- Basis1@regular && Basis2@regular
+    
     ## Create new Tensor Basis function from this information
     new("TensorP_Basis",
         Basis1 = Basis1,
         Basis2 = Basis2,
         n = nbasis_tot,
-        df = df)
+        df = df, 
+        regular = regular)
 })
 
 
@@ -978,7 +980,8 @@ print.TensorP_Basis <- function(x,...) {
     cat("Second set of basis functions\n")
     cat("-----------------------------\n")
     print(x@Basis2)
-    cat("\n\nTotal number of basis functions:",nbasis(x))
+    cat("\n\nTotal number of basis functions:",nbasis(x), "\n")
+    cat("Regular:",x@regular,"\n")
 }
 setMethod("show",signature(object="TensorP_Basis"),function(object) print(object))
 

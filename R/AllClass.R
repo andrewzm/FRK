@@ -78,7 +78,7 @@ setClass("Basis_obj", representation(n = "numeric","VIRTUAL"))
 setClass("Basis",contains="Basis_obj", representation(manifold="manifold",fn="list",pars="list", df="data.frame", regular = "numeric"))
 
 #' @rdname Basis-class
-setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Basis2="Basis",n = "integer", df = "data.frame"))
+setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Basis2="Basis",n = "integer", df = "data.frame", regular="logical"))
 
 #' @title Spatial Random Effects class
 #' @description This is the central class definition of the \code{FRK} package, containing the model and all other information required for estimation and prediction.
