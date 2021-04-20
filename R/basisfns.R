@@ -822,13 +822,19 @@ setMethod("remove_basis",signature(Basis="Basis"),function(Basis,rmidx) {
     if(!all(rmidx %in% 1:ntot))
         stop("Please make sure indices are numeric and within
              1 and the number of basis functions.")
+    
+    if (length(rmidx) == 0) {
+      warning("length(rmidx) == 0")
+      return(Basis)
+    }
+
 
     Basis_df <- data.frame(Basis)     # extract data frame
     Basis@fn <- Basis@fn[-rmidx]      # remove functions
     Basis@pars <- Basis@pars[-rmidx]  # remove parameters
     Basis@df <- Basis@df[-rmidx,]     # remove rows from data frame
     Basis@n <- nrow(Basis@df)         # reduce n as appropriate
-    Basis                             # return basis object
+    return(Basis)                             # return basis object
 })
 
 
