@@ -13,8 +13,6 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
-## FIXME: SRE_model and object are the same; I suggest we just use object
-
 #' @name SRE
 #' 
 #' @title Construct SRE object, fit and predict

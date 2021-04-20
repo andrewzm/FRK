@@ -762,13 +762,12 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   ## The remaining arguments can be whatever.
   fit <- optimiser(obj$par, obj$fn, obj$gr, ...)
   
-  ## TODO: could add this information to info_fit
-  if (!is.null(fit$iterations)) info_fit$iterations <- fit$iterations
-  if (!is.null(fit$convergence)) info_fit$convergence <- fit$convergence
-  if (!is.null(fit$message)) info_fit$message <- fit$message
+  info_fit$iterations  <- fit$iterations
+  info_fit$convergence <- fit$convergence
+  info_fit$message     <- fit$message
   
   cat("Optimisation completed.\n")
-  cat("Extracting parameter estimates and the estimated joint precision matrix of the random effects from TMB...\n")
+  cat("Extracting estimates of the parameters and the joint precision matrix of the random effects from TMB...\n")
   
   ## Re-estimate the fine-scale variance using better estimates. 
   ## Need to refit the model using the final results and the new version of sigma2fs,

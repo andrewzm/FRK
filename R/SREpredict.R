@@ -23,16 +23,14 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   ## The user can either provide k in SRE_model@BAUs$k_BAU, or in the predict call.
   ## This is so that the user can change k without having to call SRE() and SRE.fit() again.
   ## The k supplied in predict() will take precedence over the k stored in SRE_model@BAUs$k.
-  if (SRE_model@response %in% c("binomial", "negative-binomial")) 
-    if (is.null(k)) {
-      if(is.null(SRE_model@BAUs$k_BAU)) {
-        k <- rep(1, length(SRE_model@BAUs))
-        warning("k not provided for prediction: assuming k is equal to 1 for all prediction locations.")
-      } else {
-        k <- SRE_model@BAUs$k_BAU
-      }
+  if (SRE_model@response %in% c("binomial", "negative-binomial")) {
+    if (is.null(k) && is.null(SRE_model@BAUs$k_BAU)) {
+      k <- rep(1, length(SRE_model@BAUs))
+      cat("The size parameter, k, was not provided for prediction: assuming k is equal to 1 for all prediction locations.\n")
+    } else if (is.null(k) && !is.null(SRE_model@BAUs$k_BAU)) {
+      k <- SRE_model@BAUs$k_BAU
     }
-  
+  }
   
   ## Check the arguments are OK
   .check_args3(obs_fs = obs_fs, newdata = newdata, pred_polys = pred_polys,
