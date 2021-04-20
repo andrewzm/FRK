@@ -844,6 +844,8 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 ## Initialise the fixed effects, random effects, and parameters for method = 'TMB'
 .TMB_initialise <- function(M, K_type) {   
   
+  cat("Initialising parameters and random effects...\n")
+  
   nres    <- max(M@basis@df$res) 
   X_O     <- M@X_O
   S_O     <- M@S_O
@@ -1003,7 +1005,6 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     Z0[Z == 0] <- 0.05
   } 
   
-  
   # ---- Estimate mu_Z, mu_O, and Y_O ----
   
   ## First, we estime mu_Z with the (adjusted) data
@@ -1027,7 +1028,8 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     if (suppressWarnings(rankMatrix(C_O, method = 'qr') == min(dim(C_O)))) { 
       ## if C_O is full rank, simple algebraic forms for Moores-Penrose inverse exist
       if (m == mstar) {
-        Cp <- solve(C_O)
+        # Cp <- solve(C_O) # This caused an error
+        mu_O <- solve(C_O, mu_Z)
       } else if (m < mstar) {
         Cp <- t(C_O) %*% solve(C_O %*% t(C_O)) 
       } else if (m > mstar) {
@@ -1036,13 +1038,10 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     } else {
       ## Use rank-deficient computation of Moores-Penrose inverse 
       Cp <- VCA::MPinv(C_O) 
-      Cp <- as(Cp, "dgCMatrix") # NB: not sure if VCA::MPinv() takes advantage of sparsity.
-      ## Sparsity of C_O and Cp: nnzero(C_O) / (m * mstar), nnzero(Cp) / (m * mstar)
+      Cp <- as(Cp, "dgCMatrix") 
     }
-    mu_O <- as.vector(Cp %*% mu_Z)
-    ## Sanity check: 
-    ## max(abs(C_O %*% mu_O - mu_Z)) 
-    ## sum((C_O %*% mu_O - mu_Z)^2)
+    if (exists("Cp"))
+      mu_O <- as.vector(Cp %*% mu_Z)
   }
   
   ## For some link functions, mu_0 = 0 causes NaNs; set these to a small positive value.
@@ -1062,6 +1061,8 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 }
 
 .TMB_data_prep <- function (M, sigma2fs_hat, K_type, taper = taper) {
+  
+  cat("Preparing data for TMB...\n")
   
   obsidx <- observed_BAUs(M)       # Indices of observed BAUs
   
