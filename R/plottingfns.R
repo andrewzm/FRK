@@ -290,17 +290,17 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = N
         
         ## If the 5th and 95th percentiles are present, make a column of the interval width. 
         if (all(c("Y_percentile_5","Y_percentile_95") %in% names(pred_object@data))) 
-            pred_object@data$interval_90_Y <- pred_object$Y_percentile_95 - pred_object$Y_percentile_5 
+            pred_object@data$interval90_Y <- pred_object$Y_percentile_95 - pred_object$Y_percentile_5 
         if (all(c("mu_percentile_5","mu_percentile_95") %in% names(pred_object@data))) 
-            pred_object@data$interval_90_mu <- pred_object@data$mu_percentile_95 - pred_object@data$mu_percentile_5 
+            pred_object@data$interval90_mu <- pred_object@data$mu_percentile_95 - pred_object@data$mu_percentile_5 
         if (all(c("prob_percentile_5","prob_percentile_95") %in% names(pred_object@data))) 
-            pred_object@data$interval_90_prob <- pred_object@data$prob_percentile_95 - pred_object@data$prob_percentile_5 
+            pred_object@data$interval90_prob <- pred_object@data$prob_percentile_95 - pred_object@data$prob_percentile_5 
         if (all(c("Z_percentile_5","Z_percentile_95") %in% names(pred_object@data))) 
-            pred_object@data$interval_90_Z <- pred_object@data$Z_percentile_95 - pred_object@data$Z_percentile_5 
+            pred_object@data$interval90_Z <- pred_object@data$Z_percentile_95 - pred_object@data$Z_percentile_5 
            
         ## Determine which quantities we are actually plotting
         QOI <- c("Y", "mu", "prob", "Z") # Possible Quantities of interest
-        column_names <- paste0(rep(c("p_", "RMSPE_", "interval_90_"), each = length(QOI)), QOI)
+        column_names <- paste0(rep(c("p_", "RMSPE_", "interval90_"), each = length(QOI)), QOI)
         palette <- rep(c("Spectral", "BrBG", "BrBG"), each = length(QOI)) 
         keep <- column_names %in% names(pred_object@data)
         column_names <- column_names[keep]
@@ -318,49 +318,36 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = N
         
     } else if (method == "TMB") {
         
-        ## TODO: use bquote() to accept strings, and construct the following automatically
-        
-        lab_list <- list(
-            p_Y           = labs(fill = expression(paste(widehat(p)[Y]["|"][bold(Z)], " \U2261 ", "E(", Y *"(\U00B7)", " | ", bold(Z), ", ", bold("\u03B8"), ") "))),
-            RMSPE_Y       = labs(fill = expression(RMSPE(widehat(p)[Y]["|"][bold(Z)], Y))),
-            interval_90_Y = labs(fill = eval(bquote(expression("90% predictive\ninterval width for " * Y *"(\U00B7)")))),
-            p_mu           = labs(fill = expression(paste(widehat(p)[mu]["|"][bold(Z)], " \U2261 ", "E(", mu *"(\U00B7)", " | ", bold(Z), ", ", bold("\u03B8"), ") "))),
-            RMSPE_mu       = labs(fill = expression(RMSPE(widehat(p)[mu]["|"][bold(Z)], mu))),
-            interval_90_mu = labs(fill = eval(bquote(expression("90% predictive\ninterval width for " * mu *"(\U00B7)")))),
-            p_prob           = labs(fill = expression(paste(widehat(p)[pi]["|"][bold(Z)], " \U2261 ","E(", pi *"(\U00B7)", " | ", bold(Z), ", ", bold("\u03B8"), ") "))),
-            RMSPE_prob       = labs(fill = expression(RMSPE(widehat(p)[pi]["|"][bold(Z)], pi))),
-            interval_90_prob = labs(fill = eval(bquote(expression("90% predictive\ninterval width for " * pi *"(\U00B7)")))),
-            p_Z           = labs(fill = expression(widehat(p)[Z]["|"][bold(Z)], " \U2261 ",paste("E(", Z *"(\U00B7)", " | ", bold(Z), ", ", bold("\u03B8"), ") "))),
-            RMSPE_Z       = labs(fill = expression(RMSPE(widehat(p)[Z]["|"][bold(Z)], Z))),
-            interval_90_Z = labs(fill = eval(bquote(expression("90% predictive\ninterval width for " * Z *"(\U00B7)"))))
-        )
-
-
-        
-        for (i in column_names) {
-            plots[[i]] <- plots[[i]] + lab_list[[i]]
+        ## See https://en.wikipedia.org/wiki/List_of_Unicode_characters#Greek_and_Coptic
+        # for the a list of unicode characters.
+        custom_lab <- function(v) {
+            # v is a vector, with first entry indicating the type of plot we are making a 
+            ## label for, and the second entry indicating the quantity of interest    
+            type <- v[1]; x <- v[2]
+            
+            ## Set the unicode character for the quantity of interest
+            unicode <- if (x == "Y") "Y" else if (x == "mu") "\U03BC" else if (x == "prob") "\U03C0" else if (x == "Z") "Z"
+            
+            pred <- bquote(widehat(p)[.(unicode)]["|"][bold(Z)])
+            process <- bquote(paste(.(unicode), "(\U00B7)"))
+            
+            ## Construct the labels
+            label <- if (type == "p") {
+                bquote(paste(.(pred), " \U2261 ", "E(", .(process), " | ", bold(Z), ", ", bold("\U03B8"), ")"))
+            } else if (type == "RMSPE") {
+                bquote(paste("RMSPE(", .(pred), ", ", .(process),")"))
+            } else if (type == "interval_90") {
+                bquote(paste("90% predictive\ninterval width for " * .(process)))
+            }
+            
+            return(labs(fill = label))
         }
         
-        # if ("p_Y" %in% names(plots)) plots$p_Y <- plots$p_Y + labs(fill = expression(widehat(p)[Y]["|"][bold(Z)]))
-        # if ("RMSPE_Y" %in% names(plots)) plots$RMSPE_Y <- plots$RMSPE_Y + labs(fill = expression(sqrt(MSPE(widehat(p)[Y]["|"][bold(Z)], Y))))
-        # if ("interval_90_Y" %in% names(plots)) plots$interval_90_Y <- plots$interval_90_Y +
-        #         labs(fill = eval(bquote(expression("Width of 90% predictive\ninterval latent process Y(" *"\U00B7)"))))
-        # 
-        # if ("p_mu" %in% names(plots)) plots$p_mu <- plots$p_mu + labs(fill = expression(widehat(p)[mu]["|"][bold(Z)]))
-        # if ("RMSPE_mu" %in% names(plots)) plots$RMSPE_mu <- plots$RMSPE_mu + labs(fill = expression(sqrt(MSPE(widehat(p)[mu]["|"][bold(Z)], mu))))
-        # if ("interval_90_mu" %in% names(plots)) plots$interval_90_mu <- plots$interval_90_mu +
-        #         labs(fill = eval(bquote(expression("Width of predictive90%\ninterval mean process " *mu *"(\U00B7)"))))
-        # 
-        # if ("p_prob" %in% names(plots)) plots$p_prob <- plots$p_prob + labs(fill = expression(widehat(p)[pi]["|"][bold(Z)]))
-        # if ("RMSPE_prob" %in% names(plots)) plots$RMSPE_prob <- plots$RMSPE_prob + labs(fill = expression(sqrt(MSPE(widehat(p)[pi]["|"][bold(Z)], pi))))
-        # if ("interval_90_prob" %in% names(plots)) plots$interval_90_prob <- plots$interval_90_prob +
-        #         labs(fill = eval(bquote(expression("Width of predictive90%\ninterval probability process " *pi *"(\U00B7)"))))
-        # 
-        # if ("p_Z" %in% names(plots)) plots$p_Z <- plots$p_Z + labs(fill = expression(widehat(p)[Z]["|"][bold(Z)]))
-        # if ("RMSPE_Z" %in% names(plots)) plots$RMSPE_Z <- plots$RMSPE_Z + labs(fill = expression(sqrt(MSPE(widehat(p)[Z]["|"][bold(Z)], Z))))
-        # if ("interval_90_Z" %in% names(plots)) plots$interval_90_Z <- plots$interval_90_Z +
-        #         labs(fill = eval(bquote(expression("Width of predictive90%\ninterval mean process " * Z *"(\U00B7)"))))
-        # 
+        split_column_names <- strsplit(column_names, "_")
+        
+        for (i in column_names) {
+            plots[[i]] <- plots[[i]] + custom_lab(split_column_names[[i]])
+        }
     }
     
     return(plots)

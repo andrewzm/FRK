@@ -716,7 +716,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     alpha <- 1/M@phi                 # shape parameter
     beta  <- theta * alpha           # rate parameter (1/scale)
     Z_samples <- rgamma(n, shape = alpha, rate = beta)
-    Z_samples <- statmod::rinvgauss(n, mean = c(t(mu_samples)), dispersion = M@phi)
+    Z_samples <- statmod::rinvgauss(n, mean = c(t(mu_samples)), dispersion = M@phi) # FIXME: WHy is this here? this should be inverse-Gaussian??
   } else if (M@response == "negative-binomial") {
     k_vec <- rep(k, each = n_MC)
     Z_samples <- rnbinom(n, size = k_vec, mu = c(t(mu_samples)))

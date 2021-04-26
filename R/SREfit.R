@@ -719,7 +719,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   
   ## Don't want to pass in variance components that are "too small" or "too big". 
   ## This has caused TMB to explode and cause R to crash in the past, with no 
-  ## explaination as to why the crash occured.
+  ## explanation as to why the crash occured.
   parameters$logsigma2 <- pmin(pmax(parameters$logsigma2, -4), 8)
   parameters$logtau <- pmin(pmax(parameters$logtau, -4), 8)
   parameters$logdelta <- pmin(pmax(parameters$logdelta, -4), 8)
