@@ -318,39 +318,41 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = N
         
     } else if (method == "TMB") {
         
-        ## See https://en.wikipedia.org/wiki/List_of_Unicode_characters#Greek_and_Coptic
-        # for the a list of unicode characters.
-        custom_lab <- function(v) {
-            # v is a vector, with first entry indicating the type of plot we are making a 
-            ## label for, and the second entry indicating the quantity of interest    
-            type <- v[1]; x <- v[2]
-            
-            ## Set the unicode character for the quantity of interest
-            unicode <- if (x == "Y") "Y" else if (x == "mu") "\U03BC" else if (x == "prob") "\U03C0" else if (x == "Z") "Z"
-            
-            pred <- bquote(widehat(p)[.(unicode)]["|"][bold(Z)])
-            process <- bquote(paste(.(unicode), "(\U00B7)"))
-            
-            ## Construct the labels
-            label <- if (type == "p") {
-                bquote(paste(.(pred), " \U2261 ", "E(", .(process), " | ", bold(Z), ", ", bold("\U03B8"), ")"))
-            } else if (type == "RMSPE") {
-                bquote(paste("RMSPE(", .(pred), ", ", .(process),")"))
-            } else if (type == "interval_90") {
-                bquote(paste("90% predictive\ninterval width for " * .(process)))
-            }
-            
-            return(labs(fill = label))
-        }
-        
         split_column_names <- strsplit(column_names, "_")
-        
+        names(split_column_names) <- column_names
         for (i in column_names) {
-            plots[[i]] <- plots[[i]] + custom_lab(split_column_names[[i]])
+            plots[[i]] <- plots[[i]] + .custom_lab(split_column_names[[i]])
         }
     }
     
     return(plots)
+}
+
+.custom_lab <- function(v) {
+    # v is a vector, with first entry indicating the type of plot we are making a 
+    ## label for, and the second entry indicating the quantity of interest    
+    type <- v[1]; x <- v[2]
+    
+    ## Set the unicode character for the quantity of interest
+    ## See https://en.wikipedia.org/wiki/List_of_Unicode_characters#Greek_and_Coptic
+    # for the a list of unicode characters.
+    unicode <- if (x == "Y") "Y" else if (x == "mu") "\U03BC" else if (x == "prob") "\U03C0" else if (x == "Z") "Z"
+    
+    pred <- bquote(widehat(p)[.(unicode)]["|"][bold(Z)])
+    process <- bquote(paste(.(unicode), "(\U00B7)"))
+    
+    ## Construct the labels
+    ## NB: Add a couple of spaces to ensure no overlap between label and the 
+    ## fill box when arranged with legend at top
+    label <- if (type == "p") {
+        bquote(paste(.(pred), " \U2261 ", "E(", .(process), " | ", bold(Z), ", ", bold("\U03B8"), ")    "))
+    } else if (type == "RMSPE") {
+        bquote(paste("RMSPE(", .(pred), ", ", .(process),")  "))
+    } else if (type == "interval90") {
+        bquote(paste("90% predictive\ninterval width for " * .(process), "  "))
+    }
+    
+    return(labs(fill = label))
 }
 
 #' Plot data from a Spatial*DataFrame or STFDF object
