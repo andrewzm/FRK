@@ -5,12 +5,12 @@
 \alias{observed_BAUs,SRE-method}
 \title{Indices of observed BAUs}
 \usage{
-observed_BAUs(SRE_model)
+observed_BAUs(object)
 
-\S4method{observed_BAUs}{SRE}(SRE_model)
+\S4method{observed_BAUs}{SRE}(object)
 }
 \arguments{
-\item{SRE_model}{object of class \code{SRE}}
+\item{object}{object of class \code{SRE}}
 }
 \description{
 Computes the indices (a numeric vector) of the observed BAUs

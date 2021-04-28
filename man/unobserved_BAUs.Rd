@@ -5,12 +5,12 @@
 \alias{unobserved_BAUs,SRE-method}
 \title{Indices of unobserved BAUs}
 \usage{
-unobserved_BAUs(SRE_model)
+unobserved_BAUs(object)
 
-\S4method{unobserved_BAUs}{SRE}(SRE_model)
+\S4method{unobserved_BAUs}{SRE}(object)
 }
 \arguments{
-\item{SRE_model}{object of class \code{SRE}}
+\item{object}{object of class \code{SRE}}
 }
 \description{
 Computes the indices (a numeric vector) of the unobserved BAUs

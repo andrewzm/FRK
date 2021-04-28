@@ -2,20 +2,24 @@
 % Please edit documentation in R/AllGeneric.R, R/basisfns.R
 \name{remove_basis}
 \alias{remove_basis}
+\alias{remove_basis,Basis,ANY-method}
 \alias{remove_basis,Basis-method}
+\alias{remove_basis,Basis,SpatialPolygons-method}
 \title{Removes basis functions}
 \usage{
 remove_basis(Basis, rmidx)
 
-\S4method{remove_basis}{Basis}(Basis, rmidx)
+\S4method{remove_basis}{Basis,ANY}(Basis, rmidx)
+
+\S4method{remove_basis}{Basis,SpatialPolygons}(Basis, rmidx)
 }
 \arguments{
 \item{Basis}{object of class \code{Basis}}
 
-\item{rmidx}{indices of basis functions to remove}
+\item{rmidx}{indices of basis functions to remove, or a SpatialPolygons object defining a region to retain overlapping basis functions}
 }
 \description{
-Takes an object of class \code{Basis} and returns an object of class \code{Basis} with selected basis functions removed.
+Takes an object of class \code{Basis} and returns an object of class \code{Basis} with selected basis functions removed
 }
 \examples{
 library(sp)
@@ -28,5 +32,5 @@ G <- remove_basis(G,1:(nbasis(G)-1))
 data.frame(G)
 }
 \seealso{
-\code{\link{auto_basis}} for automatically constructing basis functions and \code{\link{show_basis}} for visualising basis functions.
+\code{\link{auto_basis}} for automatically constructing basis functions and \code{\link{show_basis}} for visualising basis functions
 }

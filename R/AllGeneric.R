@@ -191,11 +191,11 @@ setGeneric("BAUs_from_points", function(obj,offset = 1e-10)
     standardGeneric("BAUs_from_points"))
 
 #' @title Removes basis functions
-#' @description Takes an object of class \code{Basis} and returns an object of class \code{Basis} with selected basis functions removed.
+#' @description Takes an object of class \code{Basis} and returns an object of class \code{Basis} with selected basis functions removed
 #' @param Basis object of class \code{Basis}
-#' @param rmidx indices of basis functions to remove
+#' @param rmidx indices of basis functions to remove, or a SpatialPolygons object defining a region to retain overlapping basis functions
 #' @export
-#' @seealso \code{\link{auto_basis}} for automatically constructing basis functions and \code{\link{show_basis}} for visualising basis functions.
+#' @seealso \code{\link{auto_basis}} for automatically constructing basis functions and \code{\link{show_basis}} for visualising basis functions
 #' @examples
 #' library(sp)
 #' df <- data.frame(x = rnorm(10),
@@ -211,29 +211,29 @@ setGeneric("remove_basis", function(Basis,rmidx)
 
 #' @title Indices of observed BAUs
 #' @description Computes the indices (a numeric vector) of the observed BAUs
-#' @param SRE_model object of class \code{SRE}
+#' @param object object of class \code{SRE}
 #' @export
 #' @seealso \code{\link{unobserved_BAUs}}
-setGeneric("observed_BAUs", function(SRE_model)
+setGeneric("observed_BAUs", function(object)
     standardGeneric("observed_BAUs"))
 
 #' @title Indices of unobserved BAUs
 #' @description Computes the indices (a numeric vector) of the unobserved BAUs
-#' @param SRE_model object of class \code{SRE}
+#' @param object object of class \code{SRE}
 #' @export
 #' @seealso \code{\link{observed_BAUs}}
-setGeneric("unobserved_BAUs", function(SRE_model)
+setGeneric("unobserved_BAUs", function(object)
     standardGeneric("unobserved_BAUs"))
 
 
 #' @title Retrieve fit information for SRE model
 #' @description Takes an object of class \code{SRE} and returns a list containing all the relevant information on parameter estimation
-#' @param SRE_model object of class \code{SRE}
+#' @param object object of class \code{SRE}
 #' @export
 #' @seealso See \code{\link{SRE}} for more information on the SRE model and available fitting methods.
 #' @examples
 #' # See example in the help file for SRE
-setGeneric("info_fit", function(SRE_model)
+setGeneric("info_fit", function(object)
     standardGeneric("info_fit"))
 
 #' @title Retrieve estimated regression coefficients

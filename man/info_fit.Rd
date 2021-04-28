@@ -5,12 +5,12 @@
 \alias{info_fit,SRE-method}
 \title{Retrieve fit information for SRE model}
 \usage{
-info_fit(SRE_model)
+info_fit(object)
 
-\S4method{info_fit}{SRE}(SRE_model)
+\S4method{info_fit}{SRE}(object)
 }
 \arguments{
-\item{SRE_model}{object of class \code{SRE}}
+\item{object}{object of class \code{SRE}}
 }
 \description{
 Takes an object of class \code{SRE} and returns a list containing all the relevant information on parameter estimation

@@ -1,6 +1,6 @@
 #' @rdname SRE
 #' @export
-SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
+SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
                     lambda = 0, print_lik = FALSE, optimiser = nlminb, 
                     known_sigma2fs = NULL, taper = NULL, ...) {
 
@@ -8,14 +8,14 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     optimiser <- match.fun(optimiser)
     
     if (!is.null(known_sigma2fs)) 
-        SRE_model@sigma2fshat <- known_sigma2fs
+        object@sigma2fshat <- known_sigma2fs
     
-    if (method == "TMB" & SRE_model@K_type == "block-exponential") {
+    if (method == "TMB" & object@K_type == "block-exponential") {
       tmp <- readline(cat("You have selected method = 'TMB' and K_type = 'block-exponential'. Whilst this combination is allowed, it is significantly more computationally demanding than K_type = 'precision'. Please enter Y if you would like to continue with the block-exponential formulation, or N if you would like to change to the sparse precision matrix formulation."))
       if (tmp != "Y" && tmp != "N") {
         stop("You did not enter Y or N.")
       } else if (tmp == "N") {
-        SRE_model@K_type <- "precision"
+        object@K_type <- "precision"
         cat("Setting K-type = 'precision'.\n")
       }
     }
@@ -26,17 +26,17 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     ## for the FRK() wrapper)
     .check_args2(n_EM = n_EM, tol = tol, lambda = lambda,
                  method = method, print_lik = print_lik, 
-                 fs_by_spatial_BAU = SRE_model@fs_by_spatial_BAU, 
-                 response = SRE_model@response, K_type = SRE_model@K_type, link = SRE_model@link, 
+                 fs_by_spatial_BAU = object@fs_by_spatial_BAU, 
+                 response = object@response, K_type = object@K_type, link = object@link, 
                  known_sigma2fs = known_sigma2fs,
-                 BAUs = SRE_model@BAUs,
+                 BAUs = object@BAUs,
                  optimiser = optimiser, taper = taper, ...) # control parameters to optimiser() 
     
     ## Call internal fitting function with checked arguments
-    SRE_model <- .SRE.fit(SRE_model = SRE_model, n_EM = n_EM, tol = tol, 
+    object <- .SRE.fit(object = object, n_EM = n_EM, tol = tol, 
                           method = method, lambda = lambda, print_lik = print_lik, 
                           optimiser = optimiser, known_sigma2fs = known_sigma2fs, taper = taper, ...)
-    return(SRE_model)
+    return(object)
 }
 
 
@@ -44,32 +44,32 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 
 # ---- NOT EXPORTED ----
 
-.SRE.fit <- function(SRE_model, n_EM, tol, method, lambda, 
+.SRE.fit <- function(object, n_EM, tol, method, lambda, 
                      print_lik, optimiser, known_sigma2fs, taper, ...) {
   
   if(method == "EM") {
-    SRE_model <- .EM_fit(SRE_model = SRE_model, n_EM = n_EM, lambda = lambda, 
+    object <- .EM_fit(object = object, n_EM = n_EM, lambda = lambda, 
                          tol = tol, print_lik = print_lik, known_sigma2fs = known_sigma2fs, taper = taper)
   } else if (method == "TMB") {
-    SRE_model <- .TMB_fit(SRE_model, optimiser = optimiser, known_sigma2fs = known_sigma2fs, taper = taper, ...)
+    object <- .TMB_fit(object, optimiser = optimiser, known_sigma2fs = known_sigma2fs, taper = taper, ...)
   } else {
     stop("No other estimation method implemented yet. Please use method = 'EM' or method = 'TMB'.")
   }
   
-  SRE_model@method <- method
-  return(SRE_model) # return fitted SRE model
+  object@method <- method
+  return(object) # return fitted SRE model
 }
 
 # ---- EM fitting functions ----
 
-.EM_fit <- function(SRE_model, n_EM, lambda, tol, print_lik, known_sigma2fs, taper) {
+.EM_fit <- function(object, n_EM, lambda, tol, print_lik, known_sigma2fs, taper) {
   
   info_fit <- list()      
   
   info_fit$time <- system.time({
   
-  n <- nbasis(SRE_model)  # number of basis functions
-  X <- SRE_model@X        # covariates
+  n <- nbasis(object)  # number of basis functions
+  X <- object@X        # covariates
   
   info_fit$method <- "EM"  # updated info_fit
   llk <- rep(0,n_EM)       # log-likelihood
@@ -80,8 +80,8 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   
   ## If the user has requested covariance tapering, construct the taper matrix
   if (!is.null(taper)) {
-    beta   <- .tapering_params(D_matrices = SRE_model@D_basis, taper = taper)
-    T_beta <- .T_beta_taper_matrix(D_matrices = SRE_model@D_basis, beta = beta)
+    beta   <- .tapering_params(D_matrices = object@D_basis, taper = taper)
+    T_beta <- .T_beta_taper_matrix(D_matrices = object@D_basis, beta = beta)
     info_fit$taper <- "NULL"
   } else {
     T_beta <- 1 
@@ -89,9 +89,9 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   
   ## For each EM iteration step
   for(i in 1:n_EM) {
-    llk[i] <- loglik(SRE_model)                          # compute the log-lik
-    SRE_model <- .SRE.Estep(SRE_model)                   # compute E-step
-    SRE_model <- .SRE.Mstep(SRE_model, lambda, known_sigma2fs, T_beta) # compute M-step
+    llk[i] <- loglik(object)                          # compute the log-lik
+    object <- .SRE.Estep(object)                   # compute E-step
+    object <- .SRE.Mstep(object, lambda, known_sigma2fs, T_beta) # compute M-step
     if(opts_FRK$get("progress"))
       utils::setTxtProgressBar(pb, i)                    # update progress bar
     if(i>1)                                              # If we're not on first iteration
@@ -107,7 +107,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   
   ## If zero fine-scale variation detected just make sure user knows.
   ## This can be symptomatic of poor fitting
-  if(SRE_model@sigma2fshat == 0) {
+  if(object@sigma2fshat == 0) {
     info_fit$sigma2fshat_equal_0 <- 1
     if(opts_FRK$get("verbose") > 0)
       message("sigma2fs is being estimated to zero.
@@ -141,9 +141,9 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   }
   }) # system.time brackets
 
-  SRE_model@info_fit <- info_fit
+  object@info_fit <- info_fit
   
-  return(SRE_model)
+  return(object)
 }
 
 
@@ -674,7 +674,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 
 
 ## Fitting stage of non-Gaussian FRK (more generally, for method  = 'TMB').
-.TMB_fit <- function(M, optimiser, known_sigma2fs, taper, ...) {
+.TMB_fit <- function(object, optimiser, known_sigma2fs, taper, ...) {
   
   
   info_fit <- list()      
@@ -683,8 +683,8 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     
   info_fit$method <- "TMB" 
   
-  if (is.null(taper) && (M@K_type == "block-exponential" || !M@basis@regular)) {
-    cat("The argument taper was not specified. Since we are using TMB, and we are using either a covariance matrix (K_type = 'block-exponential') or irregular basis functions (SRE_model@basis@regular = 0), we must use tapering for computational reasons: Setting taper = 3.\n")
+  if (is.null(taper) && (object@K_type == "block-exponential" || !object@basis@regular)) {
+    cat("The argument taper was not specified. Since we are using TMB, and we are using either a covariance matrix (K_type = 'block-exponential') or irregular basis functions (object@basis@regular = 0), we must use tapering for computational reasons: Setting taper = 3.\n")
     taper <- 3
     info_fit$taper <- taper
   }
@@ -693,19 +693,19 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   ## neighbour formulation, or if we need to use the precision-block-exponential.
   ## This depends on whether the *spatial* basis is regular, or not.
   ## TODO: Could add checks here that the basis is indeed regular. See .test_regular_grid().
-  K_type <- M@K_type
-  regular <- if (is(M@basis,"TensorP_Basis")) M@basis@Basis1@regular else M@basis@regular
+  K_type <- object@K_type
+  regular <- if (is(object@basis,"TensorP_Basis")) object@basis@Basis1@regular else object@basis@regular
   if (K_type == "precision")
       K_type <- if (regular) "neighbour" else "precision-block-exponential"
 
   ## Parameter and data preparation for TMB
-  parameters <- .TMB_initialise(M, K_type = K_type)
-  data <- .TMB_data_prep(M, sigma2fs_hat = exp(parameters$logsigma2fs), K_type = K_type, taper = taper)
+  parameters <- .TMB_initialise(object, K_type = K_type)
+  data <- .TMB_data_prep(object, sigma2fs_hat = exp(parameters$logsigma2fs), K_type = K_type, taper = taper)
   
   ## If we are estimating a unique fine-scale variance at each spatial BAU, 
   ## simply replicate sigma2fs ns times. 
-  ns <- dim(M@BAUs)[1]
-  if (M@fs_by_spatial_BAU) {
+  ns <- dim(object@BAUs)[1]
+  if (object@fs_by_spatial_BAU) {
     data$sigma2fs_hat <- rep(data$sigma2fs_hat, ns)
     parameters$logsigma2fs <- rep(parameters$logsigma2fs, ns)
   }
@@ -736,9 +736,9 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     stop("Something has gone wrong in construction of the precision matrix of the basis-function coefficients: We have negative row-indices, col-indices, or total non-zeros: Please contact the package maintainer. ")
   if (!all.equal(length(data$x), length(data$col_indices), length(data$row_indices), sum(data$nnz))) 
     stop("Something has gone wrong in construction of the precision matrix of the basis-function coefficients: The number of row-indices, col-indices, or non-zeros is inconsistent. Please contact the package maintainer. ")
-  if(!all.equal(length(M@Z), length(data$Z), nrow(data$C_O), nrow(data$X_O) , nrow(data$S_O)))
+  if(!all.equal(length(object@Z), length(data$Z), nrow(data$C_O), nrow(data$X_O) , nrow(data$S_O)))
     stop("Something has gone wrong in the data preparation for TMB: The dimensions of the C, X, or S matrix is inconsistent with the number of observations. Please contact the package maintainer.")
-  if(!all.equal(nbasis(M@basis), max(data$row_indices + 1), max(data$col_indices + 1), sum(data$r_si)))
+  if(!all.equal(nbasis(object@basis), max(data$row_indices + 1), max(data$col_indices + 1), sum(data$r_si)))
     stop("Something has gone wrong in the data preparation for TMB: The number of basis functions and the matrix indices are inconsistent. Please contact the package maintainer.")
   if (!(K_type %in% c("neighbour", "block-exponential", "precision-block-exponential")))
     stop("Internal error: K_type is not one of neighbour, block-exponential, or precision-block-exponential. Please contact the package maintainer.")
@@ -800,28 +800,28 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   retain_idx  <- rownames(Q_posterior) %in% c("alpha", "random_effects") 
   Q_posterior <- Q_posterior[retain_idx, retain_idx]
   
-  ## Update the slots of M
+  ## Update the slots of object
   ## Convert to Matrix as these SRE slots require class "Matrix"
-  r  <- nbasis(M)
-  mstar <- ncol(M@C_O)
-  M@alphahat <- as(estimates$alpha, "Matrix")
-  M@mu_eta   <- as(estimates$random_effects[1:r], "Matrix")
-  if (M@include_fs) {
-    M@mu_xi  <- as(estimates$random_effects[(r+1):(r + mstar)], "Matrix")
+  r  <- nbasis(object)
+  mstar <- ncol(object@C_O)
+  object@alphahat <- as(estimates$alpha, "Matrix")
+  object@mu_eta   <- as(estimates$random_effects[1:r], "Matrix")
+  if (object@include_fs) {
+    object@mu_xi  <- as(estimates$random_effects[(r+1):(r + mstar)], "Matrix")
   } else {
-    M@mu_xi  <- as(rep(0, mstar), "Matrix")
+    object@mu_xi  <- as(rep(0, mstar), "Matrix")
   }
   
-  M@sigma2fshat <- unname(exp(estimates$logsigma2fs))
-  M@Q_posterior <- Q_posterior
-  M@phi <- unname(exp(estimates$logphi))
+  object@sigma2fshat <- unname(exp(estimates$logsigma2fs))
+  object@Q_posterior <- Q_posterior
+  object@phi <- unname(exp(estimates$logphi))
   
   ## Log-likeihood (negative of the negative-log-likelihood)
-  M@log_likelihood <- -obj$fn() # could also use -fit$objective
+  object@log_likelihood <- -obj$fn() # could also use -fit$objective
   
   ## If zero fine-scale variation detected just make sure user knows.
   ## This can be symptomatic of poor fitting
-  if(M@sigma2fshat == 0) {
+  if(object@sigma2fshat == 0) {
     info_fit$sigma2fshat_equal_0 <- 1
     if(opts_FRK$get("verbose") > 0)
       message("sigma2fs is being estimated to zero.
@@ -834,26 +834,26 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   
   })
   
-  M@info_fit <- info_fit
+  object@info_fit <- info_fit
 
-  return(M)
+  return(object)
 }
 
 
 
 ## Initialise the fixed effects, random effects, and parameters for method = 'TMB'
-.TMB_initialise <- function(M, K_type) {   
+.TMB_initialise <- function(object, K_type) {   
   
   cat("Initialising parameters and random effects...\n")
   
-  nres    <- max(M@basis@df$res) 
-  X_O     <- M@X_O
-  S_O     <- M@S_O
-  r       <- M@basis@n  
+  nres    <- max(object@basis@df$res) 
+  X_O     <- object@X_O
+  S_O     <- object@S_O
+  r       <- object@basis@n  
   
   # ---- Estimate Y over the observed BAUs ----
   
-  Y_O <- .compute_Y_O(M)
+  Y_O <- .compute_Y_O(object)
   
   # ---- Parameter and random effect initialisations ----
   
@@ -866,15 +866,15 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   l$alpha <- solve(t(X_O) %*% X_O) %*% t(X_O) %*% Y_O # OLS solution
   ## ii. Variance components
   ## Dispersion parameter depends on response; some require it to be 1. 
-  if (M@response %in% c("poisson", "bernoulli", "binomial", "negative-binomial")) {
+  if (object@response %in% c("poisson", "bernoulli", "binomial", "negative-binomial")) {
     l$phi <- 1
-  } else if (M@response == "gaussian") {
-    l$phi <- mean(diag(M@Ve))
+  } else if (object@response == "gaussian") {
+    l$phi <- mean(diag(object@Ve))
   } else {
     ## Use the variance of the data as our estimate of the dispersion parameter.
     ## This will almost certainly be an overestimate, as the mean-variance 
     ## relationship is not considered.
-    l$phi <- var(Z0)
+    l$phi <- var(object@Z)
   }
 
   
@@ -912,7 +912,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     ## iii. Basis function random-effects 
     regularising_weight <- if (!is.null(l$sigma2fs)) l$sigma2fs else l$sigma2[1] 
     
-    QInit <- .sparse_Q_block_diag(M@basis@df, 
+    QInit <- .sparse_Q_block_diag(object@basis@df, 
                                   # kappa = exp(l$sigma2), 
                                   # rho = exp(l$tau))$Q      
                                   kappa = l$sigma2, 
@@ -962,18 +962,18 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     logsigma2_t = log(l$sigma2_t),  
     frho_t = transform_minus_one_to_one_inverse(l$rho_t),
     logsigma2fs = log(l$sigma2fs),
-    random_effects = c(as.vector(l$eta), if(M@include_fs) as.vector(l$xi_O))
+    random_effects = c(as.vector(l$eta), if(object@include_fs) as.vector(l$xi_O))
   ))
 }
 
 
-.compute_Y_O <- function(M) {
+.compute_Y_O <- function(object) {
   
   
-  C_O     <- M@C_O
-  Z       <- as.vector(M@Z)         
-  k_Z     <- M@k_Z       
-  k_BAU_O <- M@k_BAU_O 
+  C_O     <- object@C_O
+  Z       <- as.vector(object@Z)         
+  k_Z     <- object@k_Z       
+  k_BAU_O <- object@k_BAU_O 
   m       <- nrow(C_O)
   mstar   <- ncol(C_O)
   
@@ -983,25 +983,25 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   ## hierarchical linking to first link the probability parameter to the 
   ## Gaussian Y-scale, and then the probability parameter to the conditional 
   ## mean at the data scale. In other situations, we simply map from Y to the mean.
-  if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
-    f     <- .link_fn(kind = "prob_to_Y", link = M@link)
-    h     <- .link_fn(kind = "mu_to_prob", response = M@response)
+  if (object@response %in% c("binomial", "negative-binomial") & object@link %in% c("logit", "probit", "cloglog")) {
+    f     <- .link_fn(kind = "prob_to_Y", link = object@link)
+    h     <- .link_fn(kind = "mu_to_prob", response = object@response)
   } else {
-    g     <- .link_fn(kind = "mu_to_Y", link = M@link) 
+    g     <- .link_fn(kind = "mu_to_Y", link = object@link) 
   }
   
   ## Create altered data to avoid the problems of applying g() to Z.
   ## This altered data is used only during the initialisation stage.
   Z0 <- Z
-  if (M@link %in% c("log", "square-root")) {
+  if (object@link %in% c("log", "square-root")) {
     Z0[Z <= 0] <- 0.1      
-  } else if (M@response == "negative-binomial" & M@link %in% c("logit", "probit", "cloglog")) {
+  } else if (object@response == "negative-binomial" & object@link %in% c("logit", "probit", "cloglog")) {
     Z0[Z == 0]   <- 0.1
-  } else if (M@response == "binomial" & M@link %in% c("logit", "probit", "cloglog")) {
+  } else if (object@response == "binomial" & object@link %in% c("logit", "probit", "cloglog")) {
     Z0 <- Z + 0.1 * (Z == 0) - 0.1 * (Z == k_Z)
-  } else if (M@response == "bernoulli" & M@link %in% c("logit", "probit", "cloglog")) {
+  } else if (object@response == "bernoulli" & object@link %in% c("logit", "probit", "cloglog")) {
     Z0 <- Z + 0.05 * (Z == 0) - 0.05 * (Z == 1)
-  } else if (M@link %in% c("inverse-squared", "inverse")) {
+  } else if (object@link %in% c("inverse-squared", "inverse")) {
     Z0[Z == 0] <- 0.05
   } 
   
@@ -1011,7 +1011,7 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   mu_Z <- Z0
   
   ## Construct mu_O from mu_Z
-  if (M@response %in% c("binomial", "negative-binomial")) {
+  if (object@response %in% c("binomial", "negative-binomial")) {
     ## Need to split mu_Z up based on the size parameter associated with each BAU
     mu_O <- numeric(mstar)
     for (x in 1:m) { # for each observation
@@ -1051,42 +1051,42 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   
   
   ## Transformed data: convert from data scale to Gaussian Y-scale.
-  if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
+  if (object@response %in% c("binomial", "negative-binomial") & object@link %in% c("logit", "probit", "cloglog")) {
     Y_O <- f(h(mu_O, k_BAU_O)) 
-  } else if (M@response == "negative-binomial" & M@link %in% c("log", "square-root")) {
+  } else if (object@response == "negative-binomial" & object@link %in% c("log", "square-root")) {
     Y_O <- g(mu_O / k_BAU_O) 
   } else {
     Y_O <- g(mu_O)
   } 
 }
 
-.TMB_data_prep <- function (M, sigma2fs_hat, K_type, taper = taper) {
+.TMB_data_prep <- function (object, sigma2fs_hat, K_type, taper = taper) {
   
   cat("Preparing data for TMB...\n")
   
-  obsidx <- observed_BAUs(M)       # Indices of observed BAUs
+  obsidx <- observed_BAUs(object)       # Indices of observed BAUs
   
   ## measurement error variance (NB: this is a vector)
-  sigma2e <- if (M@response == "gaussian") diag(M@Ve) else -1
+  sigma2e <- if (object@response == "gaussian") diag(object@Ve) else -1
   
   ## Data passed to TMB which is common to all
-  data <- list(Z = as.vector(M@Z),  # Binned data
-               X_O = M@X_O, S_O = M@S_O, C_O = M@C_O,
-               K_type = K_type, response = M@response, link = M@link,
-               k_BAU_O = M@k_BAU_O, k_Z = M@k_Z,         
-               temporal = as.integer(is(M@basis,"TensorP_Basis")), 
-               fs_by_spatial_BAU = M@fs_by_spatial_BAU, sigma2e = sigma2e, 
-               BAUs_fs = M@BAUs$fs[obsidx])
+  data <- list(Z = as.vector(object@Z),  # Binned data
+               X_O = object@X_O, S_O = object@S_O, C_O = object@C_O,
+               K_type = K_type, response = object@response, link = object@link,
+               k_BAU_O = object@k_BAU_O, k_Z = object@k_Z,         
+               temporal = as.integer(is(object@basis,"TensorP_Basis")), 
+               fs_by_spatial_BAU = object@fs_by_spatial_BAU, sigma2e = sigma2e, 
+               BAUs_fs = object@BAUs$fs[obsidx])
   
   ## Define the number of temporal basis function (r_t), and number of spatial BAUs (ns).
-  ns <- dim(M@BAUs)[1]
+  ns <- dim(object@BAUs)[1]
   if (data$temporal) {
-    spatial_dist_matrix <- M@D_basis[[1]]
-    spatial_basis <- M@basis@Basis1  
-    data$r_t <- M@basis@Basis2@n
+    spatial_dist_matrix <- object@D_basis[[1]]
+    spatial_basis <- object@basis@Basis1  
+    data$r_t <- object@basis@Basis2@n
   } else {
-    spatial_dist_matrix <- M@D_basis
-    spatial_basis <- M@basis 
+    spatial_dist_matrix <- object@D_basis
+    spatial_basis <- object@basis 
     data$r_t <- 1
   }
   
@@ -1130,20 +1130,20 @@ SRE.fit <- function(SRE_model, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   data$sigma2fs_hat <- sigma2fs_hat
   ## Only estimate sigma2fs if all the observations are associated with exactly 
   ## one BAU; otherwise, we must fix sigma2fs, or else TMB will explode.
-  if (!any(tabulate(M@Cmat@i + 1) == 1)) {
+  if (!any(tabulate(object@Cmat@i + 1) == 1)) {
     cat("There no observations are associated with a single BAU (i.e., all observations are associated with multiple BAUs). This makes the fine-scale variance parameter very difficult to estimate, so we will estimate it offline and fix for the remainder of model fitting; this estimate may be inaccurate.\n")
     data$fix_sigma2fs <- as.integer(1)
-    if (M@fs_by_spatial_BAU) 
+    if (object@fs_by_spatial_BAU) 
       stop("We do not allow each spatial BAU to have its own fine-scale variance parameter when there no observations associated with a single BAU (i.e., all observations are associated with multiple BAUs).")
   } else {
     data$fix_sigma2fs <- as.integer(0)
-    if (!all(tabulate(M@Cmat@i + 1) == 1)) 
+    if (!all(tabulate(object@Cmat@i + 1) == 1)) 
       cat("Some (but not all) observations are associated with multiple BAUs. Estimation of the fine-scale variance parameter will be done using TMB, but note that there should be a reasonable number of fine unit observations so that TMB can get a handle of the fine-scale variance parameter.\n")
   } 
   
   
   
-  data$include_fs   <- as.integer(M@include_fs)
+  data$include_fs   <- as.integer(object@include_fs)
   
   return(data)
 }

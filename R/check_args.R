@@ -223,10 +223,10 @@
 
 ## Checks arguments for the predict() function. Code is self-explanatory
 .check_args3 <- function(obs_fs, newdata, pred_polys,
-                         pred_time, covariances, SRE_model, type, 
+                         pred_time, covariances, object, type, 
                          k, percentiles, kriging, ...) {
   
-  if(kriging != "simple" & SRE_model@method == "EM")
+  if(kriging != "simple" & object@method == "EM")
     stop("Universal kriging is only available when method = 'TMB'")
   
   if(!(obs_fs %in% 0:1)) stop("obs_fs needs to be logical")
@@ -245,14 +245,14 @@
     stop("type must be a vector containing combinations of 'link', 'mean', and 'response'")
   
   ## Check k (for predictions)
-  if (SRE_model@response %in% c("binomial", "negative-binomial")) {
+  if (object@response %in% c("binomial", "negative-binomial")) {
     if(length(k) == 1){
       warning("Single number k provided for all BAUs: assuming k is invariant over the whole spatial domain.")
     } else if (!(class(k) %in% c("numeric", "integer"))) {
       stop("k must contain only positive integers.")
     } else if (any(k < 0) | any(k != round (k))) {
       stop("k must contain only positive integers.")
-    } else if (length(k) != nrow(SRE_model@S0)) {
+    } else if (length(k) != nrow(object@S0)) {
       ## FIXME: If we are allowing the user to predict over arbitrary polygons specified
       ## by the argument "newdata", then k will not be equal to the number of BAUs. Perhaps
       ## we should check to see if newdata is null, and then test if k equals its length. 

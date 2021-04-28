@@ -1,12 +1,12 @@
 #' @rdname SRE
 #' @export
-loglik <- function(SRE_model) {
+loglik <- function(object) {
   # This is structured this way so that extra models for fs-variation
   # can be implemented later
-  if (length(SRE_model@log_likelihood) != 0) {
-    return(SRE_model@log_likelihood)
-  } else if (SRE_model@fs_model == "ind") {
-    return(.loglik.ind(SRE_model))
+  if (length(object@log_likelihood) != 0) {
+    return(object@log_likelihood)
+  } else if (object@fs_model == "ind") {
+    return(.loglik.ind(object))
   } else {
     stop("Currently only independent fine-scale model is implemented")
   }
@@ -65,8 +65,8 @@ setMethod("summary",signature(object="SRE"),summary.SRE)
 ## Set method for retrieving info_fit
 #' @rdname info_fit
 #' @aliases info_fit,SRE-method
-setMethod("info_fit", signature(SRE_model = "SRE"),
-          function(SRE_model) {SRE_model@info_fit})
+setMethod("info_fit", signature(object = "SRE"),
+          function(object) {object@info_fit})
 
 # Retrieve coefficients of SRE model
 #' @rdname coef

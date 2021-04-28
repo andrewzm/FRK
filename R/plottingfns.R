@@ -238,17 +238,17 @@ EmptyTheme <- function() {
 #' @export
 setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = NULL, subset_time = NULL,  ...) {
     
-    SRE_model <- x
+    model_object <- x
     pred_object <- y
     
     ## Check that pred_object is a result of a call to predict()
-    if (SRE_model@method == "TMB") {
+    if (model_object@method == "TMB") {
         if (!is(pred_object, "list")) 
             stop("Since method = 'TMB', pred_object should be a list")
         if (is.null(pred_object$newdata)) 
             stop("Since method = 'TMB', pred_object should be a list with an element called newdata")
         pred_object <- pred_object$newdata 
-    } else if (SRE_model@method == "EM") {
+    } else if (model_object@method == "EM") {
         if(!is(pred_object, "Spatial") && !is(pred_object, "ST")) 
             stop("Since method = 'EM', pred_object should be a Spatial*DataFrame or STFDF")
     }
@@ -257,14 +257,14 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = N
     ## Note: I plot the data first, because I want it to be the first panel 
     if (!is.null(zdf)) {
         ## Extract name of response variable we wish to plot
-        response_name <- all.vars(SRE_model@f)[1]
+        response_name <- all.vars(model_object@f)[1]
         plots <- plot_spatial_or_ST(zdf, response_name, map_layer, subset_time, ...)
     } else {
         plots <- list() # initialise empty list so c() works in the next line
     }
     
     ## Plot the predictions and UQ 
-    plots <- c(plots, .plot_predictions_and_UQ(SRE_model@method, pred_object, map_layer, subset_time, ...))
+    plots <- c(plots, .plot_predictions_and_UQ(model_object@method, pred_object, map_layer, subset_time, ...))
     
 
     return(plots)

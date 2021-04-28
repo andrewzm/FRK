@@ -277,21 +277,21 @@ SRE2 <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mod
         lambda = 0)
 }
 
-.SRE.EMstep.ICAR <- function(Sm) {
+.SRE.EMstep.ICAR <- function(object) {
 
-    alpha <- Sm@alphahat
-    K <- Sm@Khat
-    Kinv <- Sm@Khat_inv
-    sigma2fs <- Sm@sigma2fshat
-    Qfs_norm <- Sm@Qfs_BAUs %>% as("dgTMatrix")
-    Cmat <- Sm@Cmat
+    alpha <- object@alphahat
+    K <- object@Khat
+    Kinv <- object@Khat_inv
+    sigma2fs <- object@sigma2fshat
+    Qfs_norm <- object@Qfs_BAUs %>% as("dgTMatrix")
+    Cmat <- object@Cmat
     r <- nrow(K)
-    n <- length(Sm@BAUs)
-    Qe <- solve(Sm@Ve)
+    n <- length(object@BAUs)
+    Qe <- solve(object@Ve)
 
     GAMMA <- as(bdiag(Kinv,(1/sigma2fs) * Qfs_norm),"symmetricMatrix") %>% as("dgTMatrix")
-    PI <- cBind(Sm@S, Cmat %*% .symDiagonal(n=length(Sm@BAUs)))
-    Qx <- (t(PI) %*% solve(Sm@Ve) %*% PI + GAMMA) %>% as("dgTMatrix")
+    PI <- cBind(object@S, Cmat %*% .symDiagonal(n=length(object@BAUs)))
+    Qx <- (t(PI) %*% solve(object@Ve) %*% PI + GAMMA) %>% as("dgTMatrix")
 
     ## Add (zero) elements to Qx so that all covariance elements associated with eta are computed
     ## This may be removed in the future if we work with uniformly sparse K
@@ -302,7 +302,7 @@ SRE2 <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mod
     Qx@x <- c(Qx@x,rep(0L,nrow(miss_idx)))
     Qx <- as(Qx,"dgCMatrix")
     temp <- cholPermute(Qx)
-    ybar <- t(PI) %*% Qe %*% (Sm@Z - Sm@X %*% alpha)
+    ybar <- t(PI) %*% Qe %*% (object@Z - object@X %*% alpha)
     x_mean <- cholsolve(Qx,ybar,perm=TRUE,cholQp = temp$Qpermchol, P = temp$P)
     Cov <- Takahashi_Davis(Qx,cholQp = temp$Qpermchol,P = temp$P) # PARTIAL
 
@@ -310,18 +310,18 @@ SRE2 <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mod
                                      x = x_mean[GAMMA@i+1] * x_mean[GAMMA@j+1])
     MeanOuter_eta <- tcrossprod(Matrix(x_mean[1:r]))
 
-    Sm@Khat <- .regularise_K(Sm = Sm,
+    object@Khat <- .regularise_K(object = object,
                              S_eta = as(forceSymmetric(Cov[(1:r),(1:r)]),"symmetricMatrix"),
                              mu_eta = (Matrix(x_mean[1:r])))
-    Sm@Khat_inv <- chol2inv(chol(Sm@Khat))
+    object@Khat_inv <- chol2inv(chol(object@Khat))
 
-    Sm@sigma2fshat <- sum(Qfs_norm * (Cov[-(1:r),-(1:r)] + MeanOuter_sparse[-(1:r),-(1:r)]))/ length(Sm@BAUs)
-    Sm@alphahat <- solve(t(Sm@X) %*% Qe %*% Sm@X) %*% t(Sm@X) %*% Qe %*% (Sm@Z - PI %*% x_mean)
-    Sm@mu_eta <- Matrix(x_mean[1:r])
-    Sm@mu_xi <- Matrix(x_mean[-(1:r)])
-    Sm@S_eta <- Cov[1:r,1:r]
-    Sm
-
+    object@sigma2fshat <- sum(Qfs_norm * (Cov[-(1:r),-(1:r)] + MeanOuter_sparse[-(1:r),-(1:r)]))/ length(object@BAUs)
+    object@alphahat <- solve(t(object@X) %*% Qe %*% object@X) %*% t(object@X) %*% Qe %*% (object@Z - PI %*% x_mean)
+    object@mu_eta <- Matrix(x_mean[1:r])
+    object@mu_xi <- Matrix(x_mean[-(1:r)])
+    object@S_eta <- Cov[1:r,1:r]
+    
+    return(object)
 }
 
 .loglik.ICAR <- function(Sm) {

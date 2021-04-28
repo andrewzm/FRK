@@ -39,4 +39,5 @@
 #' @importFrom utils data
 #' @importFrom statmod rinvgauss
 #' @importFrom VCA MPinv
+#' @importFrom stats as.formula
 NULL

@@ -98,11 +98,11 @@
 
 
 #' @rdname observed_BAUs
-setMethod("observed_BAUs", signature(SRE_model = "SRE"), function (SRE_model) {
+setMethod("observed_BAUs", signature(object = "SRE"), function (object) {
   
-  ## Note that Cmat maps BAUs to the observations. The dimension of SRE_model@Cmat is
+  ## Note that Cmat maps BAUs to the observations. The dimension of object@Cmat is
   ## (number of observations) * (number of BAUs).
-  Cmat <- as(SRE_model@Cmat, "dgTMatrix")
+  Cmat <- as(object@Cmat, "dgTMatrix")
   obsidx <- unique(Cmat@j) + 1 # unique() probably not necessary but want to be safe
   
   return(obsidx)
@@ -110,13 +110,13 @@ setMethod("observed_BAUs", signature(SRE_model = "SRE"), function (SRE_model) {
 
 
 #' @rdname unobserved_BAUs
-setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
+setMethod("unobserved_BAUs",signature(object = "SRE"), function (object) {
   
   ## Id of observed BAUs:
-  obsidx <- observed_BAUs(SRE_model)
+  obsidx <- observed_BAUs(object)
   
-  ## Id of unobserved BAUs (ncol(SRE_model@Cmat) is the total number of BAUs):
-  unobsidx <- (1:ncol(SRE_model@Cmat))[-obsidx]
+  ## Id of unobserved BAUs (ncol(object@Cmat) is the total number of BAUs):
+  unobsidx <- (1:ncol(object@Cmat))[-obsidx]
   
   return(unobsidx)
 })
@@ -498,31 +498,3 @@ setMethod("unobserved_BAUs",signature(SRE_model = "SRE"), function (SRE_model) {
   return(list(Q = Q, nnz = nnz))
 }
 
-
-# ---- Basis manipulation ----
-
-## TODO: put this with remove_basis(). 
-## I think we could make remove_basis_outside_polygon() into a method of 
-## remove_basis(). We would just have the second argument as a SpatialPolygons
-## object. 
-remove_basis_outside_polygon <- function(Basis, SpatialPolygons) {
-  
-  ## TODO: change this to use remove_basis()
-  
-  ## Original:
-  sp_df <- Basis@df
-  coordinates(sp_df) <- ~ loc1 + loc2
-  keep <- which(!is.na(over(sp_df, SpatialPolygons)))
-  Basis@fn <- Basis@fn[keep]
-  Basis@pars <- Basis@pars[keep]
-  Basis@df <- Basis@df[keep, ]
-  Basis@n <- length(keep)
-
-  ## Using remove_basis() (need to check this actually works)
-  sp_df <- Basis@df
-  coordinates(sp_df) <- ~ loc1 + loc2
-  rmidx <- which(is.na(over(sp_df, SpatialPolygons))) # note the absence of !
-  Basis <- remove_basis(Basis, rmidx)
-
-  return(basis_object)
-}

@@ -207,7 +207,7 @@ FRK <- function(f,                     # formula (compulsory)
 
     ## After constructing SRE model, fit it
     cat("Fitting SRE model...\n")
-    S <- SRE.fit(SRE_model = S,       # SRE model
+    S <- SRE.fit(S,       # SRE model
                  n_EM = n_EM,         # max. no. of EM iterations
                  tol = tol,           # tolerance at which EM is assumed to have converged
                  method = method,     # method ("EM" or "TMB")

@@ -839,6 +839,32 @@ setMethod("remove_basis",signature(Basis="Basis"),function(Basis,rmidx) {
 
 
 
+#' @rdname remove_basis
+#' @aliases remove_basis,Basis-method
+setMethod("remove_basis", signature(Basis="Basis", rmidx = "SpatialPolygons"), function(Basis,rmidx) {
+  
+  # ## Original:
+  # sp_df <- Basis@df
+  # coordinates(sp_df) <- ~ loc1 + loc2
+  # keep <- which(!is.na(over(sp_df, SpatialPolygons)))
+  # Basis@fn <- Basis@fn[keep]
+  # Basis@pars <- Basis@pars[keep]
+  # Basis@df <- Basis@df[keep, ]
+  # Basis@n <- length(keep)
+  
+  if (!is(Basis@manifold, "plane")) stop("remove_basis with SpatialPolygons only works on the plane")
+  
+  ## Using remove_basis() 
+  sp_df <- Basis@df
+  coordinates(sp_df) <- ~ loc1 + loc2
+  spatial_object <- rmidx
+  rmidx <- which(is.na(over(sp_df, spatial_object)))
+  Basis <- remove_basis(Basis, rmidx)
+  
+  return(Basis)
+})
+
+
 
 
 #' @rdname local_basis

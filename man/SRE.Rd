@@ -61,7 +61,7 @@ SRE(
 )
 
 SRE.fit(
-  SRE_model,
+  object,
   n_EM = 100L,
   tol = 0.01,
   method = c("EM", "TMB"),
@@ -86,7 +86,7 @@ SRE.fit(
   kriging = "simple"
 )
 
-loglik(SRE_model)
+loglik(object)
 }
 \arguments{
 \item{f}{\code{R} formula relating the dependent variable (or transformations thereof) to covariates}
@@ -141,9 +141,7 @@ loglik(SRE_model)
 
 \item{include_fs}{flag indicating whether the fine-scale variation should be include in the model}
 
-\item{SRE_model}{object returned from the constructor \code{SRE()} containing all the parameters and information on the SRE model}
-
-\item{object}{object of class \code{SRE}}
+\item{object}{object of class \code{SRE} returned from the constructor \code{SRE()} containing all the parameters and information on the SRE model}
 
 \item{newdata}{object of class \code{SpatialPoylgons}, \code{SpatialPoints}, or \code{STI}, indicating the regions or points over which prediction will be carried out. The BAUs are used if this option is not specified.}
 
