@@ -1187,7 +1187,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
               ## Add BAU ID to the data frame of the SP object
               sp_pols$BAU_name <- as.character(row.names(sp_pols))
 
-              ## Add coordinates to the @data aswell if not aleady there
+              ## Add coordinates to @data if not already there
               if(!(all(coordnames(sp_pols) %in% names(sp_pols@data))))
                   sp_pols@data <- cbind(sp_pols@data,coordinates(sp_pols))
 
@@ -1261,25 +1261,11 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
 
               ## We now create a new SpatialPointsDataFrame but this time the data
               ## is averaged over the BAUs, and we have at most one data point per BAU
-              if (!all(coordnames(data_sp) %in% names(Data_in_BAU))) {
-                  ## FIXME: Discuss this with Andrew
-                  ## There was an error once where coordnames(data_sp) were not 
-                  ## present in Data_in_BAU. In this instance, the coords were 
-                  ## saved as coords.x1 and coords.x2; simply match these.
-                  coords <- Data_in_BAU[grep("coords.", names(Data_in_BAU))]
-                  names(coords) <- coordnames(data_sp)
-                  new_sp_pts <- SpatialPointsDataFrame(
-                      coords=coords,                                   # coordinates of summarised data
-                      data=Data_in_BAU,                                # data frame
-                      proj4string = CRS(proj4string(data_sp)))         # CRS of original data
-                  
-              } else {
-                  new_sp_pts <- SpatialPointsDataFrame(
-                      coords=Data_in_BAU[coordnames(data_sp)],         # coordinates of summarised data
-                      data=Data_in_BAU,                                # data frame
-                      proj4string = CRS(proj4string(data_sp)))         # CRS of original data
-              }
-
+              new_sp_pts <- SpatialPointsDataFrame(
+                  coords=Data_in_BAU[coordnames(data_sp)],         # coordinates of summarised data
+                  data=Data_in_BAU,                                # data frame
+                  proj4string = CRS(proj4string(data_sp)))         # CRS of original data
+              
               ## Report time taken to bin data
               if (!silently) cat("Binned data in",timer[3],"seconds\n")
 

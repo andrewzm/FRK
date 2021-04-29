@@ -545,7 +545,12 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   
   if(!is.finite(determinant(t(X) %*% X)$modulus))
     stop("Matrix of covariates has columns that are linearly dependent. Please change formula or covariates.")
-  l$alphahat_init <- solve(t(X) %*% X) %*% t(X) %*% Z
+  
+  if (ncol(X) == 0) {
+    stop("We need at least one covariate in the model")
+  } else {
+    l$alphahat_init <- solve(t(X) %*% X) %*% t(X) %*% Z 
+  }
   l$sigma2fshat_init <- mean(diag(Ve)) / 4
   
   return(l)

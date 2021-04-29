@@ -247,7 +247,7 @@ SRE2 <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mod
     #K_init <- var(Z[,1])*K_norm
     K_init = Diagonal(n=nbasis(basis),x = 1/(1/var(Z[,1])))
     K_inv_init = Diagonal(n=nbasis(basis),x = (1/var(Z[,1])))
-
+    
     new("SRE",
         data=data,
         basis=basis,
