@@ -690,21 +690,29 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     
   info_fit$method <- "TMB" 
   
-  if (is.null(taper) && (object@K_type == "block-exponential" || !object@basis@regular)) {
-    cat("The argument taper was not specified. Since we are using TMB, and we are using either a covariance matrix (K_type = 'block-exponential') or irregular basis functions (object@basis@regular = 0), we must use tapering for computational reasons: Setting taper = 3.\n")
-    taper <- 3
-    info_fit$taper <- taper
-  }
+
   
   ## If we are using a precision matrix formulation, determine if we can use the
   ## neighbour formulation, or if we need to use the precision-block-exponential.
   ## This depends on whether the *spatial* basis is regular, or not.
   ## TODO: Could add checks here that the basis is indeed regular. See .test_regular_grid().
   K_type <- object@K_type
-  regular <- if (is(object@basis,"TensorP_Basis")) object@basis@Basis1@regular else object@basis@regular
-  if (K_type == "precision")
-      K_type <- if (regular) "neighbour" else "precision-block-exponential"
 
+  if (K_type == "precision") {
+    sp_basis <- if (is(object@basis,"TensorP_Basis")) object@basis@Basis1 else object@basis
+    if (!sp_basis@regular || is(manifold(sp_basis), "sphere")) {
+      K_type <- "precision-block-exponential"
+    } else {
+      K_type <- "neighbour"
+    }
+  }
+  
+  if (is.null(taper) && (K_type %in% c("block-exponential", "precision-block-exponential"))) {
+    cat("The argument taper was not specified. Since we are using TMB, and we are using either a covariance matrix (K_type = 'block-exponential'), or the sparse neighbour-based precision matrix cannot be used because we have irregular basis functions (object@basis@regular = 0) or the manifold is not the plane(), we must use tapering for computational reasons: Setting taper = 3.\n")
+    taper <- 3
+    info_fit$taper <- taper
+  }
+  
   ## Parameter and data preparation for TMB
   parameters <- .TMB_initialise(object, K_type = K_type)
   data <- .TMB_data_prep(object, sigma2fs_hat = exp(parameters$logsigma2fs), K_type = K_type, taper = taper)
