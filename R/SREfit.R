@@ -7,7 +7,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   ## Deprecation coercion
   tmp <- list(...)
   if(!is.null(tmp$SRE_model)) {
-    object <- SRE_model
+    object <- tmp$SRE_model
     warning("The argument 'SRE_model' is deprecated: Please use 'object'")
   }
 

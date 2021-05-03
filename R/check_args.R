@@ -188,6 +188,9 @@
   ## Check optional parameters to optimiser function are ok:
   l <- list(...)
   
+  # SRE_model is present only because of a deprecation coercion 
+  l$SRE_model <- NULL
+  
   # The ellipsis argument in the wrapper FRK() allows users to pass in
   # optional parameters to auto_BAUs() and auto_basis(). This means that
   # we must check whether the parameters in ... match the formal parameters
