@@ -16,8 +16,8 @@
     stop("The spatial component of the BAUs should be a SpatialPolygonsDataFrame or SpatialPixelsDataFrame")
   if(is(BAUs,"STFDF") && nrow(BAUs@data) != nrow(BAUs@sp) * length(BAUs@time))
     stop("The number of rows in BAUs@data should be equal to the number of spatial BAUs, nrow(BAUs@sp), multiplied by the number of time indices, length(BAUs@time)")
-  if(!all(sapply(data,function(x) coordnames(x) == coordnames(BAUs))))
-    stop("The coordinate names of data do not match those of the BAUs.")
+  # if(!all(sapply(data,function(x) coordnames(x) == coordnames(BAUs))))
+  #   stop("The coordinate names of data do not match those of the BAUs.")
   
   
   # if(is(BAUs,"SpatialPointsDataFrame"))
@@ -231,10 +231,10 @@
 .check_args3 <- function(obs_fs, newdata, pred_polys,
                          pred_time, covariances, object, type, 
                          k, percentiles, kriging, ...) {
-  if(!is.null(newdata)) {
-    if(!all(coordnames(newdata) == coordnames(object@BAUs)))
-      stop("The coordinate names of newdata do not match those of the BAUs.")
-  }
+  # if(!is.null(newdata)) {
+  #   if(!all(coordnames(newdata) == coordnames(object@BAUs)))
+  #     stop("The coordinate names of newdata do not match those of the BAUs.")
+  # }
 
   if(kriging != "simple" & object@method == "EM")
     stop("Universal kriging is only available when method = 'TMB'")
