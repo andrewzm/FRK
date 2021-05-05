@@ -199,7 +199,7 @@ print.summary.SRE <- function(x, ...) {
   ## estimate the measurement error using the variogram. 
   ## This situation typically only arises if we are trying to fit 1D spatial data.
   zero_range_dims <- which(apply(coordinates(sp_pts), 2, .zero_range))
-  if (zero_range_dims) {
+  if (length(zero_range_dims) > 0) {
     new_coords <- coordinates(sp_pts)
     for (i in zero_range_dims) {
       new_coords[, i] <- jitter(new_coords[, i], amount = 1e-5)
