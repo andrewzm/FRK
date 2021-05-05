@@ -361,7 +361,7 @@ auto_basis <- function(manifold = plane(),
         if(!requireNamespace("INLA"))
             stop("For irregularly-placed basis-function generation INLA needs to be installed
                  for constructing basis function centres. Please install it
-                 using install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\")")
+                 using install.packages(\"INLA\", repos=\"https://www.math.ntnu.no/inla/R/stable\")")
     }
 
     ## Subsamp can be used to make the placement/pruning process more efficient with big data.

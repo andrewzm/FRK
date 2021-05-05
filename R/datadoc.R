@@ -36,7 +36,7 @@
 #' @title NOAA maximum temperature data for 1990--1993
 #' @description Maximum temperature data obtained from the National Oceanic and Atmospheric
 #' Administration (NOAA) for a part of the USA between 1990 and 1993 (inclusive).
-#' See http://iridl.ldeo.columbia.edu/ SOURCES/.NOAA/.NCDC/.DAILY/.FSOD/.
+#' See https://iridl.ldeo.columbia.edu/ SOURCES/.NOAA/.NCDC/.DAILY/.FSOD/.
 #' @format A data frame with 196,253 rows and 8 variables:
 #' \describe{
 #'   \item{year}{year of retrieval}
@@ -56,7 +56,7 @@
 #' @title ISEA Aperture 3 Hexagon (ISEA3H) Discrete Global Grid
 #'
 #' @description The data used here were obtained from
-#' http://webpages.sou.edu/~sahrk/dgg/isea.old/gen/isea3h.html and represent ISEA
+#' https://webpages.sou.edu/~sahrk/dgg/isea.old/gen/isea3h.html and represent ISEA
 #' discrete global grids (DGGRIDs) generated using the \code{DGGRID} software.
 #' The original .gen files were converted to a data frame using the function \code{dggrid_gen_to_df},
 #' available with the \code{dggrids} package. Only resolutions 0--6 are supplied with \code{FRK}

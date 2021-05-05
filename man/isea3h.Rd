@@ -20,7 +20,7 @@ isea3h
 }
 \description{
 The data used here were obtained from
-http://webpages.sou.edu/~sahrk/dgg/isea.old/gen/isea3h.html and represent ISEA
+https://webpages.sou.edu/~sahrk/dgg/isea.old/gen/isea3h.html and represent ISEA
 discrete global grids (DGGRIDs) generated using the \code{DGGRID} software.
 The original .gen files were converted to a data frame using the function \code{dggrid_gen_to_df},
 available with the \code{dggrids} package. Only resolutions 0--6 are supplied with \code{FRK}

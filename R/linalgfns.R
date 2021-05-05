@@ -46,7 +46,7 @@ quickrbind <- function(L) {
 }
 
 ## Performs a quick binding of sparse matrices by extract the indices and rearranging. This code was adapted fro
-## http://stackoverflow.com/questions/8843700/creating-sparse-matrix-from-a-list-of-sparse-vectors
+## https://stackoverflow.com/questions/8843700/creating-sparse-matrix-from-a-list-of-sparse-vectors
 ## This function should probably be implemented in C at some point
 quickbind <- function(L, rc = "c") {
 

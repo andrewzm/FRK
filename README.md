@@ -1,5 +1,5 @@
 [![Build Status](https://travis-ci.org/andrewzm/FRK.svg)](https://travis-ci.org/andrewzm/FRK)
-[![codecov.io](http://codecov.io/github/andrewzm/FRK/coverage.svg?branch=master)](http://codecov.io/github/andrewzm/FRK?branch=master)
+[![codecov.io](https://codecov.io/github/andrewzm/FRK/coverage.svg?branch=master)](https://codecov.io/github/andrewzm/FRK?branch=master)
 
 Fixed Rank Kriging 
 ================
@@ -17,7 +17,7 @@ The package `FRK` is now at v1.0.0 and available on CRAN! To install, please typ
 install.packages("FRK")
 ```
 
-To install the most recent (development) version, first please install `INLA` from `http://www.r-inla.org/download`, then please load `devtools` and type
+To install the most recent (development) version, first please install `INLA` from `https://www.r-inla.org/download`, then please load `devtools` and type
 
 ```r
 install_github("andrewzm/FRK", dependencies = TRUE, build_vignettes = TRUE)

@@ -561,7 +561,7 @@ setMethod("auto_BAU",signature(manifold="plane"),
               if(nonconvex_hull)
                   if(!requireNamespace("INLA"))
                       stop("For creating a non-convex hull INLA needs to be installed. Please install it using
-                           install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\"). Alternatively
+                           install.packages(\"INLA\", repos=\"https://www.math.ntnu.no/inla/R/stable\"). Alternatively
                            please set nonconvex_hull=FALSE to use a simple convex hull.")
 
               if(is.null(d))
