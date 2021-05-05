@@ -4,8 +4,10 @@
 .check_args1 <- function(f, data,basis, BAUs, est_error, 
                          K_type, response, link, fs_by_spatial_BAU, normalise_wts, 
                          sum_variables, average_in_BAU) {
-  
+
   if(!is(f,"formula")) stop("f needs to be a formula.")
+  if(length(all.vars(f)[-1]) == 0 && !attr(terms(f), "intercept"))
+    stop("We must have at least one covariate (possibly just an intercept) in the formula f. In particular, f = Z ~ -1 is not permitted.")
   if(!is(data,"list"))
     stop("Please supply a list of Spatial objects.")
   if(!all(sapply(data,function(x) is(x,"Spatial") | is(x,"ST"))))
