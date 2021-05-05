@@ -95,4 +95,3 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 \seealso{
 \code{\link{SRE}} for details on how to construct and fit SRE models.
 }
-\keyword{spatial}

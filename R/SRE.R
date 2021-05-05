@@ -178,7 +178,6 @@
 #' \code{\link{info_fit}} for extracting information on the fitting (convergence, etc.), 
 #' and \code{\link{plot}} for plotting results. 
 #' See also the paper \url{https://arxiv.org/abs/1705.08105} for details on code operation.
-#' @keywords spatial
 #' @export
 #' @examples
 #' library(sp)

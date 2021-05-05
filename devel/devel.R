@@ -22,7 +22,6 @@
 #' @slot Khat_inv prior precision matrix of random effects (estimated)
 #' @slot alphahat fixed-effect regression coefficients (estimated)
 #' @slot sigma2fshat fine-scale variation scaling (estimated)
-#' @keywords Spatial random effects, fixed rank kriging
 setClass("SRE2",representation(data="list",
                               basis="Basis_obj",
                               BAUs="ANY",     # should be SpatialPolygonsDataFrame, SpatialPixelsDataFrame or STFDF
@@ -654,7 +653,6 @@ sp_to_ST_basis <- function(G_spatial,t_knots = 1,manifold=STsphere()) {
 #' @title Plotting themes
 #' @description Formats a ggplot object for neat plotting.
 #' @return Object of class \code{ggplot}
-#' @keywords ggplot
 #' @export
 #' @details \code{LinePlotTheme()} creates \code{ggplot} object with a white background, a relatively large font and grid lines. \code{EmptyTheme()} on the other hand creates a \code{ggplot} object with no axes or legends.
 #' @examples

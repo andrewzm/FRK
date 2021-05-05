@@ -124,7 +124,6 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot normalise_wts if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)
 #' @slot fs_by_spatial_BAU if \code{TRUE}, then each BAU is associated with its own fine-scale variance parameter
 #' @seealso \code{\link{SRE}} for details on how to construct and fit SRE models.
-#' @keywords spatial
 setClass("SRE",representation(data="list",
                               basis="Basis_obj",
                               BAUs="ANY",     # should be SpatialPolygonsDataFrame, SpatialPixelsDataFrame or STFDF

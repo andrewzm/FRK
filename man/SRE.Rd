@@ -340,4 +340,3 @@ X <- subset(X, x >= 0 & x <= 1)
 and \code{\link{plot}} for plotting results. 
 See also the paper \url{https://arxiv.org/abs/1705.08105} for details on code operation.
 }
-\keyword{spatial}
