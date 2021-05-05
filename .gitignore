@@ -4,7 +4,6 @@ FRK.Rproj
 .RData
 vignettes/*.log
 vignettes/*.aux
-vignettes/*.tex
 vignettes/*.tex~
 vignettes/*.synctex.gz
 vignettes/figure
@@ -24,5 +23,3 @@ pres/
 bigstudies
 Permissions
 *.dll
-*.Rnw
-*.bib

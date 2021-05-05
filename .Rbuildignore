@@ -11,6 +11,7 @@ bigstudies
 ^PBSmapping
 .log$
 .bbl$
+.blg$
 .concordance.tex$
 .synctex.gz$
 ^README.md$

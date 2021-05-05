@@ -56,9 +56,9 @@ library(sp)
 
 ### Create a synthetic dataset
 set.seed(1)
-d <- data.frame(lon = runif(n=1000,min = -179, max = 179),
-                lat = runif(n=1000,min = -90, max = 90),
-                z = rnorm(5000))
+d <- data.frame(lon = runif(n=500,min = -179, max = 179),
+                lat = runif(n=500,min = -90, max = 90),
+                z = rnorm(500))
 coordinates(d) <- ~lon + lat
 proj4string(d)=CRS("+proj=longlat")
 
