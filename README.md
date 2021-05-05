@@ -119,7 +119,7 @@ pred <- predict(S)                            # prediction stage
 
 ## Plotting
 plot_list <- plot(S, pred, zdf)
-ggarrange(plot_list$z, plot_list$p_mu, plot_list$interval_90_mu, 
+ggarrange(plot_list$z, plot_list$p_mu, plot_list$interval90_mu, 
           nrow = 1, legend = "top")
 
              
@@ -173,7 +173,7 @@ plot_list <- lapply(
   function(gg) gg + facet_wrap(~t, labeller = as_labeller(facet_names)))
 
 ## Plot the predictions and uncertainty
-ggarrange(plot_list$p_mu, plot_list$interval_90_mu, legend = "top") 
+ggarrange(plot_list$p_mu, plot_list$interval90_mu, legend = "top") 
 
 
 ```
