@@ -172,7 +172,7 @@ print.summary.SRE <- function(x, ...) {
 ## This function attempts to estimate the measurement error by fitting a variogram to the data
 ## and see where it crosses the y-axis. This captures the super-fine-scale variation that we
 ## characterise as measurement error. FRK then effectively fits a smooth variogram -- the difference
-## between where this cross the y-axis and the measurement error will be the fs-variation (estimated)
+## between where this crosses the y-axis and the measurement error will be the fs-variation (estimated)
 .est_obs_error <- function(sp_pts,variogram.formula,vgm_model = NULL,BAU_width = NULL) {
   
   ## Notify user (even if not verbose == TRUE)
@@ -187,11 +187,33 @@ print.summary.SRE <- function(x, ...) {
     stop("gstat is required for variogram estimation. Please install gstat")
   
   ## Make sure we're not on sphere here, otherwise variogram fitting is too slow. Just remove
-  ## CRS (this is only approximate anyways)
+  ## CRS (this is only approximate anyway)
   if(!is.na(proj4string(sp_pts))) {
     sp_pts <- SpatialPointsDataFrame(coords = coordinates(sp_pts),
                                      data = sp_pts@data,proj4string = CRS())
   }
+  
+  
+  ## If any of the coordinates are zero range (i.e., they contain only the same 
+  ## value repeatedly), then we need to jitter the coordinates so that gstat can 
+  ## estimate the measurement error using the variogram. 
+  ## This situation typically only arises if we are trying to fit 1D spatial data.
+  zero_range_dims <- which(apply(coordinates(sp_pts), 2, .zero_range))
+  if (zero_range_dims) {
+    new_coords <- coordinates(sp_pts)
+    for (i in zero_range_dims) {
+      new_coords[, i] <- jitter(new_coords[, i], amount = 1e-5)
+    }
+    
+    ## An error occurs if we try to overwrite the original coordinates:
+    # coordinates(sp_pts) <- new_coords 
+    ## Just create a new Spatial* object:
+    form <- as.formula(paste("~", paste(coordnames(sp_pts), collapse = "+")))
+    sp_pts <- cbind(sp_pts@data, new_coords)
+    coordinates(sp_pts) <- form
+  }
+  
+
   
   ## If we have many points (say > 50000) then subsample
   if(length(sp_pts) > 50000) {
