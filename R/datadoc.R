@@ -107,10 +107,23 @@
 #'   \item{y}{y-coordinate}
 #'   \item{z}{binary dependent variable - 1 if cloud is present, 0 if no cloud. This
 #'   variable has been thresholded from the original continuous measurement of
-#'   radiance supplied by the MODIS instrument.}
+#'   radiance supplied by the MODIS instrument}
 #'   \item{z_unthresholded}{The original continuous measurement of
-#'   radiance supplied by the MODIS instrument}.
+#'   radiance supplied by the MODIS instrument}
 #' }
 #' @docType data
 #' @references  MODIS Characterization Support Team (2015). MODIS 500m Calibrated Radiance Product.NASA MODIS Adaptive Processing System, Goddard Space Flight Center, USA.
 "MODIS_cloud_df"
+
+
+#' @title Americium soil data
+#' @description Between 1954 and 1963, nuclear devices were detonated at Area 13 of the Nevada Test Site in the United States, contaminating the surrounding soil with the radioactive element americium (Am). This data set contains Am concentrations in a spatial domain immediately surrounding Ground Zero (GZ)
+#' @format A data frame with 212 rows and 4 variables:
+#' \describe{
+#'   \item{Easting}{Easting in metres}
+#'   \item{Northing}{Northing in metres}
+#'   \item{Am}{Americium concentration in 1000 counts per minute}
+#' }
+#' @docType data
+#' @references Paul R, Cressie N (2011). “Lognormal block kriging for contaminated soil.” European Journal of Soil Science, 62, 337–345.
+"Am_data"

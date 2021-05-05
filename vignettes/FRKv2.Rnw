@@ -371,7 +371,12 @@ ggarrange(plot_list$z + labs(fill = "data"),
           nrow = 1, legend = "top") 
 @
 
+\section{Example: Log-normal point and block prediction}
 
+<<eval=TRUE,message=FALSE,warning=FALSE,results='hide'>>=
+GZ_df <- data.frame("Easting" = 219868.09, "Northing" = 285320.8)
+
+@
 
 
 \bibliography{FRKv2}
