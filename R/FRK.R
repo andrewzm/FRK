@@ -40,4 +40,7 @@
 #' @importFrom statmod rinvgauss
 #' @importFrom VCA MPinv
 #' @importFrom stats as.formula
+#' @importFrom scales scientific
+#' @importFrom ggpubr ggarrange
+#' @importFrom reshape2 melt
 NULL

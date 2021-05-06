@@ -1,54 +1,7 @@
-\documentclass{article}\usepackage[]{graphicx}\usepackage[]{color}
-% maxwidth is the original width if it is less than linewidth
-% otherwise use linewidth (to make sure the graphics do not exceed the margin)
-\makeatletter
-\def\maxwidth{ %
-  \ifdim\Gin@nat@width>\linewidth
-    \linewidth
-  \else
-    \Gin@nat@width
-  \fi
-}
-\makeatother
+\documentclass{article}
 
-\definecolor{fgcolor}{rgb}{0.345, 0.345, 0.345}
-\newcommand{\hlnum}[1]{\textcolor[rgb]{0.686,0.059,0.569}{#1}}%
-\newcommand{\hlstr}[1]{\textcolor[rgb]{0.192,0.494,0.8}{#1}}%
-\newcommand{\hlcom}[1]{\textcolor[rgb]{0.678,0.584,0.686}{\textit{#1}}}%
-\newcommand{\hlopt}[1]{\textcolor[rgb]{0,0,0}{#1}}%
-\newcommand{\hlstd}[1]{\textcolor[rgb]{0.345,0.345,0.345}{#1}}%
-\newcommand{\hlkwa}[1]{\textcolor[rgb]{0.161,0.373,0.58}{\textbf{#1}}}%
-\newcommand{\hlkwb}[1]{\textcolor[rgb]{0.69,0.353,0.396}{#1}}%
-\newcommand{\hlkwc}[1]{\textcolor[rgb]{0.333,0.667,0.333}{#1}}%
-\newcommand{\hlkwd}[1]{\textcolor[rgb]{0.737,0.353,0.396}{\textbf{#1}}}%
-\let\hlipl\hlkwb
-
-\usepackage{framed}
-\makeatletter
-\newenvironment{kframe}{%
- \def\at@end@of@kframe{}%
- \ifinner\ifhmode%
-  \def\at@end@of@kframe{\end{minipage}}%
-  \begin{minipage}{\columnwidth}%
- \fi\fi%
- \def\FrameCommand##1{\hskip\@totalleftmargin \hskip-\fboxsep
- \colorbox{shadecolor}{##1}\hskip-\fboxsep
-     % There is no \\@totalrightmargin, so:
-     \hskip-\linewidth \hskip-\@totalleftmargin \hskip\columnwidth}%
- \MakeFramed {\advance\hsize-\width
-   \@totalleftmargin\z@ \linewidth\hsize
-   \@setminipage}}%
- {\par\unskip\endMakeFramed%
- \at@end@of@kframe}
-\makeatother
-
-\definecolor{shadecolor}{rgb}{.97, .97, .97}
-\definecolor{messagecolor}{rgb}{0, 0, 0}
-\definecolor{warningcolor}{rgb}{1, 0, 1}
-\definecolor{errorcolor}{rgb}{1, 0, 0}
-\newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
-
-\usepackage{alltt}
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{Spatial and spatio-temporal kriging with FRK}
 
 %% Specific this vignette
 \usepackage[margin=1in]{geometry}
@@ -169,22 +122,29 @@
 
 \author{Matthew Sainsbury-Dale, Andrew Zammit-Mangion, and Noel Cressie}
 
-\title{Fixed Rank Kriging of Non-Gaussian Data using \pkg{FRK}}
+\title{Modelling of spatial and spatio-temporal non-Gaussian data with \pkg{FRK}}
 
 \usepackage[authoryear]{natbib}
 
 \bibliographystyle{plainnat}
-\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+
 \begin{document}
+
+<<setup, include=FALSE, cache=FALSE>>=
+library(knitr)
+# set global chunk options
+# opts_chunk$set(fig.path='figure/minimal-', fig.align='center', fig.show='hold')
+# options(formatR.arrow=TRUE,width=90)
+knitr::opts_chunk$set(dpi=100)
+@
 
 \maketitle
 
 \begin{abstract}
- Non-Gaussian spatial and spatial-temporal data are becoming increasingly prevalent, arising from studies as far apart as small area demographics (counts) and global remote sensing (radiant energies). 
+ Non-Gaussian spatial and spatial-temporal data are becoming increasingly prevalent, arising from studies as diverse as small area demographics (counts) and global remote sensing (radiant energies). 
   \pkg{FRK} is an \proglang{R} package for spatial/spatio-temporal modelling and prediction with large data sets. 
-In this vignette, we demonstrate the modelling of non-Gaussian data using \pkg{FRK}. 
-% This vignette serves to demonstrate the use of the \proglang{R} package \pkg{FRK} for analysing non-Gaussian spatial and spatio-temporal data. 
- All of the functionality that \pkg{FRK} offers in a Gaussian setting extends to a non-Gaussian setting: See the vignette ``FRK\_intro'', which describes how the BAUs and basis functions work; inference over different spatial manifolds (such as the sphere); inference in a spatio-temporal setting; and spatial change of support. 
+In this vignette, we provide examples where we model non-Gaussian data using \pkg{FRK} version 2.x and above. 
+ All of the functionality that \pkg{FRK} offers in a Gaussian setting extends to a non-Gaussian setting: See also the vignette ``FRK\_intro'', which describes how the BAUs and basis functions work; inference over different spatial manifolds (such as the sphere); inference in a spatio-temporal setting; and spatial change of support. 
 \end{abstract}
 
 
@@ -381,72 +341,48 @@ such that $\vec{\mu}_P = \vec{C}_P \vec{\mu}$. Again, we use MC sampling to pred
 \section{Example: Simulated Non-Gaussian, point-referenced spatial data}\label{sec:simulated_example}
 
 First, load the required packages. 
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
-\begin{alltt}
-\hlkwd{library}\hlstd{(}\hlstr{"FRK"}\hlstd{)}       \hlcom{# for carrying out FRK       }
-\hlkwd{library}\hlstd{(}\hlstr{"sp"}\hlstd{)}        \hlcom{# for defining points/polygons}
-\hlkwd{library}\hlstd{(}\hlstr{"dplyr"}\hlstd{)}     \hlcom{# for easy data manipulation}
-\hlkwd{library}\hlstd{(}\hlstr{"reshape2"}\hlstd{)}  \hlcom{# for easy data manipulation}
-\hlkwd{library}\hlstd{(}\hlstr{"ggplot2"}\hlstd{)}   \hlcom{# for plotting}
-\hlkwd{library}\hlstd{(}\hlstr{"ggpubr"}\hlstd{)}    \hlcom{# for arranging plots}
-\end{alltt}
-\end{kframe}
-\end{knitrout}
+ <<eval=TRUE,message=FALSE,warning=FALSE>>=
+library("FRK")       # for carrying out FRK       
+library("sp")        # for defining points/polygons
+library("dplyr")     # for easy data manipulation
+library("ggplot2")   # for plotting
+@
 
 Now, simulate some Poisson distributed spatial data. 
 
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
-\begin{alltt}
-\hlstd{m} \hlkwb{<-} \hlnum{250}                                                   \hlcom{# Sample size}
-\hlkwd{RNGversion}\hlstd{(}\hlstr{"3.6.0"}\hlstd{);} \hlkwd{set.seed}\hlstd{(}\hlnum{1}\hlstd{)}                           \hlcom{# Fix seed}
-\hlstd{zdf} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}\hlkwc{x} \hlstd{=} \hlkwd{runif}\hlstd{(m),} \hlkwc{y}\hlstd{=} \hlkwd{runif}\hlstd{(m))}               \hlcom{# Generate random locs}
-\hlstd{zdf}\hlopt{$}\hlstd{Y} \hlkwb{<-} \hlnum{3} \hlopt{+} \hlkwd{sin}\hlstd{(}\hlnum{7} \hlopt{*} \hlstd{zdf}\hlopt{$}\hlstd{x)} \hlopt{+} \hlkwd{cos}\hlstd{(}\hlnum{9} \hlopt{*} \hlstd{zdf}\hlopt{$}\hlstd{y)}               \hlcom{# Latent process}
-\hlstd{zdf}\hlopt{$}\hlstd{z} \hlkwb{<-} \hlkwd{rpois}\hlstd{(m,} \hlkwc{lambda} \hlstd{=} \hlkwd{exp}\hlstd{(zdf}\hlopt{$}\hlstd{Y))}                     \hlcom{# Simulate data}
-\hlkwd{coordinates}\hlstd{(zdf)} \hlkwb{=} \hlopt{~}\hlstd{x}\hlopt{+}\hlstd{y}                                    \hlcom{# Turn into sp object}
-\end{alltt}
-\end{kframe}
-\end{knitrout}
+ <<eval=TRUE,message=FALSE,warning=FALSE>>=
+m <- 250                                                   # Sample size
+RNGversion("3.6.0"); set.seed(1)                           # Fix seed
+zdf <- data.frame(x = runif(m), y= runif(m))               # Generate random locs
+zdf$Y <- 3 + sin(7 * zdf$x) + cos(9 * zdf$y)               # Latent process
+zdf$z <- rpois(m, lambda = exp(zdf$Y))                     # Simulate data
+coordinates(zdf) = ~x+y                                    # Turn into sp object
+@
 
 There is an `expert' way of using \pkg{FRK} that involves using the functions \fct{auto\_BAUs} and \fct{auto\_basis} to automatically construct BAUs and basis functions from the data, and \fct{SRE} and \fct{SRE.fit} to initialise and fit the SRE model object. 
  This `expert' way is documented in the vignette ``FRK\_intro''.
  Alternatively, there is a `simple' way of using \pkg{FRK} that uses the high-level wrapper function \fct{FRK} that calls these functions under-the-hood; in this vignette, we will use the `simple' way.
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
-\begin{alltt}
-\hlstd{S} \hlkwb{<-} \hlkwd{FRK}\hlstd{(}\hlkwc{f} \hlstd{= z} \hlopt{~} \hlnum{1}\hlstd{,}               \hlcom{# Formula to FRK}
-         \hlkwd{list}\hlstd{(zdf),}               \hlcom{# All datasets are supplied in list}
-         \hlkwc{nres} \hlstd{=} \hlnum{2}\hlstd{,}                \hlcom{# Low-rank model to reduce run-time}
-         \hlkwc{response} \hlstd{=} \hlstr{"poisson"}\hlstd{,}    \hlcom{# data model}
-         \hlkwc{link} \hlstd{=} \hlstr{"log"}\hlstd{)}            \hlcom{# link function}
-\hlstd{pred} \hlkwb{<-} \hlkwd{predict}\hlstd{(S)}                \hlcom{# prediction stage}
-\end{alltt}
-\end{kframe}
-\end{knitrout}
+<<eval=TRUE,message=FALSE,warning=FALSE,results='hide'>>=
+S <- FRK(f = z ~ 1,               # Formula to FRK
+         list(zdf),               # All datasets are supplied in list
+         nres = 2,                # Low-rank model to reduce run-time
+         response = "poisson",    # data model
+         link = "log")            # link function
+pred <- predict(S)                # prediction stage
+@
 \pkg{FRK} includes two plotting methods, \fct{plot} and \fct{plot\_spatial\_or\_ST}; the former takes an SRE object and the result of a call to predict, and returns a list of \class{ggplot} objects containing the predictions and uncertainty quantification of those predictions, while the latter is a general-purpose function for \class{Spatial*DataFrame} and \class{STFDF} objects.
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
-\begin{alltt}
-\hlstd{plot_list} \hlkwb{<-} \hlkwd{plot}\hlstd{(S, pred)}
-\hlstd{plot_list} \hlkwb{<-} \hlkwd{c}\hlstd{(plot_list,} \hlkwd{plot_spatial_or_ST}\hlstd{(zdf,} \hlstr{"z"}\hlstd{))}
-\end{alltt}
-\end{kframe}
-\end{knitrout}
+<<eval=TRUE,message=FALSE,warning=FALSE,results='hide'>>=
+plot_list <- plot(S, pred)
+plot_list <- c(plot_list, plot_spatial_or_ST(zdf, "z"))
+@
 This list of plot objects can then be arranged using one of the many functions for arranging \class{ggplot} objects: See Figure \ref{fig:example1}.
 
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}
-
-{\centering \includegraphics[width=\maxwidth]{figure/unnamed-chunk-5-1} 
-
-}
-
-\caption{(Left) Simulated Poisson spatial data. (Centre) Prediction of the mean process. (Right) Uncertainty quantification of predictions; specifically the width of the 90\% posterior predictive interval.\label{fig:example1}}\label{fig:unnamed-chunk-5}
-\end{figure}
-
-
-\end{knitrout}
+<<echo=FALSE, warning=FALSE,fig.align='center',fig.cap="(Left) Simulated Poisson spatial data. (Centre) Prediction of the mean process. (Right) Uncertainty quantification of predictions; specifically the width of the 90\\% posterior predictive interval.\\label{fig:example1}",fig.subcap=c("",""), fig.width = 10, fig.height = 4>>=
+ggpubr::ggarrange(plot_list$z + labs(fill = "data"),
+          plot_list$p_mu + labs(fill = "pred."),
+          plot_list$interval90_mu + labs(fill = "pred.\nuncertainty"),
+          nrow = 1, legend = "top")
+@
 
 
 \section{Example: Lognormally distributed soil data, point and block-level predictions}\label{sec:Americium}
@@ -456,15 +392,11 @@ In 1971, the Nevada Applied Ecology Group measured Am concentrations in a region
 The total number of measurements (including some that are collocated) is 212.
  In the following, we load this data set (supplied by \pkg{FRK}), and define GZ. 
 
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
-\begin{alltt}
-\hlkwd{data}\hlstd{(}\hlstr{"Am_data"}\hlstd{)}
-\hlkwd{coordinates}\hlstd{(Am_data)} \hlkwb{=} \hlopt{~} \hlstd{Easting} \hlopt{+} \hlstd{Northing} \hlcom{# convert to sp object}
-\hlstd{GZ_df} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}\hlstr{"Easting"} \hlstd{=} \hlnum{219868.09}\hlstd{,} \hlstr{"Northing"} \hlstd{=} \hlnum{285320.8}\hlstd{)}
-\end{alltt}
-\end{kframe}
-\end{knitrout}
+<<eval=TRUE,message=FALSE,warning=FALSE>>=
+data("Am_data")
+coordinates(Am_data) = ~ Easting + Northing # convert to sp object
+GZ_df <- data.frame("Easting" = 219868.09, "Northing" = 285320.8)
+@
 
 The left and centre panels of Figure \ref{fig:Am_data} shows the data on the original scale and on the log scale, respectively.
 \cite{Paul_Cressie_2011_lognormal_kriging_block_prediction} note that these Am concentrations are lognormally distributed, and that soil remediation is often made by averaging the contaminant over pre-specified spatial regions of $D$ called blocks.
@@ -472,97 +404,172 @@ Hence, this application requires lognormal prediction over blocks, a task well s
  The right panel of Figure \ref{fig:Am_data} shows a blocking scheme containing five blocks that we will predict over, which is centred on GZ.
  
 
+<<echo=FALSE, warning=FALSE, results='hide'>>=
 
-
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}
-
-{\centering \includegraphics[width=\maxwidth]{figure/unnamed-chunk-8-1} 
-
+# centre, width, and height
+makeRectangle <- function(centre, w, h) {
+  vertices <- rbind(c(centre[, 1] - w/2, centre[, 2] - h/2),
+                    c(centre[, 1] - w/2, centre[, 2] + h/2),
+                    c(centre[, 1] + w/2, centre[, 2] + h/2),
+                    c(centre[, 1] + w/2, centre[, 2] - h/2),
+                    c(centre[, 1] - w/2, centre[, 2] - h/2))
+  Polygon(vertices)
 }
 
-\caption{Americium soil data and blocking scheme.\label{fig:Am_data}}\label{fig:unnamed-chunk-8}
-\end{figure}
 
+## Following Paul and Cressie (2011),
+## we predict over a series of concentric square blocks centred at Ground Zero 
+## (GZ), as well as a series of concentric square blocks away from GZ.
+  n_schemes <- 1
+  n_block <- 5
+construct_block_scheme <- function() {
+  
+  ratio <- 1.03  # width to height ratio of the blocks
+  w     <- seq(43, 250, length.out = n_block)
+  h     <- w / ratio
+  
+  ## Treat GZ as the centre, and expand relative to GZ.
+  blocks <- list()
+  for(i in 1:n_block) {
+    blocks[[i]] <- makeRectangle(centre = GZ_df, w = w[i], h = h[i])
+    blocks[[i]] <- Polygons(list(blocks[[i]]), paste0("block", i))
+  }
+  
+  if (n_schemes == 2) {
+    ## Now shift away from GZ
+    centre <- GZ_df
+    centre[, 1] <- GZ_df[, 1] - 153
+    centre[, 2] <- GZ_df[, 2] + 125
+    for(i in (n_block + 1):(2 * n_block)) {
+      blocks[[i]] <- makeRectangle(centre = centre, w = w[i - n_block], h = h[i- n_block])
+      blocks[[i]] <- Polygons(list(blocks[[i]]), paste0("block", i))
+    }
+  }
+  
+  ## (set the plotting order from largest to smallest)
+  pred_polygons <- SpatialPolygons(blocks, (n_schemes * n_block):1)
+  coordnames(pred_polygons) <- c("Easting", "Northing")
+  
+  pred_polygons$Scheme <- rep(as.character(n_schemes:1), each = length(pred_polygons)/n_schemes) 
+  
+  return(pred_polygons)
+}
 
-\end{knitrout}
+blocks <- construct_block_scheme()
+@
+
+<<echo=FALSE, warning=FALSE, results='hide', fig.align='center',fig.cap="Americium soil data and blocking scheme.\\label{fig:Am_data}", fig.width = 13.6, fig.height = 4.5>>=
+nasa_palette <- c("#03006d","#02008f","#0000b6","#0001ef","#0000f6","#0428f6","#0b53f7","#0f81f3",
+                  "#18b1f5","#1ff0f7","#27fada","#3efaa3","#5dfc7b","#85fd4e","#aefc2a","#e9fc0d","#f6da0c","#f5a009",
+                  "#f6780a","#f34a09","#f2210a","#f50008","#d90009","#a80109","#730005")
+
+lab1 <- xlab(as.expression(bquote("Easting /" ~ 10^5 ~ "m")))
+lab2 <- ylab(as.expression(bquote("Northing /" ~ 10^5 ~ "m")))
+
+formatter <- function(x){ 
+    x/10^5 
+}
+x_scale <- scale_x_continuous(breaks = 10^5 *c(2.197, 2.199, 2.201), labels = formatter)  
+y_scale <- scale_y_continuous(breaks = 10^5 * c(2.852, 2.854, 2.856), labels = formatter)
+
+## Basic plot to reduce code repetition
+p_basic <- ggplot(data = as.data.frame(Am_data), 
+                  aes(x = Easting, y = Northing)) +
+  lab1 + lab2 + x_scale + y_scale + theme_bw() + coord_fixed()
+
+## Data on the original scale
+p_data <- p_basic +
+  geom_point(aes(colour = Am), size = 1)  +
+  geom_point(data = GZ_df, shape = 4, size = 5) +
+  scale_colour_gradientn(colours = nasa_palette,
+                         labels = scales::scientific, 
+                         breaks = c(250000, 750000))
+
+## Data on the log scale
+p_data_log_scale <- p_basic +
+  geom_point(aes(colour = log(Am)), size = 1) +
+  geom_point(data = GZ_df, shape = 4, size = 5) +
+  scale_colour_gradientn(colours = nasa_palette,
+                         name = "Log-Americium", 
+                         breaks = c(9, 11, 13))
+
+## Blocking scheme
+p_Scheme_1_2 <- p_basic +
+  geom_point(size = 0.3) +
+  geom_point(data = GZ_df, shape = 4, size = 5) +
+  geom_polygon(data = FRK::SpatialPolygonsDataFrame_to_df(blocks), 
+               aes(group = id, colour = Scheme), alpha = 0) +
+  labs(colour = "Blocking Scheme")
+
+ggpubr::ggarrange(p_data + theme(legend.text=element_text(angle = 20)) + 
+            theme(text = element_text(size=17)), 
+          p_data_log_scale + theme(text = element_text(size=17)), 
+          p_Scheme_1_2 + theme(text = element_text(size=17)), 
+          nrow = 1, align = "hv", legend = "top")
+@
 
 
 Following \cite{Paul_Cressie_2011_lognormal_kriging_block_prediction}, we use a piecewise linear trend, where observations within a distance of 30.48m from GZ follow a different trend to those observations beyond 30.48m from GZ.
  In \pkg{FRK}, covariates must be defined at the BAU level.  
  
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
-\begin{alltt}
-\hlstd{BAUs} \hlkwb{<-} \hlkwd{auto_BAUs}\hlstd{(}\hlkwc{manifold} \hlstd{=} \hlkwd{plane}\hlstd{(),}
-                  \hlkwc{type} \hlstd{=} \hlstr{"grid"}\hlstd{,}
-                  \hlkwc{data} \hlstd{= Am_data,}
-                  \hlkwc{nonconvex_hull} \hlstd{=} \hlnum{FALSE}\hlstd{)}
+<<eval=TRUE,message=FALSE,warning=FALSE>>=
+BAUs <- auto_BAUs(manifold = plane(), 
+                  type = "grid",            
+                  data = Am_data,           
+                  nonconvex_hull = FALSE) 
 
-\hlcom{## Add covariates to the BAUs}
-\hlstd{d_cutoff} \hlkwb{<-} \hlnum{30.48}
-\hlstd{d_BAU} \hlkwb{<-} \hlkwd{distR}\hlstd{(}\hlkwd{coordinates}\hlstd{(BAUs), GZ_df)}
-\hlstd{BAUs}\hlopt{$}\hlstd{x1} \hlkwb{<-} \hlkwd{as.numeric}\hlstd{(d_BAU} \hlopt{<} \hlstd{d_cutoff)}
-\hlstd{BAUs}\hlopt{$}\hlstd{x2} \hlkwb{<-} \hlstd{d_BAU} \hlopt{*} \hlstd{BAUs}\hlopt{$}\hlstd{x1}
-\hlstd{BAUs}\hlopt{$}\hlstd{x3} \hlkwb{<-} \hlkwd{as.numeric}\hlstd{(d_BAU} \hlopt{>=} \hlstd{d_cutoff)}
-\hlstd{BAUs}\hlopt{$}\hlstd{x4} \hlkwb{<-} \hlstd{d_BAU} \hlopt{*} \hlstd{(BAUs}\hlopt{$}\hlstd{x3)}
-\end{alltt}
-\end{kframe}
-\end{knitrout}
+## Add covariates to the BAUs
+d_cutoff <- 30.48  
+d_BAU <- distR(coordinates(BAUs), GZ_df)
+BAUs$x1 <- as.numeric(d_BAU < d_cutoff)
+BAUs$x2 <- d_BAU * BAUs$x1
+BAUs$x3 <- as.numeric(d_BAU >= d_cutoff)
+BAUs$x4 <- d_BAU * (BAUs$x3)
+@
 
 In the following, we indicate that a scalar covariance matrix should be used for the fine-scale variation term (implicit when allowing \fct{FRK} to construct that BAUs), and we replicate lognormal kriging by fixing the measurement-error standard deviation to a small value. 
 Then, we run \fct{FRK} as usual, set \code{est\_error = FALSE} so that the measurement-error standard deviation is not estimated.
 
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
-\begin{alltt}
-\hlstd{BAUs}\hlopt{$}\hlstd{fs}     \hlkwb{<-} \hlnum{1}
-\hlstd{Am_data}\hlopt{$}\hlstd{std} \hlkwb{<-} \hlnum{1}
+<<eval=TRUE,message=FALSE,warning=FALSE,results='hide'>>=
+BAUs$fs     <- 1     
+Am_data$std <- 1
 
-\hlstd{S} \hlkwb{<-} \hlkwd{FRK}\hlstd{(}\hlkwc{f} \hlstd{= Am} \hlopt{~ -}\hlnum{1} \hlopt{+} \hlstd{x1} \hlopt{+} \hlstd{x2} \hlopt{+} \hlstd{x3} \hlopt{+} \hlstd{x4,} \hlkwc{data} \hlstd{=} \hlkwd{list}\hlstd{(Am_data),}
-         \hlkwc{response} \hlstd{=} \hlstr{"gaussian"}\hlstd{,}
-         \hlkwc{link} \hlstd{=} \hlstr{"log"}\hlstd{,}
-         \hlkwc{BAUs} \hlstd{= BAUs,}
-         \hlkwc{nres} \hlstd{=} \hlnum{2}\hlstd{,}
-         \hlkwc{est_error} \hlstd{=} \hlnum{FALSE}\hlstd{)}
-\end{alltt}
-\end{kframe}
-\end{knitrout}
+S <- FRK(f = Am ~ -1 + x1 + x2 + x3 + x4, data = list(Am_data),
+         response = "gaussian", 
+         link = "log",
+         BAUs = BAUs, 
+         nres = 2, 
+         est_error = FALSE)
+@
 
 By predicting over the BAUs, one may generate predictions over the entire spatial domain. In \fct{predict}, we set \code{type = c("link", "mean")} to obtain predictions for both the latent process $Y(\cdot)$, and the mean process $\mu(\cdot)$. Figure \ref{fig:Am_BAU_predictions} shows BAU level predictions and uncertainty using \pkg{FRK}. 
 
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
-\begin{alltt}
-\hlstd{pred} \hlkwb{<-} \hlkwd{predict}\hlstd{(S,} \hlkwc{type} \hlstd{=} \hlkwd{c}\hlstd{(}\hlstr{"link"}\hlstd{,} \hlstr{"mean"}\hlstd{))}
-\hlstd{plot_list} \hlkwb{<-} \hlkwd{plot}\hlstd{(S, pred)}
-\end{alltt}
-\end{kframe}
-\end{knitrout}
+<<eval=TRUE,message=FALSE,warning=FALSE,results='hide'>>=
+pred <- predict(S, type = c("link", "mean"))
+plot_list <- plot(S, pred)
+@
 
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}
+<<echo=FALSE, message=FALSE,warning=FALSE,results='hide',fig.align='center',fig.cap="Americium point predictions.\\label{fig:Am_BAU_predictions}",fig.subcap=c("",""),fig.width = 8, fig.height = 5>>=
+plot_list <- lapply(
+  plot_list, 
+  function(gg) gg + lab1 + lab2 + x_scale + y_scale)
 
-{\centering \includegraphics[width=\maxwidth]{figure/unnamed-chunk-12-1} 
-
-}
-
-\caption{Americium point predictions.\label{fig:Am_BAU_predictions}}\label{fig:unnamed-chunk-12}
-\end{figure}
-
-
-\end{knitrout}
+ggpubr::ggarrange(
+  plot_list$p_Y + labs(fill = "Y pred.") +   
+    scale_fill_gradientn(colours = nasa_palette, labels = scales::scientific),
+  plot_list$RMSPE_Y + labs(fill = "RMSPE Y"),
+  plot_list$p_mu + labs(fill = "mu pred.") +    
+    scale_fill_gradientn(colours = nasa_palette, labels = scales::scientific),
+  plot_list$RMSPE_mu + labs(fill = "RMSPE mu"), 
+  align = "hv", nrow = 2, ncol =2) 
+@
 
 
 Alternatively, by passing a \class{SpatialPolygonsDataFrame} object into the \code{newdata} argument of \fct{predict}, one may straightforwardly generate block-level predictions. When predicting over arbitrary spatial regions, \pkg{FRK} is limited to prediction of the mean process. 
 
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
-\begin{alltt}
-\hlstd{pred} \hlkwb{<-} \hlkwd{predict}\hlstd{(S,} \hlkwc{newdata} \hlstd{= blocks)}
-\end{alltt}
-\end{kframe}
-\end{knitrout}
+<<eval=TRUE,message=FALSE,warning=FALSE,results='hide'>>=
+pred <- predict(S, newdata = blocks) 
+@
 
  These block level predictions may be plotted with the help of \fct{SpatialPolygonsDataFrame\_to\_df}; see Figure \ref{fig:Am_block_predictions_spatial}. 
 
@@ -588,19 +595,32 @@ Alternatively, by passing a \class{SpatialPolygonsDataFrame} object into the \co
 %     theme_bw() + scale_y_continuous(labels = scales::scientific) + 
 %     theme(text = element_text(size=17))
 
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}
+<<echo=FALSE, warning=FALSE,fig.align='center',fig.cap="Americium block level predictions.\\label{fig:Am_block_predictions_spatial}",fig.subcap=c("",""),fig.width = 9.5, fig.height = 3.7>>=
 
-{\centering \includegraphics[width=\maxwidth]{figure/unnamed-chunk-14-1} 
+block_pred_df <- FRK::SpatialPolygonsDataFrame_to_df(pred$newdata)
 
-}
+## Change level order to reverse the order that the blocks are plotted.
+block_pred_df$block <- factor(block_pred_df$id,
+                              levels = paste0("block", (n_schemes * n_block):1))
+p_block <- p_basic +
+  geom_point(size = 0.3) + 
+  geom_polygon(data = block_pred_df, aes(fill = p_mu, group = block),
+               alpha = 1, colour = "black") + 
+  labs(fill = "mu pred.") +   
+  scale_fill_gradientn(colours = nasa_palette, labels = scales::scientific)
+  
 
-\caption{Americium block level predictions.\label{fig:Am_block_predictions_spatial}}\label{fig:unnamed-chunk-14}
-\end{figure}
+p_block_RMSPE <- p_basic +
+  geom_point(size = 0.3) +
+  geom_polygon(data = block_pred_df, aes(fill = RMSPE_mu, group = block),
+               alpha = 1, colour = "black") +
+  scale_fill_distiller(palette = "BrBG",
+                       labels = scales::scientific) + 
+  labs(fill = "RMSPE mu")
 
+ggpubr::ggarrange(p_block, p_block_RMSPE, nrow = 1, align = "hv")
+@
 
-\end{knitrout}
-
-\bibliography{FRKv2}
+\bibliography{FRK_non-Gaussian}
 
 \end{document}

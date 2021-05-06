@@ -53,7 +53,10 @@ Imports:
     stats,
     TMB, 
     utils,
-    VCA
+    VCA, 
+    ggpubr, 
+    reshape2, 
+    scales
 Additional_repositories: https://andrewzm.github.io/dggrids-repo, 
                          https://inla.r-inla-download.org/R/stable
 License: GPL (>= 2)
