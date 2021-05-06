@@ -50,11 +50,20 @@
 
 \usepackage{alltt}
 
+%% Specific this vignette
 \usepackage[margin=1in]{geometry}
+\renewcommand{\tt} {\texttt}
+\let\code=\texttt
+\newcommand{\pkg}[1]{{\fontseries{b}\selectfont #1}}
+\let\proglang=\textsf
+\usepackage{hyperref}
 
-\usepackage{siunitx} % si units
+
 
 % ---- Math mode commands ----
+
+
+\usepackage{siunitx} % si units
 
 \usepackage{rotating} % \rotatebox
 
@@ -156,15 +165,11 @@
 }
 
 
-%% New for this vignette
-\renewcommand{\tt} {\texttt}
-\let\code=\texttt
-\newcommand{\pkg}[1]{{\fontseries{b}\selectfont #1}}
-\let\proglang=\textsf
+
 
 \author{Matthew Sainsbury-Dale, Andrew Zammit-Mangion, and Noel Cressie}
 
-\title{Modelling, Fitting, and Prediction with Non-Gaussian Spatial and Spatio-Temporal Data using \pkg{FRK}}
+\title{Fixed Rank Kriging of Non-Gaussian Data using \pkg{FRK}}
 
 \usepackage[authoryear]{natbib}
 
@@ -177,13 +182,19 @@
 \begin{abstract}
  Non-Gaussian spatial and spatial-temporal data are becoming increasingly prevalent, arising from studies as far apart as small area demographics (counts) and global remote sensing (radiant energies). 
   \pkg{FRK} is an \proglang{R} package for spatial/spatio-temporal modelling and prediction with large data sets. 
-In this vignette, we demonstrate the modelling of non-Gaussian data  using \pkg{FRK}. 
-The existing functionality of \pkg{FRK} is retained with this advance; in particular, it makes use of automatic basis-function construction, it can handle both point-referenced and areal data simultaneously, and it predicts process values at any spatial support from these data. See the vignette ``FRK\_intro'' for general usage of the package. 
+In this vignette, we demonstrate the modelling of non-Gaussian data using \pkg{FRK}. 
+% This vignette serves to demonstrate the use of the \proglang{R} package \pkg{FRK} for analysing non-Gaussian spatial and spatio-temporal data. 
+ All of the functionality that \pkg{FRK} offers in a Gaussian setting extends to a non-Gaussian setting: See the vignette ``FRK\_intro'', which describes how the BAUs and basis functions work; inference over different spatial manifolds (such as the sphere); inference in a spatio-temporal setting; and spatial change of support. 
 \end{abstract}
 
 
 
 \tableofcontents 
+
+ % In Section \ref{SEC:Methodology}, we provide an overview of the model used by \pkg{FRK} in a non-Gaussian setting. 
+ % In Section \ref{sec:simulated_example} we use a small simulated data set to demonstrate the basic work flow of \pkg{FRK}. 
+ % In Section \ref{sec:Americium}, we provide a real-world example analysing lognormally distributed soil data, and generate predictions throughout the spatial domain, and over pre-specifed spatial regions known as blocks. 
+
 
 \section{Methodology}\label{SEC:Methodology}
 
@@ -367,81 +378,228 @@ Since each element in $D^P$ is the union of subsets of $D^G$, one can construct 
 \]
 such that $\vec{\mu}_P = \vec{C}_P \vec{\mu}$. Again, we use MC sampling to predict $\vec{\mu}_P$. 
 
-\section{Example: Non-Gaussian, point-referenced spatial data}
+\section{Example: Simulated Non-Gaussian, point-referenced spatial data}\label{sec:simulated_example}
 
-In this part of the vignette we apply \pkg{FRK} to the case when we have non-Gaussian, point-referenced spatial data. 
- For simplicity, in this vignette we only consider inference on the plane; for other manifolds, such as the sphere, see the vignette ``FRK\_intro''. 
- 
+First, load the required packages. 
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
 \hlkwd{library}\hlstd{(}\hlstr{"FRK"}\hlstd{)}       \hlcom{# for carrying out FRK       }
 \hlkwd{library}\hlstd{(}\hlstr{"sp"}\hlstd{)}        \hlcom{# for defining points/polygons}
 \hlkwd{library}\hlstd{(}\hlstr{"dplyr"}\hlstd{)}     \hlcom{# for easy data manipulation}
+\hlkwd{library}\hlstd{(}\hlstr{"reshape2"}\hlstd{)}  \hlcom{# for easy data manipulation}
 \hlkwd{library}\hlstd{(}\hlstr{"ggplot2"}\hlstd{)}   \hlcom{# for plotting}
 \hlkwd{library}\hlstd{(}\hlstr{"ggpubr"}\hlstd{)}    \hlcom{# for arranging plots}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
 
-First, we simulate a Poisson data set. 
+Now, simulate some Poisson distributed spatial data. 
 
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlstd{m} \hlkwb{<-} \hlnum{1000}                                                  \hlcom{# Sample size}
+\hlstd{m} \hlkwb{<-} \hlnum{250}                                                   \hlcom{# Sample size}
 \hlkwd{RNGversion}\hlstd{(}\hlstr{"3.6.0"}\hlstd{);} \hlkwd{set.seed}\hlstd{(}\hlnum{1}\hlstd{)}                           \hlcom{# Fix seed}
 \hlstd{zdf} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}\hlkwc{x} \hlstd{=} \hlkwd{runif}\hlstd{(m),} \hlkwc{y}\hlstd{=} \hlkwd{runif}\hlstd{(m))}               \hlcom{# Generate random locs}
-\hlstd{zdf}\hlopt{$}\hlstd{Y} \hlkwb{<-} \hlkwd{sin}\hlstd{(}\hlnum{8} \hlopt{*} \hlstd{zdf}\hlopt{$}\hlstd{x)} \hlopt{+} \hlkwd{cos}\hlstd{(}\hlnum{8} \hlopt{*} \hlstd{zdf}\hlopt{$}\hlstd{y)} \hlopt{+} \hlnum{0.5} \hlopt{*} \hlkwd{rnorm}\hlstd{(m)}  \hlcom{# Simulate latent process}
-\hlstd{zdf}\hlopt{$}\hlstd{z} \hlkwb{<-} \hlkwd{rpois}\hlstd{(m,} \hlkwc{lambda} \hlstd{= zdf}\hlopt{$}\hlstd{Y}\hlopt{^}\hlnum{2}\hlstd{)}                        \hlcom{# Simulate data}
+\hlstd{zdf}\hlopt{$}\hlstd{Y} \hlkwb{<-} \hlnum{3} \hlopt{+} \hlkwd{sin}\hlstd{(}\hlnum{7} \hlopt{*} \hlstd{zdf}\hlopt{$}\hlstd{x)} \hlopt{+} \hlkwd{cos}\hlstd{(}\hlnum{9} \hlopt{*} \hlstd{zdf}\hlopt{$}\hlstd{y)}               \hlcom{# Latent process}
+\hlstd{zdf}\hlopt{$}\hlstd{z} \hlkwb{<-} \hlkwd{rpois}\hlstd{(m,} \hlkwc{lambda} \hlstd{=} \hlkwd{exp}\hlstd{(zdf}\hlopt{$}\hlstd{Y))}                     \hlcom{# Simulate data}
 \hlkwd{coordinates}\hlstd{(zdf)} \hlkwb{=} \hlopt{~}\hlstd{x}\hlopt{+}\hlstd{y}                                    \hlcom{# Turn into sp object}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
 
-
-Now, we run \pkg{FRK}. There is an `expert' way of using \pkg{FRK}, which involves using the functions \fct{auto\_BAUs} and \fct{auto\_basis} to automatically construct BAUs and basis functions from the data, \fct{SRE} to initialise the SRE model object and perform data preprocessing, and \fct{SRE.fit} to fit the model object. 
- This `expert' way is documented in the vignette ``FRK\_intro''. 
- Alternatively, there is a `simple' way of using \pkg{FRK} that uses the high-level wrapper function \fct{FRK} that calls these functions under-the-hood; in this vignette, we will use the `simple' way. 
- 
+There is an `expert' way of using \pkg{FRK} that involves using the functions \fct{auto\_BAUs} and \fct{auto\_basis} to automatically construct BAUs and basis functions from the data, and \fct{SRE} and \fct{SRE.fit} to initialise and fit the SRE model object. 
+ This `expert' way is documented in the vignette ``FRK\_intro''.
+ Alternatively, there is a `simple' way of using \pkg{FRK} that uses the high-level wrapper function \fct{FRK} that calls these functions under-the-hood; in this vignette, we will use the `simple' way.
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
 \hlstd{S} \hlkwb{<-} \hlkwd{FRK}\hlstd{(}\hlkwc{f} \hlstd{= z} \hlopt{~} \hlnum{1}\hlstd{,}               \hlcom{# Formula to FRK}
          \hlkwd{list}\hlstd{(zdf),}               \hlcom{# All datasets are supplied in list}
-         \hlkwc{nres} \hlstd{=} \hlnum{1}\hlstd{,}                \hlcom{# Reduce run-time using only 1 basis function resolution}
-         \hlkwc{response} \hlstd{=} \hlstr{"poisson"}\hlstd{,}    \hlcom{# Poisson data model}
-         \hlkwc{link} \hlstd{=} \hlstr{"square-root"}\hlstd{)}    \hlcom{# square-root link function}
+         \hlkwc{nres} \hlstd{=} \hlnum{2}\hlstd{,}                \hlcom{# Low-rank model to reduce run-time}
+         \hlkwc{response} \hlstd{=} \hlstr{"poisson"}\hlstd{,}    \hlcom{# data model}
+         \hlkwc{link} \hlstd{=} \hlstr{"log"}\hlstd{)}            \hlcom{# link function}
 \hlstd{pred} \hlkwb{<-} \hlkwd{predict}\hlstd{(S)}                \hlcom{# prediction stage}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
-
-\pkg{FRK} includes two plotting methods, \fct{plot} and \fct{plot\_spatial\_or\_ST}; the former takes an SRE object and the result of a call to predict, and returns a list of \class{ggplot} objects containing the predictions and uncertainty quantification of those predictions, while the former is a general-purpose function for \class{Spatial*DataFrame} and \class{STFDF} objects. See Figure \ref{fig:example1}.
-
+\pkg{FRK} includes two plotting methods, \fct{plot} and \fct{plot\_spatial\_or\_ST}; the former takes an SRE object and the result of a call to predict, and returns a list of \class{ggplot} objects containing the predictions and uncertainty quantification of those predictions, while the latter is a general-purpose function for \class{Spatial*DataFrame} and \class{STFDF} objects.
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlstd{plot_list} \hlkwb{<-} \hlkwd{plot}\hlstd{(S, pred, zdf)}
-\hlkwd{ggarrange}\hlstd{(plot_list}\hlopt{$}\hlstd{z} \hlopt{+} \hlkwd{labs}\hlstd{(}\hlkwc{fill} \hlstd{=} \hlstr{"data"}\hlstd{),}
-          \hlstd{plot_list}\hlopt{$}\hlstd{p_mu} \hlopt{+} \hlkwd{labs}\hlstd{(}\hlkwc{fill} \hlstd{=} \hlstr{"pred."}\hlstd{),}
-          \hlstd{plot_list}\hlopt{$}\hlstd{interval90_mu} \hlopt{+} \hlkwd{labs}\hlstd{(}\hlkwc{fill} \hlstd{=} \hlstr{"pred.\textbackslash{}nuncertainty"}\hlstd{),}
-          \hlkwc{nrow} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{legend} \hlstd{=} \hlstr{"top"}\hlstd{)}
+\hlstd{plot_list} \hlkwb{<-} \hlkwd{plot}\hlstd{(S, pred)}
+\hlstd{plot_list} \hlkwb{<-} \hlkwd{c}\hlstd{(plot_list,} \hlkwd{plot_spatial_or_ST}\hlstd{(zdf,} \hlstr{"z"}\hlstd{))}
 \end{alltt}
-\end{kframe}\begin{figure}
+\end{kframe}
+\end{knitrout}
+This list of plot objects can then be arranged using one of the many functions for arranging \class{ggplot} objects: See Figure \ref{fig:example1}.
 
-{\centering \includegraphics[width=\maxwidth]{figure/unnamed-chunk-4-1} 
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}
+
+{\centering \includegraphics[width=\maxwidth]{figure/unnamed-chunk-5-1} 
 
 }
 
-\caption{(Left) Simulated poisson data. (Centre) Prediction of the mean process. (Right) Uncertainty quantification of predictions, specifically the width of the 90\% posterior predictive interval.\label{fig:example1}}\label{fig:unnamed-chunk-4}
+\caption{(Left) Simulated Poisson spatial data. (Centre) Prediction of the mean process. (Right) Uncertainty quantification of predictions; specifically the width of the 90\% posterior predictive interval.\label{fig:example1}}\label{fig:unnamed-chunk-5}
 \end{figure}
 
 
 \end{knitrout}
 
 
+\section{Example: Lognormally distributed soil data, point and block-level predictions}\label{sec:Americium}
 
+Between 1954 and 1963, nuclear devices were detonated at Area 13 of the Nevada Test Site in the United States, contaminating the surrounding soil with the radioactive element americium (Am). 
+In 1971, the Nevada Applied Ecology Group measured Am concentrations in a region surrounding Ground Zero (GZ), the location where the devices were detonated \citep{Paul_Cressie_2011_lognormal_kriging_block_prediction}. 
+The total number of measurements (including some that are collocated) is 212.
+ In the following, we load this data set (supplied by \pkg{FRK}), and define GZ. 
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{data}\hlstd{(}\hlstr{"Am_data"}\hlstd{)}
+\hlkwd{coordinates}\hlstd{(Am_data)} \hlkwb{=} \hlopt{~} \hlstd{Easting} \hlopt{+} \hlstd{Northing} \hlcom{# convert to sp object}
+\hlstd{GZ_df} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}\hlstr{"Easting"} \hlstd{=} \hlnum{219868.09}\hlstd{,} \hlstr{"Northing"} \hlstd{=} \hlnum{285320.8}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+The left and centre panels of Figure \ref{fig:Am_data} shows the data on the original scale and on the log scale, respectively.
+\cite{Paul_Cressie_2011_lognormal_kriging_block_prediction} note that these Am concentrations are lognormally distributed, and that soil remediation is often made by averaging the contaminant over pre-specified spatial regions of $D$ called blocks.
+Hence, this application requires lognormal prediction over blocks, a task well suited to \pkg{FRK}. 
+ The right panel of Figure \ref{fig:Am_data} shows a blocking scheme containing five blocks that we will predict over, which is centred on GZ.
+ 
+
+
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}
+
+{\centering \includegraphics[width=\maxwidth]{figure/unnamed-chunk-8-1} 
+
+}
+
+\caption{Americium soil data and blocking scheme.\label{fig:Am_data}}\label{fig:unnamed-chunk-8}
+\end{figure}
+
+
+\end{knitrout}
+
+
+Following \cite{Paul_Cressie_2011_lognormal_kriging_block_prediction}, we use a piecewise linear trend, where observations within a distance of 30.48m from GZ follow a different trend to those observations beyond 30.48m from GZ.
+ In \pkg{FRK}, covariates must be defined at the BAU level.  
+ 
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{BAUs} \hlkwb{<-} \hlkwd{auto_BAUs}\hlstd{(}\hlkwc{manifold} \hlstd{=} \hlkwd{plane}\hlstd{(),}
+                  \hlkwc{type} \hlstd{=} \hlstr{"grid"}\hlstd{,}
+                  \hlkwc{data} \hlstd{= Am_data,}
+                  \hlkwc{nonconvex_hull} \hlstd{=} \hlnum{FALSE}\hlstd{)}
+
+\hlcom{## Add covariates to the BAUs}
+\hlstd{d_cutoff} \hlkwb{<-} \hlnum{30.48}
+\hlstd{d_BAU} \hlkwb{<-} \hlkwd{distR}\hlstd{(}\hlkwd{coordinates}\hlstd{(BAUs), GZ_df)}
+\hlstd{BAUs}\hlopt{$}\hlstd{x1} \hlkwb{<-} \hlkwd{as.numeric}\hlstd{(d_BAU} \hlopt{<} \hlstd{d_cutoff)}
+\hlstd{BAUs}\hlopt{$}\hlstd{x2} \hlkwb{<-} \hlstd{d_BAU} \hlopt{*} \hlstd{BAUs}\hlopt{$}\hlstd{x1}
+\hlstd{BAUs}\hlopt{$}\hlstd{x3} \hlkwb{<-} \hlkwd{as.numeric}\hlstd{(d_BAU} \hlopt{>=} \hlstd{d_cutoff)}
+\hlstd{BAUs}\hlopt{$}\hlstd{x4} \hlkwb{<-} \hlstd{d_BAU} \hlopt{*} \hlstd{(BAUs}\hlopt{$}\hlstd{x3)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+In the following, we indicate that a scalar covariance matrix should be used for the fine-scale variation term (implicit when allowing \fct{FRK} to construct that BAUs), and we replicate lognormal kriging by fixing the measurement-error standard deviation to a small value. 
+Then, we run \fct{FRK} as usual, set \code{est\_error = FALSE} so that the measurement-error standard deviation is not estimated.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{BAUs}\hlopt{$}\hlstd{fs}     \hlkwb{<-} \hlnum{1}
+\hlstd{Am_data}\hlopt{$}\hlstd{std} \hlkwb{<-} \hlnum{1}
+
+\hlstd{S} \hlkwb{<-} \hlkwd{FRK}\hlstd{(}\hlkwc{f} \hlstd{= Am} \hlopt{~ -}\hlnum{1} \hlopt{+} \hlstd{x1} \hlopt{+} \hlstd{x2} \hlopt{+} \hlstd{x3} \hlopt{+} \hlstd{x4,} \hlkwc{data} \hlstd{=} \hlkwd{list}\hlstd{(Am_data),}
+         \hlkwc{response} \hlstd{=} \hlstr{"gaussian"}\hlstd{,}
+         \hlkwc{link} \hlstd{=} \hlstr{"log"}\hlstd{,}
+         \hlkwc{BAUs} \hlstd{= BAUs,}
+         \hlkwc{nres} \hlstd{=} \hlnum{2}\hlstd{,}
+         \hlkwc{est_error} \hlstd{=} \hlnum{FALSE}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+By predicting over the BAUs, one may generate predictions over the entire spatial domain. In \fct{predict}, we set \code{type = c("link", "mean")} to obtain predictions for both the latent process $Y(\cdot)$, and the mean process $\mu(\cdot)$. Figure \ref{fig:Am_BAU_predictions} shows BAU level predictions and uncertainty using \pkg{FRK}. 
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{pred} \hlkwb{<-} \hlkwd{predict}\hlstd{(S,} \hlkwc{type} \hlstd{=} \hlkwd{c}\hlstd{(}\hlstr{"link"}\hlstd{,} \hlstr{"mean"}\hlstd{))}
+\hlstd{plot_list} \hlkwb{<-} \hlkwd{plot}\hlstd{(S, pred)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}
+
+{\centering \includegraphics[width=\maxwidth]{figure/unnamed-chunk-12-1} 
+
+}
+
+\caption{Americium point predictions.\label{fig:Am_BAU_predictions}}\label{fig:unnamed-chunk-12}
+\end{figure}
+
+
+\end{knitrout}
+
+
+Alternatively, by passing a \class{SpatialPolygonsDataFrame} object into the \code{newdata} argument of \fct{predict}, one may straightforwardly generate block-level predictions. When predicting over arbitrary spatial regions, \pkg{FRK} is limited to prediction of the mean process. 
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{pred} \hlkwb{<-} \hlkwd{predict}\hlstd{(S,} \hlkwc{newdata} \hlstd{= blocks)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+ These block level predictions may be plotted with the help of \fct{SpatialPolygonsDataFrame\_to\_df}; see Figure \ref{fig:Am_block_predictions_spatial}. 
+
+% FRK_results <- pred$newdata@data
+% FRK_results$area_sqrt <- sapply(blocks@polygons, function(x) sqrt(x@area))
+% # FRK_results$Scheme <- as.numeric(blocks@data$Scheme)
+% 
+% FRK_results <- FRK_results %>%
+%   dplyr::select(c("p_mu", "RMSPE_mu", "area_sqrt")) %>% #, "Scheme")) %>% 
+%   reshape2::melt(id.vars = c("area_sqrt"))#, "Scheme")) %>% 
+%   ## alter the levels to change the facet_wrap titles:
+%   mutate(variable = factor(
+%     variable, 
+%     labels = c("'Block prediction /' ~ 10^3 ~ 'counts' ~ min^-1", 
+%                "'RMSPE from block prediction /' ~ 10^3 ~ 'counts' ~ min^-1")
+%     ))
+%
+% ggplot(data = FRK_results, aes(x = area_sqrt)) +
+%     geom_line(aes(y = value)) +
+%     facet_wrap(~variable, scales = "free", labeller = label_parsed) + 
+%     labs(x = "Block size (m)", y = "", 
+%          colour = "Blocking Scheme") +
+%     theme_bw() + scale_y_continuous(labels = scales::scientific) + 
+%     theme(text = element_text(size=17))
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}
+
+{\centering \includegraphics[width=\maxwidth]{figure/unnamed-chunk-14-1} 
+
+}
+
+\caption{Americium block level predictions.\label{fig:Am_block_predictions_spatial}}\label{fig:unnamed-chunk-14}
+\end{figure}
+
+
+\end{knitrout}
 
 \bibliography{FRKv2}
 
