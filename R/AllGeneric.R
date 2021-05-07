@@ -193,7 +193,7 @@ setGeneric("BAUs_from_points", function(obj,offset = 1e-10)
 #' @title Removes basis functions
 #' @description Takes an object of class \code{Basis} and returns an object of class \code{Basis} with selected basis functions removed
 #' @param Basis object of class \code{Basis}
-#' @param rmidx indices of basis functions to remove. Or a \code{SpatialPolygons} object; basis functions overlapping this object will be removed
+#' @param rmidx indices of basis functions to remove. Or a \code{SpatialPolygons} object; basis functions overlapping this \code{SpatialPolygons} object will be \emph{retained}
 #' @export
 #' @seealso \code{\link{auto_basis}} for automatically constructing basis functions and \code{\link{show_basis}} for visualising basis functions
 #' @examples
@@ -203,8 +203,18 @@ setGeneric("BAUs_from_points", function(obj,offset = 1e-10)
 #' coordinates(df) <- ~x+y
 #' G <- auto_basis(plane(),df,nres=1)
 #' data.frame(G) # Print info on basis
-#' G <- remove_basis(G,1:(nbasis(G)-1))
-#' data.frame(G)
+#' 
+#' ## Removing basis functions by index
+#' G_subset <- remove_basis(G, 1:(nbasis(G)-1))
+#' data.frame(G_subset)
+#' 
+#' ## Removing basis functions using SpatialPolygons
+#' x <- 1
+#' poly <- Polygon(rbind(c(-x, -x), c(-x, x), c(x, x), c(x, -x), c(-x, -x)))
+#' polys <- Polygons(list(poly), "1")
+#' spatpolys <- SpatialPolygons(list(polys))
+#' G_subset <- remove_basis(G, spatpolys)
+#' data.frame(G_subset)
 setGeneric("remove_basis", function(Basis,rmidx)
     standardGeneric("remove_basis"))
     
