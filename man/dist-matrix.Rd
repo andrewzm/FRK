@@ -19,7 +19,7 @@ Matrix of size N1 x N2
 This function extends \code{dist} to accept two arguments.
 }
 \details{
-Computes the distances between the coordinates in \code{x1} and the coordinates in \code{x2}. The matrices \code{x1} and \code{x2} do not need to have the same number of rows, but need to have the same number of columns (dimensions).
+Computes the distances between the coordinates in \code{x1} and the coordinates in \code{x2}. The matrices \code{x1} and \code{x2} do not need to have the same number of rows, but need to have the same number of columns (e.g., manifold dimensions).
 }
 \examples{
 A <- matrix(rnorm(50),5,10)

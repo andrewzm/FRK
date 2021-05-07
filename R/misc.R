@@ -125,7 +125,7 @@ setMethod("observed_BAUs", signature(object = "SRE"), function (object) {
   return(unique(as(Cmat, "dgTMatrix")) + 1)
 }
 
-#' @rdname unobserved_BAUs
+#' @rdname observed_BAUs
 setMethod("unobserved_BAUs",signature(object = "SRE"), function (object) {
   
   obsidx <- observed_BAUs(object)

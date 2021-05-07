@@ -2,19 +2,22 @@
 % Please edit documentation in R/AllGeneric.R, R/misc.R
 \name{observed_BAUs}
 \alias{observed_BAUs}
+\alias{unobserved_BAUs}
 \alias{observed_BAUs,SRE-method}
-\title{Indices of observed BAUs}
+\alias{unobserved_BAUs,SRE-method}
+\title{Observed (or unobserved) BAUs}
 \usage{
 observed_BAUs(object)
 
+unobserved_BAUs(object)
+
 \S4method{observed_BAUs}{SRE}(object)
+
+\S4method{unobserved_BAUs}{SRE}(object)
 }
 \arguments{
 \item{object}{object of class \code{SRE}}
 }
 \description{
-Computes the indices (a numeric vector) of the observed BAUs
-}
-\seealso{
-\code{\link{unobserved_BAUs}}
+Computes the indices (a numeric vector) of the observed (or unobserved) BAUs
 }

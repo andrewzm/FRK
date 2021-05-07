@@ -207,21 +207,17 @@ setGeneric("BAUs_from_points", function(obj,offset = 1e-10)
 #' data.frame(G)
 setGeneric("remove_basis", function(Basis,rmidx)
     standardGeneric("remove_basis"))
+    
 
-
-#' @title Indices of observed BAUs
-#' @description Computes the indices (a numeric vector) of the observed BAUs
+#' @title Observed (or unobserved) BAUs
+#' @description Computes the indices (a numeric vector) of the observed (or unobserved) BAUs
 #' @param object object of class \code{SRE}
 #' @export
-#' @seealso \code{\link{unobserved_BAUs}}
 setGeneric("observed_BAUs", function(object)
     standardGeneric("observed_BAUs"))
 
-#' @title Indices of unobserved BAUs
-#' @description Computes the indices (a numeric vector) of the unobserved BAUs
-#' @param object object of class \code{SRE}
+#' @rdname observed_BAUs
 #' @export
-#' @seealso \code{\link{observed_BAUs}}
 setGeneric("unobserved_BAUs", function(object)
     standardGeneric("unobserved_BAUs"))
 

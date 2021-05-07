@@ -193,7 +193,7 @@ gc_dist_time <- function(R=NULL) {
 #' @description This function extends \code{dist} to accept two arguments.
 #' @param x1 matrix of size N1 x n
 #' @param x2 matrix of size N2 x n
-#' @details Computes the distances between the coordinates in \code{x1} and the coordinates in \code{x2}. The matrices \code{x1} and \code{x2} do not need to have the same number of rows, but need to have the same number of columns (dimensions).
+#' @details Computes the distances between the coordinates in \code{x1} and the coordinates in \code{x2}. The matrices \code{x1} and \code{x2} do not need to have the same number of rows, but need to have the same number of columns (e.g., manifold dimensions).
 #' @return Matrix of size N1 x N2
 #' @export
 #' @examples
