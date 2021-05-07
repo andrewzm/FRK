@@ -5,7 +5,7 @@
 \alias{Am_data}
 \title{Americium soil data}
 \format{
-A data frame with 212 rows and 4 variables:
+A data frame with 212 rows and 3 variables:
 \describe{
   \item{Easting}{Easting in metres}
   \item{Northing}{Northing in metres}
@@ -16,7 +16,7 @@ A data frame with 212 rows and 4 variables:
 Am_data
 }
 \description{
-Between 1954 and 1963, nuclear devices were detonated at Area 13 of the Nevada Test Site in the United States, contaminating the surrounding soil with the radioactive element americium (Am). This data set contains Am concentrations in a spatial domain immediately surrounding Ground Zero (GZ)
+Americium (Am) concentrations in a spatial domain immediately surrounding the location at which nuclear devices were detonated at Area 13 of the Nevada Test Site, between 1954 and 1963.
 }
 \references{
 Paul R, Cressie N (2011). “Lognormal block kriging for contaminated soil.” European Journal of Soil Science, 62, 337–345.

@@ -18,18 +18,18 @@
 #' @title Construct SRE object, fit and predict
 #' @description The Spatial Random Effects (SRE) model is the central object in FRK. The function \code{FRK} provides a wrapper for the construction and estimation of the SRE object from data, using the functions \code{SRE} (the object constructor) and \code{SRE.fit} (for fitting it to the data). Please see \code{\link{SRE-class}} for more details on the SRE object's properties and methods.
 #' @param f \code{R} formula relating the dependent variable (or transformations thereof) to covariates
-#' @param data list of objects of class \code{SpatialPointsDataFrame}, \code{SpatialPolygonsDataFrame}, \code{STIDF}, or  \code{STFDF}. If using space-time objects, the data frame must have another field, \code{t}, containing the time index of the data point. If the assumed response distribution is \code{"binomial"} or \code{"negative-binomial"}, the data frame must have another field, \code{k}, containing the known constant parameter \eqn{k} for each observation. 
+#' @param data list of objects of class \code{SpatialPointsDataFrame}, \code{SpatialPolygonsDataFrame}, \code{STIDF}, or  \code{STFDF}. If using space-time objects, the data frame must have another field, \code{t}, containing the time index of the data point. If the assumed response distribution is "binomial" or "negative-binomial", the data frame must have another field, \code{k}, containing the known constant parameter \eqn{k} for each observation. 
 #' @param basis object of class \code{Basis} (or \code{TensorP_Basis})
 #' @param BAUs object of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame}, \code{STIDF}, or \code{STFDF}. The object's data frame must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality. If the function \code{FRK()} is used directly, then BAUs are created automatically, but only coordinates can then be used as covariates
 #' @param est_error flag indicating whether the measurement-error variance should be estimated from variogram techniques (only applicable for a Gaussian response). If this is set to 0, then \code{data} must contain a field \code{std}. Measurement-error estimation is currently not implemented for spatio-temporal datasets
 #' @param include_fs flag indicating whether the fine-scale variation should be include in the model
 #' @param average_in_BAU if \code{TRUE}, then multiple data points falling in the same BAU are averaged; the measurement error of the averaged data point is taken as the average of the individual measurement errors
-#' @param sum_variables vector of strings indicating which variables are to be summed rather than averaged; only applicable if \code{average_in_BAU == TRUE}
+#' @param sum_variables if \code{average_in_BAU == TRUE}, the string \code{sum_variables} indicates which data variables (can be observations or covariates) are to be summed rather than averaged
 #' @param normalise_wts if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)
-#' @param fs_by_spatial_BAU if \code{TRUE}, then each spatial BAU is associated with its own fine-scale variance parameter; otherwise, a single fine-scale variance parameter is used. Only applicable in a spatio-temporal setting and if \code{method = "TMB"}
+#' @param fs_by_spatial_BAU if \code{TRUE}, then each spatial BAU is associated with its own fine-scale variance parameter; otherwise, a single fine-scale variance parameter is used. Only applicable in a spatio-temporal setting and if \code{method} = "TMB"
 #' @param fs_model if "ind" then the fine-scale variation is independent at the BAU level. If "ICAR", then an ICAR model for the fine-scale variation is placed on the BAUs
 #' @param vgm_model an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm}. This object contains the variogram model that will be fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified, the variogram used is \code{gstat::vgm(1, "Lin", d, 1)}, where \code{d} is approximately one third of the maximum distance between any two data points
-#' @param K_type the parameterisation used for the \code{K} matrix. If the EM algorithm is used for model fitting, \code{K_type} can be "unstructured" or "block-exponential". If TMB is used for model fitting, \code{K_type} can be "precision" or "block-exponential". The default is "block-exponential"
+#' @param K_type the parameterisation used for the \code{K} matrix. If the EM algorithm is used for model fitting, \code{K_type} can be "unstructured" or "block-exponential". If TMB is used for model fitting, \code{K_type} can be "precision" or "block-exponential". The default is "block-exponential", however if \code{FRK()} is used and \code{method} = "TMB", for computational reasons \code{K_type} is set to "precision"
 #' @param normalise_basis flag indicating whether to normalise the basis functions so that they reproduce a stochastic process with approximately constant variance spatially
 #' @param object object of class \code{SRE} returned from the constructor \code{SRE()} containing all the parameters and information on the SRE model. Note that prior to v2.x, \code{loglik()} and \code{SRE.fit()} took the now-defunct argument \code{SRE_model} instead of \code{object}
 #' @param n_EM maximum number of iterations for the EM algorithm
@@ -42,16 +42,16 @@
 #' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error; indicated by \code{obs_fs = TRUE}) or in the process model (process fine-scale variation; indicated by \code{obs_fs = FALSE}, default). For non-Gaussian data models, and/or non-identity link functions, if \code{obs_fs = TRUE}, then the fine-scale variation is removed from the latent process \eqn{Y}; however, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}
 #' @param pred_time vector of time indices at which prediction will be carried out. All time points are used if this option is not specified
 #' @param covariances logical variable indicating whether prediction covariances should be returned or not. If set to \code{TRUE}, a maximum of 4000 prediction locations or polygons are allowed
-#' @param response string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "bernoulli", "gamma","inverse-gaussian", "negative-binomial", or "binomial"
+#' @param response string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "negative-binomial", "binomial", "gamma", or "inverse-gaussian"
 #' @param link  string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted
-#' @param taper positive numeric indicating the strength of the covariance/partial-correlation tapering. Only applicable if \code{K_type = "block-exponential"} or if the basis-functions are irregular and \code{K_type = "precision"}. If \code{taper} is \code{NULL} (default) and \code{method = "EM"}, no tapering is applied; if \code{method = "TMB"}, tapering must be applied (for computational reasons), and we set it to 4 if it is unspecified
-#' @param optimiser the optimising function used for model fitting when \code{method = "TMB"} (default is \code{nlminb}). Users may pass in a function object or a string corresponding to a named function. Optional parameters may be passed to \code{optimiser} via \code{...}. The only requirement of \code{optimiser} is that the first three arguments correspond to the initial parameters, the objective function, and the gradient, respectively (this may be achieved by simply constructing a wrapper function) 
-#' @param known_sigma2fs known value of the fine-scale variance. If \code{NULL} (the default), the fine-scale variance \eqn{\sigma^2_\xi} is estimated as usual. If \code{known_sigma2fs} is not \code{NULL}, the fine-scale variance is fixed to the supplied value; this may be a scalar, or vector of length equal to the number of spatial BAUs (if fs_by_spatial_BAU = TRUE)
-#' @param kriging string indicating the kind of kriging: \code{"simple"} ignores uncertanity due to estimation of the fixed effects, while \code{"universal"} accounts for this source of uncertainty. Only applicable if \code{method = "TMB"}
-#' @param type vector of strings indicating the quantities for which inference is desired. If \code{"link"} is in \code{type}, inference on the latent Gaussian process \eqn{Y(\cdot)} is included; If \code{"mean"} is in \code{type}, inference on the mean process \eqn{\mu(\cdot)} is included (and the probability process, \eqn{\pi(\cdot)},  if applicable); If \code{"response"} is in \code{type}, inference on the noisy data process \eqn{Z} is included. Only applicable if \code{method = "TMB"}
-#' @param n_MC A postive integer indicating the number of MC samples at each location. Only applicable if \code{method = "TMB"}
-#' @param k vector of size parameters at each BAU. Applicable only if we have binomial or negative-binomial data and \code{method = "TMB"}
-#' @param percentiles a vector of scalars in [0, 100] specifying the desired percentiles of the posterior predictive distribution; if \code{NULL}, no percentiles are computed. Only applicable if \code{method = "TMB"}
+#' @param taper positive numeric indicating the strength of the covariance/partial-correlation tapering. Only applicable if \code{K_type} = "block-exponential", or if \code{K_type} = "precision" and the the basis-functions are irregular or the manifold is not the plane. If \code{taper} is \code{NULL} (default) and \code{method} = "EM", no tapering is applied; if \code{method} = "TMB", tapering must be applied (for computational reasons), and we set it to 3 if it is unspecified
+#' @param optimiser the optimising function used for model fitting when \code{method} = "TMB" (default is \code{nlminb}). Users may pass in a function object or a string corresponding to a named function. Optional parameters may be passed to \code{optimiser} via \code{...}. The only requirement of \code{optimiser} is that the first three arguments correspond to the initial parameters, the objective function, and the gradient, respectively (this may be achieved by simply constructing a wrapper function) 
+#' @param known_sigma2fs known value of the fine-scale variance parameter(s). If \code{NULL} (the default), the fine-scale variance parameter(s) is estimated as usual. If \code{known_sigma2fs} is not \code{NULL}, the fine-scale variance is fixed to the supplied value; this may be a scalar, or vector of length equal to the number of spatial BAUs (if \code{fs_by_spatial_BAU = TRUE})
+#' @param kriging string indicating the kind of kriging: "simple" ignores uncertainty due to estimation of the fixed effects, while "universal" accounts for this source of uncertainty. Only applicable if \code{method} = "TMB"
+#' @param type vector of strings indicating the quantities for which inference is desired. If "link" is in \code{type}, inference on the latent Gaussian process \eqn{Y(\cdot)} is included; if "mean" is in \code{type}, inference on the mean process \eqn{\mu(\cdot)} is included (and the probability process, \eqn{\pi(\cdot)},  if applicable); if "response" is in \code{type}, inference on the noisy data process \eqn{Z} is included. Only applicable if \code{method} = "TMB"
+#' @param n_MC a postive integer indicating the number of MC samples at each location. Only applicable if \code{method} = "TMB"
+#' @param k vector of size parameters at each BAU. Applicable only if we have binomial or negative-binomial data
+#' @param percentiles a vector of scalars in (0, 100) specifying the desired percentiles of the posterior predictive distribution; if \code{NULL}, no percentiles are computed. Only applicable if \code{method} = "TMB"
 #' @param ... other parameters passed on to \code{auto_basis()} and \code{auto_BAUs()} when calling \code{FRK()}, or the user specified function \code{optimiser()} when calling \code{FRK()} or \code{SRE.fit()}
 #' @details 
 #' \strong{Model description}
@@ -85,7 +85,7 @@
 #' model simplifies considerably: specifically,
 #' \deqn{Z = CY + C\delta + e,} 
 #' where \eqn{Z} is the data vector, \eqn{\delta} is systematic error at the 
-#' BAU level, and \eqn{e} represent independent measurement error.  
+#' BAU level, and \eqn{e} represents independent measurement error.  
 #' 
 #' \strong{Set-up}
 #' 
@@ -109,9 +109,10 @@
 #' parameters, namely the covariance matrix \eqn{K}, the fine scale variance
 #' (\eqn{\sigma^2_{\xi}} or \eqn{\sigma^2_{\delta}}, depending on whether Case 1
 #' or Case 2 is chosen; see the vignette) and the regression parameters \eqn{\alpha}.
-#' There are two methods of model fitting currently implemented.
+#' There are two methods of model fitting currently implemented, both of which 
+#' implement maximum likelihood estimation (MLE).
 #' \itemize{
-#'  \item{Maximum likelihhod estimation (MLE) via the expectation maximisation
+#'  \item{MLE via the expectation maximisation
 #'  (EM) algorithm. }{This method is implemented only
 #'  for Gaussian data and an identity link function.
 #'  The log-likelihood (given in Section 2.2 of the vignette) is evaluated at each
@@ -168,7 +169,7 @@
 #' which are of class \code{SpatialPixelsDataFrame}, \code{SpatialPolygonsDataFrame}, 
 #' or \code{STFDF}, with predictions and 
 #' uncertainty quantification added. 
-#' If \code{method = "TMB"}, the returned object is a list, containing the 
+#' If \code{method} = "TMB", the returned object is a list, containing the 
 #' previously described predictions, and a list of Monte Carlo samples. 
 #' The predictions and uncertainties can be easily plotted using \code{\link{plot}}
 #' or \code{spplot} from the package \code{sp}.
@@ -417,8 +418,9 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   Z <- do.call("rbind",Z)
   Ve <- do.call("bdiag",Ve)
   Vfs <- do.call("bdiag",Vfs)
-  ## Some matrices evaluated at observed BAUs only:
-  obsidx <- unique(as(Cmat, "dgTMatrix")@j) + 1 
+  
+  ## Some matrices evaluated at observed BAUs only: ## FIXME: possible remove S_O, X_O, C_O, from SRE object 
+  obsidx <- .observed_BAUs_Cmat(Cmat)
   C_O <- Cmat[, obsidx, drop = FALSE] 
   S_O <- S0[obsidx, , drop = FALSE]
   S_O <- drop0(S_O) # For some reason, S0 results in explicit zeros when nres = 1.

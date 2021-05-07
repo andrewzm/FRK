@@ -98,14 +98,14 @@
 
 
 #' @title MODIS cloud data
-#' @description The data is an image of a cloud taken by the Moderate Resolution
+#' @description An image of a cloud taken by the Moderate Resolution
 #' Imaging Spectroradiometer (MODIS) instrument aboard the Aqua satellite (MODIS
-#' Characterization Support Team, 2015). See https://mcst.gsfc.nasa.gov/.
+#' Characterization Support Team, 2015). 
 #' @format A data frame with 33,750 rows and 3 variables:
 #' \describe{
 #'   \item{x}{x-coordinate}
 #'   \item{y}{y-coordinate}
-#'   \item{z}{binary dependent variable - 1 if cloud is present, 0 if no cloud. This
+#'   \item{z}{binary dependent variable: 1 if cloud is present, 0 if no cloud. This
 #'   variable has been thresholded from the original continuous measurement of
 #'   radiance supplied by the MODIS instrument}
 #'   \item{z_unthresholded}{The original continuous measurement of
@@ -117,8 +117,8 @@
 
 
 #' @title Americium soil data
-#' @description Between 1954 and 1963, nuclear devices were detonated at Area 13 of the Nevada Test Site in the United States, contaminating the surrounding soil with the radioactive element americium (Am). This data set contains Am concentrations in a spatial domain immediately surrounding Ground Zero (GZ)
-#' @format A data frame with 212 rows and 4 variables:
+#' @description Americium (Am) concentrations in a spatial domain immediately surrounding the location at which nuclear devices were detonated at Area 13 of the Nevada Test Site, between 1954 and 1963. 
+#' @format A data frame with 212 rows and 3 variables:
 #' \describe{
 #'   \item{Easting}{Easting in metres}
 #'   \item{Northing}{Northing in metres}

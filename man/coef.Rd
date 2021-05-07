@@ -17,7 +17,7 @@ coef(object, ...)
 \item{...}{currently unused}
 }
 \description{
-Takes a an object of class \code{SRE} and returns a numeric vector with the estimated regression coefficients.
+Takes an object of class \code{SRE} and returns a numeric vector with the estimated regression coefficients.
 }
 \examples{
 library(sp)

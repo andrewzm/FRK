@@ -25,7 +25,7 @@ to location and scale parameters.}
 }
 \description{
 This function is meant to be used for manual construction of arbitrary basis functions. For
-'local' basis functions, please use the function \code{\link{local_basis}} instead.
+`local' basis functions, please use the function \code{\link{local_basis}} instead.
 }
 \details{
 This constructor checks that all the parameters are valid before constructing the basis functions

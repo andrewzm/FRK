@@ -15,7 +15,7 @@
 
 #' @title Generic basis-function constructor
 #' @description This function is meant to be used for manual construction of arbitrary basis functions. For
-#' 'local' basis functions, please use the function \code{\link{local_basis}} instead.
+#' `local' basis functions, please use the function \code{\link{local_basis}} instead.
 #' @param manifold object of class \code{manifold}, for example, \code{sphere}
 #' @param n number of basis functions (should be an integer)
 #' @param fn a list of functions, one for each basis function. Each function should be encapsulated within an environment
@@ -919,7 +919,7 @@ setMethod( "data.frame<-", "TensorP_Basis", # Allows easy assignment of data.fra
            function(x, value){x@df <- value; x})
 
 #' @title Basis-function data frame object
-#' @description Tools for retrieving and manipulating the data frame within the Basis objects. Use the assignment \code{data.frame()<-} with care; no checks are made to make sure the data frame conforms with the object. Only use if you know what you're doing.
+#' @description Tools for retrieving and manipulating the data frame within Basis objects. Use the assignment \code{data.frame()<-} with care; no checks are made to ensure the data frame conforms with the object.
 #' @param x the obect of class \code{Basis} we are assigning the new data to or retrieving data from
 #' @param value the new data being assigned to the Basis object
 #' @param name the field name to which values will be retrieved or assigned inside the Basis object's data frame

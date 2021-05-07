@@ -35,7 +35,7 @@ data.frame(x) <- value
 \item{...}{unused}
 }
 \description{
-Tools for retrieving and manipulating the data frame within the Basis objects. Use the assignment \code{data.frame()<-} with care; no checks are made to make sure the data frame conforms with the object. Only use if you know what you're doing.
+Tools for retrieving and manipulating the data frame within Basis objects. Use the assignment \code{data.frame()<-} with care; no checks are made to ensure the data frame conforms with the object.
 }
 \examples{
 G <- local_basis()

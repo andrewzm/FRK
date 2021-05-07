@@ -62,7 +62,7 @@ setClass("STsphere",representation(radius="numeric"),contains="STmanifold")
 #' @docType class
 #' @title Basis functions
 #'
-#' @description An object of class \code{Basis} contains the basis functions used to construct the matrix \eqn{S} in FRK. It contains five slots, described below.
+#' @description An object of class \code{Basis} contains the basis functions used to construct the matrix \eqn{S} in FRK. 
 #' @slot manifold an object of class \code{manifold} that contains information on the manifold and the distance measure used on the manifold. See \code{\link{manifold-class}} for more details
 #' @slot n  the number of basis functions in this set
 #' @slot fn a list of length \code{n}, with each item the function of a specific basis function

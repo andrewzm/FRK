@@ -95,26 +95,40 @@
   return(X)
 }
 
+.constructS_O <- function(object) {
+  obsidx <- observed_BAUs(object)
+  return(drop0(object@S0[obsidx, , drop = FALSE]))
+}
+
+.constructC_O <- function(object) {
+  obsidx <- observed_BAUs(object)
+  return(object@Cmat[, obsidx, drop = FALSE])
+}
+
+.constructX_O <- function(object) {
+  obsidx <- observed_BAUs(object)
+  X_BAU <- as(.extract_BAU_X_matrix(f, BAUs), "matrix") # fixed-effect design matrix at BAU level
+  return(X_BAU[obsidx, , drop = FALSE])
+}
 
 
 #' @rdname observed_BAUs
 setMethod("observed_BAUs", signature(object = "SRE"), function (object) {
-  
-  ## Note that Cmat maps BAUs to the observations. The dimension of object@Cmat is
-  ## (number of observations) * (number of BAUs).
-  Cmat <- as(object@Cmat, "dgTMatrix")
-  obsidx <- unique(Cmat@j) + 1 # unique() probably not necessary but want to be safe
-  
-  return(obsidx)
+  return(.observed_BAUs_Cmat(object@Cmat))
 })
 
+## this function is defined so that we can call it in SRE(), before an object of 
+## class SRE is defined
+## Note that Cmat maps BAUs to the observations. The dimension of object@Cmat is
+## (number of observations) * (number of BAUs).
+.observed_BAUs_Cmat <- function(Cmat) { 
+  return(unique(as(Cmat, "dgTMatrix")) + 1)
+}
 
 #' @rdname unobserved_BAUs
 setMethod("unobserved_BAUs",signature(object = "SRE"), function (object) {
   
-  ## Id of observed BAUs:
   obsidx <- observed_BAUs(object)
-  
   ## Id of unobserved BAUs (ncol(object@Cmat) is the total number of BAUs):
   unobsidx <- (1:ncol(object@Cmat))[-obsidx]
   

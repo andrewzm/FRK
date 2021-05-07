@@ -16,7 +16,7 @@ remove_basis(Basis, rmidx)
 \arguments{
 \item{Basis}{object of class \code{Basis}}
 
-\item{rmidx}{indices of basis functions to remove, or a SpatialPolygons object defining a region to retain overlapping basis functions}
+\item{rmidx}{indices of basis functions to remove. Or a \code{SpatialPolygons} object; basis functions overlapping this object will be removed}
 }
 \description{
 Takes an object of class \code{Basis} and returns an object of class \code{Basis} with selected basis functions removed

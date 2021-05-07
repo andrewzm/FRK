@@ -17,7 +17,7 @@
 #' @description Layers a \code{ggplot2} map of the world over the current \code{ggplot2} object.
 #' @param g initial ggplot object
 #' @param inc_border flag indicating whether a map border should be drawn or not; see details.
-#' @details This function uses \code{ggplot2::map_data} in order to create a world map. Since, by default, this creates lines crossing the world at the (-180,180) longitude boundary, function \code{.homogenise_maps} is used to split the polygons at this boundary into two. If \code{inc_border} is TRUE, then a border is drawn around the lon-lat space; this option is most useful for projections that do not yield rectangular plots (e.g., the sinusoidal global projection).
+#' @details This function uses \code{ggplot2::map_data()} in order to create a world map. Since, by default, this creates lines crossing the world at the (-180,180) longitude boundary, the function \code{.homogenise_maps()} is used to split the polygons at this boundary into two. If \code{inc_border} is TRUE, then a border is drawn around the lon-lat space; this option is most useful for projections that do not yield rectangular plots (e.g., the sinusoidal global projection).
 #' @seealso the help file for the dataset \code{\link{worldmap}}
 #' @export
 #' @examples

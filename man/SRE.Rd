@@ -91,7 +91,7 @@ loglik(object)
 \arguments{
 \item{f}{\code{R} formula relating the dependent variable (or transformations thereof) to covariates}
 
-\item{data}{list of objects of class \code{SpatialPointsDataFrame}, \code{SpatialPolygonsDataFrame}, \code{STIDF}, or  \code{STFDF}. If using space-time objects, the data frame must have another field, \code{t}, containing the time index of the data point. If the assumed response distribution is \code{"binomial"} or \code{"negative-binomial"}, the data frame must have another field, \code{k}, containing the known constant parameter \eqn{k} for each observation.}
+\item{data}{list of objects of class \code{SpatialPointsDataFrame}, \code{SpatialPolygonsDataFrame}, \code{STIDF}, or  \code{STFDF}. If using space-time objects, the data frame must have another field, \code{t}, containing the time index of the data point. If the assumed response distribution is "binomial" or "negative-binomial", the data frame must have another field, \code{k}, containing the known constant parameter \eqn{k} for each observation.}
 
 \item{basis}{object of class \code{Basis} (or \code{TensorP_Basis})}
 
@@ -101,7 +101,7 @@ loglik(object)
 
 \item{average_in_BAU}{if \code{TRUE}, then multiple data points falling in the same BAU are averaged; the measurement error of the averaged data point is taken as the average of the individual measurement errors}
 
-\item{sum_variables}{vector of strings indicating which variables are to be summed rather than averaged; only applicable if \code{average_in_BAU == TRUE}}
+\item{sum_variables}{if \code{average_in_BAU == TRUE}, the string \code{sum_variables} indicates which data variables (can be observations or covariates) are to be summed rather than averaged}
 
 \item{normalise_wts}{if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)}
 
@@ -109,7 +109,7 @@ loglik(object)
 
 \item{vgm_model}{an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm}. This object contains the variogram model that will be fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified, the variogram used is \code{gstat::vgm(1, "Lin", d, 1)}, where \code{d} is approximately one third of the maximum distance between any two data points}
 
-\item{K_type}{the parameterisation used for the \code{K} matrix. If the EM algorithm is used for model fitting, \code{K_type} can be "unstructured" or "block-exponential". If TMB is used for model fitting, \code{K_type} can be "precision" or "block-exponential". The default is "block-exponential"}
+\item{K_type}{the parameterisation used for the \code{K} matrix. If the EM algorithm is used for model fitting, \code{K_type} can be "unstructured" or "block-exponential". If TMB is used for model fitting, \code{K_type} can be "precision" or "block-exponential". The default is "block-exponential", however if \code{FRK()} is used and \code{method} = "TMB", for computational reasons \code{K_type} is set to "precision"}
 
 \item{n_EM}{maximum number of iterations for the EM algorithm}
 
@@ -121,19 +121,19 @@ loglik(object)
 
 \item{print_lik}{flag indicating whether likelihood value should be printed or not after convergence of the EM estimation algorithm}
 
-\item{response}{string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "bernoulli", "gamma","inverse-gaussian", "negative-binomial", or "binomial"}
+\item{response}{string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "negative-binomial", "binomial", "gamma", or "inverse-gaussian"}
 
 \item{link}{string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted}
 
-\item{optimiser}{the optimising function used for model fitting when \code{method = "TMB"} (default is \code{nlminb}). Users may pass in a function object or a string corresponding to a named function. Optional parameters may be passed to \code{optimiser} via \code{...}. The only requirement of \code{optimiser} is that the first three arguments correspond to the initial parameters, the objective function, and the gradient, respectively (this may be achieved by simply constructing a wrapper function)}
+\item{optimiser}{the optimising function used for model fitting when \code{method} = "TMB" (default is \code{nlminb}). Users may pass in a function object or a string corresponding to a named function. Optional parameters may be passed to \code{optimiser} via \code{...}. The only requirement of \code{optimiser} is that the first three arguments correspond to the initial parameters, the objective function, and the gradient, respectively (this may be achieved by simply constructing a wrapper function)}
 
-\item{percentiles}{a vector of scalars in [0, 100] specifying the desired percentiles of the posterior predictive distribution; if \code{NULL}, no percentiles are computed. Only applicable if \code{method = "TMB"}}
+\item{percentiles}{a vector of scalars in (0, 100) specifying the desired percentiles of the posterior predictive distribution; if \code{NULL}, no percentiles are computed. Only applicable if \code{method} = "TMB"}
 
-\item{fs_by_spatial_BAU}{if \code{TRUE}, then each spatial BAU is associated with its own fine-scale variance parameter; otherwise, a single fine-scale variance parameter is used. Only applicable in a spatio-temporal setting and if \code{method = "TMB"}}
+\item{fs_by_spatial_BAU}{if \code{TRUE}, then each spatial BAU is associated with its own fine-scale variance parameter; otherwise, a single fine-scale variance parameter is used. Only applicable in a spatio-temporal setting and if \code{method} = "TMB"}
 
-\item{known_sigma2fs}{known value of the fine-scale variance. If \code{NULL} (the default), the fine-scale variance \eqn{\sigma^2_\xi} is estimated as usual. If \code{known_sigma2fs} is not \code{NULL}, the fine-scale variance is fixed to the supplied value; this may be a scalar, or vector of length equal to the number of spatial BAUs (if fs_by_spatial_BAU = TRUE)}
+\item{known_sigma2fs}{known value of the fine-scale variance parameter(s). If \code{NULL} (the default), the fine-scale variance parameter(s) is estimated as usual. If \code{known_sigma2fs} is not \code{NULL}, the fine-scale variance is fixed to the supplied value; this may be a scalar, or vector of length equal to the number of spatial BAUs (if \code{fs_by_spatial_BAU = TRUE})}
 
-\item{taper}{positive numeric indicating the strength of the covariance/partial-correlation tapering. Only applicable if \code{K_type = "block-exponential"} or if the basis-functions are irregular and \code{K_type = "precision"}. If \code{taper} is \code{NULL} (default) and \code{method = "EM"}, no tapering is applied; if \code{method = "TMB"}, tapering must be applied (for computational reasons), and we set it to 4 if it is unspecified}
+\item{taper}{positive numeric indicating the strength of the covariance/partial-correlation tapering. Only applicable if \code{K_type} = "block-exponential", or if \code{K_type} = "precision" and the the basis-functions are irregular or the manifold is not the plane. If \code{taper} is \code{NULL} (default) and \code{method} = "EM", no tapering is applied; if \code{method} = "TMB", tapering must be applied (for computational reasons), and we set it to 3 if it is unspecified}
 
 \item{...}{other parameters passed on to \code{auto_basis()} and \code{auto_BAUs()} when calling \code{FRK()}, or the user specified function \code{optimiser()} when calling \code{FRK()} or \code{SRE.fit()}}
 
@@ -151,13 +151,13 @@ loglik(object)
 
 \item{covariances}{logical variable indicating whether prediction covariances should be returned or not. If set to \code{TRUE}, a maximum of 4000 prediction locations or polygons are allowed}
 
-\item{n_MC}{A postive integer indicating the number of MC samples at each location. Only applicable if \code{method = "TMB"}}
+\item{n_MC}{a postive integer indicating the number of MC samples at each location. Only applicable if \code{method} = "TMB"}
 
-\item{type}{vector of strings indicating the quantities for which inference is desired. If \code{"link"} is in \code{type}, inference on the latent Gaussian process \eqn{Y(\cdot)} is included; If \code{"mean"} is in \code{type}, inference on the mean process \eqn{\mu(\cdot)} is included (and the probability process, \eqn{\pi(\cdot)},  if applicable); If \code{"response"} is in \code{type}, inference on the noisy data process \eqn{Z} is included. Only applicable if \code{method = "TMB"}}
+\item{type}{vector of strings indicating the quantities for which inference is desired. If "link" is in \code{type}, inference on the latent Gaussian process \eqn{Y(\cdot)} is included; if "mean" is in \code{type}, inference on the mean process \eqn{\mu(\cdot)} is included (and the probability process, \eqn{\pi(\cdot)},  if applicable); if "response" is in \code{type}, inference on the noisy data process \eqn{Z} is included. Only applicable if \code{method} = "TMB"}
 
-\item{k}{vector of size parameters at each BAU. Applicable only if we have binomial or negative-binomial data and \code{method = "TMB"}}
+\item{k}{vector of size parameters at each BAU. Applicable only if we have binomial or negative-binomial data}
 
-\item{kriging}{string indicating the kind of kriging: \code{"simple"} ignores uncertanity due to estimation of the fixed effects, while \code{"universal"} accounts for this source of uncertainty. Only applicable if \code{method = "TMB"}}
+\item{kriging}{string indicating the kind of kriging: "simple" ignores uncertainty due to estimation of the fixed effects, while "universal" accounts for this source of uncertainty. Only applicable if \code{method} = "TMB"}
 }
 \description{
 The Spatial Random Effects (SRE) model is the central object in FRK. The function \code{FRK} provides a wrapper for the construction and estimation of the SRE object from data, using the functions \code{SRE} (the object constructor) and \code{SRE.fit} (for fitting it to the data). Please see \code{\link{SRE-class}} for more details on the SRE object's properties and methods.
@@ -194,7 +194,7 @@ When the data is Gaussian, and an identity link function is used, the preceding
 model simplifies considerably: specifically,
 \deqn{Z = CY + C\delta + e,} 
 where \eqn{Z} is the data vector, \eqn{\delta} is systematic error at the 
-BAU level, and \eqn{e} represent independent measurement error.  
+BAU level, and \eqn{e} represents independent measurement error.  
 
 \strong{Set-up}
 
@@ -218,9 +218,10 @@ sensible defaults. Please see
 parameters, namely the covariance matrix \eqn{K}, the fine scale variance
 (\eqn{\sigma^2_{\xi}} or \eqn{\sigma^2_{\delta}}, depending on whether Case 1
 or Case 2 is chosen; see the vignette) and the regression parameters \eqn{\alpha}.
-There are two methods of model fitting currently implemented.
+There are two methods of model fitting currently implemented, both of which 
+implement maximum likelihood estimation (MLE).
 \itemize{
- \item{Maximum likelihhod estimation (MLE) via the expectation maximisation
+ \item{MLE via the expectation maximisation
  (EM) algorithm. }{This method is implemented only
  for Gaussian data and an identity link function.
  The log-likelihood (given in Section 2.2 of the vignette) is evaluated at each
@@ -277,7 +278,7 @@ using the estimated parameters is used for prediction.
 which are of class \code{SpatialPixelsDataFrame}, \code{SpatialPolygonsDataFrame}, 
 or \code{STFDF}, with predictions and 
 uncertainty quantification added. 
-If \code{method = "TMB"}, the returned object is a list, containing the 
+If \code{method} = "TMB", the returned object is a list, containing the 
 previously described predictions, and a list of Monte Carlo samples. 
 The predictions and uncertainties can be easily plotted using \code{\link{plot}}
 or \code{spplot} from the package \code{sp}.
