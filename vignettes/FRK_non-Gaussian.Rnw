@@ -104,18 +104,18 @@
 \newcommand{\MSPEtwoarg}[2]{\text{MSPE}\left\{#1, #2\right\}} 
 
 
-%% Define a \hat{} that will fit over any function input. 
-\usepackage{scalerel,stackengine}
-\stackMath
-\newcommand\reallywidehat[1]{%
-\savestack{\tmpbox}{\stretchto{%
-  \scaleto{%
-    \scalerel*[\widthof{\ensuremath{#1}}]{\kern-.6pt\bigwedge\kern-.6pt}%
-    {\rule[-\textheight/2]{1ex}{\textheight}}%WIDTH-LIMITED BIG WEDGE
-  }{\textheight}% 
-}{0.5ex}}%
-\stackon[1pt]{#1}{\tmpbox}%
-}
+% %% Define a \hat{} that will fit over any function input. 
+% \usepackage{scalerel,stackengine}
+% \stackMath
+% \newcommand\reallywidehat[1]{%
+% \savestack{\tmpbox}{\stretchto{%
+%   \scaleto{%
+%     \scalerel*[\widthof{\ensuremath{#1}}]{\kern-.6pt\bigwedge\kern-.6pt}%
+%     {\rule[-\textheight/2]{1ex}{\textheight}}%WIDTH-LIMITED BIG WEDGE
+%   }{\textheight}% 
+% }{0.5ex}}%
+% \stackon[1pt]{#1}{\tmpbox}%
+% }
 
 
 
