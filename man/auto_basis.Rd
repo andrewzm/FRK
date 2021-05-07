@@ -101,3 +101,6 @@ G <- auto_basis(manifold = sphere(),data=d,
 show_basis(G,draw_world())
 }
 }
+\seealso{
+\code{\link{remove_basis}} for removing basis functions and \code{\link{show_basis}} for visualising basis functions
+}

@@ -201,6 +201,7 @@ local_basis <- function(manifold=sphere(),          # default manifold is sphere
 #' show_basis(G,draw_world())
 #' }
 #' @export
+#' @seealso \code{\link{remove_basis}} for removing basis functions and \code{\link{show_basis}} for visualising basis functions
 auto_basis <- function(manifold = plane(),
                        data,
                        regular = 1,

@@ -48,6 +48,8 @@ install:
 - Rscript -e 'install.packages("lintr", repos = "https://cran.rstudio.com")'
 - Rscript -e 'install.packages("statmod", repos = "https://cran.rstudio.com")'
 - Rscript -e 'install.packages("VCA", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("ggpubr", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("reshape2", repos = "https://cran.rstudio.com")'
 
 
 
