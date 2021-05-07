@@ -63,7 +63,9 @@ summary.SRE <- function(object,...) {
 setMethod("summary",signature(object="SRE"),summary.SRE)
 
 ## Set method for retrieving info_fit
-#' @rdname info_fit
+## #' @rdname info_fit
+#' @rdname SRE
+#' @export
 #' @aliases info_fit,SRE-method
 setMethod("info_fit", signature(object = "SRE"),
           function(object) {object@info_fit})

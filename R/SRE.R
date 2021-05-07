@@ -186,7 +186,7 @@
 #' m <- 250                                                   # Sample size
 #' zdf <- data.frame(x = runif(m), y= runif(m))               # Generate random locs
 #' zdf$Y <- 3 + sin(7 * zdf$x) + cos(9 * zdf$y)               # Latent process
-#' zdf$z <- rnorm(m, mean = zdf$Y)                     # Simulate data
+#' zdf$z <- rnorm(m, mean = zdf$Y)                            # Simulate data
 #' coordinates(zdf) = ~x+y                                    # Turn into sp object
 #' 
 #' ## Construct BAUs and basis functions 

@@ -112,7 +112,8 @@
 }
 
 
-#' @rdname observed_BAUs
+# #' @rdname observed_BAUs
+#' @rdname SRE
 setMethod("observed_BAUs", signature(object = "SRE"), function (object) {
   return(object@obsidx)
 })
@@ -125,7 +126,8 @@ setMethod("observed_BAUs", signature(object = "SRE"), function (object) {
   return(unique(as(Cmat, "dgTMatrix")@j) + 1)
 }
 
-#' @rdname observed_BAUs
+# #' @rdname observed_BAUs
+#' @rdname SRE
 setMethod("unobserved_BAUs",signature(object = "SRE"), function (object) {
   ## ncol(object@Cmat) is the total number of BAUs:
   unobsidx <- (1:ncol(object@Cmat))[-object@obsidx]

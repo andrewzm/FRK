@@ -217,28 +217,28 @@ setGeneric("BAUs_from_points", function(obj,offset = 1e-10)
 #' data.frame(G_subset)
 setGeneric("remove_basis", function(Basis,rmidx)
     standardGeneric("remove_basis"))
-    
 
-#' @title Observed (or unobserved) BAUs
-#' @description Computes the indices (a numeric vector) of the observed (or unobserved) BAUs
-#' @param object object of class \code{SRE}
-#' @export
+
+
+# #' @title Observed (or unobserved) BAUs
+# #' @description Computes the indices (a numeric vector) of the observed (or unobserved) BAUs
+# #' @param object object of class \code{SRE}
+# #' @export
 setGeneric("observed_BAUs", function(object)
     standardGeneric("observed_BAUs"))
 
-#' @rdname observed_BAUs
+# #' @rdname observed_BAUs
 #' @export
 setGeneric("unobserved_BAUs", function(object)
     standardGeneric("unobserved_BAUs"))
 
-
-#' @title Retrieve fit information for SRE model
-#' @description Takes an object of class \code{SRE} and returns a list containing all the relevant information on parameter estimation
-#' @param object object of class \code{SRE}
+## #' @title Retrieve fit information for SRE model
+## #' @description Takes an object of class \code{SRE} and returns a list containing all the relevant information on parameter estimation
+## #' @param object object of class \code{SRE}
+## #' @seealso See \code{\link{SRE}} for more information on the SRE model and available fitting methods.
+## #' @examples
+## #' # See example in the help file for SRE
 #' @export
-#' @seealso See \code{\link{SRE}} for more information on the SRE model and available fitting methods.
-#' @examples
-#' # See example in the help file for SRE
 setGeneric("info_fit", function(object)
     standardGeneric("info_fit"))
 
