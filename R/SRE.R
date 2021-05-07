@@ -22,7 +22,7 @@
 #' @param basis object of class \code{Basis} (or \code{TensorP_Basis})
 #' @param BAUs object of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame}, \code{STIDF}, or \code{STFDF}. The object's data frame must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality. If the function \code{FRK()} is used directly, then BAUs are created automatically, but only coordinates can then be used as covariates
 #' @param est_error flag indicating whether the measurement-error variance should be estimated from variogram techniques (only applicable for a Gaussian response). If this is set to 0, then \code{data} must contain a field \code{std}. Measurement-error estimation is currently not implemented for spatio-temporal datasets
-#' @param include_fs flag indicating whether the fine-scale variation should be include in the model
+#' @param include_fs flag indicating whether the fine-scale variation should be included in the model
 #' @param average_in_BAU if \code{TRUE}, then multiple data points falling in the same BAU are averaged; the measurement error of the averaged data point is taken as the average of the individual measurement errors
 #' @param sum_variables if \code{average_in_BAU == TRUE}, the string \code{sum_variables} indicates which data variables (can be observations or covariates) are to be summed rather than averaged
 #' @param normalise_wts if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)
@@ -419,13 +419,8 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   Ve <- do.call("bdiag",Ve)
   Vfs <- do.call("bdiag",Vfs)
   
-  ## Some matrices evaluated at observed BAUs only: ## FIXME: possible remove S_O, X_O, C_O, from SRE object 
-  obsidx <- .observed_BAUs_Cmat(Cmat)
-  C_O <- Cmat[, obsidx, drop = FALSE] 
-  S_O <- S0[obsidx, , drop = FALSE]
-  S_O <- drop0(S_O) # For some reason, S0 results in explicit zeros when nres = 1.
-  X_BAU <- as(.extract_BAU_X_matrix(f, BAUs), "matrix") # fixed-effect design matrix at BAU level
-  X_O <- X_BAU[obsidx, , drop = FALSE]
+  ## Indices of observed BAUs
+  obsidx <- .observed_BAUs_from_Cmat(Cmat)
   
   # Size parameter
   if(response %in% c("binomial", "negative-binomial")) {
@@ -497,7 +492,6 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
       f = f,
       S = S,
       S0 = S0,
-      S_O = S_O,
       D_basis = D_basis,
       Ve = Ve,
       Vfs = Vfs,
@@ -505,9 +499,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
       Qfs_BAUs = Qfs_BAUs,
       Z = Z,
       Cmat = Cmat,
-      C_O = C_O,
       X = X,
-      X_O = X_O,
       mu_eta = l$mu_eta_init,
       S_eta = l$S_eta_init,
       Q_eta = l$Q_eta_init,
@@ -525,7 +517,8 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
       k_BAU_O = as.numeric(k_BAU_O), 
       include_fs = include_fs, 
       normalise_wts = normalise_wts, 
-      fs_by_spatial_BAU = fs_by_spatial_BAU)
+      fs_by_spatial_BAU = fs_by_spatial_BAU, 
+      obsidx = obsidx)
 }
 
 ## Initalise the fixed effects and parameters for method = 'EM'

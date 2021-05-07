@@ -506,6 +506,10 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
 ## #' }
 .MC_sampler <- function(M, X, type, n_MC, obs_fs, k, Q_L, obsidx, predict_BAUs, CP, kriging){
   
+  ## Some matrices evaluated at observed BAUs only
+  X_O <- .constructX_O(M) 
+  S_O <- .constructS_O(M) 
+  
   MC <- list()              
   N   <- nrow(M@S0)   
   mstar <- length(obsidx)
@@ -596,10 +600,10 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   
   ## Simulate the smooth Y-process (excluding fs variation) over the observed and unobserved BAUs
   if (kriging == "universal") {
-    Y_smooth_O <- M@X_O %*% alpha + M@S_O %*% eta
+    Y_smooth_O <- X_O %*% alpha + S_O %*% eta
     Y_smooth_U <- X_U %*% alpha + S_U %*% eta
   } else {
-    Y_smooth_O <- M@X_O %*% M@alphahat + M@S_O %*% eta
+    Y_smooth_O <- X_O %*% M@alphahat + S_O %*% eta
     Y_smooth_U <- X_U %*% M@alphahat + S_U %*% eta
   }
   

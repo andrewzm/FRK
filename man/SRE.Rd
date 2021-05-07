@@ -139,7 +139,7 @@ loglik(object)
 
 \item{normalise_basis}{flag indicating whether to normalise the basis functions so that they reproduce a stochastic process with approximately constant variance spatially}
 
-\item{include_fs}{flag indicating whether the fine-scale variation should be include in the model}
+\item{include_fs}{flag indicating whether the fine-scale variation should be included in the model}
 
 \item{object}{object of class \code{SRE} returned from the constructor \code{SRE()} containing all the parameters and information on the SRE model. Note that prior to v2.x, \code{loglik()} and \code{SRE.fit()} took the now-defunct argument \code{SRE_model} instead of \code{object}}
 

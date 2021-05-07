@@ -683,19 +683,19 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 ## Fitting stage of non-Gaussian FRK (more generally, for method  = 'TMB').
 .TMB_fit <- function(object, optimiser, known_sigma2fs, taper, ...) {
   
+  ## Some matrices evaluated at observed BAUs only: 
+  C_O <- .constructC_O(object) 
+  X_O <- .constructX_O(object) 
+  S_O <- .constructS_O(object) 
   
   info_fit <- list()      
-  
   info_fit$time <- system.time({
     
   info_fit$method <- "TMB" 
   
-
-  
   ## If we are using a precision matrix formulation, determine if we can use the
   ## neighbour formulation, or if we need to use the precision-block-exponential.
   ## This depends on whether the *spatial* basis is regular, or not.
-  ## TODO: Could add checks here that the basis is indeed regular. See .test_regular_grid().
   K_type <- object@K_type
 
   if (K_type == "precision") {
@@ -714,8 +714,10 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   }
   
   ## Parameter and data preparation for TMB
-  parameters <- .TMB_initialise(object, K_type = K_type)
-  data <- .TMB_data_prep(object, sigma2fs_hat = exp(parameters$logsigma2fs), K_type = K_type, taper = taper)
+  parameters <- .TMB_initialise(object, K_type = K_type, C_O = C_O, X_O = X_O, S_O = S_O)
+  data <- .TMB_data_prep(object, sigma2fs_hat = exp(parameters$logsigma2fs), 
+                         K_type = K_type, taper = taper, 
+                         C_O = C_O, X_O = X_O, S_O = S_O)
   
   ## If we are estimating a unique fine-scale variance at each spatial BAU, 
   ## simply replicate sigma2fs ns times. 
@@ -818,7 +820,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   ## Update the slots of object
   ## Convert to Matrix as these SRE slots require class "Matrix"
   r  <- nbasis(object)
-  mstar <- ncol(object@C_O)
+  mstar <- ncol(C_O)
   object@alphahat <- as(estimates$alpha, "Matrix")
   object@mu_eta   <- as(estimates$random_effects[1:r], "Matrix")
   if (object@include_fs) {
@@ -857,18 +859,16 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 
 
 ## Initialise the fixed effects, random effects, and parameters for method = 'TMB'
-.TMB_initialise <- function(object, K_type) {   
+.TMB_initialise <- function(object, K_type, C_O, X_O, S_O) {   
   
   cat("Initialising parameters and random effects...\n")
   
   nres    <- max(object@basis@df$res) 
-  X_O     <- object@X_O
-  S_O     <- object@S_O
   r       <- object@basis@n  
   
   # ---- Estimate Y over the observed BAUs ----
   
-  Y_O <- .compute_Y_O(object)
+  Y_O <- .compute_Y_O(object, C_O = C_O)
   
   # ---- Parameter and random effect initialisations ----
   
@@ -982,10 +982,8 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 }
 
 
-.compute_Y_O <- function(object) {
+.compute_Y_O <- function(object, C_O) {
   
-  
-  C_O     <- object@C_O
   Z       <- as.vector(object@Z)         
   k_Z     <- object@k_Z       
   k_BAU_O <- object@k_BAU_O 
@@ -1075,7 +1073,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   } 
 }
 
-.TMB_data_prep <- function (object, sigma2fs_hat, K_type, taper = taper) {
+.TMB_data_prep <- function (object, sigma2fs_hat, K_type, taper, C_O, X_O, S_O) {
   
   cat("Preparing data for TMB...\n")
   
@@ -1086,7 +1084,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   
   ## Data passed to TMB which is common to all
   data <- list(Z = as.vector(object@Z),  # Binned data
-               X_O = object@X_O, S_O = object@S_O, C_O = object@C_O,
+               X_O = X_O, S_O = S_O, C_O = C_O,
                K_type = K_type, response = object@response, link = object@link,
                k_BAU_O = object@k_BAU_O, k_Z = object@k_Z,         
                temporal = as.integer(is(object@basis,"TensorP_Basis")), 

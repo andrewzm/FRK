@@ -25,8 +25,6 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 
 \item{\code{S0}}{matrix constructed by evaluating the basis functions at all BAUs (of class \code{Matrix})}
 
-\item{\code{S_O}}{matrix constructed by evaluating the basis functions at observed BAUs (of class \code{Matrix})}
-
 \item{\code{D_basis}}{list of distance-matrices of class \code{Matrix}, one for each basis-function resolution}
 
 \item{\code{Ve}}{measurement-error variance-covariance matrix (typically diagonal and of class \code{Matrix})}
@@ -41,11 +39,7 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 
 \item{\code{Cmat}}{incidence matrix mapping the observations to the BAUs}
 
-\item{\code{C_O}}{incidence matrix mapping the observations to the observed BAUs}
-
 \item{\code{X}}{matrix of covariates}
-
-\item{\code{X_O}}{matrix of covariates at observed BAUs}
 
 \item{\code{K_type}}{type of prior covariance matrix of random effects. Can be "block-exponential" (correlation between effects decays as a function of distance between the basis-function centroids), "unstructured" (all elements in \code{K} are unknown and need to be estimated), or "neighbour" (a sparse precision matrix is used, whereby only neighbouring basis functions have non-zero precision matrix elements).}
 
@@ -85,11 +79,13 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 
 \item{\code{k_BAU}}{vector of known size parameters at the observed BAUs (only applicable to binomial and negative-binomial response distributions)}
 
-\item{\code{include_fs}}{flag indicating whether the fine-scale variation should be include in the model}
+\item{\code{include_fs}}{flag indicating whether the fine-scale variation should be included in the model}
 
 \item{\code{normalise_wts}}{if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)}
 
 \item{\code{fs_by_spatial_BAU}}{if \code{TRUE}, then each BAU is associated with its own fine-scale variance parameter}
+
+\item{\code{obsidx}}{indices of observed BAUs}
 }}
 
 \seealso{
