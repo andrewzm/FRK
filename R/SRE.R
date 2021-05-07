@@ -181,54 +181,40 @@
 #' See also the paper \url{https://arxiv.org/abs/1705.08105} for details on code operation.
 #' @export
 #' @examples
-#' library(sp)
-#'
+#' library("sp")        
 #' ## Generate process and data
-#' n <- 100
-#' sim_process <- data.frame(x = seq(0.005,0.995,length=n))
-#' sim_process$y <- 0
-#' sim_process$proc <- sin(sim_process$x*10) + 0.3*rnorm(n)
-#'
-#' sim_data <- sim_process[sample(1:n,50),]
-#' sim_data$z <- sim_data$proc + 0.1*rnorm(50)
-#' sim_data$std <- 0.1
-#' coordinates(sim_data) = ~x + y # change into an sp object
-#' grid_BAUs <- auto_BAUs(manifold=real_line(),data=sim_data,
-#'                        nonconvex_hull=FALSE,cellsize = c(0.01),type="grid")
-#' grid_BAUs$fs = 1
-#'
-#' ## Set up SRE model
-#' G <- auto_basis(manifold = real_line(),
-#'                 data=sim_data,
-#'                 nres = 2,
-#'                 regular = 6,
-#'                 type = "bisquare",
-#'                 subsamp = 20000)
-#' f <- z ~ 1
-#' S <- SRE(f,list(sim_data),G,
-#'          grid_BAUs,
-#'          est_error = FALSE)
-#'
+#' m <- 250                                                   # Sample size
+#' zdf <- data.frame(x = runif(m), y= runif(m))               # Generate random locs
+#' zdf$Y <- 3 + sin(7 * zdf$x) + cos(9 * zdf$y)               # Latent process
+#' zdf$z <- rnorm(m, mean = zdf$Y)                     # Simulate data
+#' coordinates(zdf) = ~x+y                                    # Turn into sp object
+#' 
+#' ## Construct BAUs and basis functions 
+#' BAUs <- auto_BAUs(manifold = plane(), data = zdf, 
+#'                   nonconvex_hull = FALSE, cellsize = c(0.03, 0.03), type="grid") 
+#' BAUs$fs <- 1 # scalar fine-scale covariance matrix
+#' basis <- auto_basis(manifold =  plane(), data = zdf, nres = 2)
+#' 
+#' ## Fit the SRE model
+#' S <- SRE(f = z ~ 1, list(zdf), basis = basis, BAUs = BAUs)
+#' 
+#' ## Compute observed and unobserved BAUs    
+#' observed_BAUs(S); unobserved_BAUs(S)   
+#' 
 #' ## Fit with 5 EM iterations so as not to take too much time
-#' S <- SRE.fit(S,n_EM = 5,tol = 0.01,print_lik=TRUE)
-#'
-#' ## Check fit info
-#'
-#'
+#' S <- SRE.fit(S,n_EM = 5, tol = 0.01, print_lik=TRUE)
+#' 
+#' ## Check fit info and final log-likelihood
+#' info_fit(S)
+#' loglik(S)
+#' 
 #' ## Predict over BAUs
-#' grid_BAUs <- predict(S)
-#'
+#' pred <- predict(S)
+#' 
 #' ## Plot
 #' \dontrun{
-#' library(ggplot2)
-#' X <- slot(grid_BAUs,"data")
-#' X <- subset(X, x >= 0 & x <= 1)
-#'  g1 <- LinePlotTheme() +
-#'     geom_line(data=X,aes(x,y=mu)) +
-#'     geom_errorbar(data=X,aes(x=x,ymax = mu + 2*sqrt(var), ymin= mu - 2*sqrt(var))) +
-#'     geom_point(data = data.frame(sim_data),aes(x=x,y=z),size=3) +
-#'     geom_line(data=sim_process,aes(x=x,y=proc),col="red")
-#'  print(g1)}
+#' plotlist <- plot(S, pred)
+#' ggpubr::ggarrange(plotlist = plotlist)}
 SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                 sum_variables = NULL,
                 normalise_wts = TRUE,
