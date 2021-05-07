@@ -23,9 +23,9 @@
 \usepackage{amsmath}	% align environment.
 \usepackage{amsfonts}	% \mathbb{} (used for Real number symbol, etc.)
 \usepackage{amsthm}		% mathy stuff (Theorems, Lemmas, etc.)
-\usepackage{commath}
-\usepackage{bbm} % \mathbb{} doesn't support digits (1, 2, 3, etc.), so use \mathbbm{} in these instances
-\usepackage{mathtools} % \vdotswithin command to have vertical dots between equals signs
+% \usepackage{commath}
+%\usepackage{bbm} % \mathbb{} doesn't support digits (1, 2, 3, etc.), so use \mathbbm{} in these instances
+% \usepackage{mathtools} % \vdotswithin command to have vertical dots between equals signs
 
 %% Lists
 \usepackage{enumerate}
