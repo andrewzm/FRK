@@ -368,7 +368,7 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = N
 #' @seealso \code{\link{plot}}
 #' @export
 #' @examples 
-#' See example in the help file for SRE
+#' ## See example in the help file for SRE
 plot_spatial_or_ST <- function(object, column_names,  map_layer = NULL, 
                                subset_time = NULL, palette = "Spectral", ...) {
     

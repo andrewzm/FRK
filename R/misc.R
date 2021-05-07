@@ -112,27 +112,6 @@
 }
 
 
-# #' @rdname observed_BAUs
-#' @rdname SRE
-setMethod("observed_BAUs", signature(object = "SRE"), function (object) {
-  return(object@obsidx)
-})
-
-## this function is defined so that we can call it in SRE(), before an object of 
-## class SRE is defined
-## Note that Cmat maps BAUs to the observations. The dimension of object@Cmat is
-## (number of observations) * (number of BAUs).
-.observed_BAUs_from_Cmat <- function(Cmat) { 
-  return(unique(as(Cmat, "dgTMatrix")@j) + 1)
-}
-
-# #' @rdname observed_BAUs
-#' @rdname SRE
-setMethod("unobserved_BAUs",signature(object = "SRE"), function (object) {
-  ## ncol(object@Cmat) is the total number of BAUs:
-  unobsidx <- (1:ncol(object@Cmat))[-object@obsidx]
-  return(unobsidx)
-})
 
 
 ## Determine if the basis functions are in a regular rectangular grid

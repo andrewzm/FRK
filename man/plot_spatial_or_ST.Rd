@@ -33,7 +33,7 @@ a list of \code{ggplot} objects corresponding to the provided \code{column_names
 Plot data from a Spatial*DataFrame or STFDF object
 }
 \examples{
-See example in the help file for SRE
+## See example in the help file for SRE
 }
 \seealso{
 \code{\link{plot}}

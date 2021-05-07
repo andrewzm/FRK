@@ -1,5 +1,6 @@
 #' @rdname SRE
 #' @export
+#' @aliases loglik,SRE-method
 setMethod("loglik", signature="SRE", function(object) {
   # This is structured this way so that extra models for fs-variation
   # can be implemented later
@@ -12,6 +13,31 @@ setMethod("loglik", signature="SRE", function(object) {
   }
 })
 
+# #' @rdname observed_BAUs
+#' @rdname SRE
+#' @export
+#' @aliases observed_BAUs,SRE-method
+setMethod("observed_BAUs", signature(object = "SRE"), function (object) {
+  return(object@obsidx)
+})
+
+## this function is defined so that we can call it in SRE(), before an object of 
+## class SRE is defined
+## Note that Cmat maps BAUs to the observations. The dimension of object@Cmat is
+## (number of observations) * (number of BAUs).
+.observed_BAUs_from_Cmat <- function(Cmat) { 
+  return(unique(as(Cmat, "dgTMatrix")@j) + 1)
+}
+
+# #' @rdname observed_BAUs
+#' @rdname SRE
+#' @export
+#' @aliases unobserved_BAUs,SRE-method
+setMethod("unobserved_BAUs",signature(object = "SRE"), function (object) {
+  ## ncol(object@Cmat) is the total number of BAUs:
+  unobsidx <- (1:ncol(object@Cmat))[-object@obsidx]
+  return(unobsidx)
+})
 
 
 ## Print/Show SRE
@@ -73,7 +99,9 @@ setMethod("info_fit", signature(object = "SRE"),
           function(object) {object@info_fit})
 
 # Retrieve coefficients of SRE model
-#' @rdname coef
+# #' @rdname coef
+#' @rdname SRE
+#' @export 
 #' @aliases coef, SRE-method
 setMethod("coef",signature(object = "SRE"),function(object,...) {
   coeff <- as.numeric(object@alphahat)

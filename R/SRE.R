@@ -101,7 +101,9 @@
 #' are constructed within \code{SRE()} and returned as part of the \code{SRE} object. 
 #' \code{SRE()} also intitialises the parameters and random effects using 
 #' sensible defaults. Please see 
-#' \code{\link{SRE-class}} for more details.
+#' \code{\link{SRE-class}} for more details. 
+#' The functions \code{observed_BAUs()} and \code{unobserved_BAUs()} return the 
+#' indices of the observed and unobserved BAUs, respectively. 
 #' 
 #' \strong{Model fitting}
 #'
@@ -143,6 +145,10 @@
 #'  (default \code{nlminb()}).}
 #' }
 #' 
+#' \code{info_fit()} extracts information on the fitting (convergence, etc.), 
+#' \code{coef()} extracts the estimated regression regression coefficients, and 
+#' \code{loglik()} returns the final log-likelihood. 
+#' 
 #' \emph{Wrapper for set-up and model fitting}
 #'
 #' The function \code{FRK()} acts as a wrapper for the functions \code{SRE()} and 
@@ -174,10 +180,8 @@
 #' The predictions and uncertainties can be easily plotted using \code{\link{plot}}
 #' or \code{spplot} from the package \code{sp}.
 #' @seealso \code{\link{SRE-class}} for details on the SRE object internals, 
-#' \code{\link{auto_basis}} for automatically constructing basis functions, 
-#' \code{\link{auto_BAUs}} for automatically constructing BAUs, 
-#' \code{\link{info_fit}} for extracting information on the fitting (convergence, etc.), 
-#' and \code{\link{plot}} for plotting results. 
+#' \code{\link{auto_basis}} for automatically constructing basis functions, and
+#' \code{\link{auto_BAUs}} for automatically constructing BAUs. 
 #' See also the paper \url{https://arxiv.org/abs/1705.08105} for details on code operation.
 #' @export
 #' @examples
@@ -199,14 +203,16 @@
 #' S <- SRE(f = z ~ 1, list(zdf), basis = basis, BAUs = BAUs)
 #' 
 #' ## Compute observed and unobserved BAUs    
-#' observed_BAUs(S); unobserved_BAUs(S)   
+#' observed_BAUs(S)
+#' unobserved_BAUs(S)   
 #' 
 #' ## Fit with 5 EM iterations so as not to take too much time
-#' S <- SRE.fit(S,n_EM = 5, tol = 0.01, print_lik=TRUE)
+#' S <- SRE.fit(S,n_EM = 5, tol = 0.01, print_lik = TRUE)
 #' 
-#' ## Check fit info and final log-likelihood
+#' ## Check fit info, final log-likelihood, and estimated regression coefficients
 #' info_fit(S)
 #' loglik(S)
+#' coef(S)
 #' 
 #' ## Predict over BAUs
 #' pred <- predict(S)
@@ -220,7 +226,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                 sum_variables = NULL,
                 normalise_wts = TRUE,
                 fs_model = "ind", vgm_model = NULL, 
-                K_type = c("block-exponential", "precision", "unstructured", "separable"), 
+                K_type = c("block-exponential", "precision", "unstructured"), 
                 normalise_basis = TRUE, 
                 response = c("gaussian", "poisson", "bernoulli", "gamma",
                              "inverse-gaussian", "negative-binomial", "binomial"), 
