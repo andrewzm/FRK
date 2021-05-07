@@ -325,6 +325,7 @@ pred <- predict(S)
 
 ## Plot
 \dontrun{
+plot_spatial_or_ST(zdf, "z")
 plotlist <- plot(S, pred)
 ggpubr::ggarrange(plotlist = plotlist)}
 }

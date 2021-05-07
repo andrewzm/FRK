@@ -25,6 +25,9 @@ a list of \code{ggplot} objects consisting of the observed data, predictions, an
 \description{
 Plot predictions from FRK analysis.
 }
+\examples{
+## See example in the help file for SRE
+}
 \seealso{
 \code{\link{plot_spatial_or_ST}}
 }

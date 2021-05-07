@@ -236,6 +236,8 @@ EmptyTheme <- function() {
 #' @return a list of \code{ggplot} objects consisting of the observed data, predictions, and standard errors. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.
 #' @seealso \code{\link{plot_spatial_or_ST}}
 #' @export
+#' @examples 
+#' ## See example in the help file for SRE
 setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = NULL, subset_time = NULL,  ...) {
     
     model_object <- x
@@ -365,6 +367,8 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = N
 #' @return a list of \code{ggplot} objects corresponding to the provided \code{column_names}. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}
 #' @seealso \code{\link{plot}}
 #' @export
+#' @examples 
+#' See example in the help file for SRE
 plot_spatial_or_ST <- function(object, column_names,  map_layer = NULL, 
                                subset_time = NULL, palette = "Spectral", ...) {
     

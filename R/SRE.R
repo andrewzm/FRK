@@ -213,6 +213,7 @@
 #' 
 #' ## Plot
 #' \dontrun{
+#' plot_spatial_or_ST(zdf, "z")
 #' plotlist <- plot(S, pred)
 #' ggpubr::ggarrange(plotlist = plotlist)}
 SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
