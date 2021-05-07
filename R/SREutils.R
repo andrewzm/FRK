@@ -1,6 +1,6 @@
 #' @rdname SRE
 #' @export
-loglik <- function(object) {
+setMethod("loglik", signature="SRE", function(object) {
   # This is structured this way so that extra models for fs-variation
   # can be implemented later
   if (length(object@log_likelihood) != 0) {
@@ -10,7 +10,9 @@ loglik <- function(object) {
   } else {
     stop("Currently only independent fine-scale model is implemented")
   }
-}
+})
+
+
 
 ## Print/Show SRE
 print.SRE <- function(x,...) {

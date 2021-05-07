@@ -267,6 +267,10 @@ setGeneric("coef", function(object)
 setGeneric("predict", function(object, ...)
     standardGeneric("predict"))
 
+#' @export
+setGeneric("loglik", function(object, ...)
+    standardGeneric("loglik"))
+
 
 ########################
 #### NOT EXPORTED ######

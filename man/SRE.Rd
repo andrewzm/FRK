@@ -6,7 +6,7 @@
 \alias{SRE}
 \alias{SRE.fit}
 \alias{predict,SRE-method}
-\alias{loglik}
+\alias{loglik,SRE-method}
 \alias{info_fit,SRE-method}
 \alias{observed_BAUs,SRE-method}
 \alias{unobserved_BAUs,SRE-method}
@@ -89,7 +89,7 @@ SRE.fit(
   kriging = "simple"
 )
 
-loglik(object)
+\S4method{loglik}{SRE}(object)
 
 \S4method{info_fit}{SRE}(object)
 
