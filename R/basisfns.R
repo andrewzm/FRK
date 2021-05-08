@@ -26,8 +26,8 @@
 #' to location and scale parameters.
 #' @param df A data frame containing one row per basis function, typically for providing informative summaries.
 #' @param regular logical indicating if the basis functions (of each resolution) are in a regular grid
-#' @details This constructor checks that all the parameters are valid before constructing the basis functions
-#' using \code{new}. The requirement that every function is encapsulated is tedious, but necessary for
+#' @details This constructor checks that all parameters are valid before constructing the basis functions. 
+#' The requirement that every function is encapsulated is tedious, but necessary for
 #' FRK to work with a large range of basis functions in the future. Please see the example below which exemplifies
 #' the process of constructing linear basis functions from scratch using this function.
 #' @seealso \code{\link{auto_basis}} for constructing basis functions automatically, \code{\link{local_basis}} for

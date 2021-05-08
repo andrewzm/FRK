@@ -35,7 +35,6 @@ FRK <- function(f,                     # formula (compulsory)
                              "inverse-gaussian", "negative-binomial", "binomial"), 
                 link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"),
                 optimiser = nlminb,    # Optimiser for fitting (applicable only if method = 'TMB')
-                percentiles = c(5, 95),  # Desired percentiles of the quantitity of interest
                 fs_by_spatial_BAU = FALSE,
                 known_sigma2fs = NULL, 
                 taper = NULL, 

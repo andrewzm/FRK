@@ -28,8 +28,8 @@ This function is meant to be used for manual construction of arbitrary basis fun
 `local' basis functions, please use the function \code{\link{local_basis}} instead.
 }
 \details{
-This constructor checks that all the parameters are valid before constructing the basis functions
-using \code{new}. The requirement that every function is encapsulated is tedious, but necessary for
+This constructor checks that all parameters are valid before constructing the basis functions. 
+The requirement that every function is encapsulated is tedious, but necessary for
 FRK to work with a large range of basis functions in the future. Please see the example below which exemplifies
 the process of constructing linear basis functions from scratch using this function.
 }

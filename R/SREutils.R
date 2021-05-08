@@ -1,6 +1,5 @@
 #' @rdname SRE
 #' @export
-#' @aliases loglik,SRE-method
 setMethod("loglik", signature="SRE", function(object) {
   # This is structured this way so that extra models for fs-variation
   # can be implemented later
@@ -16,7 +15,6 @@ setMethod("loglik", signature="SRE", function(object) {
 # #' @rdname observed_BAUs
 #' @rdname SRE
 #' @export
-#' @aliases observed_BAUs,SRE-method
 setMethod("observed_BAUs", signature(object = "SRE"), function (object) {
   return(object@obsidx)
 })
@@ -32,7 +30,6 @@ setMethod("observed_BAUs", signature(object = "SRE"), function (object) {
 # #' @rdname observed_BAUs
 #' @rdname SRE
 #' @export
-#' @aliases unobserved_BAUs,SRE-method
 setMethod("unobserved_BAUs",signature(object = "SRE"), function (object) {
   ## ncol(object@Cmat) is the total number of BAUs:
   unobsidx <- (1:ncol(object@Cmat))[-object@obsidx]
@@ -94,7 +91,6 @@ setMethod("summary",signature(object="SRE"),summary.SRE)
 ## #' @rdname info_fit
 #' @rdname SRE
 #' @export
-#' @aliases info_fit,SRE-method
 setMethod("info_fit", signature(object = "SRE"),
           function(object) {object@info_fit})
 
@@ -102,7 +98,6 @@ setMethod("info_fit", signature(object = "SRE"),
 # #' @rdname coef
 #' @rdname SRE
 #' @export 
-#' @aliases coef, SRE-method
 setMethod("coef",signature(object = "SRE"),function(object,...) {
   coeff <- as.numeric(object@alphahat)
   varnames <- all.vars(object@f)[-1]
@@ -111,7 +106,7 @@ setMethod("coef",signature(object = "SRE"),function(object,...) {
     nms <- c(nms, varnames)
   }
   names(coeff) <- nms
-  coeff
+  return(coeff)
 })
 
 ## Print summary of SRE
