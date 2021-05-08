@@ -10,6 +10,7 @@ plot_spatial_or_ST(
   map_layer = NULL,
   subset_time = NULL,
   palette = "Spectral",
+  plot_over_world = FALSE,
   ...
 )
 }
@@ -23,6 +24,8 @@ plot_spatial_or_ST(
 \item{subset_time}{(optional) a vector of times to be included; applicable only for \code{STFDF} objects}
 
 \item{palette}{the palette supplied to scale_*_distiller()}
+
+\item{plot_over_world}{logical; if \code{TRUE}, \code{coord_map("mollweide")} and \code{\link{draw_world}} are used to plot over the world}
 
 \item{...}{optional arguments passed on to whatever geom is appropriate for the data (geom_point, geom_raster, or geom_polygon)}
 }

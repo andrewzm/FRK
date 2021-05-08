@@ -4,7 +4,15 @@
 \alias{plot,SRE,ANY-method}
 \title{Plot predictions from FRK analysis.}
 \usage{
-\S4method{plot}{SRE,ANY}(x, y, zdf = NULL, map_layer = NULL, subset_time = NULL, ...)
+\S4method{plot}{SRE,ANY}(
+  x,
+  y,
+  zdf = NULL,
+  map_layer = NULL,
+  subset_time = NULL,
+  plot_over_world = FALSE,
+  ...
+)
 }
 \arguments{
 \item{x}{\code{SRE} object}
@@ -16,6 +24,8 @@
 \item{map_layer}{(optional) a \code{ggplot} layer or object to add below the plotted layer, often a map}
 
 \item{subset_time}{(optional) a vector of times to be included; applicable only for \code{STFDF} objects}
+
+\item{plot_over_world}{logical; if \code{TRUE}, \code{coord_map("mollweide")} and \code{\link{draw_world}} are used to plot over the world}
 
 \item{...}{optional arguments passed on to whatever geom is appropriate for the data (geom_point, geom_raster, or geom_polygon)}
 }

@@ -173,11 +173,16 @@ LinePlotTheme <- function() {
 #' @rdname plotting-themes
 #' @export
 EmptyTheme <- function() {
-    g <- ggplot() +  theme(panel.background = element_rect(fill='white', colour='white'),
-                           panel.grid=element_blank(),axis.ticks=element_blank(),
-                           panel.grid.major=element_blank(),panel.grid.minor=element_blank(),
-                           axis.text.x=element_blank(),axis.text.y=element_blank())
+    g <- ggplot() + .EmptyTheme_theme_only()
     return (g)
+}
+
+## this is so I can add it to already-constructed plots
+.EmptyTheme_theme_only <- function() {
+    theme(panel.background = element_rect(fill='white', colour='white'),
+          panel.grid=element_blank(),axis.ticks=element_blank(),
+          panel.grid.major=element_blank(),panel.grid.minor=element_blank(),
+          axis.text.x=element_blank(),axis.text.y=element_blank())
 }
 
 #####################################################
@@ -238,7 +243,7 @@ EmptyTheme <- function() {
 #' @export
 #' @examples 
 #' ## See example in the help file for SRE
-setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = NULL, subset_time = NULL,  ...) {
+setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = NULL, subset_time = NULL, plot_over_world = FALSE, ...) {
     
     model_object <- x
     pred_object <- y
@@ -266,14 +271,14 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = N
     }
     
     ## Plot the predictions and UQ 
-    plots <- c(plots, .plot_predictions_and_UQ(model_object@method, pred_object, map_layer, subset_time, ...))
+    plots <- c(plots, .plot_predictions_and_UQ(model_object@method, pred_object, map_layer, subset_time, plot_over_world, ...))
     
 
     return(plots)
 })
 
 
-.plot_predictions_and_UQ <- function(method, pred_object, map_layer = NULL, subset_time = NULL, ...) {
+.plot_predictions_and_UQ <- function(method, pred_object, map_layer = NULL, subset_time = NULL, plot_over_world = FALSE, ...) {
     
     ## Determine columns we need to plot, and which palette to use
     if (method == "EM") {
@@ -309,7 +314,7 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = N
         palette  <-  palette[keep] 
     }
     
-    plots <- plot_spatial_or_ST(pred_object, column_names, map_layer, subset_time, palette, ...)
+    plots <- plot_spatial_or_ST(pred_object, column_names, map_layer, subset_time, palette, plot_over_world, ...)
 
     ## Edit labels
     if (method == "EM") {
@@ -363,6 +368,7 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = N
 #' @param map_layer (optional) a \code{ggplot} layer or object to add below the plotted layer, often a map
 #' @param subset_time (optional) a vector of times to be included; applicable only for \code{STFDF} objects
 #' @param palette the palette supplied to scale_*_distiller()
+#' @param plot_over_world logical; if \code{TRUE}, \code{coord_map("mollweide")} and \code{\link{draw_world}} are used to plot over the world
 #' @param ... optional arguments passed on to whatever geom is appropriate for the data (geom_point, geom_raster, or geom_polygon)
 #' @return a list of \code{ggplot} objects corresponding to the provided \code{column_names}. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}
 #' @seealso \code{\link{plot}}
@@ -370,7 +376,8 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = N
 #' @examples 
 #' ## See example in the help file for SRE
 plot_spatial_or_ST <- function(object, column_names,  map_layer = NULL, 
-                               subset_time = NULL, palette = "Spectral", ...) {
+                               subset_time = NULL, palette = "Spectral", 
+                               plot_over_world = FALSE, ...) {
     
     if (!is(object, "Spatial") && !is(object, "STFDF")) 
         stop("object should be a Spatial*DataFrame or STFDF")
@@ -416,8 +423,19 @@ plot_spatial_or_ST <- function(object, column_names,  map_layer = NULL,
                     function(i, x, y, ...) {
                         .plot(df, x[i], coord_names, time_name, sp_type, map_layer, y[i], ...)
                     }, x = column_names, y = palette, ...)
-    names(plots) <- column_names
+
+    suppressMessages( # suppress message about adding a new coordinate system
+        if(plot_over_world) {
+            plots <- lapply(plots, function(gg) {
+                (gg + .EmptyTheme_theme_only() + coord_map("mollweide")) %>%  
+                    draw_world(inc_border = TRUE)
+            })
+        }
+    )
+
     
+    
+    names(plots) <- column_names
     return(plots)
 }
 
