@@ -15,9 +15,9 @@
 )
 }
 \arguments{
-\item{x}{\code{SRE} object}
+\item{x}{an object of class \code{SRE}}
 
-\item{y}{result of calling \code{predict} on an \code{SRE} object}
+\item{y}{the result of calling \code{predict()} on an \code{SRE} object}
 
 \item{zdf}{a \code{data.frame}, \code{SpatialPointsDataFrame}, or \code{SpatialPolygonsDataFrame} containing the observations}
 

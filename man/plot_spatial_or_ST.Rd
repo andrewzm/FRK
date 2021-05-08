@@ -5,7 +5,7 @@
 \title{Plot data from a Spatial*DataFrame or STFDF object}
 \usage{
 plot_spatial_or_ST(
-  object,
+  sp_or_ST_DF,
   column_names,
   map_layer = NULL,
   subset_time = NULL,
@@ -15,7 +15,7 @@ plot_spatial_or_ST(
 )
 }
 \arguments{
-\item{object}{a Spatial*DataFrame or STFDF}
+\item{sp_or_ST_DF}{an object of class Spatial*DataFrame or STFDF}
 
 \item{column_names}{a vector of strings indicating the columns of the data to plot}
 

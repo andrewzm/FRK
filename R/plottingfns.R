@@ -233,9 +233,10 @@ EmptyTheme <- function() {
 
 #' Plot predictions from FRK analysis. 
 #' 
+#' 
 # #' @rdname SRE
-#' @param x \code{SRE} object 
-#' @param y result of calling \code{predict} on an \code{SRE} object 
+#' @param x an object of class \code{SRE} 
+#' @param y the result of calling \code{predict()} on an \code{SRE} object 
 #' @param zdf a \code{data.frame}, \code{SpatialPointsDataFrame}, or \code{SpatialPolygonsDataFrame} containing the observations
 #' @inheritParams plot_spatial_or_ST
 #' @return a list of \code{ggplot} objects consisting of the observed data, predictions, and standard errors. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.
@@ -245,48 +246,29 @@ EmptyTheme <- function() {
 #' ## See example in the help file for SRE
 setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = NULL, subset_time = NULL, plot_over_world = FALSE, ...) {
     
-    model_object <- x
+    object <- x
     pred_object <- y
     
-    ## Check that pred_object is a result of a call to predict()
-    if (model_object@method == "TMB") {
-        if (!is(pred_object, "list")) 
+    ## Check that newdata is a result of a call to predict()
+    if (object@method == "TMB") {
+        if (!is(pred_object, "list"))
             stop("Since method = 'TMB', pred_object should be a list")
-        if (is.null(pred_object$newdata)) 
+        if (is.null(pred_object$newdata))
             stop("Since method = 'TMB', pred_object should be a list with an element called newdata")
-        pred_object <- pred_object$newdata 
-    } else if (model_object@method == "EM") {
-        if(!is(pred_object, "Spatial") && !is(pred_object, "ST")) 
+        newdata <- pred_object$newdata
+    } else if (object@method == "EM") {
+        if(!is(pred_object, "Spatial") && !is(pred_object, "ST"))
             stop("Since method = 'EM', pred_object should be a Spatial*DataFrame or STFDF")
+        newdata <- pred_object
     }
-
-    ## Plot the data if it was provided
-    ## Note: I plot the data first, because I want it to be the first panel 
-    if (!is.null(zdf)) {
-        ## Extract name of response variable we wish to plot
-        response_name <- all.vars(model_object@f)[1]
-        plots <- plot_spatial_or_ST(zdf, response_name, map_layer, subset_time, ...)
-    } else {
-        plots <- list() # initialise empty list so c() works in the next line
-    }
-    
-    ## Plot the predictions and UQ 
-    plots <- c(plots, .plot_predictions_and_UQ(model_object@method, pred_object, map_layer, subset_time, plot_over_world, ...))
-    
-
-    return(plots)
-})
-
-
-.plot_predictions_and_UQ <- function(method, pred_object, map_layer = NULL, subset_time = NULL, plot_over_world = FALSE, ...) {
     
     ## Determine columns we need to plot, and which palette to use
-    if (method == "EM") {
+    if (object@method == "EM") {
         
         column_names <- c("mu", "sd")
         palette <- c("Spectral", "BrBG")
         
-    } else if (method == "TMB") {
+    } else if (object@method == "TMB") {
         
         ## Unfortunately, we don't know the value of type specified in predict().
         ## We will just check the existence of quantities using if statements. 
@@ -296,34 +278,34 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = N
         ## has specified the 5th and 95th percentiles (default).
         
         ## If the 5th and 95th percentiles are present, make a column of the interval width. 
-        if (all(c("Y_percentile_5","Y_percentile_95") %in% names(pred_object@data))) 
-            pred_object@data$interval90_Y <- pred_object$Y_percentile_95 - pred_object$Y_percentile_5 
-        if (all(c("mu_percentile_5","mu_percentile_95") %in% names(pred_object@data))) 
-            pred_object@data$interval90_mu <- pred_object@data$mu_percentile_95 - pred_object@data$mu_percentile_5 
-        if (all(c("prob_percentile_5","prob_percentile_95") %in% names(pred_object@data))) 
-            pred_object@data$interval90_prob <- pred_object@data$prob_percentile_95 - pred_object@data$prob_percentile_5 
-        if (all(c("Z_percentile_5","Z_percentile_95") %in% names(pred_object@data))) 
-            pred_object@data$interval90_Z <- pred_object@data$Z_percentile_95 - pred_object@data$Z_percentile_5 
-           
+        if (all(c("Y_percentile_5","Y_percentile_95") %in% names(newdata@data))) 
+            newdata@data$interval90_Y <- newdata$Y_percentile_95 - newdata$Y_percentile_5 
+        if (all(c("mu_percentile_5","mu_percentile_95") %in% names(newdata@data))) 
+            newdata@data$interval90_mu <- newdata@data$mu_percentile_95 - newdata@data$mu_percentile_5 
+        if (all(c("prob_percentile_5","prob_percentile_95") %in% names(newdata@data))) 
+            newdata@data$interval90_prob <- newdata@data$prob_percentile_95 - newdata@data$prob_percentile_5 
+        if (all(c("Z_percentile_5","Z_percentile_95") %in% names(newdata@data))) 
+            newdata@data$interval90_Z <- newdata@data$Z_percentile_95 - newdata@data$Z_percentile_5 
+        
         ## Determine which quantities we are actually plotting
         QOI <- c("Y", "mu", "prob", "Z") # Possible Quantities of interest
         column_names <- paste0(rep(c("p_", "RMSPE_", "interval90_"), each = length(QOI)), QOI)
         palette <- rep(c("Spectral", "BrBG", "BrBG"), each = length(QOI)) 
-        keep <- column_names %in% names(pred_object@data)
+        keep <- column_names %in% names(newdata@data)
         column_names <- column_names[keep]
         palette  <-  palette[keep] 
     }
     
-    plots <- plot_spatial_or_ST(pred_object, column_names, map_layer, subset_time, palette, plot_over_world, ...)
-
+    plots <- plot_spatial_or_ST(newdata, column_names, map_layer, subset_time, palette, plot_over_world, ...)
+    
     ## Edit labels
-    if (method == "EM") {
+    if (object@method == "EM") {
         
         ## Change from "sd" to "se" (standard error)
         plots$sd <- plots$sd + labs(fill = "se")
         names(plots)[which(names(plots) == "sd")] <- "se"
         
-    } else if (method == "TMB") {
+    } else if (object@method == "TMB") {
         
         split_column_names <- strsplit(column_names, "_")
         names(split_column_names) <- column_names
@@ -332,8 +314,15 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = N
         }
     }
     
+    ## Plot the data if it was provided 
+    if (!is.null(zdf)) {
+        ## Extract name of response variable we wish to plot
+        response_name <- all.vars(object@f)[1]
+        plots <- c(plots, plot_spatial_or_ST(zdf, response_name, map_layer, subset_time, plot_over_world, ...))
+    } 
+    
     return(plots)
-}
+})
 
 .custom_lab <- function(v) {
     # v is a vector, with first entry indicating the type of plot we are making a 
@@ -363,7 +352,7 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = N
 }
 
 #' Plot data from a Spatial*DataFrame or STFDF object
-#' @param object a Spatial*DataFrame or STFDF
+#' @param sp_or_ST_DF an object of class Spatial*DataFrame or STFDF
 #' @param column_names a vector of strings indicating the columns of the data to plot
 #' @param map_layer (optional) a \code{ggplot} layer or object to add below the plotted layer, often a map
 #' @param subset_time (optional) a vector of times to be included; applicable only for \code{STFDF} objects
@@ -375,18 +364,18 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = N
 #' @export
 #' @examples 
 #' ## See example in the help file for SRE
-plot_spatial_or_ST <- function(object, column_names,  map_layer = NULL, 
+plot_spatial_or_ST <- function(sp_or_ST_DF, column_names,  map_layer = NULL, 
                                subset_time = NULL, palette = "Spectral", 
                                plot_over_world = FALSE, ...) {
     
-    if (!is(object, "Spatial") && !is(object, "STFDF")) 
-        stop("object should be a Spatial*DataFrame or STFDF")
+    if (!is(sp_or_ST_DF, "Spatial") && !is(sp_or_ST_DF, "STFDF")) 
+        stop("sp_or_ST_DF should be a Spatial*DataFrame or STFDF")
     
     ## Get the coordinate names 
-    coord_names <- coordnames(object)
+    coord_names <- coordnames(sp_or_ST_DF)
     
     ## Remove the coordinate corresponding to time. coord_names is just spatial.
-    if(is(object, "ST")) {
+    if(is(sp_or_ST_DF, "ST")) {
         time_name <- coord_names[3]
         coord_names <- coord_names[1:2]
     } else {
@@ -396,8 +385,8 @@ plot_spatial_or_ST <- function(object, column_names,  map_layer = NULL,
     if (length(coord_names) != 2) 
         stop("plot() only implemented for the 2D space")
     
-    ## Classify the kind of spatial data we have, and convert object to a data.frame
-    tmp <- .classify_sp_and_convert_to_df(object)
+    ## Classify the kind of spatial data we have, and convert sp_or_ST_DF to a data.frame
+    tmp <- .classify_sp_and_convert_to_df(sp_or_ST_DF)
     df      <- tmp$df
     sp_type <- tmp$sp_type
 
@@ -433,8 +422,6 @@ plot_spatial_or_ST <- function(object, column_names,  map_layer = NULL,
         }
     )
 
-    
-    
     names(plots) <- column_names
     return(plots)
 }
@@ -483,32 +470,32 @@ plot_spatial_or_ST <- function(object, column_names,  map_layer = NULL,
 }
 
 
-.classify_sp_and_convert_to_df <- function(object) {
+.classify_sp_and_convert_to_df <- function(sp_or_ST_DF) {
     
-    ## NB: I don't use is() because is(object, "SpatialPointsDataFrame") returns 
-    ## TRUE when class(object) == "SpatialPixelsDataFrame"
-    if (class(object) == "SpatialPointsDataFrame") {
-        df <- data.frame(object)
+    ## NB: I don't use is() because is(sp_or_ST_DF, "SpatialPointsDataFrame") returns 
+    ## TRUE when class(sp_or_ST_DF) == "SpatialPixelsDataFrame"
+    if (class(sp_or_ST_DF) == "SpatialPointsDataFrame") {
+        df <- data.frame(sp_or_ST_DF)
         sp_type <- "points"
-    } else if (class(object) == "SpatialPixelsDataFrame") {
-        df <- data.frame(object)
+    } else if (class(sp_or_ST_DF) == "SpatialPixelsDataFrame") {
+        df <- data.frame(sp_or_ST_DF)
         sp_type <- "pixels"
-    } else if (class(object) == "SpatialPolygonsDataFrame") {
-        df <- .SpatialPolygonsDataFrame_to_df(object)
+    } else if (class(sp_or_ST_DF) == "SpatialPolygonsDataFrame") {
+        df <- .SpatialPolygonsDataFrame_to_df(sp_or_ST_DF)
         sp_type <- "polygons"
-    } else if (class(object) == "STIDF") {
+    } else if (class(sp_or_ST_DF) == "STIDF") {
         stop("Plotting of STIDF not yet implemented.")
-        df <- data.frame(object)
+        df <- data.frame(sp_or_ST_DF)
         sp_type <- "points"
-    } else if (class(object) == "STFDF") {
-        if (is(object@sp, "SpatialPolygons")) {
+    } else if (class(sp_or_ST_DF) == "STFDF") {
+        if (is(sp_or_ST_DF@sp, "SpatialPolygons")) {
             sp_type <- "polygons"
-        } else if (is(object@sp, "SpatialPixels")) {
+        } else if (is(sp_or_ST_DF@sp, "SpatialPixels")) {
             sp_type <- "pixels"
         }
-        df <- STFDF_to_df(object) 
+        df <- STFDF_to_df(sp_or_ST_DF) 
     } else {
-        stop("Class of object is not recognised.")
+        stop("Class of sp_or_ST_DF is not recognised.")
     }
     
     ## Remove duplicate columns (can sometimes happen when we convert the Spatial* 
