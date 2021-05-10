@@ -318,7 +318,7 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = N
     if (!is.null(zdf)) {
         ## Extract name of response variable we wish to plot
         response_name <- all.vars(object@f)[1]
-        plots <- c(plots, plot_spatial_or_ST(zdf, response_name, map_layer, subset_time, plot_over_world, ...))
+        plots <- c(plots, plot_spatial_or_ST(zdf, response_name, map_layer, subset_time,  palette, plot_over_world, ...))
     } 
     
     return(plots)

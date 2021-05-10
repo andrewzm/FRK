@@ -987,8 +987,6 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   Z       <- as.vector(object@Z)         
   k_Z     <- object@k_Z       
   k_BAU_O <- object@k_BAU_O 
-  m       <- nrow(C_O)
-  mstar   <- ncol(C_O)
   
   ## Create the relevant link functions. When a probability parameter is 
   ## present in a model and the link-function is appropriate for modelling 
@@ -1023,39 +1021,9 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   ## First, we estime mu_Z with the (adjusted) data
   mu_Z <- Z0
   
-  ## Construct mu_O from mu_Z
-  if (object@response %in% c("binomial", "negative-binomial")) {
-    ## Need to split mu_Z up based on the size parameter associated with each BAU
-    mu_O <- numeric(mstar)
-    for (x in 1:m) { # for each observation
-      ## Find the BAU indices associated with mu_Z[x]
-      idx <- which((C_O@i+1) == x)
-      for (j in idx) # fill in the corresponding mu_O
-        mu_O[j] <- (k_BAU_O[j] / sum(k_BAU_O[idx])) * mu_Z[x]
-    }
-    ## Sanity check: any(mu_O > k_BAU_O)
-  } else {
-    ## Use Moores-Penrose inverse to "solve" C_O mu_O = mu_Z. 
-    ## NB: if C_O is m x m*, then Cp is m* x m.
-    
-    if (suppressWarnings(rankMatrix(C_O, method = 'qr') == min(dim(C_O)))) { 
-      ## if C_O is full rank, simple algebraic forms for Moores-Penrose inverse exist
-      if (m == mstar) {
-        # Cp <- solve(C_O) # This caused an error
-        mu_O <- solve(C_O, mu_Z)
-      } else if (m < mstar) {
-        Cp <- t(C_O) %*% solve(C_O %*% t(C_O)) 
-      } else if (m > mstar) {
-        Cp <- solve(t(C_O) %*% C_O) %*% t(C_O)  
-      } 
-    } else {
-      ## Use rank-deficient computation of Moores-Penrose inverse 
-      Cp <- VCA::MPinv(C_O) 
-      Cp <- as(Cp, "dgCMatrix") 
-    }
-    if (exists("Cp"))
-      mu_O <- as.vector(Cp %*% mu_Z)
-  }
+
+  ## Use mu_Z to construct mu_O
+  mu_O <- .compute_mu_O(object, C_O, mu_Z)
   
   ## For some link functions, mu_0 = 0 causes NaNs; set these to a small positive value.
   ## The size parameter being 0 also causes NaNs.
@@ -1071,6 +1039,60 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   } else {
     Y_O <- g(mu_O)
   } 
+  
+  return(Y_O)
+}
+
+.simple_interpolation <- function(w, Z) {
+  interpolated_Z <- w / sum(w) * Z
+  return(interpolated_Z)
+}
+
+.compute_mu_O <- function(object, C_O, mu_Z) {
+  
+  m       <- nrow(C_O)
+  mstar   <- ncol(C_O)
+  
+  mu_O <- vector(mode = "list", length = mstar)
+  for (Bj in 1:m) {        # for each observation (obs.) j
+
+    ## If the data is bin. or neg.-bin., use the BAU level size parameters to 
+    ## interpolate mu_O from mu_Z. (Note that this step is the reason why we enforce
+    ## the weights of the incidence matrix to be 1 if the data is bin. or neg.-bin.)
+    ## Otherwise, just use the elements (weights) of C_Z to interpolate mu_O from mu_Z.
+    if (object@response %in% c("binomial", "negative-binomial")) {
+      ## NB: THIS CODE ASSUMES THAT WE DO NOT HAVE OVERLAPPING DATA SUPPORTS 
+      ## Original code:
+      idx <- which((C_O@i+1) == Bj) # find the BAU indices associated with obs. j
+      w   <- object@k_BAU_O[idx]
+      
+      # ## Code to try and replicate the rest of the framework
+      # idx <- which(C_O[Bj, ] > 0)         # find the BAU indices associated with obs. j
+      # w   <- object@BAUs$k_BAU[idx] # NO: WE DONT NECESSARILY HAVE k_BAU
+    } else {
+      w_j <- C_O[Bj, ]              # extract the incidence matrix weights for obs. j
+      idx <- which(w_j > 0)         # find the BAU indices associated with obs. j
+      w   <- w_j[idx]
+    }
+
+    ## Interpolate mu_Z[j] to each BAU associated with obs. j
+    mu_O_j <- .simple_interpolation(w = w, Z = mu_Z[Bj])  
+    for (i in 1:length(idx)) {  # for each BAU associated with obs. j,
+      mu_O[[idx[i]]] <- c(mu_O[[idx[i]]], mu_O_j[i]) # assign mu_O_j[i] to BAU i
+    }
+  }
+  
+  ## If we have overlapping data supports, some entries in the list mu_O will 
+  ## have a length greater than 1. If the data is bin. or neg.-bin., take the 
+  ## minimum for each entry, because we must have mu_O[i] <= k_BAU_O[i] for all 
+  ## i = 1...N. Otherwise, just take the average. 
+  if (object@response %in% c("binomial", "negative-binomial")) {
+    mu_O <- sapply(mu_O, min)
+  } else {
+    mu_O <- sapply(mu_O, mean)
+  }
+  
+  return(mu_O)
 }
 
 .TMB_data_prep <- function (object, sigma2fs_hat, K_type, taper, C_O, X_O, S_O) {
@@ -1137,7 +1159,6 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     }
   } 
 
-  
   ## Create a data entry of sigma2fs_hat (one that will stay constant if we are 
   ## not estimating sigma2fs within TMB)
   data$sigma2fs_hat <- sigma2fs_hat
@@ -1154,9 +1175,6 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
       cat("Some (but not all) observations are associated with multiple BAUs. Estimation of the fine-scale variance parameter will be done using TMB, but note that there should be a reasonable number of fine unit observations so that TMB can get a handle of the fine-scale variance parameter.\n")
   } 
   
-  
-  
   data$include_fs   <- as.integer(object@include_fs)
-  
   return(data)
 }

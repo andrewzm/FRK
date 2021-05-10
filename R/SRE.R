@@ -423,10 +423,12 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     ## If any observations are associated with multiple BAUs, 
     ## we require the size parameter in a field of the BAUs;
     ## otherwise, we just use the observation size parameters.
+    ## NB: THIS CODE ASSUMES THAT WE DO NOT HAVE OVERLAPPING DATA SUPPORTS 
     num_BAUs_each_data_support <- table(as(Cmat, "dgTMatrix")@i)
     if (!all(num_BAUs_each_data_support == 1)) {
-      if (!("k_BAU" %in% names(BAUs))) stop("When dealing with binomial or negative-binomial data, and some data supports are associated with multiple BAUs (e.g., areal data), the size parameter must be provided in the BAUs objects, in a field named 'k_BAU'.") 
-      k_BAU_O <- BAUs$k_BAU[obsidx]
+      if (!("k_BAU" %in% names(BAUs))) 
+        stop("When dealing with binomial or negative-binomial data, and some data supports are associated with multiple BAUs (e.g., areal data), the size parameter must be provided in the BAUs objects, in a field named 'k_BAU'.") 
+      k_BAU_O <- BAUs$k_BAU[obsidx] 
     } else {
       ## Note that we have to re-order the observation size parameters, so that element i
       ## of k_Z is associated with the same BAU as element i of k_BAU_O;
