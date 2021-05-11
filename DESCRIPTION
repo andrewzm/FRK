@@ -52,7 +52,6 @@ Imports:
     stats,
     TMB, 
     utils,
-    VCA, 
     ggpubr, 
     reshape2, 
     scales

@@ -38,7 +38,6 @@
 #' @importFrom stats .getXlevels coefficients dist kmeans lm median model.extract model.frame model.matrix na.fail optim runif sd terms var time rnorm formula nlminb pnorm qnorm quantile rbinom rgamma rnbinom rpois
 #' @importFrom utils data
 #' @importFrom statmod rinvgauss
-#' @importFrom VCA MPinv
 #' @importFrom stats as.formula
 #' @importFrom scales scientific
 #' @importFrom ggpubr ggarrange
