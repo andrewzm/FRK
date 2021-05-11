@@ -220,46 +220,31 @@ setGeneric("remove_basis", function(Basis,rmidx)
 
 
 
-# #' @title Observed (or unobserved) BAUs
-# #' @description Computes the indices (a numeric vector) of the observed (or unobserved) BAUs
-# #' @param object object of class \code{SRE}
+#' @title Observed (or unobserved) BAUs
+#' @description Computes the indices (a numeric vector) of the observed (or unobserved) BAUs
+#' @param object object of class \code{SRE}
+#' @seealso See \code{\link{FRK}} for more information on the SRE model and available fitting methods.
+#' @examples 
+#' # See example in the help file for FRK
 #' @export
 setGeneric("observed_BAUs", function(object)
     standardGeneric("observed_BAUs"))
 
-# #' @rdname observed_BAUs
+#' @rdname observed_BAUs
 #' @export
 setGeneric("unobserved_BAUs", function(object)
     standardGeneric("unobserved_BAUs"))
 
-## #' @title Retrieve fit information for SRE model
-## #' @description Takes an object of class \code{SRE} and returns a list containing all the relevant information on parameter estimation
-## #' @param object object of class \code{SRE}
-## #' @seealso See \code{\link{SRE}} for more information on the SRE model and available fitting methods.
-## #' @examples
-## #' # See example in the help file for SRE
+#' @title Retrieve fit information for SRE model
+#' @description Takes an object of class \code{SRE} and returns a list containing all the relevant information on parameter estimation
+#' @param object object of class \code{SRE}
+#' @seealso See \code{\link{FRK}} for more information on the SRE model and available fitting methods.
+#' @examples
+#' # See example in the help file for FRK
 #' @export
 setGeneric("info_fit", function(object)
     standardGeneric("info_fit"))
 
-# #' @title Retrieve estimated regression coefficients
-# #' @description Takes an object of class \code{SRE} and returns a numeric vector with the estimated regression coefficients.
-# #' @param object object of class \code{SRE}
-# #' @param ... currently unused
-# #' @export
-# #' @seealso \code{\link{SRE}} for more information on how to construct and fit an SRE model.
-# #' @examples
-# #' library(sp)
-# #' simdata <- SpatialPointsDataFrame(
-# #'                coords = matrix(runif(100), 50, 2),
-# #'                 data = data.frame(z = rnorm(50)))
-# #' BAUs <- BAUs_from_points(SpatialPoints(simdata))
-# #' BAUs$fs <- 1
-# #' S <- SRE(f = z ~ 1 + coords.x1,
-# #'          basis = local_basis(plane()),
-# #'          BAUs = BAUs,
-# #'          data = list(simdata))
-# #' est_reg_coeff <- coef(S)
 #' @export
 setGeneric("coef", function(object)
     standardGeneric("coef"))
@@ -268,8 +253,14 @@ setGeneric("coef", function(object)
 setGeneric("predict", function(object, ...)
     standardGeneric("predict"))
 
+#' @title Retrieve log-likelihood
+#' @description Takes an object of class \code{SRE} and returns the log-likelihood function.
+#' @param object object of class \code{SRE}
 #' @export
-setGeneric("loglik", function(object, ...)
+#' @seealso \code{\link{FRK}} for more information on how to construct and fit an SRE model, and other available methods for an object of class SRE.
+#' @examples
+#' # See example in the help file for FRK
+setGeneric("loglik", function(object)
     standardGeneric("loglik"))
 
 

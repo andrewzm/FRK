@@ -6,10 +6,6 @@
 \alias{SRE}
 \alias{SRE.fit}
 \alias{predict,SRE-method}
-\alias{loglik,SRE-method}
-\alias{observed_BAUs,SRE-method}
-\alias{unobserved_BAUs,SRE-method}
-\alias{info_fit,SRE-method}
 \alias{coef,SRE-method}
 \title{Construct SRE object, fit and predict}
 \usage{
@@ -88,14 +84,6 @@ SRE.fit(
   percentiles = c(5, 95),
   kriging = "simple"
 )
-
-\S4method{loglik}{SRE}(object)
-
-\S4method{observed_BAUs}{SRE}(object)
-
-\S4method{unobserved_BAUs}{SRE}(object)
-
-\S4method{info_fit}{SRE}(object)
 
 \S4method{coef}{SRE}(object, ...)
 }

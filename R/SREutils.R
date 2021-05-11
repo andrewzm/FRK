@@ -1,4 +1,4 @@
-#' @rdname SRE
+#' @rdname loglik
 #' @export
 setMethod("loglik", signature="SRE", function(object) {
   # This is structured this way so that extra models for fs-variation
@@ -12,8 +12,7 @@ setMethod("loglik", signature="SRE", function(object) {
   }
 })
 
-# #' @rdname observed_BAUs
-#' @rdname SRE
+#' @rdname observed_BAUs
 #' @export
 setMethod("observed_BAUs", signature(object = "SRE"), function (object) {
   return(object@obsidx)
@@ -27,8 +26,7 @@ setMethod("observed_BAUs", signature(object = "SRE"), function (object) {
   return(unique(as(Cmat, "dgTMatrix")@j) + 1)
 }
 
-# #' @rdname observed_BAUs
-#' @rdname SRE
+#' @rdname observed_BAUs
 #' @export
 setMethod("unobserved_BAUs",signature(object = "SRE"), function (object) {
   ## ncol(object@Cmat) is the total number of BAUs:
@@ -46,7 +44,7 @@ print.SRE <- function(x,...) {
     basis_class = class(x@basis)[1],
     nBAUs = length(x@BAUs),
     nobs = length(x@Z),
-    mean_obsvar = mean(x@Ve@x), # FIXME: @
+    mean_obsvar = mean(x@Ve@x), 
     fs_var = x@sigma2fshat,
     dimC = deparse(dim(x@Cmat)),
     dimS = deparse(dim(x@S)),
@@ -88,14 +86,12 @@ summary.SRE <- function(object,...) {
 setMethod("summary",signature(object="SRE"),summary.SRE)
 
 ## Set method for retrieving info_fit
-## #' @rdname info_fit
-#' @rdname SRE
+#' @rdname info_fit
 #' @export
 setMethod("info_fit", signature(object = "SRE"),
           function(object) {object@info_fit})
 
 # Retrieve coefficients of SRE model
-# #' @rdname coef
 #' @rdname SRE
 #' @export 
 setMethod("coef",signature(object = "SRE"),function(object,...) {
