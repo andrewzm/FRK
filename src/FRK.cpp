@@ -58,8 +58,8 @@ Type objective_function<Type>::operator() ()
   DATA_STRING(K_type);        // Indicates the desired model formulation of eta prior (K or Q)
   DATA_STRING(response);      // String specifying the response distribution
   DATA_STRING(link);          // String specifying the link function
-  DATA_VECTOR(BAUs_fs);        // Vector of weights that account for fine-scale heteroskedasticity
-  DATA_VECTOR(k_BAU_O);         // Known size parameter at the BAU level (only relevant for negative-binomial and binomial)
+  DATA_VECTOR(BAUs_fs);       // Vector of weights that account for fine-scale heteroskedasticity
+  DATA_VECTOR(k_BAU_O);       // Known size parameter at the BAU level (only relevant for negative-binomial and binomial)
   DATA_VECTOR(k_Z);           // Known size parameter at the DATA support level (only relevant for negative-binomial and binomial)
   DATA_INTEGER(temporal);     // Boolean indicating whether we are in space-time or not (1 if true, 0 if false)
   

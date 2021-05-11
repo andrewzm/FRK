@@ -1048,6 +1048,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   
   m       <- nrow(C_O)
   mstar   <- ncol(C_O)
+  observed_BAUs <- object@BAUs[object@obsidx,]
   
   mu_O <- vector(mode = "list", length = mstar)
   for (Bj in 1:m) {        # for each observation (obs.) j
@@ -1057,14 +1058,17 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     ## the weights of the incidence matrix to be 1 if the data is bin. or neg.-bin.)
     ## Otherwise, just use the elements (weights) of C_Z to interpolate mu_O from mu_Z.
     if (object@response %in% c("binomial", "negative-binomial")) {
-      ## Original code:
-      ## NB: THIS CODE ASSUMES THAT WE DO NOT HAVE OVERLAPPING DATA SUPPORTS 
-      idx <- which((C_O@i+1) == Bj) # find the BAU indices associated with obs. j
-      w_j <- object@k_BAU_O[idx]
+      # ## Original code:
+      # ## NB: THIS CODE ASSUMES THAT WE DO NOT HAVE OVERLAPPING DATA SUPPORTS 
+      # idx <- which((C_O@i+1) == Bj) # find the BAU indices associated with obs. j
+      # w_j <- object@k_BAU_O[idx]
       
       # ## Code to try and replicate the rest of the framework
-      # idx <- which(C_O[Bj, ] > 0)         # find the BAU indices associated with obs. j
-      # w   <- object@BAUs$k_BAU[idx] # NO: WE DONT NECESSARILY HAVE BAUs$k_BAU. Need to use object@k_BAU_O
+      idx <- which(C_O[Bj, ] > 0)         # find the BAU indices associated with obs. j
+      # idx <- which(object@Cmat[Bj, ] > 0) # find the BAU indices associated with obs. j
+      # w_j <- object@BAUs$k_BAU[idx]
+      w_j <- observed_BAUs$k_BAU[idx]
+      
     } else {
       w_j <- C_O[Bj, ]              # extract the incidence matrix weights for obs. j
       idx <- which(w_j > 0)         # find the BAU indices associated with obs. j
@@ -1087,6 +1091,8 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   } else {
     mu_O <- sapply(mu_O, mean)
   }
+  
+  browser()
   
   return(mu_O)
 }

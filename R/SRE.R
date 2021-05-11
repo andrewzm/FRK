@@ -260,14 +260,15 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   
   ## When the response has a size parameter, restrict the incidence matrices 
   ## (Cz and Cp) to represent simple sums only. This behaviour is kept vague
-  ## in the paper, but perhaps a warning should be thrown to notify users.
+  ## in the paper, but a note is provided to the user.
   ## Also enforce average_in_BAU = TRUE for simplicity.
   if (response %in% c("binomial", "negative-binomial")) {
     normalise_wts <- FALSE # Set to FALSE so that Cz represents an aggregation of the mean
     BAUs$wts <- 1
     average_in_BAU <- TRUE
+    cat("You have selected a response distribution that has an associated size parameter. For simplicity, we enforce the elements of the incidence matrices (C_Z and C_P in the paper) to be 1, and average_in_BAU = TRUE.\n")
   }
-  
+
   ## Check that the arguments are OK
   .check_args1(f = f, data = data, basis = basis, BAUs = BAUs, est_error = est_error, 
                response = response, link = link, K_type = K_type, 
@@ -401,12 +402,12 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   } else stop("No other fs-model implemented yet")
   
   ## Now concatenate the matrices obtained from all the observations together
-  S <- do.call("rbind",S)
-  X <- do.call("rbind",X)
+  S    <- do.call("rbind",S)
+  X    <- do.call("rbind",X)
   Cmat <- do.call("rbind",Cmat)
-  Z <- do.call("rbind",Z)
-  Ve <- do.call("bdiag",Ve)
-  Vfs <- do.call("bdiag",Vfs)
+  Z    <- do.call("rbind",Z)
+  Ve   <- do.call("bdiag",Ve)
+  Vfs  <- do.call("bdiag",Vfs)
   
   ## Indices of observed BAUs
   obsidx <- .observed_BAUs_from_Cmat(Cmat)
@@ -429,10 +430,18 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
       ## Note that we have to re-order the observation size parameters, so that element i
       ## of k_Z is associated with the same BAU as element i of k_BAU_O;
       ## Cmat@i contains the index of the observation associated with BAU Cmat@j
-      k_BAU_O <- k_Z[as(Cmat, "dgTMatrix")@i + 1]
+      tmp <- as(Cmat, "dgTMatrix")
+      k_BAU_O <- k_Z[tmp@i + 1]
+      
+      ## If all observations are associated with exactly one BAU, we can assign
+      ## the data level size parameter (k_Z) to the BAU object. Note that it is 
+      ## OK if non-observed BAUs do not have a size parameter. 
+      BAUs@data[tmp@j + 1, "k_BAU"] <- k_BAU_O
     }
-    
-    if (any(is.na(k_BAU_O))) stop("The size parameter is required at all observed BAUs")
+
+    if (any(is.na(k_BAU_O))) 
+      stop("The size parameter is required at all observed BAUs")
+
   } 
   
   ## If we are estimating a unique fine-scale variance at each spatial BAU, 

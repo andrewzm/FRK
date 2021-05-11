@@ -112,8 +112,8 @@
       stop("For binomial or negative-binomial data, the known constant size parameter must be provided for each observation. Please provide this in the data object, in a field called 'k_Z'.")
     } else if (!all(sapply(data, function(l) class(l$k_Z) %in% c("numeric", "integer")))) {
       stop("The known constant size parameter must contain only positive integers.")
-    } else if (any(sapply(data, function(l) l$k_Z <= 0)) | 
-               !all(sapply(data, function(l) l$k_Z == round(l$k_Z)))) {
+    } else if (any(sapply(data, function(l) any(l$k_Z <= 0))) | 
+               !all(sapply(data, function(l) all(l$k_Z == round(l$k_Z))))) {
       stop("The known constant size parameter must contain only positive integers.")
     }
   } else {
