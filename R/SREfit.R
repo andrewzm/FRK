@@ -1043,10 +1043,6 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   return(Y_O)
 }
 
-.simple_interpolation <- function(w, Z) {
-  interpolated_Z <- w / sum(w) * Z
-  return(interpolated_Z)
-}
 
 .compute_mu_O <- function(object, C_O, mu_Z) {
   
@@ -1061,22 +1057,22 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     ## the weights of the incidence matrix to be 1 if the data is bin. or neg.-bin.)
     ## Otherwise, just use the elements (weights) of C_Z to interpolate mu_O from mu_Z.
     if (object@response %in% c("binomial", "negative-binomial")) {
-      ## NB: THIS CODE ASSUMES THAT WE DO NOT HAVE OVERLAPPING DATA SUPPORTS 
       ## Original code:
+      ## NB: THIS CODE ASSUMES THAT WE DO NOT HAVE OVERLAPPING DATA SUPPORTS 
       idx <- which((C_O@i+1) == Bj) # find the BAU indices associated with obs. j
-      w   <- object@k_BAU_O[idx]
+      w_j <- object@k_BAU_O[idx]
       
       # ## Code to try and replicate the rest of the framework
       # idx <- which(C_O[Bj, ] > 0)         # find the BAU indices associated with obs. j
-      # w   <- object@BAUs$k_BAU[idx] # NO: WE DONT NECESSARILY HAVE k_BAU
+      # w   <- object@BAUs$k_BAU[idx] # NO: WE DONT NECESSARILY HAVE BAUs$k_BAU. Need to use object@k_BAU_O
     } else {
       w_j <- C_O[Bj, ]              # extract the incidence matrix weights for obs. j
       idx <- which(w_j > 0)         # find the BAU indices associated with obs. j
-      w   <- w_j[idx]
+      w_j <- w_j[idx]
     }
 
     ## Interpolate mu_Z[j] to each BAU associated with obs. j
-    mu_O_j <- .simple_interpolation(w = w, Z = mu_Z[Bj])  
+    mu_O_j <- w_j / sum(w_j) * mu_Z[Bj] 
     for (i in 1:length(idx)) {  # for each BAU associated with obs. j,
       mu_O[[idx[i]]] <- c(mu_O[[idx[i]]], mu_O_j[i]) # assign mu_O_j[i] to BAU i
     }
@@ -1162,8 +1158,8 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   ## Create a data entry of sigma2fs_hat (one that will stay constant if we are 
   ## not estimating sigma2fs within TMB)
   data$sigma2fs_hat <- sigma2fs_hat
-  ## Only estimate sigma2fs if all the observations are associated with exactly 
-  ## one BAU; otherwise, we must fix sigma2fs, or else TMB will explode.
+  ## fix sigma2fs during model fitting if all observations are associated with multiple
+  ## BAUs, as TMB will explode if we don't. Otherwise, just estimate it with TMB.
   if (!any(tabulate(object@Cmat@i + 1) == 1)) {
     cat("There no observations are associated with a single BAU (i.e., all observations are associated with multiple BAUs). This makes the fine-scale variance parameter very difficult to estimate, so we will estimate it offline and fix for the remainder of model fitting; this estimate may be inaccurate.\n")
     data$fix_sigma2fs <- as.integer(1)

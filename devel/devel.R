@@ -58,7 +58,8 @@ setClass("SRE2",representation(data="list",
 #' @param BAUs object of class \code{SpatialPolygonsDataFrame}, the data frame which must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality. If the function \code{FRK} is used directly, then BAUs are created automatically but only coordinates can then be used as covariates
 #' @param est_error flag indicating whether the measurement-error variance should be estimated from variogram techniques. If this is set to 0, then \code{data} must contain a field \code{std}. Measurement-error estimation is not implemented for spatio-temporal datasets
 #' @param average_in_BAU if \code{TRUE}, then multiple data points falling in the same BAU are averaged; the measurement error of the averaged data point is taken as the average of the individual measurement errors
-#' @param fs_model if "ind" then the fine-scale variation is independent at the BAU level. If "ICAR", then an ICAR model is placed on the BAUs
+#' @param fs_model if "ind" then the fine-scale variation is independent at the BAU level. Currently only "ind" is supported
+# #' If "ICAR", then an ICAR model is placed on the BAUs. 
 #' @param SRE_model object returned from the constructor \code{SRE()}
 #' @param n_EM maximum number of iterations for the EM algorithm
 #' @param tol convergence tolerance for the EM algorithm

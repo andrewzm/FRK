@@ -251,6 +251,7 @@
   
   if(!(is.integer(pred_time) | is.null(pred_time))) stop("pred_time needs to be of class integer")
   if(!is.logical(covariances)) stop("covariances needs to be TRUE or FALSE")
+  if(covariances && object@method == "TMB") stop("covariances not implemented for method = 'TMB'")
   
   ## Quantities of interest
   if(!all(type %in% c("link", "mean", "response")))

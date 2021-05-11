@@ -116,7 +116,7 @@ SRE.fit(
 
 \item{normalise_wts}{if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)}
 
-\item{fs_model}{if "ind" then the fine-scale variation is independent at the BAU level. If "ICAR", then an ICAR model for the fine-scale variation is placed on the BAUs}
+\item{fs_model}{if "ind" then the fine-scale variation is independent at the BAU level. Only the independent model is allowed for now, future implementation will include CAR/ICAR (in development)}
 
 \item{vgm_model}{(applicable only if \code{response} = "gaussian") an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm}. This object contains the variogram model that will be fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified, the variogram used is \code{gstat::vgm(1, "Lin", d, 1)}, where \code{d} is approximately one third of the maximum distance between any two data points}
 
@@ -158,7 +158,7 @@ SRE.fit(
 
 \item{pred_time}{vector of time indices at which prediction will be carried out. All time points are used if this option is not specified}
 
-\item{covariances}{logical variable indicating whether prediction covariances should be returned or not. If set to \code{TRUE}, a maximum of 4000 prediction locations or polygons are allowed}
+\item{covariances}{(applicable only for \code{method} = "EM") logical variable indicating whether prediction covariances should be returned or not. If set to \code{TRUE}, a maximum of 4000 prediction locations or polygons are allowed}
 
 \item{n_MC}{(applicable only if \code{method} = "TMB") a positive integer indicating the number of MC samples at each location}
 

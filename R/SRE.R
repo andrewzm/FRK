@@ -27,7 +27,8 @@
 #' @param sum_variables if \code{average_in_BAU == TRUE}, the string \code{sum_variables} indicates which data variables (can be observations or covariates) are to be summed rather than averaged
 #' @param normalise_wts if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)
 #' @param fs_by_spatial_BAU (applicable only in a spatio-temporal setting and if \code{method} = "TMB") if \code{TRUE}, then each spatial BAU is associated with its own fine-scale variance parameter; otherwise, a single fine-scale variance parameter is used
-#' @param fs_model if "ind" then the fine-scale variation is independent at the BAU level. If "ICAR", then an ICAR model for the fine-scale variation is placed on the BAUs
+#' @param fs_model if "ind" then the fine-scale variation is independent at the BAU level. Only the independent model is allowed for now, future implementation will include CAR/ICAR (in development)
+# #' If "ICAR", then an ICAR model for the fine-scale variation is placed on the BAUs
 #' @param vgm_model (applicable only if \code{response} = "gaussian") an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm}. This object contains the variogram model that will be fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified, the variogram used is \code{gstat::vgm(1, "Lin", d, 1)}, where \code{d} is approximately one third of the maximum distance between any two data points
 #' @param K_type the parameterisation used for the basis-function covariance matrix, \code{K}. If \code{method} = "EM", \code{K_type} can be "unstructured" or "block-exponential". If \code{method} = "TMB", \code{K_type} can be "precision" or "block-exponential". The default is "block-exponential", however if \code{FRK()} is used and \code{method} = "TMB", for computational reasons \code{K_type} is set to "precision"
 #' @param normalise_basis flag indicating whether to normalise the basis functions so that they reproduce a stochastic process with approximately constant variance spatially
@@ -41,7 +42,7 @@
 #' @param newdata object of class \code{SpatialPoylgons}, \code{SpatialPoints}, or \code{STI}, indicating the regions or points over which prediction will be carried out. The BAUs are used if this option is not specified. 
 #' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error; indicated by \code{obs_fs = TRUE}) or in the process model (process fine-scale variation; indicated by \code{obs_fs = FALSE}, default). For non-Gaussian data models, and/or non-identity link functions, if \code{obs_fs = TRUE}, then the fine-scale variation is removed from the latent process \eqn{Y}; however, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}
 #' @param pred_time vector of time indices at which prediction will be carried out. All time points are used if this option is not specified
-#' @param covariances logical variable indicating whether prediction covariances should be returned or not. If set to \code{TRUE}, a maximum of 4000 prediction locations or polygons are allowed
+#' @param covariances (applicable only for \code{method} = "EM") logical variable indicating whether prediction covariances should be returned or not. If set to \code{TRUE}, a maximum of 4000 prediction locations or polygons are allowed
 #' @param response string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "negative-binomial", "binomial", "gamma", or "inverse-gaussian". If \code{method} = "EM", only "gaussian" can be used
 #' @param link  string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted. If \code{method} = "EM", only "identity" can be used
 #' @param taper positive numeric indicating the strength of the covariance/partial-correlation tapering. Only applicable if \code{K_type} = "block-exponential", or if \code{K_type} = "precision" and the the basis-functions are irregular or the manifold is not the plane. If \code{taper} is \code{NULL} (default) and \code{method} = "EM", no tapering is applied; if \code{method} = "TMB", tapering must be applied (for computational reasons), and we set it to 3 if it is unspecified
@@ -383,11 +384,6 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     
     ## Only the independent model is allowed for now, future implementation will include CAR/ICAR (in development)
     if(fs_model == "ind") {
-      ## FIXME: Originally, Cmat was constructed to have only 1's appear in the non-zero elements,
-      ## To accomodate for non-equally weighted BAUs, Cmat now has non-zero elements
-      ## If we want to retain the old functionality, just use:
-      # tmp <- Cmat[[i]]; tmp@x <- rep(1, length(tmp@x))
-      # Vfs[[i]] <- tcrossprod(tmp %*% Diagonal(x=sqrt(BAUs$fs)))
       Vfs[[i]] <- tcrossprod(Cmat[[i]] %*% Diagonal(x=sqrt(BAUs$fs)))
     } else stop("No other fs-model implemented yet")
     

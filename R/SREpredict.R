@@ -456,10 +456,16 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   ## Percentiles 
   newdata@data <- .concat_percentiles_to_df(newdata@data, MC = MC, percentiles = percentiles)
   
-  ## FIXME: need to implement pred_time, which indicates the time 
-  ## indices to predict over. See how the EM side does it.
-  if (is(M@basis,"TensorP_Basis")) {
-    newdata$t <- M@BAUs@data$t
+  ## subset based on pred_time
+  if(!is.null(pred_time)) {
+    browser()
+    newdata <- newdata[,pred_time]  # return only specified time points
+    ## Also need to subset the Monte Carlo samples. Only do this if t is present 
+    ## in the data; otherwise, don't worry about it, as the user can just do it manually.
+    if (!is.null(newdata@data$t)) {
+      idx <- which(newdata@data$t %in% pred_time)
+      MC <- lapply(MC, function(X) X[idx, ])
+    }
   }
   
   # ## It is convenient to have the spatial coordinates in the @data slot of the
