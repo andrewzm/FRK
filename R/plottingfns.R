@@ -231,37 +231,33 @@ EmptyTheme <- function() {
     return(worldmap)                                             # return fixed world map
 }
 
-#' Plot predictions from FRK analysis. 
-#' 
-#' 
-# #' @rdname SRE
-#' @param x an object of class \code{SRE} 
-#' @param y the result of calling \code{predict()} on an \code{SRE} object 
-#' @param zdf a \code{data.frame}, \code{SpatialPointsDataFrame}, or \code{SpatialPolygonsDataFrame} containing the observations
-#' @inheritParams plot_spatial_or_ST
-#' @return a list of \code{ggplot} objects consisting of the observed data, predictions, and standard errors. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.
-#' @seealso \code{\link{plot_spatial_or_ST}}
-#' @export
-#' @examples 
-#' ## See example in the help file for SRE
-setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = NULL, subset_time = NULL, plot_over_world = FALSE, ...) {
+# ---- FUNCTIONS SPECIFIC TO PLOT() -----
+
+#' @rdname plot
+#' @export 
+setMethod("plot", signature(x = "SRE", y = "ST"), function(x, y, zdf = NULL, map_layer = NULL, subset_time = NULL, plot_over_world = FALSE, ...) {
     
     object <- x
-    pred_object <- y
+    newdata <- y
     
-    ## Check that newdata is a result of a call to predict()
-    if (object@method == "TMB") {
-        if (!is(pred_object, "list"))
-            stop("Since method = 'TMB', pred_object should be a list")
-        if (is.null(pred_object$newdata))
-            stop("Since method = 'TMB', pred_object should be a list with an element called newdata")
-        newdata <- pred_object$newdata
-    } else if (object@method == "EM") {
-        if(!is(pred_object, "Spatial") && !is(pred_object, "ST"))
-            stop("Since method = 'EM', pred_object should be a Spatial*DataFrame or STFDF")
-        newdata <- pred_object
-    }
+    plots <- .plot_common(object, newdata, zdf, map_layer, subset_time, plot_over_world, ...)
     
+    return(plots)
+})
+
+#' @rdname plot
+#' @export 
+setMethod("plot", signature(x = "SRE", y = "Spatial"), function(x, y, zdf = NULL, map_layer = NULL, subset_time = NULL, plot_over_world = FALSE, ...) {
+    
+    object <- x
+    newdata <- y
+    
+    plots <- .plot_common(object, newdata, zdf, map_layer, subset_time, plot_over_world, ...)
+    
+    return(plots)
+})
+
+.plot_common <- function(object, newdata, zdf = NULL, map_layer = NULL, subset_time = NULL, plot_over_world = FALSE, ...) {
     ## Determine columns we need to plot, and which palette to use
     if (object@method == "EM") {
         
@@ -322,7 +318,9 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = N
     } 
     
     return(plots)
-})
+}
+
+
 
 .custom_lab <- function(v) {
     # v is a vector, with first entry indicating the type of plot we are making a 
@@ -351,62 +349,90 @@ setMethod("plot", signature(x = "SRE"), function(x, y, zdf = NULL, map_layer = N
     return(labs(fill = label))
 }
 
-#' Plot data from a Spatial*DataFrame or STFDF object
-#' @param sp_or_ST_DF an object of class Spatial*DataFrame or STFDF
-#' @param column_names a vector of strings indicating the columns of the data to plot
-#' @param map_layer (optional) a \code{ggplot} layer or object to add below the plotted layer, often a map
-#' @param subset_time (optional) a vector of times to be included; applicable only for \code{STFDF} objects
-#' @param palette the palette supplied to scale_*_distiller()
-#' @param plot_over_world logical; if \code{TRUE}, \code{coord_map("mollweide")} and \code{\link{draw_world}} are used to plot over the world
-#' @param ... optional arguments passed on to whatever geom is appropriate for the data (geom_point, geom_raster, or geom_polygon)
-#' @return a list of \code{ggplot} objects corresponding to the provided \code{column_names}. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}
-#' @seealso \code{\link{plot}}
-#' @export
-#' @examples 
-#' ## See example in the help file for SRE
-plot_spatial_or_ST <- function(sp_or_ST_DF, column_names,  map_layer = NULL, 
-                               subset_time = NULL, palette = "Spectral", 
-                               plot_over_world = FALSE, ...) {
-    
-    if (!is(sp_or_ST_DF, "Spatial") && !is(sp_or_ST_DF, "STFDF")) 
-        stop("sp_or_ST_DF should be a Spatial*DataFrame or STFDF")
-    
-    ## Get the coordinate names 
-    coord_names <- coordnames(sp_or_ST_DF)
-    
-    ## Remove the coordinate corresponding to time. coord_names is just spatial.
-    if(is(sp_or_ST_DF, "ST")) {
-        time_name <- coord_names[3]
-        coord_names <- coord_names[1:2]
-    } else {
-        time_name <- NULL
-    }
-    
-    if (length(coord_names) != 2) 
-        stop("plot() only implemented for the 2D space")
-    
-    ## Classify the kind of spatial data we have, and convert sp_or_ST_DF to a data.frame
-    tmp <- .classify_sp_and_convert_to_df(sp_or_ST_DF)
-    df      <- tmp$df
-    sp_type <- tmp$sp_type
 
+# ---- MAIN PLOTTING FUNCTIONS ----
+
+
+#' @rdname plot_spatial_or_ST
+#' @export
+setMethod("plot_spatial_or_ST", signature(newdata = "ST"), 
+          function(newdata, column_names,  map_layer = NULL, 
+                   subset_time = NULL, palette = "Spectral", 
+                   plot_over_world = FALSE, ...) {
+      
+     if(!("data" %in% slotNames(newdata)))
+         "newdata needs to have a @data slot"
+      
+      ## Get the coordinate names 
+      coord_names <- coordnames(newdata)
+      
+      ## Remove the coordinate corresponding to time. coord_names is just spatial.
+      time_name <- coord_names[3]
+      coord_names <- coord_names[1:2]
+      
+      if (!is.null(subset_time)) 
+          newdata <- newdata[, subset_time]
+                  
+      ## Classify the kind of spatial data we have, and convert newdata to a data.frame
+      tmp <- .classify_sp_and_convert_to_df(newdata)
+      df      <- tmp$df
+      sp_type <- tmp$sp_type
+      
+      # ## Edit the time column so that the facets display t = ...
+      # if(!is.null(time_name))
+      # df[, time_name] <- factor(
+      #    df[, time_name], ordered = TRUE,
+      #    labels = paste(time_name, sort(unique(df[, time_name])), sep = " = ")
+      # )
+      
+      if (length(palette) == 1) 
+          palette <- rep(palette, length(column_names))
+      
+      ## Plot the requested columns
+      plots <- lapply(1:length(column_names), 
+                      function(i, x, y, ...) {
+                          .plot(df, x[i], coord_names, time_name, sp_type, map_layer, y[i], ...)
+                      }, x = column_names, y = palette, ...)
+      
+      suppressMessages( # suppress message about adding a new coordinate system
+          if(plot_over_world) {
+              plots <- lapply(plots, function(gg) {
+                  (gg + .EmptyTheme_theme_only() + coord_map("mollweide")) %>%  
+                      draw_world(inc_border = TRUE)
+              })
+          }
+      )
+      names(plots) <- column_names
+      return(plots)
+})            
+
+#' @rdname plot_spatial_or_ST
+#' @export
+setMethod("plot_spatial_or_ST", signature(newdata = "Spatial"), 
+          function(newdata, column_names,  map_layer = NULL, 
+                   subset_time = NULL, palette = "Spectral", 
+                   plot_over_world = FALSE, ...) {
     
-    if(!all(column_names %in% names(df)))
+    if(!("data" %in% slotNames(newdata)))
+        "newdata needs to have a @data slot"
+              
+    if(!all(column_names %in% names(newdata@data)))
         stop("Some of the columns you have requested are not in the data")
     
-    if (!is.null(subset_time)) 
-        df <-  df[df[, time_name] %in% subset_time, ]
+    ## Get the coordinate names 
+    coord_names <- coordnames(newdata)
     
-    # ## Edit the time column so that the facets display t = ...
-    # if (!is.null(time_name)) 
-    #     df[, time_name] <- factor(
-    #         df[, time_name], ordered = TRUE,
-    #         labels = paste(time_name, sort(unique(df[, time_name])), sep = " = ")
-    #     )
+    ## time_name is just NULL in the spatial setting
+    time_name <- NULL
+    
+    ## Classify the kind of spatial data we have, and convert newdata to a data.frame
+    tmp <- .classify_sp_and_convert_to_df(newdata)
+    df      <- tmp$df
+    sp_type <- tmp$sp_type
     
     if (length(palette) == 1) 
         palette <- rep(palette, length(column_names))
-    
+
     ## Plot the requested columns
     plots <- lapply(1:length(column_names), 
                     function(i, x, y, ...) {
@@ -421,10 +447,9 @@ plot_spatial_or_ST <- function(sp_or_ST_DF, column_names,  map_layer = NULL,
             })
         }
     )
-
     names(plots) <- column_names
     return(plots)
-}
+})
 
 .plot <- function(df, column_name, coord_names, time_name, sp_type, map_layer, palette, ...){
     
@@ -470,32 +495,32 @@ plot_spatial_or_ST <- function(sp_or_ST_DF, column_names,  map_layer = NULL,
 }
 
 
-.classify_sp_and_convert_to_df <- function(sp_or_ST_DF) {
+.classify_sp_and_convert_to_df <- function(newdata) {
     
-    ## NB: I don't use is() because is(sp_or_ST_DF, "SpatialPointsDataFrame") returns 
-    ## TRUE when class(sp_or_ST_DF) == "SpatialPixelsDataFrame"
-    if (class(sp_or_ST_DF) == "SpatialPointsDataFrame") {
-        df <- data.frame(sp_or_ST_DF)
+    ## NB: I don't use is() because is(newdata, "SpatialPointsDataFrame") returns 
+    ## TRUE when class(newdata) == "SpatialPixelsDataFrame"
+    if (class(newdata) == "SpatialPointsDataFrame") {
+        df <- data.frame(newdata)
         sp_type <- "points"
-    } else if (class(sp_or_ST_DF) == "SpatialPixelsDataFrame") {
-        df <- data.frame(sp_or_ST_DF)
+    } else if (class(newdata) == "SpatialPixelsDataFrame") {
+        df <- data.frame(newdata)
         sp_type <- "pixels"
-    } else if (class(sp_or_ST_DF) == "SpatialPolygonsDataFrame") {
-        df <- .SpatialPolygonsDataFrame_to_df(sp_or_ST_DF)
+    } else if (class(newdata) == "SpatialPolygonsDataFrame") {
+        df <- .SpatialPolygonsDataFrame_to_df(newdata)
         sp_type <- "polygons"
-    } else if (class(sp_or_ST_DF) == "STIDF") {
+    } else if (class(newdata) == "STIDF") {
         stop("Plotting of STIDF not yet implemented.")
-        df <- data.frame(sp_or_ST_DF)
+        df <- data.frame(newdata)
         sp_type <- "points"
-    } else if (class(sp_or_ST_DF) == "STFDF") {
-        if (is(sp_or_ST_DF@sp, "SpatialPolygons")) {
+    } else if (class(newdata) == "STFDF") {
+        if (is(newdata@sp, "SpatialPolygons")) {
             sp_type <- "polygons"
-        } else if (is(sp_or_ST_DF@sp, "SpatialPixels")) {
+        } else if (is(newdata@sp, "SpatialPixels")) {
             sp_type <- "pixels"
         }
-        df <- STFDF_to_df(sp_or_ST_DF) 
+        df <- STFDF_to_df(newdata) 
     } else {
-        stop("Class of sp_or_ST_DF is not recognised.")
+        stop("Class of newdata is not recognised.")
     }
     
     ## Remove duplicate columns (can sometimes happen when we convert the Spatial* 

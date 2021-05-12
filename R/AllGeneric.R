@@ -245,13 +245,7 @@ setGeneric("unobserved_BAUs", function(object)
 setGeneric("info_fit", function(object)
     standardGeneric("info_fit"))
 
-#' @export
-setGeneric("coef", function(object)
-    standardGeneric("coef"))
 
-#' @export
-setGeneric("predict", function(object, ...)
-    standardGeneric("predict"))
 
 #' @title Retrieve log-likelihood
 #' @description Takes an object of class \code{SRE} and returns the log-likelihood function.
@@ -262,6 +256,50 @@ setGeneric("predict", function(object, ...)
 #' # See example in the help file for FRK
 setGeneric("loglik", function(object)
     standardGeneric("loglik"))
+
+
+#' @title Plot a Spatial*DataFrame or STFDF object
+#' @description Takes an object of class \code{Spatial*DataFrame} or \code{STFDF}, and plots requested data columns using \code{ggplot2}
+#' @param newdata an object of class \code{Spatial*DataFrame} or \code{STFDF}
+#' @param column_names a vector of strings indicating the columns of the data to plot
+#' @param map_layer (optional) a \code{ggplot} layer or object to add below the plotted layer, often a map
+#' @param subset_time (optional) a vector of times to be included; applicable only for \code{STFDF} objects
+#' @param palette the palette supplied to scale_*_distiller()
+#' @param plot_over_world logical; if \code{TRUE}, \code{coord_map("mollweide")} and \code{\link{draw_world}} are used to plot over the world
+#' @param ... optional arguments passed on to whatever geom is appropriate for the \code{Spatial*DataFrame} or \code{STFDF} object (geom_point, geom_raster, or geom_polygon)
+#' @return a list of \code{ggplot} objects corresponding to the provided \code{column_names}. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}
+#' @seealso \code{\link{plot}}
+#' @export
+#' @examples 
+#' ## See example in the help file for FRK
+setGeneric("plot_spatial_or_ST", function(newdata, column_names,  map_layer=NULL, 
+                                          subset_time=NULL, palette="Spectral", plot_over_world=FALSE, ...)
+    standardGeneric("plot_spatial_or_ST"))
+
+
+## INHERITED GENERICS
+
+#' @export
+setGeneric("coef", function(object)
+    standardGeneric("coef"))
+
+#' @export
+setGeneric("predict", function(object, ...)
+    standardGeneric("predict"))
+
+#' Plot predictions from FRK analysis. 
+#' 
+#' @param x an object of class \code{SRE} 
+#' @param y the \code{Spatial*DataFrame} or \code{STFDF} object resulting from a of call to \code{predict()} on an \code{SRE} object 
+#' @param zdf a \code{data.frame}, \code{SpatialPointsDataFrame}, or \code{SpatialPolygonsDataFrame} containing the observations
+#' @inheritParams plot_spatial_or_ST
+#' @return a list of \code{ggplot} objects consisting of the observed data, predictions, and standard errors. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.
+#' @seealso \code{\link{plot_spatial_or_ST}}
+#' @export
+#' @examples 
+#' ## See example in the help file for SRE
+setGeneric("plot", function(x, y, ...)
+    standardGeneric("plot"))
 
 
 ########################
