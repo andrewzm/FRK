@@ -26,9 +26,15 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
       k <- rep(1, length(object@BAUs))
       cat("The size parameter, k, was not provided for prediction: assuming k is equal to 1 for all prediction locations.\n")
     } else if (is.null(k) && !is.null(object@BAUs$k_BAU)) {
-      k <- object@BAUs$k_BAU
+        if (any(is.na(object@BAUs$k_BAU))) {
+          k <- rep(1, length(object@BAUs))
+          cat("The size parameter, k, at the BAU level contained some NAs: simply assuming k is equal to 1 for all prediction locations.\n")
+        } else {
+          k <- object@BAUs$k_BAU
+        }
     }
   }
+
   
   ## Check the arguments are OK
   .check_args3(obs_fs = obs_fs, newdata = newdata, 
@@ -717,14 +723,13 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     }
     
     Z_samples <- rnorm(n, mean = c(t(mu_samples)), sd = sqrt(sigma2e))
-  } else if (M@response == "bernoulli") {
-    Z_samples <- rbinom(n, size = 1, prob = c(t(mu_samples)))
   } else if (M@response == "gamma") {
-    theta <- 1 / c(t(mu_samples)) # canonical parameter
-    alpha <- 1/M@phi                 # shape parameter
-    beta  <- theta * alpha           # rate parameter (1/scale)
-    Z_samples <- rgamma(n, shape = alpha, rate = beta)
-    Z_samples <- statmod::rinvgauss(n, mean = c(t(mu_samples)), dispersion = M@phi) # FIXME: WHy is this here? this should be inverse-Gaussian??
+    theta <- 1 / c(t(mu_samples))    # canonical parameter
+    a <- 1/M@phi                     # shape parameter
+    beta  <- theta * a               # rate parameter (1/scale)
+    Z_samples <- rgamma(n, shape = a, rate = beta)
+  } else if (M@response == "inverse-gaussian") {
+    Z_samples <- statmod::rinvgauss(n, mean = c(t(mu_samples)), dispersion = M@phi) 
   } else if (M@response == "negative-binomial") {
     k_vec <- rep(k, each = n_MC)
     Z_samples <- rnbinom(n, size = k_vec, mu = c(t(mu_samples)))

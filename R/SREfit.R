@@ -881,7 +881,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   l$alpha <- solve(t(X_O) %*% X_O) %*% t(X_O) %*% Y_O # OLS solution
   ## ii. Variance components
   ## Dispersion parameter depends on response; some require it to be 1. 
-  if (object@response %in% c("poisson", "bernoulli", "binomial", "negative-binomial")) {
+  if (object@response %in% c("poisson", "binomial", "negative-binomial")) {
     l$phi <- 1
   } else if (object@response == "gaussian") {
     l$phi <- mean(diag(object@Ve))
@@ -889,7 +889,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     ## Use the variance of the data as our estimate of the dispersion parameter.
     ## This will almost certainly be an overestimate, as the mean-variance 
     ## relationship is not considered.
-    l$phi <- var(object@Z)
+    l$phi <- var(as.numeric(object@Z))
   }
 
   
@@ -1010,8 +1010,6 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     Z0[Z == 0]   <- 0.1
   } else if (object@response == "binomial" & object@link %in% c("logit", "probit", "cloglog")) {
     Z0 <- Z + 0.1 * (Z == 0) - 0.1 * (Z == k_Z)
-  } else if (object@response == "bernoulli" & object@link %in% c("logit", "probit", "cloglog")) {
-    Z0 <- Z + 0.05 * (Z == 0) - 0.05 * (Z == 1)
   } else if (object@link %in% c("inverse-squared", "inverse")) {
     Z0[Z == 0] <- 0.05
   } 

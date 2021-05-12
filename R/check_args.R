@@ -84,7 +84,7 @@
   #     }  
   
   ## Check that valid data model and link function have been chosen
-  if (!(response %in% c("gaussian", "poisson", "bernoulli", "gamma", "inverse-gaussian", "negative-binomial", "binomial")))
+  if (!(response %in% c("gaussian", "poisson", "gamma", "inverse-gaussian", "negative-binomial", "binomial")))
     stop("Invalid response argument")
   if (!(link %in% c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared")))
     stop("Invalid link argument")
@@ -94,8 +94,7 @@
       response == "gamma" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "square-root")) ||
       response == "inverse-gaussian" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "square-root")) ||
       response == "negative-binomial" & !(link %in% c("log", "square-root", "logit", "probit", "cloglog")) ||
-      response == "binomial" & !(link %in% c("logit", "probit", "cloglog")) ||
-      response == "bernoulli" & !(link %in% c("logit", "probit", "cloglog"))) {
+      response == "binomial" & !(link %in% c("logit", "probit", "cloglog"))) {
     stop("Invalid response-link combination selected. Please choose an appropriate link function for the specified response distribution.")
   }
   ## Provide a warning if a possibly problematic combination is chosen
@@ -136,7 +135,7 @@
               Please either set fs_by_spatial_BAU to FALSE if you are not in a spatio-temporal application.")
   
   if(normalise_wts &
-     response %in% c("poisson", "binomial", "bernoulli", "negative-binomial") & 
+     response %in% c("poisson", "binomial", "negative-binomial") & 
      any(sapply(data, function(x) is(x, "SpatialPolygons")))) {
     warning("You have specified a count data model with SpatialPolygons observations; consider setting normalise_wts = FALSE so that aggregation of the mean is a weighted sum rather than a weighted average.")
   }
@@ -238,7 +237,7 @@
   #     stop("The coordinate names of newdata do not match those of the BAUs.")
   # }
 
-  if(kriging != "simple" & object@method == "EM")
+  if(kriging != "simple" && object@method == "EM")
     stop("Universal kriging is only available when method = 'TMB'")
   
   if(!(obs_fs %in% 0:1)) stop("obs_fs needs to be logical")

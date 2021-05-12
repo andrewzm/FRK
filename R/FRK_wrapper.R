@@ -31,7 +31,7 @@ FRK <- function(f,                     # formula (compulsory)
                 method = c("EM", "TMB"),         # method for parameter estimation
                 lambda = 0,            # regularisation parameter
                 print_lik = FALSE,     # print log-likelihood at each iteration
-                response = c("gaussian", "poisson", "bernoulli", "gamma",
+                response = c("gaussian", "poisson", "gamma",
                              "inverse-gaussian", "negative-binomial", "binomial"), 
                 link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"),
                 optimiser = nlminb,    # Optimiser for fitting (applicable only if method = 'TMB')

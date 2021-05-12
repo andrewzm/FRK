@@ -356,8 +356,7 @@ Type objective_function<Type>::operator() ()
   Type aphi{1.0}; // initialise to 1.0, only change for two-parameter exponential families
   vector<Type> cZphi(m);
   
-  if (response == "poisson" || response == "negative-binomial" ||
-      response == "binomial" || response == "bernoulli") 
+  if (response == "poisson" || response == "negative-binomial" || response == "binomial") 
     phi = 1.0;
   
   if (response == "gaussian") {
@@ -383,9 +382,7 @@ Type objective_function<Type>::operator() ()
     for (int i = 0; i < m; i++) {
       cZphi[i] = lfactorial(k_Z[i]) - lfactorial(Z[i]) - lfactorial(k_Z[i] - Z[i]);
     }
-  } else if (response == "bernoulli") {
-    cZphi = 0.0;
-  }
+  } 
   
   // 4.4. Construct ln[Z|Y_Z]
   Type ld_Z{0.0};
@@ -450,8 +447,7 @@ bool isCanonicalLink(std::string response, std::string link) {
   if ((response == "gaussian"         && link == "identity") ||
       (response == "gamma"            && link == "inverse") ||
       (response == "inverse-gaussian" && link == "inverse-squared") ||
-      (response == "poisson"          && link == "log") ||
-      (response == "bernoulli"        && link == "logit")){
+      (response == "poisson"          && link == "log")){
     canonical_link = true;
   }
   return canonical_link;
@@ -491,9 +487,7 @@ Type canonicalParameter(Type mu_Z, Type k_Z, std::string response) {
     lambda = -log(1.0 + k_Z/(mu_Z + epsilon));
   } else if (response == "binomial") {
     lambda = log((mu_Z + epsilon) / (k_Z - mu_Z + epsilon));
-  } else if (response == "bernoulli") {
-    lambda = log((mu_Z + epsilon) / (1.0 - mu_Z + epsilon));
-  }
+  } 
   return lambda;
 }
 
@@ -507,8 +501,7 @@ Type cumulantFunction(Type x, Type k_Z, std::string response, std::string parame
   double epsilon{10e-8};
   Type b;
   if (parameterisation == "lambda") {
-    if       (response == "bernoulli") {        b =  log(1.0 + exp(x));
-    }else if (response == "gaussian") {         b = (x * x) / 2.0;
+    if       (response == "gaussian") {         b = (x * x) / 2.0;
     }else if (response == "gamma"){             b =  log(x);
     }else if (response == "inverse-gaussian"){  b =  2.0 * sqrt(x);
     }else if (response == "poisson"){           b =  exp(x);
@@ -516,8 +509,7 @@ Type cumulantFunction(Type x, Type k_Z, std::string response, std::string parame
   } 
   
   if (parameterisation == "mu") {
-    if       (response == "bernoulli"){           b =  -log(1.0 - x + epsilon);
-    }else if (response == "gaussian"){            b = (x * x) / 2.0;
+    if       (response == "gaussian"){            b = (x * x) / 2.0;
     }else if (response == "gamma"){               b =  -log(x + epsilon);
     }else if (response == "inverse-gaussian"){    b =  2.0 / (x + epsilon);
     }else if (response == "poisson"){             b =  x;

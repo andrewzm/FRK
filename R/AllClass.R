@@ -108,7 +108,7 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot sigma2fshat fine-scale variation scaling (estimated)
 #' @slot fs_model type of fine-scale variation (independent or CAR-based). Currently only "ind" is permitted
 #' @slot info_fit information on fitting (convergence etc.)
-#' @slot response A character string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "bernoulli", "gamma","inverse-gaussian", "negative-binomial", or "binomial".
+#' @slot response A character string indicating the assumed distribution of the response variable
 #' @slot link A character string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted. 
 #' @slot mu_xi updated expectation of the fine-scale random effects at all BAUs (estimated)
 #' @slot Q_posterior updated joint precision matrix of the basis function random effects and observed fine-scale random effects (estimated)

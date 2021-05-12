@@ -260,7 +260,7 @@ setMethod("plot", signature(x = "SRE", y = "Spatial"), function(x, y,  ...) {
 .plot_common <- function(object, newdata, ...) {
     
     if(!("data" %in% slotNames(newdata)))
-        "y needs to have a @data slot"
+        stop("y needs to have a @data slot")
     
     ## Determine columns we need to plot, and which palette to use
     if (object@method == "EM") {
@@ -354,7 +354,7 @@ setMethod("plot_spatial_or_ST", signature(newdata = "ST"),
                    plot_over_world = FALSE, ...) {
 
      if(!("data" %in% slotNames(newdata)))
-         "newdata needs to have a @data slot"
+         stop("newdata needs to have a @data slot")
       
       ## Get the coordinate names 
       coord_names <- coordnames(newdata)
@@ -383,10 +383,14 @@ setMethod("plot_spatial_or_ST", signature(newdata = "Spatial"),
                    plot_over_world = FALSE, ...) {
             
     if(!("data" %in% slotNames(newdata)))
-        "newdata needs to have a @data slot"
+        stop("newdata needs to have a @data slot")
               
     if(!all(column_names %in% names(newdata@data)))
         stop("Some of the columns you have requested are not in the data")
+            
+    ## Inclusion of "-" characters can cause problems; convert to "_"
+    column_names <- gsub("-", "_", column_names)
+    names(newdata@data) <- gsub("-", "_", names(newdata@data))
     
     ## Get the coordinate names 
     coord_names <- coordnames(newdata)
@@ -420,6 +424,7 @@ setMethod("plot_spatial_or_ST", signature(newdata = "Spatial"),
     
     if (length(palette) == 1) 
         palette <- rep(palette, length(column_names))
+  
     
     ## Plot the requested columns
     plots <- lapply(1:length(column_names), 
@@ -487,13 +492,15 @@ setMethod("plot_spatial_or_ST", signature(newdata = "Spatial"),
 
 .classify_sp_and_convert_to_df <- function(newdata) {
     
+    original_names <- names(newdata@data)
+  
     ## NB: I don't use is() because is(newdata, "SpatialPointsDataFrame") returns 
     ## TRUE when class(newdata) == "SpatialPixelsDataFrame"
     if (class(newdata) == "SpatialPointsDataFrame") {
-        df <- data.frame(newdata)
+        df <- cbind(newdata@data, coordinates(newdata))
         sp_type <- "points"
     } else if (class(newdata) == "SpatialPixelsDataFrame") {
-        df <- data.frame(newdata)
+        df <- cbind(newdata@data, coordinates(newdata))
         sp_type <- "pixels"
     } else if (class(newdata) == "SpatialPolygonsDataFrame") {
         df <- .SpatialPolygonsDataFrame_to_df(newdata)
@@ -512,6 +519,11 @@ setMethod("plot_spatial_or_ST", signature(newdata = "Spatial"),
     } else {
         stop("Class of newdata is not recognised.")
     }
+
+    ## check all original column names are present
+    if (!all(original_names %in% names(df)))
+      warning("Some of the original names in newdata were not retained when newdata was coerced to a data.frame. 
+              This can sometimes happen if some of the column names contain '-', which get converted to '.'.")
     
     ## Remove duplicate columns (can sometimes happen when we convert the Spatial* 
     ## object, e.g., if the coordinates are already present)
