@@ -300,23 +300,14 @@ setMethod("plot", signature(x = "SRE", y = "Spatial"), function(x, y,  ...) {
         column_names <- column_names[keep]
         palette  <-  palette[keep] 
     }
-    
-    plots <- plot_spatial_or_ST(newdata, column_names, ...)
+  
+    plots <- plot_spatial_or_ST(newdata, column_names, palette = palette, ...)
     
     ## Edit labels
-    if (object@method == "EM") {
-        
-        ## Change from "sd" to "se" (standard error)
-        plots$sd <- plots$sd + labs(fill = "se")
-        names(plots)[which(names(plots) == "sd")] <- "se"
-        
-    } else if (object@method == "TMB") {
-        
-        split_column_names <- strsplit(column_names, "_")
-        names(split_column_names) <- column_names
-        for (i in column_names) {
-            plots[[i]] <- plots[[i]] + .custom_lab(split_column_names[[i]])
-        }
+    split_column_names <- strsplit(column_names, "_")
+    names(split_column_names) <- column_names
+    for (i in column_names) {
+      plots[[i]] <- plots[[i]] + .custom_lab(split_column_names[[i]])
     }
     
     return(plots)
@@ -361,7 +352,7 @@ setMethod("plot_spatial_or_ST", signature(newdata = "ST"),
           function(newdata, column_names,  map_layer = NULL, 
                    subset_time = NULL, palette = "Spectral", 
                    plot_over_world = FALSE, ...) {
-      
+
      if(!("data" %in% slotNames(newdata)))
          "newdata needs to have a @data slot"
       
@@ -390,7 +381,7 @@ setMethod("plot_spatial_or_ST", signature(newdata = "Spatial"),
           function(newdata, column_names,  map_layer = NULL, 
                    subset_time = NULL, palette = "Spectral", 
                    plot_over_world = FALSE, ...) {
-    
+            
     if(!("data" %in% slotNames(newdata)))
         "newdata needs to have a @data slot"
               

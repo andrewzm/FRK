@@ -1092,8 +1092,6 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     mu_O <- sapply(mu_O, mean)
   }
   
-  browser()
-  
   return(mu_O)
 }
 
