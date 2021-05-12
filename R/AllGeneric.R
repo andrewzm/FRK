@@ -267,7 +267,7 @@ setGeneric("loglik", function(object)
 #' @param palette the palette supplied to scale_*_distiller()
 #' @param plot_over_world logical; if \code{TRUE}, \code{coord_map("mollweide")} and \code{\link{draw_world}} are used to plot over the world
 #' @param ... optional arguments passed on to whatever geom is appropriate for the \code{Spatial*DataFrame} or \code{STFDF} object (geom_point, geom_raster, or geom_polygon)
-#' @return a list of \code{ggplot} objects corresponding to the provided \code{column_names}. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}
+#' @return A list of \code{ggplot} objects corresponding to the provided \code{column_names}. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.
 #' @seealso \code{\link{plot}}
 #' @export
 #' @examples 
@@ -287,14 +287,15 @@ setGeneric("coef", function(object)
 setGeneric("predict", function(object, ...)
     standardGeneric("predict"))
 
-#' Plot predictions from FRK analysis. 
-#' 
-#' @param x an object of class \code{SRE} 
-#' @param y the \code{Spatial*DataFrame} or \code{STFDF} object resulting from a of call to \code{predict()} on an \code{SRE} object 
-#' @param zdf a \code{data.frame}, \code{SpatialPointsDataFrame}, or \code{SpatialPolygonsDataFrame} containing the observations
-#' @inheritParams plot_spatial_or_ST
-#' @return a list of \code{ggplot} objects consisting of the observed data, predictions, and standard errors. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.
-#' @seealso \code{\link{plot_spatial_or_ST}}
+#' @title Plot predictions from FRK analysis 
+#' @description This function essentially acts as a wrapper around 
+#' \code{\link{plot_spatial_or_ST}}, using the \code{SRE} object \code{x} to 
+#' determine which data columns of \code{y} should be plotted. It also generates 
+#' some informative, latex-style legend labels for each of the plots.  
+#' @param x object of class \code{SRE} 
+#' @param y the \code{Spatial*DataFrame} or \code{STFDF} object resulting from the call \code{predict(x)}
+#' @param ... optional arguments passed on to \code{\link{plot_spatial_or_ST}}
+#' @return A list of \code{ggplot} objects consisting of the observed data, predictions, and standard errors. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.
 #' @export
 #' @examples 
 #' ## See example in the help file for SRE

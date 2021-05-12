@@ -372,7 +372,7 @@ pred <- predict(S)                # prediction stage
 @
 \pkg{FRK} includes two plotting methods, \fct{plot} and \fct{plot\_spatial\_or\_ST}; the former takes an SRE object and the result of a call to predict, and returns a list of \class{ggplot} objects containing the predictions and uncertainty quantification of those predictions, while the latter is a general-purpose function for \class{Spatial*DataFrame} and \class{STFDF} objects.
 <<eval=TRUE,message=FALSE,warning=FALSE,results='hide'>>=
-plot_list <- plot(S, pred)
+plot_list <- plot(S, pred$newdata)
 plot_list <- c(plot_list, plot_spatial_or_ST(zdf, "z"))
 @
 This list of plot objects can then be arranged using one of the many functions for arranging \class{ggplot} objects: See Figure \ref{fig:example1}.
@@ -546,7 +546,7 @@ By predicting over the BAUs, one may generate predictions over the entire spatia
 
 <<eval=TRUE,message=FALSE,warning=FALSE,results='hide'>>=
 pred <- predict(S, type = c("link", "mean"))
-plot_list <- plot(S, pred)
+plot_list <- plot(S, pred$newdata)
 @
 
 <<echo=FALSE, message=FALSE,warning=FALSE,results='hide',fig.align='center',fig.cap="Americium point predictions.\\label{fig:Am_BAU_predictions}",fig.subcap=c("",""),fig.width = 8, fig.height = 5>>=

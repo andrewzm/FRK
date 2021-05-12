@@ -84,7 +84,8 @@ S <- FRK(f = z ~ 1,                         # Formula to FRK
 pred <- predict(S)                          # Prediction stage
 
 ## Plotting
-plot_list <- plot(S, pred, zdf)
+plot_list <- plot(S, pred)
+plot_list <- c(plot_list, plot_spatial_or_ST(zdf, "z"))
 ggarrange(plotlist = plot_list, nrow = 1, legend = "top")
 
 ```
@@ -118,7 +119,8 @@ pred <- predict(S)                            # prediction stage
 
 
 ## Plotting
-plot_list <- plot(S, pred, zdf)
+plot_list <- plot(S, pred$newdata)
+plot_list <- c(plot_list, plot_spatial_or_ST(zdf, "z"))
 ggarrange(plot_list$z, plot_list$p_mu, plot_list$interval90_mu, 
           nrow = 1, legend = "top")
 
@@ -163,7 +165,7 @@ S <- FRK(f = z ~ 1 + lat, data = list(STObj),
 pred <- predict(S)
 
 ## Plotting: include only some times via the argument subset_time
-plot_list <- plot(S, pred, subset_time = c(1, 7, 13, 19, 25, 31)) 
+plot_list <- plot(S, pred$newdata, subset_time = c(1, 7, 13, 19, 25, 31)) 
 
 ## Apply a labeller so the facet shows day x rather than just x
 facet_names <- paste0("day ", unique(pred$newdata$t))

@@ -235,33 +235,42 @@ EmptyTheme <- function() {
 
 #' @rdname plot
 #' @export 
-setMethod("plot", signature(x = "SRE", y = "ST"), function(x, y, zdf = NULL, map_layer = NULL, subset_time = NULL, plot_over_world = FALSE, ...) {
+setMethod("plot", signature(x = "SRE", y = "ST"), function(x, y, ...) {
     
     object <- x
     newdata <- y
     
-    plots <- .plot_common(object, newdata, zdf, map_layer, subset_time, plot_over_world, ...)
+    plots <- .plot_common(object, newdata, ...)
     
     return(plots)
 })
 
 #' @rdname plot
 #' @export 
-setMethod("plot", signature(x = "SRE", y = "Spatial"), function(x, y, zdf = NULL, map_layer = NULL, subset_time = NULL, plot_over_world = FALSE, ...) {
+setMethod("plot", signature(x = "SRE", y = "Spatial"), function(x, y,  ...) {
     
     object <- x
     newdata <- y
     
-    plots <- .plot_common(object, newdata, zdf, map_layer, subset_time, plot_over_world, ...)
+    plots <- .plot_common(object, newdata, ...)
     
     return(plots)
 })
 
-.plot_common <- function(object, newdata, zdf = NULL, map_layer = NULL, subset_time = NULL, plot_over_world = FALSE, ...) {
+.plot_common <- function(object, newdata, ...) {
+    
+    if(!("data" %in% slotNames(newdata)))
+        "y needs to have a @data slot"
+    
     ## Determine columns we need to plot, and which palette to use
     if (object@method == "EM") {
         
-        column_names <- c("mu", "sd")
+        ## Here we will just rename the columns produced by the EM side to 
+        ## align with those of the TMB side.
+        newdata$p_mu <- newdata$mu 
+        newdata$RMSPE_mu <- newdata$sd
+        # column_names <- c("mu", "sd")
+        column_names <- c("p_mu", "RMSPE_mu")
         palette <- c("Spectral", "BrBG")
         
     } else if (object@method == "TMB") {
@@ -292,7 +301,7 @@ setMethod("plot", signature(x = "SRE", y = "Spatial"), function(x, y, zdf = NULL
         palette  <-  palette[keep] 
     }
     
-    plots <- plot_spatial_or_ST(newdata, column_names, map_layer, subset_time, palette, plot_over_world, ...)
+    plots <- plot_spatial_or_ST(newdata, column_names, ...)
     
     ## Edit labels
     if (object@method == "EM") {
@@ -309,13 +318,6 @@ setMethod("plot", signature(x = "SRE", y = "Spatial"), function(x, y, zdf = NULL
             plots[[i]] <- plots[[i]] + .custom_lab(split_column_names[[i]])
         }
     }
-    
-    ## Plot the data if it was provided 
-    if (!is.null(zdf)) {
-        ## Extract name of response variable we wish to plot
-        response_name <- all.vars(object@f)[1]
-        plots <- c(plots, plot_spatial_or_ST(zdf, response_name, map_layer, subset_time,  palette, plot_over_world, ...))
-    } 
     
     return(plots)
 }
@@ -373,38 +375,14 @@ setMethod("plot_spatial_or_ST", signature(newdata = "ST"),
       if (!is.null(subset_time)) 
           newdata <- newdata[, subset_time]
                   
-      ## Classify the kind of spatial data we have, and convert newdata to a data.frame
-      tmp <- .classify_sp_and_convert_to_df(newdata)
-      df      <- tmp$df
-      sp_type <- tmp$sp_type
-      
-      # ## Edit the time column so that the facets display t = ...
-      # if(!is.null(time_name))
-      # df[, time_name] <- factor(
-      #    df[, time_name], ordered = TRUE,
-      #    labels = paste(time_name, sort(unique(df[, time_name])), sep = " = ")
-      # )
-      
-      if (length(palette) == 1) 
-          palette <- rep(palette, length(column_names))
-      
-      ## Plot the requested columns
-      plots <- lapply(1:length(column_names), 
-                      function(i, x, y, ...) {
-                          .plot(df, x[i], coord_names, time_name, sp_type, map_layer, y[i], ...)
-                      }, x = column_names, y = palette, ...)
-      
-      suppressMessages( # suppress message about adding a new coordinate system
-          if(plot_over_world) {
-              plots <- lapply(plots, function(gg) {
-                  (gg + .EmptyTheme_theme_only() + coord_map("mollweide")) %>%  
-                      draw_world(inc_border = TRUE)
-              })
-          }
-      )
-      names(plots) <- column_names
+      plots <- .plot_spatial_or_ST_common(
+          newdata = newdata, column_names = column_names, coord_names = coord_names, 
+          time_name = time_name, map_layer = map_layer, 
+          palette = palette, plot_over_world = plot_over_world, ...
+          )
       return(plots)
-})            
+})        
+
 
 #' @rdname plot_spatial_or_ST
 #' @export
@@ -425,20 +403,39 @@ setMethod("plot_spatial_or_ST", signature(newdata = "Spatial"),
     ## time_name is just NULL in the spatial setting
     time_name <- NULL
     
+    plots <- .plot_spatial_or_ST_common(
+        newdata = newdata, column_names = column_names, coord_names = coord_names, 
+        time_name = time_name, map_layer = map_layer, 
+        palette = palette, plot_over_world = plot_over_world, ...
+    )
+    return(plots)
+})
+
+.plot_spatial_or_ST_common <- function(
+    newdata, column_names, coord_names, time_name, map_layer, palette, plot_over_world, ...
+) {
+    
     ## Classify the kind of spatial data we have, and convert newdata to a data.frame
     tmp <- .classify_sp_and_convert_to_df(newdata)
     df      <- tmp$df
     sp_type <- tmp$sp_type
     
+    # ## Edit the time column so that the facets display t = ...
+    # if(!is.null(time_name))
+    # df[, time_name] <- factor(
+    #    df[, time_name], ordered = TRUE,
+    #    labels = paste(time_name, sort(unique(df[, time_name])), sep = " = ")
+    # )
+    
     if (length(palette) == 1) 
         palette <- rep(palette, length(column_names))
-
+    
     ## Plot the requested columns
     plots <- lapply(1:length(column_names), 
                     function(i, x, y, ...) {
                         .plot(df, x[i], coord_names, time_name, sp_type, map_layer, y[i], ...)
                     }, x = column_names, y = palette, ...)
-
+    
     suppressMessages( # suppress message about adding a new coordinate system
         if(plot_over_world) {
             plots <- lapply(plots, function(gg) {
@@ -449,7 +446,9 @@ setMethod("plot_spatial_or_ST", signature(newdata = "Spatial"),
     )
     names(plots) <- column_names
     return(plots)
-})
+}
+
+#### This function creates the individual plots.
 
 .plot <- function(df, column_name, coord_names, time_name, sp_type, map_layer, palette, ...){
     

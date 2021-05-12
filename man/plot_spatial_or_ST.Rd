@@ -52,7 +52,7 @@ plot_spatial_or_ST(
 \item{...}{optional arguments passed on to whatever geom is appropriate for the \code{Spatial*DataFrame} or \code{STFDF} object (geom_point, geom_raster, or geom_polygon)}
 }
 \value{
-a list of \code{ggplot} objects corresponding to the provided \code{column_names}. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}
+A list of \code{ggplot} objects corresponding to the provided \code{column_names}. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.
 }
 \description{
 Takes an object of class \code{Spatial*DataFrame} or \code{STFDF}, and plots requested data columns using \code{ggplot2}

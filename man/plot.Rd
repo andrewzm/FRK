@@ -4,54 +4,30 @@
 \alias{plot}
 \alias{plot,SRE,ST-method}
 \alias{plot,SRE,Spatial-method}
-\title{Plot predictions from FRK analysis.}
+\title{Plot predictions from FRK analysis}
 \usage{
 plot(x, y, ...)
 
-\S4method{plot}{SRE,ST}(
-  x,
-  y,
-  zdf = NULL,
-  map_layer = NULL,
-  subset_time = NULL,
-  plot_over_world = FALSE,
-  ...
-)
+\S4method{plot}{SRE,ST}(x, y, ...)
 
-\S4method{plot}{SRE,Spatial}(
-  x,
-  y,
-  zdf = NULL,
-  map_layer = NULL,
-  subset_time = NULL,
-  plot_over_world = FALSE,
-  ...
-)
+\S4method{plot}{SRE,Spatial}(x, y, ...)
 }
 \arguments{
-\item{x}{an object of class \code{SRE}}
+\item{x}{object of class \code{SRE}}
 
-\item{y}{the \code{Spatial*DataFrame} or \code{STFDF} object resulting from a of call to \code{predict()} on an \code{SRE} object}
+\item{y}{the \code{Spatial*DataFrame} or \code{STFDF} object resulting from the call \code{predict(x)}}
 
-\item{...}{optional arguments passed on to whatever geom is appropriate for the \code{Spatial*DataFrame} or \code{STFDF} object (geom_point, geom_raster, or geom_polygon)}
-
-\item{zdf}{a \code{data.frame}, \code{SpatialPointsDataFrame}, or \code{SpatialPolygonsDataFrame} containing the observations}
-
-\item{map_layer}{(optional) a \code{ggplot} layer or object to add below the plotted layer, often a map}
-
-\item{subset_time}{(optional) a vector of times to be included; applicable only for \code{STFDF} objects}
-
-\item{plot_over_world}{logical; if \code{TRUE}, \code{coord_map("mollweide")} and \code{\link{draw_world}} are used to plot over the world}
+\item{...}{optional arguments passed on to \code{\link{plot_spatial_or_ST}}}
 }
 \value{
-a list of \code{ggplot} objects consisting of the observed data, predictions, and standard errors. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.
+A list of \code{ggplot} objects consisting of the observed data, predictions, and standard errors. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.
 }
 \description{
-Plot predictions from FRK analysis.
+This function essentially acts as a wrapper around 
+\code{\link{plot_spatial_or_ST}}, using the \code{SRE} object \code{x} to 
+determine which data columns of \code{y} should be plotted. It also generates 
+some informative, latex-style legend labels for each of the plots.
 }
 \examples{
 ## See example in the help file for SRE
-}
-\seealso{
-\code{\link{plot_spatial_or_ST}}
 }
