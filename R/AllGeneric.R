@@ -264,7 +264,7 @@ setGeneric("loglik", function(object)
 #' @param column_names a vector of strings indicating the columns of the data to plot
 #' @param map_layer (optional) a \code{ggplot} layer or object to add below the plotted layer, often a map
 #' @param subset_time (optional) a vector of times to be included; applicable only for \code{STFDF} objects
-#' @param palette the palette supplied to scale_*_distiller()
+#' @param palette the palette supplied to the argument \code{palette} of \code{scale_*_distiller()}. Alternatively, if \code{palette} = "nasa", a vibrant colour palette is created using \code{scale_*_gradientn()}
 #' @param plot_over_world logical; if \code{TRUE}, \code{coord_map("mollweide")} and \code{\link{draw_world}} are used to plot over the world
 #' @param ... optional arguments passed on to whatever geom is appropriate for the \code{Spatial*DataFrame} or \code{STFDF} object (geom_point, geom_raster, or geom_polygon)
 #' @return A list of \code{ggplot} objects corresponding to the provided \code{column_names}. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.

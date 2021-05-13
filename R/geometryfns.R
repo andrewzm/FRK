@@ -368,7 +368,7 @@ auto_BAUs <- function(manifold, type=NULL,cellsize = NULL,
         if(!(isea3h_res >=0 & isea3h_res <= 9)) stop("isea3h_res needs to be between 0 and 9")
 
         ## Coerce type to hex if user wants to use the ISEA3h
-        if(type=="grid") {
+        if(type == "grid") {
             type = "hex"
             message("Only hex BAUs possible when setting isea3h_res. Coercing type to 'hex'")
         }

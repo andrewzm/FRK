@@ -45,7 +45,7 @@ plot_spatial_or_ST(
 
 \item{subset_time}{(optional) a vector of times to be included; applicable only for \code{STFDF} objects}
 
-\item{palette}{the palette supplied to scale_*_distiller()}
+\item{palette}{the palette supplied to the argument \code{palette} of \code{scale_*_distiller()}. Alternatively, if \code{palette} = "nasa", a vibrant colour palette is created using \code{scale_*_gradientn()}}
 
 \item{plot_over_world}{logical; if \code{TRUE}, \code{coord_map("mollweide")} and \code{\link{draw_world}} are used to plot over the world}
 

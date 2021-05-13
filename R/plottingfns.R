@@ -259,58 +259,78 @@ setMethod("plot", signature(x = "SRE", y = "Spatial"), function(x, y,  ...) {
 
 .plot_common <- function(object, newdata, ...) {
     
-    if(!("data" %in% slotNames(newdata)))
-        stop("y needs to have a @data slot")
-    
-    ## Determine columns we need to plot, and which palette to use
-    if (object@method == "EM") {
-        
-        ## Here we will just rename the columns produced by the EM side to 
-        ## align with those of the TMB side.
-        newdata$p_mu <- newdata$mu 
-        newdata$RMSPE_mu <- newdata$sd
-        # column_names <- c("mu", "sd")
-        column_names <- c("p_mu", "RMSPE_mu")
-        palette <- c("Spectral", "BrBG")
-        
-    } else if (object@method == "TMB") {
-        
-        ## Unfortunately, we don't know the value of type specified in predict().
-        ## We will just check the existence of quantities using if statements. 
-        ## Usually, people want prediction interval widths, but the output of predict
-        ## doesn't give interval widths directly. Instead, it gives user-specified
-        ## percentiles, so here we construct some interval widths assuming the user
-        ## has specified the 5th and 95th percentiles (default).
-        
-        ## If the 5th and 95th percentiles are present, make a column of the interval width. 
-        if (all(c("Y_percentile_5","Y_percentile_95") %in% names(newdata@data))) 
-            newdata@data$interval90_Y <- newdata$Y_percentile_95 - newdata$Y_percentile_5 
-        if (all(c("mu_percentile_5","mu_percentile_95") %in% names(newdata@data))) 
-            newdata@data$interval90_mu <- newdata@data$mu_percentile_95 - newdata@data$mu_percentile_5 
-        if (all(c("prob_percentile_5","prob_percentile_95") %in% names(newdata@data))) 
-            newdata@data$interval90_prob <- newdata@data$prob_percentile_95 - newdata@data$prob_percentile_5 
-        if (all(c("Z_percentile_5","Z_percentile_95") %in% names(newdata@data))) 
-            newdata@data$interval90_Z <- newdata@data$Z_percentile_95 - newdata@data$Z_percentile_5 
-        
-        ## Determine which quantities we are actually plotting
-        QOI <- c("Y", "mu", "prob", "Z") # Possible Quantities of interest
-        column_names <- paste0(rep(c("p_", "RMSPE_", "interval90_"), each = length(QOI)), QOI)
-        palette <- rep(c("Spectral", "BrBG", "BrBG"), each = length(QOI)) 
-        keep <- column_names %in% names(newdata@data)
-        column_names <- column_names[keep]
-        palette  <-  palette[keep] 
-    }
+  if(!("data" %in% slotNames(newdata)))
+    stop("y needs to have a @data slot")
   
-    plots <- plot_spatial_or_ST(newdata, column_names, palette = palette, ...)
+  ## Determine columns we need to plot, and which palette to use
+  if (object@method == "EM") {
     
-    ## Edit labels
-    split_column_names <- strsplit(column_names, "_")
-    names(split_column_names) <- column_names
-    for (i in column_names) {
-      plots[[i]] <- plots[[i]] + .custom_lab(split_column_names[[i]])
-    }
+    ## Here we will just rename the columns produced by the EM side to 
+    ## align with those of the TMB side.
+    newdata$p_mu <- newdata$mu 
+    newdata$RMSPE_mu <- newdata$sd
+    column_names <- c("p_mu", "RMSPE_mu")
+    palette <- c("Spectral", "BrBG")
     
-    return(plots)
+  } else if (object@method == "TMB") {
+    
+    ## Unfortunately, we don't know the value of type specified in predict().
+    ## We will just check the existence of quantities using if statements. 
+    ## Usually, people want prediction interval widths, but the output of predict
+    ## doesn't give interval widths directly. Instead, it gives user-specified
+    ## percentiles, so here we construct some interval widths assuming the user
+    ## has specified the 5th and 95th percentiles (default).
+    
+    ## If the 5th and 95th percentiles are present, make a column of the interval width. 
+    if (all(c("Y_percentile_5","Y_percentile_95") %in% names(newdata@data))) 
+      newdata@data$interval90_Y <- newdata$Y_percentile_95 - newdata$Y_percentile_5 
+    if (all(c("mu_percentile_5","mu_percentile_95") %in% names(newdata@data))) 
+      newdata@data$interval90_mu <- newdata@data$mu_percentile_95 - newdata@data$mu_percentile_5 
+    if (all(c("prob_percentile_5","prob_percentile_95") %in% names(newdata@data))) 
+      newdata@data$interval90_prob <- newdata@data$prob_percentile_95 - newdata@data$prob_percentile_5 
+    if (all(c("Z_percentile_5","Z_percentile_95") %in% names(newdata@data))) 
+      newdata@data$interval90_Z <- newdata@data$Z_percentile_95 - newdata@data$Z_percentile_5 
+    
+    ## Determine which quantities we are actually plotting
+    QOI <- c("Y", "mu", "prob", "Z") # Possible Quantities of interest
+    column_names <- paste0(rep(c("p_", "RMSPE_", "interval90_"), each = length(QOI)), QOI)
+    palette <- rep(c("Spectral", "BrBG", "BrBG"), each = length(QOI)) 
+    keep <- column_names %in% names(newdata@data)
+    column_names <- column_names[keep]
+    palette  <-  palette[keep] 
+  }
+  
+  ## plot() decides the palette for each graphic based on whether it is 
+  ## the term is related to prediction or prediction uncertainty quantification.
+  ## This means that the palette argument cannot be provided by the user via 
+  ## ... argument. An exception is if the user has specified palette = "nasa", 
+  ## in which case we will use it for the prediction plots.
+  user_args <- list(...)
+  if (!is.null(user_args$palette) && user_args$palette == "nasa") {
+    palette <- gsub(pattern = "Spectral", replacement = "nasa", palette)
+  }
+  
+  ## Need to use do.call(), as it allows arguments to be provided as a list. 
+  ## Otherwise, there is no way to remove the original value of palette supplied
+  ## by the user. Remove potential clashes:
+  user_args$palette      <- NULL
+  user_args$column_names <- NULL
+  args_list <- c(list(newdata = newdata, 
+                      column_names = column_names, 
+                      palette = palette), 
+                 user_args)
+  plots <- do.call(plot_spatial_or_ST, args_list)
+  
+  # plots <- plot_spatial_or_ST(newdata, column_names, palette = palette, ...)
+  
+  ## Edit labels
+  split_column_names <- strsplit(column_names, "_")
+  names(split_column_names) <- column_names
+  for (i in column_names) {
+    plots[[i]] <- plots[[i]] + .custom_lab(split_column_names[[i]])
+  }
+  
+  return(plots)
 }
 
 
@@ -471,16 +491,24 @@ setMethod("plot_spatial_or_ST", signature(newdata = "Spatial"),
     gg <- gg %+% aes_string(x = coord_names[1], y = coord_names[2]) + 
         theme_bw() + coord_fixed()
     
+    if (palette == "nasa") {
+      colour_fn <- scale_colour_gradientn(colours = nasa_palette)
+      fill_fn <- scale_fill_gradientn(colours = nasa_palette)
+    } else {
+      colour_fn <- scale_colour_distiller(palette = palette)
+      fill_fn <- scale_fill_distiller(palette = palette)
+    }
+    
     ## Plot based on data type
     if (sp_type == "points") { # this is only for observation data
-        gg <- gg + geom_point(aes_string(colour = column_name), ...) + scale_colour_distiller(palette = palette)
+        gg <- gg + geom_point(aes_string(colour = column_name), ...) + colour_fn
     } else {
         if (sp_type == "pixels") {
             gg <- gg + geom_raster(aes_string(fill = column_name), ...)
         } else if (sp_type == "polygons") {
             gg <- gg + geom_polygon(aes_string(group = "id", fill = column_name), ...) 
         }
-        gg <- gg + scale_fill_distiller(palette = palette)
+        gg <- gg + fill_fn
     }
     
     if (!is.null(time_name))

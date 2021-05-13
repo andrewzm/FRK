@@ -8,17 +8,7 @@ Authors@R: c(
     person("Matthew", "Sainsbury-Dale", , "msdale@uow.edu.au", c("aut")))
 Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
 VignetteBuilder: knitr
-Description: Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling
-    and prediction with large datasets. The approach, discussed in Cressie and
-    Johannesson (2008) <DOI:10.1111/j.1467-9868.2007.00633.x>, decomposes the 
-    spatial/spatio-temporal field, and hence the covariance function, using a f
-    ixed set of r basis functions, where r is typically much smaller than the 
-    number of data points (or polygons) m. 
-    The method naturally allows for non-stationary, anisotropic covariance functions 
-    and the use of observations with varying support (with known error variance).  
-    The package FRK provides helper functions to model, fit, and predict using 
-    the fixed-rank kriging approach with relative ease, using both Gaussian 
-    and non-Gaussian data.
+Description: Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling and prediction with large datasets. The approach decomposes the field, and hence the covariance function, using a fixed set of r basis functions, where r is typically much smaller than the number of data points (or polygons) m. This low-rank basis-function representation facilitates the modelling of 'big' spatial/spatio-temporal data. The method naturally allows for non-stationary, anisotropic covariance functions. Discretisation of the spatial domain into so-called basic areal units (BAUs) facilitates the use of observations with varying support (i.e., both point-referenced and areal supports, potentially simultaneously), and prediction over arbitrary user-specified regions. The package `FRK` caters for Gaussian and non-Gaussian data, employing a spatial generalised linear mixed model (GLMM) framework  to cater for Poisson, binomial, negative-binomial, gamma, and inverse-Gaussian distributed data. `FRK` also supports inference over various manifolds, including the 2D plane and 3D sphere, and it provides helper functions to model, fit, predict, and plot with relative ease. Zammit-Mangion and Cressie <arXiv:1705.08105> describe `FRK` in a Gaussian setting, and detail it's use of basis functions and BAUs.
 BugReports: https://github.com/andrewzm/FRK/issues
 Depends:
     R (>= 3.2.0)

@@ -95,6 +95,12 @@
   return(X)
 }
 
+# #' NASA colour palette
+# #' @export
+nasa_palette <- c("#03006d","#02008f","#0000b6","#0001ef","#0000f6","#0428f6","#0b53f7","#0f81f3",
+                  "#18b1f5","#1ff0f7","#27fada","#3efaa3","#5dfc7b","#85fd4e","#aefc2a","#e9fc0d","#f6da0c","#f5a009",
+                  "#f6780a","#f34a09","#f2210a","#f50008","#d90009","#a80109","#730005")
+
 .constructS_O <- function(object) {
   obsidx <- observed_BAUs(object)
   return(drop0(object@S0[obsidx, , drop = FALSE]))
