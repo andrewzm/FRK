@@ -449,7 +449,7 @@ setMethod("plot_spatial_or_ST", signature(newdata = "Spatial"),
     ## Plot the requested columns
     plots <- lapply(1:length(column_names), 
                     function(i, x, y, ...) {
-                        .plot(df, x[i], coord_names, time_name, sp_type, map_layer, y[i], ...)
+                        .plot(df, x[i], coord_names, time_name, sp_type, map_layer, y[i], plot_over_world, ...)
                     }, x = column_names, y = palette, ...)
     
     suppressMessages( # suppress message about adding a new coordinate system
@@ -466,7 +466,7 @@ setMethod("plot_spatial_or_ST", signature(newdata = "Spatial"),
 
 #### This function creates the individual plots.
 
-.plot <- function(df, column_name, coord_names, time_name, sp_type, map_layer, palette, ...){
+.plot <- function(df, column_name, coord_names, time_name, sp_type, map_layer, palette, plot_over_world, ...){
     
     ## Basic plot
     if (!is.null(map_layer)) {
@@ -504,7 +504,14 @@ setMethod("plot_spatial_or_ST", signature(newdata = "Spatial"),
         gg <- gg + geom_point(aes_string(colour = column_name), ...) + colour_fn
     } else {
         if (sp_type == "pixels") {
+          ## geom_raster is typically faster, but it doesn't work if we are 
+          ## plotting over the plane. For simplicity, just use geom_tile instead.
+          if (plot_over_world) {
+            gg <- gg + geom_tile(aes_string(fill = column_name), ...)
+          } else {
             gg <- gg + geom_raster(aes_string(fill = column_name), ...)
+          }
+          
         } else if (sp_type == "polygons") {
             gg <- gg + geom_polygon(aes_string(group = "id", fill = column_name), ...) 
         }
