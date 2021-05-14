@@ -288,9 +288,10 @@ setGeneric("predict", function(object, ...)
     standardGeneric("predict"))
 
 #' @title Plot predictions from FRK analysis 
-#' @description This function essentially acts as a wrapper around 
+#' @description This function acts as a wrapper around 
 #' \code{\link{plot_spatial_or_ST}}, using the \code{SRE} object \code{x} to 
-#' determine which data columns of \code{y} should be plotted. It also generates 
+#' determine which fields of \code{y} should be plotted, and the \code{@data} 
+#' slot of \code{x} to plot the supplied data. It also generates 
 #' some informative, latex-style legend labels for each of the plots.  
 #' @param x object of class \code{SRE} 
 #' @param y the \code{Spatial*DataFrame} or \code{STFDF} object resulting from the call \code{predict(x)}

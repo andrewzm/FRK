@@ -281,7 +281,7 @@ setMethod("plot", signature(x = "SRE", y = "Spatial"), function(x, y,  ...) {
     ## percentiles, so here we construct some interval widths assuming the user
     ## has specified the 5th and 95th percentiles (default).
     
-    ## If the 5th and 95th percentiles are present, make a column of the interval width. 
+    ## If the 5th and 95th percentiles are present, construct the 90% predictive interval width. 
     if (all(c("Y_percentile_5","Y_percentile_95") %in% names(newdata@data))) 
       newdata@data$interval90_Y <- newdata$Y_percentile_95 - newdata$Y_percentile_5 
     if (all(c("mu_percentile_5","mu_percentile_95") %in% names(newdata@data))) 
@@ -329,6 +329,32 @@ setMethod("plot", signature(x = "SRE", y = "Spatial"), function(x, y,  ...) {
   for (i in column_names) {
     plots[[i]] <- plots[[i]] + .custom_lab(split_column_names[[i]])
   }
+  
+  ## Plot the data. Note that this assumes object@data is a list, which it should be. 
+  ## Since data.frame are classified as lists, double-check here that a data.frame
+  ## didn't get passed in @data.
+  if (is.data.frame(object@data)) {
+    warning("Cannot plot the data stored in object@data, as it is a data.frame")
+  } else if (is.list(object@data)) {
+    response_name <- all.vars(object@f)[1]
+    data_plots <- sapply(object@data, plot_spatial_or_ST, response_name, ...)
+    if (length(data_plots) == 1) {
+      names(data_plots) <- response_name
+    } else {
+      names(data_plots) <- paste(response_name, "dataset", 1:length(data_plots), sep = "_")
+      data_legend_name <- paste(response_name, "\ndataset", 1:length(data_plots), sep = " ")
+      for (i in 1:length(data_plots)) {
+        data_plots[[i]] <- data_plots[[i]] + labs(colour = data_legend_name[i], fill = data_legend_name[i])
+      }
+    }
+    plots <- c(data_plots, plots)
+  } else if (is(object@data, "Spatial") || is(object@data, "ST")) { # this shouldn't happen, but add just in case
+    data_plots <- plot_spatial_or_ST(object@data, response_name, ...)
+    plots <- c(data_plots, plots)
+  } else {
+    warning("Couldn't plot the data stored in object@data as the type was unrecognised.")
+  }
+  
   
   return(plots)
 }

@@ -23,9 +23,10 @@ plot(x, y, ...)
 A list of \code{ggplot} objects consisting of the observed data, predictions, and standard errors. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.
 }
 \description{
-This function essentially acts as a wrapper around 
+This function acts as a wrapper around 
 \code{\link{plot_spatial_or_ST}}, using the \code{SRE} object \code{x} to 
-determine which data columns of \code{y} should be plotted. It also generates 
+determine which fields of \code{y} should be plotted, and the \code{@data} 
+slot of \code{x} to plot the supplied data. It also generates 
 some informative, latex-style legend labels for each of the plots.
 }
 \examples{
