@@ -53,8 +53,8 @@ install:
 
 
 
-- Rscript -e 'devtools::install_github("andrewzm/dggrids")'
-- Rscript -e 'devtools::install_github("andrewzm/inla")'
+- Rscript -e 'devtools::install_github("andrewzm/dggrids/")'
+- Rscript -e 'devtools::install_github("andrewzm/inla/")'
 # - Rscript -e 'devtools::install_github("jimhester/covr")'
 # - Rscript -e 'devtools::install_github("jimhester/lintr")'
 # - Rscript -e "install.packages('INLA', repos='https://www.math.ntnu.no/inla/R/stable')"

@@ -25,7 +25,7 @@ discrete global grids (DGGRIDs) generated using the \code{DGGRID} software.
 The original .gen files were converted to a data frame using the function \code{dggrid_gen_to_df},
 available with the \code{dggrids} package. Only resolutions 0--6 are supplied with \code{FRK}
 and note that resolution 0 of ISEA3H is equal to resolution 1 in \code{FRK}. For higher
-resolutions \code{dggrids} can be installed from \code{https://github.com/andrewzm/dggrids}
+resolutions \code{dggrids} can be installed from \code{https://github.com/andrewzm/dggrids/}
 using \code{devtools}.
 }
 \references{
