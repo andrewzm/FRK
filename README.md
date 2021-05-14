@@ -87,7 +87,6 @@ pred <- predict(S)                          # Prediction stage
 
 ## Plotting
 plot_list <- plot(S, pred)
-plot_list <- c(plot_list, plot_spatial_or_ST(zdf, "z"))
 ggarrange(plotlist = plot_list, nrow = 1, legend = "top")
 
 ```
@@ -96,7 +95,7 @@ ggarrange(plotlist = plot_list, nrow = 1, legend = "top")
 ggsave( 
   filename = "Gaussian_data.png", device = "png", 
   width = 10, height = 4,
-  path = "~/Desktop/"
+  path = "~/Dropbox/FRK/man/figures/"
 )
 --->
 
@@ -107,32 +106,26 @@ ggsave(
 Here we analyse simulated Poisson data. We signify a Poisson data model with a mean response that is modelled using the square-root link function by setting `response = "poisson"` and `link = "square-root"` in `FRK()`. Other non-Gaussian data models available in `FRK` are the binomial, negative-binomial, gamma, and inverse-Gaussian. 
 
 ```r
-## Setup
-## Simulate Poisson data, using the data of the previous example to construct a mean 
-RNGversion("3.6.0"); set.seed(1)                          
+## Simulate Poisson data using the previous example's data to construct a mean 
 zdf$z <- rpois(m, lambda = zdf$z^2)
 
 ## Run FRK
-S <- FRK(f = z ~ 1,                           # Formula to FRK
-         list(zdf),                           # All datasets are supplied in list
+S <- FRK(f = z ~ 1, list(zdf),                          
          response = "poisson",                # Poisson data model
          link = "square-root")                # square-root link function
-pred <- predict(S)                            # prediction stage
-
+pred <- predict(S)                            
 
 ## Plotting
 plot_list <- plot(S, pred$newdata)
-plot_list <- c(plot_list, plot_spatial_or_ST(zdf, "z"))
 ggarrange(plot_list$z, plot_list$p_mu, plot_list$interval90_mu, 
           nrow = 1, legend = "top")
-
              
 ```    
 <!---
 ggsave( 
   filename = "Poisson_data.png", device = "png", 
   width = 10, height = 4,
-  path = "~/Desktop/"
+  path = "~/Dropbox/FRK/man/figures/"
 )
 --->
 
@@ -149,44 +142,41 @@ data("NOAA_df_1990")
 Tmax <- subset(NOAA_df_1990, month %in% 7 & year == 1993)
 Tmax <- within(Tmax, {time = as.Date(paste(year,month,day,sep="-"))})
 STObj <- stConstruct(x = Tmax, space = c("lon","lat"), time = "time", interval = TRUE)
-STObj$std <- 2
 
-## BAUs
-## Choose spatial BAUs as 1x1 pixels, temporal BAUs as 1 day intervals
+## BAUs: spatial BAUs are 1x1 pixels, temporal BAUs are 1 day intervals
 BAUs <- auto_BAUs(manifold = STplane(), 
                        cellsize = c(1, 1, 1),    
                        data=STObj, tunit = "days")
-BAUs$fs <- 1 # scale fine-scale variance matrix, implicit in previous examples
+BAUs$fs <- 1 # scalar fine-scale variance matrix, implicit in previous examples
 
 ## Basis functions
 G <- auto_basis(manifold = STplane(), data = STObj, nres = 2, tunit = "days")
 
 ## Run FRK
+STObj$std <- 2 # fix the measurement error variance
 S <- FRK(f = z ~ 1 + lat, data = list(STObj), 
          basis = G, BAUs = BAUs, est_error = FALSE, method = "TMB")
-pred <- predict(S)
+pred <- predict(S, percentiles = NULL)
 
 ## Plotting: include only some times via the argument subset_time
 plot_list <- plot(S, pred$newdata, subset_time = c(1, 7, 13, 19, 25, 31)) 
 
+## Plotting
+ggarrange(plotlist = plot_list, nrow = 1, legend = "top") 
+```
+
+<!---
 ## Apply a labeller so the facet shows day x rather than just x
 facet_names <- paste0("day ", unique(pred$newdata$t))
 names(facet_names) <- unique(pred$newdata$t)
 plot_list <- lapply(
   plot_list, 
   function(gg) gg + facet_wrap(~t, labeller = as_labeller(facet_names)))
-
-## Plot the predictions and uncertainty
-ggarrange(plot_list$p_mu, plot_list$interval90_mu, legend = "top") 
-
-
-```
-
-<!---
+  
 ggsave( 
   filename = "ST_data.png", device = "png", 
-  width = 8.5, height = 3.8,
-  path = "~/Desktop/"
+  width = 12.5, height = 3.8,
+  path = "~/Dropbox/FRK/man/figures/"
 )
 --->
 
