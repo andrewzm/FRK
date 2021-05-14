@@ -160,8 +160,6 @@ pred <- predict(S, percentiles = NULL)
 
 ## Plotting: include only some times via the argument subset_time
 plot_list <- plot(S, pred$newdata, subset_time = c(1, 7, 13, 19, 25, 31)) 
-
-## Plotting
 ggarrange(plotlist = plot_list, nrow = 1, legend = "top") 
 ```
 

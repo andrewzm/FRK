@@ -227,13 +227,16 @@ auto_basis <- function(manifold = plane(),
    ## Note that we put this here, because there is a call to auto_basis() 
    ## when constructing the spatial basis, at which point the arguments will be 
    ## checked. 
-   if (is(data, "ST") & is(manifold, "STplane")) {
+   if (is(manifold, "STplane") || is(manifold, "STsphere")) {
      if(is.null(tunit)) {
        stop("Please specify tunit (the temporal unit) if you want to construct a spatio-temporal basis. Note that this should be the same as the BAUs.")
      }
      ## Set up the spatial basis functions
-     ## NB: there's no reason we have to hard code plane(). 
-     ## We could easily allow for sphere too.
+     if (is(manifold, "STplane")) {
+       spatial_manifold <- plane()
+     } else if (is(manifold, "STsphere")) {
+       spatial_manifold <- sphere()
+     }
      B_spatial <- auto_basis(manifold = plane(), data = as(data, "Spatial"), 
                              regular = regular, nres = nres, prune = prune, 
                              max_basis = max_basis, subsamp = subsamp, 
