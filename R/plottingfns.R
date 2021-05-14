@@ -321,8 +321,6 @@ setMethod("plot", signature(x = "SRE", y = "Spatial"), function(x, y,  ...) {
                  user_args)
   plots <- do.call(plot_spatial_or_ST, args_list)
   
-  # plots <- plot_spatial_or_ST(newdata, column_names, palette = palette, ...)
-  
   ## Edit labels
   split_column_names <- strsplit(column_names, "_")
   names(split_column_names) <- column_names
@@ -330,14 +328,59 @@ setMethod("plot", signature(x = "SRE", y = "Spatial"), function(x, y,  ...) {
     plots[[i]] <- plots[[i]] + .custom_lab(split_column_names[[i]])
   }
   
-  ## Plot the data. Note that this assumes object@data is a list, which it should be. 
-  ## Since data.frame are classified as lists, double-check here that a data.frame
-  ## didn't get passed in @data.
+  ## Now plot the data. Note that here we use a simple call to plot_spatial_or_ST(), 
+  ## rather than via do.call(), because we have not constructed a custom palette 
+  ## within this function.
+  response_name <- all.vars(object@f)[1]
   if (is.data.frame(object@data)) {
     warning("Cannot plot the data stored in object@data, as it is a data.frame")
   } else if (is.list(object@data)) {
-    response_name <- all.vars(object@f)[1]
-    data_plots <- sapply(object@data, plot_spatial_or_ST, response_name, ...)
+    if (any(sapply(object@data, function(d) is(d, "STIDF")))) {
+      if (length(object@data) == 1) {
+        ## Plot the binned data over the BAUs. This is a bit difficult if any 
+        ## observations are associated with multiple BAUs; don't do it in this case.
+        Cmat_dgT <- as(object@Cmat, "dgTMatrix")
+        if (!all(tabulate(Cmat_dgT@i + 1) == 1) || any(tabulate(Cmat_dgT@j + 1) > 1)) {
+          warning("The data set stored in object@data is of class STIDF. In this case, 
+                  we normally use the binned data in object@Z to plot over the BAUs. However,
+                  some observations are associated with multiple BAUs, or there 
+                  are some BAUs associated with multiple observations (probably because 
+                  average_in_BAU = FALSE). This makes things a bit tricky, so we will not plot the data.")
+        } else {
+          obs_BAUs <- Cmat_dgT@j + 1 # BAUs associated with each observation
+          data_idx <- Cmat_dgT@i + 1 # data index
+          binned_data <- rep(NA, length(object@BAUs))
+          binned_data[obs_BAUs] <- object@Z[, 1][data_idx]
+          object@BAUs@data[, response_name] <- binned_data
+          ## If unspecified, use white colour for NAs
+          args_list <- list(...)
+          if (!"na.value" %in% names(args_list)) {
+            args_list$na.value <- "transparent" 
+          }
+          args_list$newdata     <- object@BAUs
+          args_list$column_name <- response_name
+          data_plots <- do.call(plot_spatial_or_ST, args_list)
+        }
+      } else {
+        ## We may have a combination of STIDF and STFDF, and we don't know which 
+        ## dataset each element of object@Z is associated with. This is a bit 
+        ## complicated, so we don't do it. 
+        warning("Multiple data sets were used in the analysis, and because at 
+                least one is of class STIDF, we will not plot the data. 
+                Please contact the package maintainer if you would like help plotting the data.")
+      }
+    } else {
+      data_plots <- sapply(object@data, plot_spatial_or_ST, response_name, ...)
+    }
+  } else if (is(object@data, "Spatial") || is(object@data, "STFDF")) { # this shouldn't happen, but add just in case
+    data_plots <- plot_spatial_or_ST(object@data, response_name, ...)
+  } else {
+    warning("Couldn't plot the data stored in object@data as the type was unrecognised.")
+  }
+  
+  ## Give the data plots meaningful labels, and combine them with the prediction 
+  ## and uncertainty quantification plots.
+  if (exists("data_plots")) {
     if (length(data_plots) == 1) {
       names(data_plots) <- response_name
     } else {
@@ -347,12 +390,7 @@ setMethod("plot", signature(x = "SRE", y = "Spatial"), function(x, y,  ...) {
         data_plots[[i]] <- data_plots[[i]] + labs(colour = data_legend_name[i], fill = data_legend_name[i])
       }
     }
-    plots <- c(data_plots, plots)
-  } else if (is(object@data, "Spatial") || is(object@data, "ST")) { # this shouldn't happen, but add just in case
-    data_plots <- plot_spatial_or_ST(object@data, response_name, ...)
-    plots <- c(data_plots, plots)
-  } else {
-    warning("Couldn't plot the data stored in object@data as the type was unrecognised.")
+    plots <- c(data_plots, plots) 
   }
   
   
@@ -518,11 +556,11 @@ setMethod("plot_spatial_or_ST", signature(newdata = "Spatial"),
         theme_bw() + coord_fixed()
     
     if (palette == "nasa") {
-      colour_fn <- scale_colour_gradientn(colours = nasa_palette)
-      fill_fn <- scale_fill_gradientn(colours = nasa_palette)
+      colour_fn <- scale_colour_gradientn(colours = nasa_palette, ...)
+      fill_fn <- scale_fill_gradientn(colours = nasa_palette, ...)
     } else {
-      colour_fn <- scale_colour_distiller(palette = palette)
-      fill_fn <- scale_fill_distiller(palette = palette)
+      colour_fn <- scale_colour_distiller(palette = palette, ...)
+      fill_fn <- scale_fill_distiller(palette = palette, ...)
     }
     
     ## Plot based on data type

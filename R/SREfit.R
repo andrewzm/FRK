@@ -26,7 +26,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
         cat("Setting K-type = 'precision'.\n")
       }
     }
-    
+
 
     ## Check the arguments are OK
     ## (Note that we cannot pass the SRE model, because it complicates things 
@@ -873,7 +873,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   # ---- Parameter and random effect initialisations ----
   
   ## Now that we have a crude estimate of Y_O, we may initialise the variance
-  ## components and random effects
+  ## components and random effect
   
   l <- list() # list of initial values
   
@@ -1043,33 +1043,30 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 
 
 .compute_mu_O <- function(object, C_O, mu_Z) {
-  
+
   m       <- nrow(C_O)
   mstar   <- ncol(C_O)
-  observed_BAUs <- object@BAUs[object@obsidx,]
+  ## FIXME: Think we can just use object@BAUs@data[object@obsidx, ] for both
+  if (is(object@BAUs, "Spatial")) {
+    obs_BAUs_df <- object@BAUs[object@obsidx, ] 
+  } else if (is(object@BAUs, "ST")) {
+    obs_BAUs_df <- object@BAUs@data[object@obsidx, ] 
+  }
+
   
   mu_O <- vector(mode = "list", length = mstar)
   for (Bj in 1:m) {        # for each observation (obs.) j
 
+    w_j <- C_O[Bj, ]              # extract the incidence matrix weights for obs. j
+    idx <- which(w_j > 0)         # find the BAU indices associated with obs. j
+    
     ## If the data is bin. or neg.-bin., use the BAU level size parameters to 
     ## interpolate mu_O from mu_Z. (Note that this step is the reason why we enforce
     ## the weights of the incidence matrix to be 1 if the data is bin. or neg.-bin.)
     ## Otherwise, just use the elements (weights) of C_Z to interpolate mu_O from mu_Z.
     if (object@response %in% c("binomial", "negative-binomial")) {
-      # ## Original code:
-      # ## NB: THIS CODE ASSUMES THAT WE DO NOT HAVE OVERLAPPING DATA SUPPORTS 
-      # idx <- which((C_O@i+1) == Bj) # find the BAU indices associated with obs. j
-      # w_j <- object@k_BAU_O[idx]
-      
-      # ## Code to try and replicate the rest of the framework
-      idx <- which(C_O[Bj, ] > 0)         # find the BAU indices associated with obs. j
-      # idx <- which(object@Cmat[Bj, ] > 0) # find the BAU indices associated with obs. j
-      # w_j <- object@BAUs$k_BAU[idx]
-      w_j <- observed_BAUs$k_BAU[idx]
-      
+      w_j <- obs_BAUs_df$k_BAU[idx]
     } else {
-      w_j <- C_O[Bj, ]              # extract the incidence matrix weights for obs. j
-      idx <- which(w_j > 0)         # find the BAU indices associated with obs. j
       w_j <- w_j[idx]
     }
 

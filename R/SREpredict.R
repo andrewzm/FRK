@@ -464,7 +464,6 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   
   ## subset based on pred_time
   if(!is.null(pred_time)) {
-    browser()
     newdata <- newdata[,pred_time]  # return only specified time points
     ## Also need to subset the Monte Carlo samples. Only do this if t is present 
     ## in the data; otherwise, don't worry about it, as the user can just do it manually.
