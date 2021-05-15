@@ -367,7 +367,8 @@ S <- FRK(f = z ~ 1,               # Formula to FRK
          list(zdf),               # All datasets are supplied in list
          nres = 2,                # Low-rank model to reduce run-time
          response = "poisson",    # data model
-         link = "log")            # link function
+         link = "log",            # link function 
+         nonconvex_hull = FALSE)  # convex hull                     
 pred <- predict(S)                # prediction stage
 @
 \pkg{FRK} includes two plotting methods, \fct{plot} and \fct{plot\_spatial\_or\_ST}; the former takes an SRE object and the result of a call to predict, and returns a list of \class{ggplot} objects containing the predictions and uncertainty quantification of those predictions, while the latter is a general-purpose function for \class{Spatial*DataFrame} and \class{STFDF} objects.
