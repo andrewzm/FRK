@@ -351,15 +351,17 @@ setMethod("plot", signature(x = "SRE", y = "Spatial"), function(x, y,  ...) {
           data_idx <- Cmat_dgT@i + 1 # data index
           binned_data <- rep(NA, length(object@BAUs))
           binned_data[obs_BAUs] <- object@Z[, 1][data_idx]
-          object@BAUs@data[, response_name] <- binned_data
-          ## If unspecified, use white colour for NAs
-          args_list <- list(...)
-          if (!"na.value" %in% names(args_list)) {
-            args_list$na.value <- "transparent" 
+          ## If NAs are present (i.e., some of the BAUs are unobserved), 
+          ## tell the user. This will illuminate a warning thrown later as well.
+          if (any(is.na(binned_data))) {
+            warning("To plot the STIDF data provided in the SRE object, we use the 
+                    binned data in object@Z to plot over the BAUs. The unobserved 
+                    BAUs (i.e., those that are not associated with any 
+                    elements of object@Z) are given a value of NA. 
+                    ")
           }
-          args_list$newdata     <- object@BAUs
-          args_list$column_name <- response_name
-          data_plots <- do.call(plot_spatial_or_ST, args_list)
+          object@BAUs@data[, response_name] <- binned_data
+          data_plots <- plot_spatial_or_ST(object@BAUs, response_name, ...)
         }
       } else {
         ## We may have a combination of STIDF and STFDF, and we don't know which 
@@ -467,7 +469,7 @@ setMethod("plot_spatial_or_ST", signature(newdata = "Spatial"),
                    plot_over_world = FALSE, ...) {
             
     if(!("data" %in% slotNames(newdata)))
-        stop("newdata needs to have a @data slot")
+        stop("newdata needs to have a slot @data")
               
     if(!all(column_names %in% names(newdata@data)))
         stop("Some of the columns you have requested are not in the data")
@@ -534,8 +536,6 @@ setMethod("plot_spatial_or_ST", signature(newdata = "Spatial"),
     
     ## Basic plot
     if (!is.null(map_layer)) {
-        ## TODO: Would be nice for the user to be able to supply geom_polygon() without
-        ## having to provide data. Will add this if I have an example where it is needed. 
         if ("ggplot" %in% class(map_layer)) {
             ## Do it this way, because we cannot add map_layer to a ggplot object if
             ## map_layer is a gg object itself (e.g., if map_layer is a result from a
@@ -555,12 +555,20 @@ setMethod("plot_spatial_or_ST", signature(newdata = "Spatial"),
     gg <- gg %+% aes_string(x = coord_names[1], y = coord_names[2]) + 
         theme_bw() + coord_fixed()
     
+    ## If NAs are present, tell the user that we hard-code the colour/fill for 
+    ## the pixels with NA values to be transparent 
+    if (any(is.na(df[, column_name]))) {
+      warning("NA values detected in the data, which will be transparent in the 
+      final plot. If you want them to show up in the plot, take the returned 
+      plot object and add a colour/fill scale with na.value equal to whatever 
+      colour you want.")
+    }
     if (palette == "nasa") {
-      colour_fn <- scale_colour_gradientn(colours = nasa_palette, ...)
-      fill_fn <- scale_fill_gradientn(colours = nasa_palette, ...)
+      colour_fn <- scale_colour_gradientn(colours = nasa_palette, na.value = "transparent")
+      fill_fn <- scale_fill_gradientn(colours = nasa_palette, na.value = "transparent")
     } else {
-      colour_fn <- scale_colour_distiller(palette = palette, ...)
-      fill_fn <- scale_fill_distiller(palette = palette, ...)
+      colour_fn <- scale_colour_distiller(palette = palette, na.value = "transparent")
+      fill_fn <- scale_fill_distiller(palette = palette, na.value = "transparent")
     }
     
     ## Plot based on data type
@@ -606,8 +614,6 @@ setMethod("plot_spatial_or_ST", signature(newdata = "Spatial"),
         sp_type <- "polygons"
     } else if (class(newdata) == "STIDF") {
         stop("Plotting of STIDF not yet implemented.")
-        df <- data.frame(newdata)
-        sp_type <- "points"
     } else if (class(newdata) == "STFDF") {
         if (is(newdata@sp, "SpatialPolygons")) {
             sp_type <- "polygons"

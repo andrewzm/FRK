@@ -49,7 +49,7 @@ plot_spatial_or_ST(
 
 \item{plot_over_world}{logical; if \code{TRUE}, \code{coord_map("mollweide")} and \code{\link{draw_world}} are used to plot over the world}
 
-\item{...}{optional arguments passed on to whatever geom is appropriate for the \code{Spatial*DataFrame} or \code{STFDF} object (\code{geom_point}, \code{geom_tile}, \code{geom_raster}, or \code{geom_polygon}), or fill/colour scale}
+\item{...}{optional arguments passed on to whatever geom is appropriate for the \code{Spatial*DataFrame} or \code{STFDF} object (\code{geom_point}, \code{geom_tile}, \code{geom_raster}, or \code{geom_polygon})}
 }
 \value{
 A list of \code{ggplot} objects corresponding to the provided \code{column_names}. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.

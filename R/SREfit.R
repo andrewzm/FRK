@@ -1167,7 +1167,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   } else {
     data$fix_sigma2fs <- as.integer(0)
     if (!all(tabulate(object@Cmat@i + 1) == 1)) 
-      cat("Some (but not all) observations are associated with multiple BAUs. Estimation of the fine-scale variance parameter will be done using TMB, but note that there should be a reasonable number of fine unit observations so that TMB can get a handle of the fine-scale variance parameter.\n")
+      cat("Some (but not all) observations are associated with multiple BAUs. Estimation of the fine-scale variance parameter will be done using TMB, but note that there should be a reasonable number of fine-unit observations so that TMB can get a handle of the fine-scale variance parameter.\n")
   } 
   
   data$include_fs   <- as.integer(object@include_fs)
