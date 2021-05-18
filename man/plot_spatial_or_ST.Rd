@@ -2,8 +2,10 @@
 % Please edit documentation in R/AllGeneric.R, R/plottingfns.R
 \name{plot_spatial_or_ST}
 \alias{plot_spatial_or_ST}
-\alias{plot_spatial_or_ST,ST-method}
-\alias{plot_spatial_or_ST,Spatial-method}
+\alias{plot_spatial_or_ST,STFDF-method}
+\alias{plot_spatial_or_ST,SpatialPointsDataFrame-method}
+\alias{plot_spatial_or_ST,SpatialPixelsDataFrame-method}
+\alias{plot_spatial_or_ST,SpatialPolygonsDataFrame-method}
 \title{Plot a Spatial*DataFrame or STFDF object}
 \usage{
 plot_spatial_or_ST(
@@ -16,7 +18,7 @@ plot_spatial_or_ST(
   ...
 )
 
-\S4method{plot_spatial_or_ST}{ST}(
+\S4method{plot_spatial_or_ST}{STFDF}(
   newdata,
   column_names,
   map_layer = NULL,
@@ -26,7 +28,27 @@ plot_spatial_or_ST(
   ...
 )
 
-\S4method{plot_spatial_or_ST}{Spatial}(
+\S4method{plot_spatial_or_ST}{SpatialPointsDataFrame}(
+  newdata,
+  column_names,
+  map_layer = NULL,
+  subset_time = NULL,
+  palette = "Spectral",
+  plot_over_world = FALSE,
+  ...
+)
+
+\S4method{plot_spatial_or_ST}{SpatialPixelsDataFrame}(
+  newdata,
+  column_names,
+  map_layer = NULL,
+  subset_time = NULL,
+  palette = "Spectral",
+  plot_over_world = FALSE,
+  ...
+)
+
+\S4method{plot_spatial_or_ST}{SpatialPolygonsDataFrame}(
   newdata,
   column_names,
   map_layer = NULL,

@@ -2,15 +2,21 @@
 % Please edit documentation in R/AllGeneric.R, R/plottingfns.R
 \name{plot}
 \alias{plot}
-\alias{plot,SRE,ST-method}
-\alias{plot,SRE,Spatial-method}
+\alias{plot,SRE,STFDF-method}
+\alias{plot,SRE,SpatialPointsDataFrame-method}
+\alias{plot,SRE,SpatialPixelsDataFrame-method}
+\alias{plot,SRE,SpatialPolygonsDataFrame-method}
 \title{Plot predictions from FRK analysis}
 \usage{
 plot(x, y, ...)
 
-\S4method{plot}{SRE,ST}(x, y, ...)
+\S4method{plot}{SRE,STFDF}(x, y, ...)
 
-\S4method{plot}{SRE,Spatial}(x, y, ...)
+\S4method{plot}{SRE,SpatialPointsDataFrame}(x, y, ...)
+
+\S4method{plot}{SRE,SpatialPixelsDataFrame}(x, y, ...)
+
+\S4method{plot}{SRE,SpatialPolygonsDataFrame}(x, y, ...)
 }
 \arguments{
 \item{x}{object of class \code{SRE}}
@@ -24,10 +30,11 @@ A list of \code{ggplot} objects consisting of the observed data, predictions, an
 }
 \description{
 This function acts as a wrapper around 
-\code{\link{plot_spatial_or_ST}}, using the \code{SRE} object \code{x} to 
-determine which fields of \code{y} should be plotted, and the \code{@data} 
-slot of \code{x} to plot the supplied data. It also generates 
-some informative, latex-style legend labels for each of the plots.
+\code{\link{plot_spatial_or_ST}}. It plots the fields of the 
+\code{Spatial*DataFrame} or \code{STFDF} object corresponding to 
+prediction and prediction uncertainty quantification. It also uses the 
+\code{@data} slot of \code{SRE} object to plot the training data set(s), 
+and generates informative, latex-style legend labels for each of the plots.
 }
 \examples{
 ## See example in the help file for SRE

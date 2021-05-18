@@ -235,32 +235,22 @@ EmptyTheme <- function() {
 
 #' @rdname plot
 #' @export 
-setMethod("plot", signature(x = "SRE", y = "ST"), function(x, y, ...) {
-    
-    object <- x
-    newdata <- y
-    
-    plots <- .plot_common(object, newdata, ...)
-    
-    return(plots)
-})
+setMethod("plot", signature(x = "SRE", y = "STFDF"), function(x, y, ...) .plot_common(x, y, ...))
 
 #' @rdname plot
 #' @export 
-setMethod("plot", signature(x = "SRE", y = "Spatial"), function(x, y,  ...) {
-    
-    object <- x
-    newdata <- y
-    
-    plots <- .plot_common(object, newdata, ...)
-    
-    return(plots)
-})
+setMethod("plot", signature(x = "SRE", y = "SpatialPointsDataFrame"), function(x, y, ...) .plot_common(x, y, ...))
+
+#' @rdname plot
+#' @export 
+setMethod("plot", signature(x = "SRE", y = "SpatialPixelsDataFrame"), function(x, y, ...) .plot_common(x, y, ...))
+
+#' @rdname plot
+#' @export 
+setMethod("plot", signature(x = "SRE", y = "SpatialPolygonsDataFrame"), function(x, y, ...) .plot_common(x, y, ...))
+
 
 .plot_common <- function(object, newdata, ...) {
-    
-  if(!("data" %in% slotNames(newdata)))
-    stop("y needs to have a @data slot")
   
   ## Determine columns we need to plot, and which palette to use
   if (object@method == "EM") {
@@ -333,6 +323,7 @@ setMethod("plot", signature(x = "SRE", y = "Spatial"), function(x, y,  ...) {
   ## within this function.
   response_name <- all.vars(object@f)[1]
   if (is.data.frame(object@data)) {
+    ## This will never happen, but add a check just in case
     warning("Cannot plot the data stored in object@data, as it is a data.frame")
   } else if (is.list(object@data)) {
     if (any(sapply(object@data, function(d) is(d, "STIDF")))) {
@@ -374,7 +365,11 @@ setMethod("plot", signature(x = "SRE", y = "Spatial"), function(x, y,  ...) {
     } else {
       data_plots <- sapply(object@data, plot_spatial_or_ST, response_name, ...)
     }
-  } else if (is(object@data, "Spatial") || is(object@data, "STFDF")) { # this shouldn't happen, but add just in case
+  } else if (is(object@data, "SpatialPointsDataFrame") ||
+             is(object@data, "SpatialPixelsDataFrame") ||
+             is(object@data, "SpatialPolygonsDataFrame") ||
+             is(object@data, "STFDF")) { 
+    ## this shouldn't happen, but add just in case
     data_plots <- plot_spatial_or_ST(object@data, response_name, ...)
   } else {
     warning("Couldn't plot the data stored in object@data as the type was unrecognised.")
@@ -394,7 +389,6 @@ setMethod("plot", signature(x = "SRE", y = "Spatial"), function(x, y,  ...) {
     }
     plots <- c(data_plots, plots) 
   }
-  
   
   return(plots)
 }
@@ -434,13 +428,10 @@ setMethod("plot", signature(x = "SRE", y = "Spatial"), function(x, y,  ...) {
 
 #' @rdname plot_spatial_or_ST
 #' @export
-setMethod("plot_spatial_or_ST", signature(newdata = "ST"), 
+setMethod("plot_spatial_or_ST", signature(newdata = "STFDF"), 
           function(newdata, column_names,  map_layer = NULL, 
                    subset_time = NULL, palette = "Spectral", 
                    plot_over_world = FALSE, ...) {
-
-     if(!("data" %in% slotNames(newdata)))
-         stop("newdata needs to have a @data slot")
       
       ## Get the coordinate names 
       coord_names <- coordnames(newdata)
@@ -463,43 +454,75 @@ setMethod("plot_spatial_or_ST", signature(newdata = "ST"),
 
 #' @rdname plot_spatial_or_ST
 #' @export
-setMethod("plot_spatial_or_ST", signature(newdata = "Spatial"), 
+setMethod("plot_spatial_or_ST", signature(newdata = "SpatialPointsDataFrame"), 
           function(newdata, column_names,  map_layer = NULL, 
                    subset_time = NULL, palette = "Spectral", 
                    plot_over_world = FALSE, ...) {
-            
-    if(!("data" %in% slotNames(newdata)))
-        stop("newdata needs to have a slot @data")
-              
-    if(!all(column_names %in% names(newdata@data)))
-        stop("Some of the columns you have requested are not in the data")
-            
-    ## Inclusion of "-" characters can cause problems; convert to "_"
-    column_names <- gsub("-", "_", column_names)
-    names(newdata@data) <- gsub("-", "_", names(newdata@data))
     
-    ## Get the coordinate names 
+    ## Get the coordinate names, and time_name is NULL in the spatial setting
     coord_names <- coordnames(newdata)
-    
-    ## time_name is just NULL in the spatial setting
     time_name <- NULL
     
-    plots <- .plot_spatial_or_ST_common(
+    .plot_spatial_or_ST_common(
         newdata = newdata, column_names = column_names, coord_names = coord_names, 
         time_name = time_name, map_layer = map_layer, 
         palette = palette, plot_over_world = plot_over_world, ...
     )
-    return(plots)
 })
+
+#' @rdname plot_spatial_or_ST
+#' @export
+setMethod("plot_spatial_or_ST", signature(newdata = "SpatialPixelsDataFrame"), 
+          function(newdata, column_names,  map_layer = NULL, 
+                   subset_time = NULL, palette = "Spectral", 
+                   plot_over_world = FALSE, ...) {
+            
+            ## Get the coordinate names, and time_name is NULL in the spatial setting
+            coord_names <- coordnames(newdata)
+            time_name <- NULL
+            
+            .plot_spatial_or_ST_common(
+              newdata = newdata, column_names = column_names, coord_names = coord_names, 
+              time_name = time_name, map_layer = map_layer, 
+              palette = palette, plot_over_world = plot_over_world, ...
+            )
+          })
+
+
+#' @rdname plot_spatial_or_ST
+#' @export
+setMethod("plot_spatial_or_ST", signature(newdata = "SpatialPolygonsDataFrame"), 
+          function(newdata, column_names,  map_layer = NULL, 
+                   subset_time = NULL, palette = "Spectral", 
+                   plot_over_world = FALSE, ...) {
+            
+            ## Get the coordinate names, and time_name is NULL in the spatial setting
+            coord_names <- coordnames(newdata)
+            time_name <- NULL
+            
+            .plot_spatial_or_ST_common(
+              newdata = newdata, column_names = column_names, coord_names = coord_names, 
+              time_name = time_name, map_layer = map_layer, 
+              palette = palette, plot_over_world = plot_over_world, ...
+            )
+          })
 
 .plot_spatial_or_ST_common <- function(
     newdata, column_names, coord_names, time_name, map_layer, palette, plot_over_world, ...
 ) {
+  
+    ## Inclusion of "-" characters can cause problems; convert to "_"
+    column_names <- gsub("-", "_", column_names)
+    names(newdata@data) <- gsub("-", "_", names(newdata@data))
     
     ## Classify the kind of spatial data we have, and convert newdata to a data.frame
     tmp <- .classify_sp_and_convert_to_df(newdata)
     df      <- tmp$df
     sp_type <- tmp$sp_type
+    
+    ## Remove duplicate columns (can sometimes happen when we convert the Spatial* 
+    ## object, e.g., if the coordinates are already present)
+    df <- df[, unique(colnames(df))]
     
     # ## Edit the time column so that the facets display t = ...
     # if(!is.null(time_name))
@@ -612,8 +635,6 @@ setMethod("plot_spatial_or_ST", signature(newdata = "Spatial"),
     } else if (class(newdata) == "SpatialPolygonsDataFrame") {
         df <- .SpatialPolygonsDataFrame_to_df(newdata)
         sp_type <- "polygons"
-    } else if (class(newdata) == "STIDF") {
-        stop("Plotting of STIDF not yet implemented.")
     } else if (class(newdata) == "STFDF") {
         if (is(newdata@sp, "SpatialPolygons")) {
             sp_type <- "polygons"
@@ -629,10 +650,6 @@ setMethod("plot_spatial_or_ST", signature(newdata = "Spatial"),
     if (!all(original_names %in% names(df)))
       warning("Some of the original names in newdata were not retained when newdata was coerced to a data.frame. 
               This can sometimes happen if some of the column names contain '-', which get converted to '.'.")
-    
-    ## Remove duplicate columns (can sometimes happen when we convert the Spatial* 
-    ## object, e.g., if the coordinates are already present)
-    df <- df[, unique(colnames(df))]
     
     return(list(df = df, sp_type = sp_type))
 }
