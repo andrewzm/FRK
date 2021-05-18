@@ -534,7 +534,7 @@ data(AIRS_05_2003)                                          ## Load data
 
 We next subset the data to include only the first three days, rename \tt{co2std} to \tt{std} (since this is what is required by \pkg{FRK} to identify the standard deviation of the measurement error), and select the columns that are relevant for the study. Finally we assign the CRS object:
 
-<<>>=
+<<warning=FALSE>>=
 AIRS_05_2003 <-
     dplyr::filter(AIRS_05_2003,day %in% 1:3) %>%    # only first three days
     dplyr::mutate(std=co2std) %>%                   # change std to have suitable name
@@ -587,7 +587,7 @@ show_basis(G,draw_world()) +
 
 \noindent {\bf Steps 4--5:} Since CO$_2$ mole fraction has a latitudinal gradient, we use latitude as a covariate in our model. The SRE object is then constructed in the same way as Section \ref{sec:meuse}, but this time we set \tt{est\_error = FALSE} since the measurement error is supplied with the data. When multiple data points fall into the same BAU, we assume that each of these data points are conditionally independent readings of the process in the BAU. The matrix $\Vmat_Z$ is therefore not diagonal and this increases computational time considerably. For large point-referenced datasets, such as the \tt{AIRS} dataset, one can leave the argument \tt{average\_in\_BAU = TRUE} set (by default) to indicate that one wishes to summarise the data at the BAU level. Below, and in all subsequent analyses, we set the maximum number of EM iterations \tt{n\_EM = 1} so as to reduce the computational time of the vignette:
 
-<<cache=FALSE,eval=TRUE,message=FALSE,results='hide'>>=
+<<cache=FALSE,eval=TRUE,message=FALSE,results='hide',warning=FALSE>>=
 f <- co2avgret ~ lat + 1         # formula for fixed effects
 S <- SRE(f = f,                  # formula for fixed effects
          list(AIRS_05_2003),     # list of data objects
@@ -832,7 +832,7 @@ ggplot() +                          # Similar to above but with s.e.
 
 In order to model the \tt{NOAA} dataset on a subset of the sphere, we first need to associate an appropriate Coordinate Reference System with \tt{STObj},
 
-<<>>=
+<<warning=FALSE>>=
 proj4string(STObj) <- "+proj=longlat +ellps=sphere"
 @
 
@@ -840,7 +840,7 @@ proj4string(STObj) <- "+proj=longlat +ellps=sphere"
 
 
 
-<<FRK2,cache=FALSE>>=
+<<FRK2,cache=FALSE,warning=FALSE>>=
 grid_BAUs <- auto_BAUs(manifold=STsphere(),       # spatio-temporal process on the sphere
                        data=STObj,                # data
                        cellsize = c(1,1,1),       # BAU cell size
@@ -890,7 +890,7 @@ AIRS_05_2003 <- within(AIRS_05_2003,
 
 \noindent and construct the spatio-temporal object (\tt{STIDF}) using \tt{stConstruct}:
 
-<<>>=
+<<warning=FALSE>>=
 STObj <- stConstruct(x = AIRS_05_2003,            # dataset
                  space = c("lon","lat"),          # spatial fields
                  time ="time",                    # time field
@@ -899,7 +899,7 @@ STObj <- stConstruct(x = AIRS_05_2003,            # dataset
 @
 
 
-%' <<>>=
+%' <<warning=FALSE>>=
 %' time <- as.POSIXct("2003-05-01",tz="") + 3600*24*(AIRS_05_2003$t-1)
 %' space <- AIRS_05_2003[,c("lon","lat")]
 %' coordinates(space) = ~lon+lat # change into an sp object
@@ -913,7 +913,7 @@ STObj <- stConstruct(x = AIRS_05_2003,            # dataset
 \noindent {\bf Step 2:} We next construct the BAUs. This time we specify \tt{STsphere()} for the manifold, and for illustration we discretise the sphere using a regular grid rather than a hexagonal lattice.  To do this we set a \tt{cellsize} and specify \tt{type="grid"}. We also supply \tt{time(STObj)} so that the BAUs are constructed around the time of the data; if we supply \tt{STObj} instead, then BAUs are pruned spatially.  We show the BAUs generated using \tt{time(STObj)} and \tt{STObj} in Fig.~\ref{fig:sphere_grid_BAUs}.
 
 
-<<eval=TRUE,cache=FALSE>>=
+<<eval=TRUE,cache=FALSE,warning=FALSE>>=
 ## Prediction (BAU) grid
 grid_BAUs <- auto_BAUs(manifold=STsphere(),         # space-time field on sphere
                              data=time(STObj),      # temporal part of the data
@@ -925,7 +925,7 @@ grid_BAUs$fs = 1
 
 
 
-<<echo=FALSE,fig.subcap=c("",""),fig.cap="Gridded BAUs on the sphere used for modelling and predicting with the \\tt{AIRS} data. (a) BAUs constructed when supplying only the temporal indices of the data (the entire sphere is covered with BAUs within the specified time period). (b) BAUs constructed when supplying the entire dataset. The view of the sphere is from the bottom; in this case there is no data below $60^{\\circ}$S and thus BAUs have been omitted from this region.\\label{fig:sphere_grid_BAUs}",fig.width=4,fig.height=4,out.width="0.5\\linewidth",fig.pos="t!",message=FALSE>>=
+<<warning=FALSE,echo=FALSE,fig.subcap=c("",""),fig.cap="Gridded BAUs on the sphere used for modelling and predicting with the \\tt{AIRS} data. (a) BAUs constructed when supplying only the temporal indices of the data (the entire sphere is covered with BAUs within the specified time period). (b) BAUs constructed when supplying the entire dataset. The view of the sphere is from the bottom; in this case there is no data below $60^{\\circ}$S and thus BAUs have been omitted from this region.\\label{fig:sphere_grid_BAUs}",fig.width=4,fig.height=4,out.width="0.5\\linewidth",fig.pos="t!",message=FALSE>>=
 
 grid_BAUs2 <- auto_BAUs(manifold=STsphere(),  # space-time field on sphere
                              data=STObj,            # data
@@ -971,7 +971,7 @@ G_spacetime <- TensorP(G_spatial,G_temporal)
 
 \noindent {\bf Steps 4--6:} Finally, the SRE model is constructed and fitted as in the other examples. Recall that \tt{est\_error = FALSE} is required with spatio-temporal data and, since we have multiple data per BAU we also set \tt{average\_in\_BAU = TRUE}. For predicting, we use the \tt{pred\_time} flag to indicate at which time points we wish to predict; here the numbers correspond to the time indices of the BAUs. We specify \tt{pred\_time = c(4,8,12)}, which indicates that we want to predict on the 4, 8 and 12 May 2003. The data, prediction, and prediction standard error for these days are given in Figs.~\ref{fig:FRK_AIRS_ST1}--\ref{fig:FRK_AIRS_ST3}.
 
-<<eval=TRUE,message=FALSE,results='hide',cache=FALSE>>=
+<<eval=TRUE,message=FALSE,results='hide',cache=FALSE,warning=FALSE>>=
 f <- co2avgret ~ lat +1           # formula for fixed effects
 S <- SRE(f = f,                   # formula
          data = list(STObj),      # spatio-temporal object
@@ -1041,7 +1041,7 @@ X$se <- sqrt(X$var)
 g3 <-  (EmptyTheme() +
             geom_polygon(data=filter(X,(t %in% c(4,8,12)) & abs(lon) < 175),
                          aes(lon,lat,fill=se,group=id))+
-           scale_fill_distiller(palette="Spectral",name="s.e. (ppm)") +
+           scale_fill_distiller(palette="BrBG",name="s.e. (ppm)") +
            coord_map("mollweide") +
            facet_grid(~t) +
             xlab("lon (deg)") +

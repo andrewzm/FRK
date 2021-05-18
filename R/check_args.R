@@ -5,6 +5,7 @@
                          K_type, response, link, fs_by_spatial_BAU, normalise_wts, 
                          sum_variables, average_in_BAU) {
 
+
   if(!is(f,"formula")) stop("f needs to be a formula.")
   if(length(all.vars(f)[-1]) == 0 && !attr(terms(f), "intercept"))
     stop("We must have at least one covariate (possibly just an intercept) in the formula f. In particular, f = Z ~ -1 is not permitted.")
@@ -54,6 +55,13 @@
   if(response == "gaussian" && !est_error && !all(sapply(data, function(x) x$std >= 0)))
     stop("If the response is Gaussian and observational error is not going to be estimated,
              the std field must contain only positive numbers")
+  
+  # ## Do we have a mixture of point and areal data?
+  # mixture <- any(sapply(data, is, "SpatialPoints")) && any(sapply(data, is, "SpatialPolygons"))
+  # if (response %in% c("binomial", "negative-binomial") && mixture) {
+  #   stop("If the response distribution is associated with a size-paremeter (e.g., binomial or negative-binomial), 
+  #        all data sets must be the same class")
+  # }
   
   
   if(!(K_type %in% c("block-exponential", "precision", "unstructured")))

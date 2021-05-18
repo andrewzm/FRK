@@ -266,7 +266,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     normalise_wts <- FALSE # Set to FALSE so that Cz represents an aggregation of the mean
     BAUs$wts <- 1
     average_in_BAU <- TRUE
-    cat("You have selected a response distribution that has an associated size parameter. For simplicity, we enforce the elements of the incidence matrices (C_Z and C_P in the paper) to be 1, and average_in_BAU = TRUE.\n")
+    cat("The response distribution has an associated size parameter. For simplicity, we enforce the non-zero elements of the incidence matrices (C_Z and C_P) to be 1, normalise_wts = FALSE, and average_in_BAU = TRUE.\n")
   }
 
   ## Check that the arguments are OK
@@ -311,9 +311,6 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   for(i in 1:ndata) {
     
     ## If we are estimating measurement error
-    ## (FIXME: I think that this measurement error term will be very dodgy when the
-    ## link is not the identity function; perhaps we should add a transformation to
-    ## the data.)
     if(est_error && response == "gaussian") {
       ## Algorithm for estimating measurement error in space-time objects still not implemented
       if(is(data[[i]],"ST"))
@@ -412,7 +409,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   ## Indices of observed BAUs
   obsidx <- .observed_BAUs_from_Cmat(Cmat)
   
-  # Size parameter
+  # Size parameter 
   if(response %in% c("binomial", "negative-binomial")) {
     k_Z <- as.numeric(do.call("rbind", k_Z))
     
@@ -420,7 +417,6 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     ## If any observations are associated with multiple BAUs, 
     ## we require the size parameter in a field of the BAUs;
     ## otherwise, we just use the observation size parameters.
-    ## NB: THIS CODE ASSUMES THAT WE DO NOT HAVE OVERLAPPING DATA SUPPORTS 
     num_BAUs_each_data_support <- table(as(Cmat, "dgTMatrix")@i)
     if (!all(num_BAUs_each_data_support == 1)) {
       if (!("k_BAU" %in% names(BAUs))) 
