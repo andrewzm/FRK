@@ -376,8 +376,8 @@ auto_BAUs <- function(manifold, type=NULL,cellsize = NULL,
         ## Ensure the resolution is an integer and assign to resl
         resl <- round(isea3h_res)
     } else {
-        ## If user did not specify ISEA3h then just set resl to NULL
-        resl <- NULL
+        ## If user did not specify ISEA3h then just set resl to 3
+        resl <- 3L
     }
 
     ## If we are on the sphere set defaults for type and resolution if not already specified
