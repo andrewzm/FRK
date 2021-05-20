@@ -672,7 +672,9 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     prob_samples <- finv(Y = Y_samples)
     mu_samples   <- hinv(p = prob_samples, k = k)
   } else if (M@response == "negative-binomial" & M@link %in% c("log", "square-root")) {
-    mu_samples   <- k * ginv(Y_samples)
+    mu_samples   <- k * ginv(Y_samples) 
+    ## Don't use prob_samples in any of the following computations, but construct
+    ## the samples anyway as they may be of interest. 
     f            <- .link_fn(kind = "mu_to_prob", response = M@response)
     prob_samples <- f(mu = mu_samples, k = k)
   } else if (M@response == "gaussian" && M@link == "identity" && obs_fs) {

@@ -318,37 +318,40 @@ Type objective_function<Type>::operator() ()
       ld_xi_O += - 0.5 * (sigma2fs[0] * BAUs_fs).log().sum() - 0.5 * quadform_xi_O;
     }
   }
-    
-  // ---- 2a. Prior for the fine-scale variance component ---- //
-  
-  // We assume an inverse-gamma prior distribution for the fine-scale variance, 
-  // wherein the mean and variance of the prior is equal to sigmafs_hat.
-  // Type a = sigma2fs_hat + 2.0;
-  // Type b = pow(sigma2fs_hat, 2.0) + 1.0;
-  // Type ld_sigma_xi = -(a + 1) * sigma2fs - b / sigma2fs;
-  
   
   // ---- 3. Construct ln[Z|Y_Z]  ---- //
   
   // 3.1 Construct Y, the latent process at the BAU level, and mu 
-  // (NB: mu is the probability parameter if a logit, probit, or cloglog link is used)
+  // (NB: mu_O is the probability parameter if a logit, probit, or cloglog link is used)
   vector<Type> Y_O  = X_O * alpha + S_O * eta + xi_O;
   vector<Type> mu_O = inverseLinkFunction(Y_O, link);
   
-  // If response is negative-binomial or binomial, link the probability parameter to the mean:
-  if (link == "logit" || link == "probit" || link == "cloglog") {
-    if (response == "negative-binomial") {
-      mu_O = k_BAU_O * (1.0 / (mu_O + epsilon) - 1);
-    } else if (response == "binomial") {
-      mu_O *= k_BAU_O; 
-    }
-  } 
+  
+  // If the data are (negative-) binomial, need to account for the size parameter.
+  bool probability_link{link == "logit" || link == "probit" || link == "cloglog"};
+  if (response == "binomial" || response == "negative-binomial") {
+    if (probability_link) {
+      // Currently, mu_O represents the probability process, pi_O. Now convert to 
+      // the mean process using the size parameter and the formula for the mean as
+      // a function of the probability parameter.
+      if (response == "negative-binomial") {
+        mu_O = k_BAU_O * (1.0 / (mu_O + epsilon) - 1);
+      } else if (response == "binomial") {
+        mu_O *= k_BAU_O; 
+      }
+    } else if (link == "log" || link == "square-root") {
+      if (response == "negative-binomial") {
+        mu_O *= k_BAU_O;
+      } 
+    } 
+  }
+  
   
   // Compute the mean over the observed data supports:
   vector<Type> mu_Z = C_O * mu_O;
   
   // Compute the canonical parameter and cumulant function using the mean
-  vector<Type> lambda = canonicalParameter(mu_Z, k_Z, response); 
+  vector<Type> lambda  = canonicalParameter(mu_Z, k_Z, response); 
   vector<Type> blambda = cumulantFunction(mu_Z, k_Z, response, "mu");
 
   
@@ -519,9 +522,3 @@ Type cumulantFunction(Type x, Type k_Z, std::string response, std::string parame
   
   return b;
 }
-
-
-// PARAMETER_VECTOR(eta) defines eta as an ARRAY object in Eigen i.e. vector<type>
-// is equivalent to an array.  - be careful,  as matrices/vectors cannot be mixed 
-// with arrays! 
-// PARAMETER_MATRIX() casts as matrix<type>, which is indeed a matrix.
