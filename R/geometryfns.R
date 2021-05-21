@@ -447,7 +447,7 @@ setMethod("auto_BAU",signature(manifold="real_line"),
               if(is.null(d))
                   stop("Data must be supplied when generating BAUs on a plane")
 
-              crs <- CRS(proj4string(d))     # CRS of data
+              crs <- .quiet_CRS(proj4string(d))     # CRS of data
               coords <- coordinates(d)       # coordinates of data
 
               if(is.null(xlims))               # if x limits are not specified
@@ -567,7 +567,7 @@ setMethod("auto_BAU",signature(manifold="plane"),
               if(is.null(d))
                   stop("Data must be supplied when generating BAUs on a plane")
 
-              crs <- CRS(proj4string(d))   # CRS of data
+              crs <- .quiet_CRS(proj4string(d))   # CRS of data
 
               X1 <- X2 <- NULL             # Suppress bindings warning
 
@@ -700,19 +700,26 @@ setMethod("auto_BAU",signature(manifold="plane"),
 
           })
 
+## This function allows us to call CRS() without getting all of the warnings  
+## that have arison as a result from going to PROJ6. This is only a temporary 
+## solution.
+.quiet_CRS <- function(...) {
+    suppressWarnings(CRS(...))
+}
+
 ## Constructing BAUs on the surface of the sphere
 setMethod("auto_BAU",signature(manifold="sphere"),
           function(manifold,type="grid",cellsize = c(1,1),resl=2,d=NULL,xlims=NULL,ylims=NULL, ...) {
-
+              
               ## For this function d (the data) may be NULL in which case the whole sphere is covered with BAUs
               if(is.null(d))                                  # set CRS if data not provided
-                  prj <- CRS("+proj=longlat +ellps=sphere")
+                  prj <- .quiet_CRS("+proj=longlat +ellps=sphere")
               else {
-                  prj <- CRS(proj4string(d))                # extract CRS
+                  prj <- .quiet_CRS(proj4string(d))                # extract CRS # FIXME: Warning comes from here
                   coords <- data.frame(coordinates(d))      # extract coordinates
 
                   ## When modelling on the sphere, the CRS needs to be CRS("+proj=longlat +ellps=sphere")
-                  if(!identical(prj,CRS("+proj=longlat +ellps=sphere")))
+                  if(!identical(prj, .quiet_CRS("+proj=longlat +ellps=sphere")))
                       stop("If modelling on the sphere please set the CRS of
                            the data to CRS('+proj=longlat +ellps=sphere)")
 
@@ -724,7 +731,7 @@ setMethod("auto_BAU",signature(manifold="sphere"),
 
               ## If the user wants hexagonal BAUs
               if(type == "hex") {
-
+                  
                   ## Suppress bindings warnings
                   isea3h <- res <- lon <- centroid <- lat <- in_chull <- NULL
 
@@ -1134,7 +1141,7 @@ setMethod("BAUs_from_points",signature(obj = "SpatialPoints"),
 
               ## Now create polygons from the above paths, and keep same projection
               sp_obj_pols <- df_to_SpatialPolygons(sp_obj_pols,coords=cnames,keys="id",
-                                                   proj = CRS(proj4string(obj)))
+                                                   proj = .quiet_CRS(proj4string(obj)))
 
               ## We assign the centroid of the BAU to the data object
               df_data <- as.data.frame(coords)
@@ -1264,7 +1271,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
               new_sp_pts <- SpatialPointsDataFrame(
                   coords=Data_in_BAU[coordnames(data_sp)],         # coordinates of summarised data
                   data=Data_in_BAU,                                # data frame
-                  proj4string = CRS(proj4string(data_sp)))         # CRS of original data
+                  proj4string = .quiet_CRS(proj4string(data_sp)))         # CRS of original data
               
               ## Report time taken to bin data
               if (!silently) cat("Binned data in",timer[3],"seconds\n")
@@ -1310,7 +1317,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
               } else if (is(sp_pols, "SpatialPixels")) {
                   BAU_as_points <- SpatialPointsDataFrame(coordinates(sp_pols),
                                                           sp_pols@data,
-                                                          proj4string = CRS(proj4string(sp_pols)))
+                                                          proj4string = .quiet_CRS(proj4string(sp_pols)))
               }
 
               ## Now see which centroids fall into the BAUs
@@ -1352,7 +1359,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
     }
     BAU_as_points <- SpatialPointsDataFrame(BAU_as_points,
                                             sp_pols@data,
-                                            proj4string = CRS(proj4string(sp_pols)))
+                                            proj4string = .quiet_CRS(proj4string(sp_pols)))
     return(BAU_as_points)
 }
 
@@ -1533,7 +1540,7 @@ setMethod("BuildC",signature(data="SpatialPolygons"),
                   ## If data does not overlap any BAU centroid, then the area
                   ## is very small -- simply find which polygon this data point falls in
                   if(length(overlap) == 0) {
-                      crs <- CRS(proj4string(BAUs))
+                      crs <- .quiet_CRS(proj4string(BAUs))
                       datum_as_point <- SpatialPoints(this_poly, proj4string = crs)
                       overlap <- over(datum_as_point, BAUs)$n
                   }
