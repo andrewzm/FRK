@@ -293,9 +293,11 @@ setGeneric("predict", function(object, ...)
 #' \code{Spatial*DataFrame} or \code{STFDF} object corresponding to 
 #' prediction and prediction uncertainty quantification. It also uses the 
 #' \code{@data} slot of \code{SRE} object to plot the training data set(s), 
-#' and generates informative, latex-style legend labels for each of the plots.  
+#' and generates informative, latex-style legend labels for each of the plots. 
 #' @param x object of class \code{SRE} 
-#' @param y the \code{Spatial*DataFrame} or \code{STFDF} object resulting from the call \code{predict(x)}
+#' @param y the \code{Spatial*DataFrame} or \code{STFDF} object resulting from the call \code{predict(x)}. 
+#' Keep in mind that \code{predict()} returns a \code{list} when \code{method} = "TMB"; the element \code{$newdata} contains the required \code{Spatial}/\code{ST} object. 
+#' If the list itself is passed, you will receive the error: "x" and "y" lengths differ.  
 #' @param ... optional arguments passed on to \code{\link{plot_spatial_or_ST}}
 #' @return A list of \code{ggplot} objects consisting of the observed data, predictions, and standard errors. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.
 #' @export

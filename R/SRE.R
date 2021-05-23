@@ -186,7 +186,8 @@
 #' See also the paper \url{https://arxiv.org/abs/1705.08105} for details on code operation.
 #' @export
 #' @examples
-#' library("sp")        
+#' library("FRK")
+#' library("sp")
 #' ## Generate process and data
 #' m <- 250                                                   # Sample size
 #' zdf <- data.frame(x = runif(m), y= runif(m))               # Generate random locs
@@ -220,9 +221,8 @@
 #' 
 #' ## Plot
 #' \dontrun{
-#' plot_spatial_or_ST(zdf, "z")
 #' plotlist <- plot(S, pred)
-#' ggpubr::ggarrange(plotlist = plotlist)}
+#' ggpubr::ggarrange(plotlist = plotlist, nrow = 1, align = "hv", legend = "top")}
 SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                 sum_variables = NULL,
                 normalise_wts = TRUE,

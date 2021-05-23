@@ -289,7 +289,8 @@ The predictions and uncertainties can be easily plotted using \code{\link{plot}}
 or \code{spplot} from the package \code{sp}.
 }
 \examples{
-library("sp")        
+library("FRK")
+library("sp")
 ## Generate process and data
 m <- 250                                                   # Sample size
 zdf <- data.frame(x = runif(m), y= runif(m))               # Generate random locs
@@ -323,9 +324,8 @@ pred <- predict(S)
 
 ## Plot
 \dontrun{
-plot_spatial_or_ST(zdf, "z")
 plotlist <- plot(S, pred)
-ggpubr::ggarrange(plotlist = plotlist)}
+ggpubr::ggarrange(plotlist = plotlist, nrow = 1, align = "hv", legend = "top")}
 }
 \seealso{
 \code{\link{SRE-class}} for details on the SRE object internals, 

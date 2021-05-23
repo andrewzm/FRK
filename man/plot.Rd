@@ -21,7 +21,9 @@ plot(x, y, ...)
 \arguments{
 \item{x}{object of class \code{SRE}}
 
-\item{y}{the \code{Spatial*DataFrame} or \code{STFDF} object resulting from the call \code{predict(x)}}
+\item{y}{the \code{Spatial*DataFrame} or \code{STFDF} object resulting from the call \code{predict(x)}. 
+Keep in mind that \code{predict()} returns a \code{list} when \code{method} = "TMB"; the element \code{$newdata} contains the required \code{Spatial}/\code{ST} object. 
+If the list itself is passed, you will receive the error: "x" and "y" lengths differ.}
 
 \item{...}{optional arguments passed on to \code{\link{plot_spatial_or_ST}}}
 }
