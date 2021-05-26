@@ -2,7 +2,7 @@ Package: FRK
 Type: Package
 Title: Fixed Rank Kriging
 Version: 2.0.0
-Date: 2021-05-07
+Date: 2021-05-26
 Authors@R: c(
     person("Andrew", "Zammit-Mangion", , "andrewzm@gmail.com", c("aut", "cre")),
     person("Matthew", "Sainsbury-Dale", , "msdale@uow.edu.au", c("aut")))
@@ -11,7 +11,7 @@ VignetteBuilder: knitr
 Description: Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling and prediction with large datasets. The approach decomposes the field, and hence the covariance function, using a fixed set of r basis functions, where r is typically much smaller than the number of data points (or polygons) m. This low-rank basis-function representation facilitates the modelling of 'big' spatial/spatio-temporal data. The method naturally allows for non-stationary, anisotropic covariance functions. Discretisation of the spatial domain into so-called basic areal units (BAUs) facilitates the use of observations with varying support (i.e., both point-referenced and areal supports, potentially simultaneously), and prediction over arbitrary user-specified regions. The package `FRK` caters for Gaussian and non-Gaussian data, employing a spatial generalised linear mixed model (GLMM) framework  to cater for Poisson, binomial, negative-binomial, gamma, and inverse-Gaussian distributed data. `FRK` also supports inference over various manifolds, including the 2D plane and 3D sphere, and it provides helper functions to model, fit, predict, and plot with relative ease. Zammit-Mangion and Cressie <arXiv:1705.08105> describe `FRK` in a Gaussian setting, and detail it's use of basis functions and BAUs.
 BugReports: https://github.com/andrewzm/FRK/issues/
 Depends:
-    R (>= 3.2.0)
+    R (>= 3.5.0)
 Suggests:
     covr,
     dggrids,
@@ -21,6 +21,7 @@ Suggests:
     mapproj,
     parallel,
     rgeos,
+    rgdal,
     spdep,
     splancs,
     testthat,
@@ -35,7 +36,6 @@ Imports:
     methods,
     plyr,
     Rcpp (>= 0.12.12), 
-    RcppEigen,
     sp,
     spacetime,
     sparseinv,

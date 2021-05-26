@@ -1387,6 +1387,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPixels"),
 setMethod("map_data_to_BAUs",signature(data_sp="ST"),
           function(data_sp,sp_pols,average_in_BAU = TRUE, sum_variables = NULL, silently = FALSE) {
 
+              
               ## Initialise to no spatial field
               sp_fields <- NULL
 
@@ -1459,7 +1460,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="ST"),
                   if(!is.null(sp_fields[[i]])) {
 
                       ## Concatenate into a new data frame sp
-                      sp <- rbind(sp,sp_fields[[i]]@data)
+                      sp <- rbind(sp, sp_fields[[i]]@data)
 
                       ## The time field is simply the current time * number of data points
                       n <- nrow(sp_fields[[i]])

@@ -1,6 +1,8 @@
 # Sample .travis.yml for R projects
 
 language: r
+r:
+  - oldrel
 group: deprecated-2017Q1
 warnings_are_errors: false
 sudo: required
@@ -34,6 +36,7 @@ install:
 - Rscript -e 'install.packages("dplyr", repos = "https://cran.rstudio.com")'
 - Rscript -e 'install.packages("ggplot2", repos = "https://cran.rstudio.com")'
 - Rscript -e 'install.packages("splancs", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("rgdal", repos = "http://cran.rstudio.com")'
 - Rscript -e 'install.packages("mapproj", repos = "https://cran.rstudio.com")'
 - Rscript -e 'install.packages("rgeos", repos = "https://cran.rstudio.com")'
 - Rscript -e 'install.packages("sparseinv", repos = "https://cran.rstudio.com")'

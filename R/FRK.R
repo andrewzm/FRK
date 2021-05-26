@@ -23,7 +23,6 @@
 #' @import ggplot2
 #' @import Matrix
 #' @import TMB
-#' @import RcppEigen
 #' @import Rcpp
 #' @import sp
 #' @import spacetime
