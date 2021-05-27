@@ -88,6 +88,9 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 \item{\code{obsidx}}{indices of observed BAUs}
 }}
 
+\references{
+Zammit-Mangion, A. and Cressie, N. (2017). FRK: An R package for spatial and spatio-temporal prediction with large datasets. Journal of Statistical Software, 98(4), 1-48. doi:10.18637/jss.v098.i04.
+}
 \seealso{
 \code{\link{SRE}} for details on how to construct and fit SRE models.
 }

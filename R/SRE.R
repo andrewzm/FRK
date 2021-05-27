@@ -183,7 +183,8 @@
 #' @seealso \code{\link{SRE-class}} for details on the SRE object internals, 
 #' \code{\link{auto_basis}} for automatically constructing basis functions, and
 #' \code{\link{auto_BAUs}} for automatically constructing BAUs. 
-#' See also the paper \url{https://arxiv.org/abs/1705.08105} for details on code operation.
+#' @references
+#' Zammit-Mangion, A. and Cressie, N. (2017). FRK: An R package for spatial and spatio-temporal prediction with large datasets. Journal of Statistical Software, 98(4), 1-48. doi:10.18637/jss.v098.i04.
 #' @export
 #' @examples
 #' library("FRK")
