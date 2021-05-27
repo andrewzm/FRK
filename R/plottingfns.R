@@ -621,6 +621,7 @@ setMethod("plot_spatial_or_ST", signature(newdata = "SpatialPolygonsDataFrame"),
 
 
 .classify_sp_and_convert_to_df <- function(newdata) {
+  
     
     original_names <- names(newdata@data)
   

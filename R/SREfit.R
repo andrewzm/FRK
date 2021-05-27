@@ -279,7 +279,6 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     
     ## If the user has supplied a known value for the fine-scale variance, we 
     ## don't need to estimate sigma2fs.
-    ## TODO: Implement this
     est_sigma2fs <- is.null(known_sigma2fs)
       
     ## If we have some fine-scale variation terms
@@ -1046,14 +1045,8 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 
   m       <- nrow(C_O)
   mstar   <- ncol(C_O)
-  ## FIXME: Think we can just use object@BAUs@data[object@obsidx, ] for both
-  if (is(object@BAUs, "Spatial")) {
-    obs_BAUs_df <- object@BAUs[object@obsidx, ] 
-  } else if (is(object@BAUs, "ST")) {
-    obs_BAUs_df <- object@BAUs@data[object@obsidx, ] 
-  }
+  obs_BAUs_df <- object@BAUs@data[object@obsidx, ]
 
-  
   mu_O <- vector(mode = "list", length = mstar)
   for (Bj in 1:m) {        # for each observation (obs.) j
 

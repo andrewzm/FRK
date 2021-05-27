@@ -380,7 +380,6 @@ nasa_palette <- c("#03006d","#02008f","#0000b6","#0001ef","#0000f6","#0428f6","#
   ## bit faster)
   distances <- lapply(abs_diff, function(X) sort(unique(X[1, ])))
 
-  ## TODO: I'd like to think about how to use irregular basis functions. 
   for (current_order in 1:order) { ## Order is experimental, and is hard-coded to be 1 for now
     
     ## Extract the smallest distance which is not zero, provided the basis functions 

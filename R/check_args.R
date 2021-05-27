@@ -273,9 +273,6 @@
     } else if (any(k < 0) | any(k != round (k))) {
       stop("k must contain only positive integers.")
     } else if (length(k) != nrow(object@S0)) {
-      ## FIXME: If we are allowing the user to predict over arbitrary polygons specified
-      ## by the argument "newdata", then k will not be equal to the number of BAUs. Perhaps
-      ## we should check to see if newdata is null, and then test if k equals its length. 
       stop("length(k) must equal 1 or N (the number of BAUs)." )
     }      
   }

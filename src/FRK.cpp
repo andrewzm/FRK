@@ -186,7 +186,7 @@ Type objective_function<Type>::operator() ()
       // Quadratic form
       if (temporal) {
         // First compute L_{s, k}' H_k
-        // FIXME: HAVENT IMPLEMENTED SPATIO-TEMPORAL WITH SEPARABLE YET
+        // HAVENT IMPLEMENTED SPATIO-TEMPORAL WITH SEPARABLE YET
         // J.block(start_eta, 0, r_si[k], r_t) = Mk * J.block(start_eta, 0, r_si[k], r_t);
         
       } else {

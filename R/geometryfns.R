@@ -715,7 +715,7 @@ setMethod("auto_BAU",signature(manifold="sphere"),
               if(is.null(d))                                  # set CRS if data not provided
                   prj <- .quiet_CRS("+proj=longlat +ellps=sphere")
               else {
-                  prj <- .quiet_CRS(proj4string(d))                # extract CRS # FIXME: Warning comes from here
+                  prj <- .quiet_CRS(proj4string(d))         # extract CRS # FIXME: Warning comes from here
                   coords <- data.frame(coordinates(d))      # extract coordinates
 
                   ## When modelling on the sphere, the CRS needs to be CRS("+proj=longlat +ellps=sphere")
@@ -1292,16 +1292,6 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
               ## Suppress bindings warnings
               . <- BAU_name <- NULL
 
-              ## SpatialPixels have equal area while SpatialPolygons need not.
-              ## Currently we are not weighting by the different BAU area.
-              ## Inform user of this
-              # if(!is(sp_pols,"SpatialPixels"))
-              #     message("BAUs are Polygons and not Pixels. Currently BAU of identical
-              #             area are being assumed when computing the incidence matrix
-              #             from observations having a large support.
-              #             Handling of different areas will be catered for in a future revision.
-              #             Please report this issue to the package maintainer.")
-
               ## Attach the ID of the data polygon to the data frame
               data_sp$id <- as.character(row.names(data_sp))
               
@@ -1325,9 +1315,12 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
               ## the data polygons, with all the BAU features averaged (hence if
               ## BAU_as_points$xx = c(1,2,3) for those BAUs inside the data polygon
               ## BAUs_aux_data$xx = 2. 
+              if (!is.null(sum_variables)) {
+                  stop("sum_variables argument is not implemented for 'SpatialPolygons' data. Please set sum_variables to NULL, or contact the package maintainer if you think sum_variables is required for your problem.")
+              } else {
+                  BAUs_aux_data <- .parallel_over(data_sp, BAU_as_points, fn=.safe_mean)
+              }
               
-              ## FIXME: I changed this to .safe_mean temporarily
-              BAUs_aux_data <- .parallel_over(data_sp, BAU_as_points, fn=.safe_mean)
               
               ## Now include the ID in the table so we merge by it later
               BAUs_aux_data$id <- as.character(row.names(BAUs_aux_data))
