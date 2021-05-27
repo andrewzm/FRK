@@ -279,7 +279,12 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     
     ## If the user has supplied a known value for the fine-scale variance, we 
     ## don't need to estimate sigma2fs.
-    est_sigma2fs <- is.null(known_sigma2fs)
+    if(!is.null(known_sigma2fs)) {
+        est_sigma2fs <- FALSE
+        sigma2fs_new <- known_sigma2fs
+    } else {
+       est_sigma2fs <- TRUE # and sigma2fs_new will be estimated below 
+    }
       
     ## If we have some fine-scale variation terms
     if(!all(diag(Sm@Vfs) == 0))
@@ -350,31 +355,34 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     ## a simple search algorithm for finding a good starting values.
 
     ## If we have some fine-scale variation terms
-    if(!all(diag(Sm@Vfs) == 0))
+    if(!all(diag(Sm@Vfs) == 0)) {
         ## And we're not in the special homoscedastic case
         if(!homoscedastic) {
-            amp_factor <- 10; OK <- 0  # initialise
-            while(!OK) {
-                amp_factor <- amp_factor * 10 # widen the interval
+            if(est_sigma2fs) {
+                amp_factor <- 10; OK <- 0  # initialise
+                while(!OK) {
+                    amp_factor <- amp_factor * 10 # widen the interval
 
-                ## If the signs are different, then we're OK, otherwise not
-                if(!(sign(J(sigma2fs/amp_factor)) == sign(J(sigma2fs*amp_factor)))) OK <- 1
+                    ## If the signs are different, then we're OK, otherwise not
+                    if(!(sign(J(sigma2fs/amp_factor)) == sign(J(sigma2fs*amp_factor)))) OK <- 1
 
-                ## If we have a really big amp_factor, it means we're not getting anywhere and
-                ## sigma2fshat is probably tending to zero.
+                    ## If we have a really big amp_factor, it means we're not getting anywhere and
+                    ## sigma2fshat is probably tending to zero.
+                    if(amp_factor > 1e9) {
+                        OK <- 1
+                    }
+                }
+
                 if(amp_factor > 1e9) {
-                    OK <- 1
+                    sigma2fs_new <- 0  # fix sigma2fshat to zero since we couldn't estimate it
+                } else {
+                    ## Otherwise find the root of the equation with the sought initial conditions
+                    sigma2fs_new <- stats::uniroot(f = J,
+                                                   interval = c(sigma2fs/amp_factor,
+                                                                sigma2fs*amp_factor))$root
                 }
             }
-
-            if(amp_factor > 1e9) {
-                sigma2fs_new <- 0  # fix sigma2fshat to zero since we couldn't estimate it
-            } else {
-                ## Otherwise find the root of the equation with the sought initial conditions
-                sigma2fs_new <- stats::uniroot(f = J,
-                                               interval = c(sigma2fs/amp_factor,
-                                                            sigma2fs*amp_factor))$root
-            }
+            
             D <- sigma2fs_new*Sm@Vfs + Sm@Ve  # total data variance-covariance
             if(isDiagonal(D)) {               # inverse of D (as above)
                 D <- Diagonal(x=D@x)          # cast to Diagonal
@@ -390,23 +398,27 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
             alpha <- solve(t(Sm@X) %*% Sm@X) %*%      # alpha GLS estimate
                 t(Sm@X) %*% (Sm@Z - Sm@S %*% mu_eta)
             resid <- Sm@Z - Sm@X %*% alpha            # residual
-            Omega_diag <- Omega_diag1 -               # just compute Omega once
-                2*diag2(Sm@S %*% mu_eta, t(resid)) +
-                diag2(resid,t(resid))
-            Omega_diag <- Diagonal(x=Omega_diag)
+            if(est_sigma2fs) {
+                Omega_diag <- Omega_diag1 -               # just compute Omega once
+                    2*diag2(Sm@S %*% mu_eta, t(resid)) +
+                    diag2(resid,t(resid))
+                Omega_diag <- Diagonal(x=Omega_diag)
 
-            ## Closed-form solution for sigma2fs (see vignette)
-            sigma2fs_new <- 1/b[1]*(sum(Omega_diag)/length(Sm@Z) - a[1])
-            if(sigma2fs_new < 0) {  # If we get less than zero because of numeric instability
-                sigma2fs_new = 0    # just fix to zero
-            }
+                ## Closed-form solution for sigma2fs (see vignette)
+                sigma2fs_new <- 1/b[1]*(sum(Omega_diag)/length(Sm@Z) - a[1])
+                if(sigma2fs_new < 0) {  # If we get less than zero because of numeric instability
+                    sigma2fs_new = 0    # just fix to zero
+                }
+            }            
         }
+    }
+
 
     ## If we do NOT have any fine-scale variation (e.g., estimated to zero in previous iteration)
     if(all(diag(Sm@Vfs) == 0)) {
         alpha <- solve(t(Sm@X) %*% solve(Sm@Ve) %*% Sm@X) %*% t(Sm@X) %*%  # just find GLS
             solve(Sm@Ve) %*% (Sm@Z - Sm@S %*% mu_eta)
-        sigma2fs_new <- 0                                                  # and keep sigma2fs at zero
+        if(est_sigma2fs) sigma2fs_new <- 0                                 # and keep sigma2fs at zero
     }
 
     ## Update SRE model with estimated quantities
