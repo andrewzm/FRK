@@ -1316,7 +1316,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
               ## BAU_as_points$xx = c(1,2,3) for those BAUs inside the data polygon
               ## BAUs_aux_data$xx = 2. 
               if (!is.null(sum_variables)) {
-                  stop("sum_variables argument is not implemented for 'SpatialPolygons' data. Please set sum_variables to NULL, or contact the package maintainer if you think sum_variables is required for your problem.")
+                  warning("sum_variables argument is not implemented for 'SpatialPolygons' data. Please set sum_variables to NULL, or contact the package maintainer if you think sum_variables is required for your problem.")
               } else {
                   BAUs_aux_data <- .parallel_over(data_sp, BAU_as_points, fn=.safe_mean)
               }

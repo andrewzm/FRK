@@ -261,13 +261,28 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   
   ## When the response has a size parameter, restrict the incidence matrices 
   ## (Cz and Cp) to represent simple sums only. This behaviour is kept vague
-  ## in the paper, but a note is provided to the user.
-  ## Also enforce average_in_BAU = TRUE for simplicity.
+  ## in the paper, but a note is provided to the user.  
   if (response %in% c("binomial", "negative-binomial")) {
-    normalise_wts <- FALSE # Set to FALSE so that Cz represents an aggregation of the mean
-    BAUs$wts <- 1
-    average_in_BAU <- TRUE
-    cat("The response distribution has an associated size parameter. For simplicity, we enforce the non-zero elements of the incidence matrices (C_Z and C_P) to be 1, normalise_wts = FALSE, and average_in_BAU = TRUE.\n")
+    normalise_wts <- FALSE 
+    BAUs$wts      <- 1
+
+    cat("The response distribution has an associated size parameter (i.e., it is 
+    binomial or negative-binomial). For simplicity, we enforce the non-zero 
+    elements of the incidence matrices (C_Z and C_P) to be 1 and normalise_wts = FALSE.\n") 
+    
+    if(any(sapply(data, function(x) is(x, "SpatialPoints")))) {
+      ## Enforce average_in_BAU = TRUE for simplicity
+      average_in_BAU <- TRUE
+      ## sum_variables is a vector of variable names that are to be summed
+      ## rather than averaged when average_in_BAU = TRUE 
+      sum_variables  <- c(all.vars(f)[1], "k_Z", sum_variables)
+      ## Remove possible duplicates of all.vars(f)[1] and "k_Z"
+      sum_variables  <- unique(sum_variables) 
+      
+      cat("For SpatialPoints binomial and negative-binomial data, we enforce 
+    average_in_BAU = TRUE, and include the response name and the size parameter 
+        in sum_variables (i.e., all.vars(f)[1] and 'k_Z' are included in sum_variables).\n")
+    }
   }
 
   ## Check that the arguments are OK
@@ -333,11 +348,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     ## BAU (average_in_BAU == TRUE) or not (average_in_BAU == FALSE).
     cat("Binning data...\n")
     
-    ## sum_variables is a vector of variable names which are to be summed
-    ## rather than averaged. Typically, we will wish to sum the data/size parameter 
-    ## in a setting with a size parameter (binomial or negative-binomial). 
-    if (response %in% c("binomial", "negative-binomial")) 
-      sum_variables <- c(all.vars(f)[1], "k_Z", sum_variables)
+
     
     data_proc <- map_data_to_BAUs(data[[i]],       
                                   BAUs,           
