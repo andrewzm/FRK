@@ -1,7 +1,7 @@
 \documentclass{article}
 
 %\VignetteEngine{knitr::knitr}
-%\VignetteIndexEntry{Modelling of spatial and spatio-temporal non-Gaussian data with FRK}
+%\VignetteIndexEntry{Spatial and spatio-temporal kriging with FRK}
 
 \usepackage{hyperref}
 \usepackage{subfig}

@@ -1,7 +1,7 @@
 \documentclass{article}
 
 %\VignetteEngine{knitr::knitr}
-%\VignetteIndexEntry{Spatial and spatio-temporal kriging with FRK}
+%\VignetteIndexEntry{Modelling of spatial and spatio-temporal non-Gaussian data with FRK}
 
 %% Specific this vignette
 \usepackage[margin=1in]{geometry}
