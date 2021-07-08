@@ -108,7 +108,6 @@ FRK <- function(f,                     # formula (compulsory)
     if(is.null(BAUs)) {
 
         cat("Constructing BAUs...\n")
-
         BAUs <- auto_BAUs(manifold = manifold, # Construct BAUs
                           data = data[[d]],    # Using the dataset with largest extent
                           ...)
