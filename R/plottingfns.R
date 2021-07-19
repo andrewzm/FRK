@@ -431,7 +431,7 @@ setMethod("plot", signature(x = "SRE", y = "SpatialPolygonsDataFrame"), function
 setMethod("plot_spatial_or_ST", signature(newdata = "STFDF"), 
           function(newdata, column_names,  map_layer = NULL, 
                    subset_time = NULL, palette = "Spectral", 
-                   plot_over_world = FALSE, ...) {
+                   plot_over_world = FALSE, labels_from_coordnames = TRUE, ...) {
       
       ## Get the coordinate names 
       coord_names <- coordnames(newdata)
@@ -446,7 +446,9 @@ setMethod("plot_spatial_or_ST", signature(newdata = "STFDF"),
       plots <- .plot_spatial_or_ST_common(
           newdata = newdata, column_names = column_names, coord_names = coord_names, 
           time_name = time_name, map_layer = map_layer, 
-          palette = palette, plot_over_world = plot_over_world, ...
+          palette = palette, plot_over_world = plot_over_world, 
+          labels_from_coordnames = labels_from_coordnames,
+          ...
           )
       return(plots)
 })        
@@ -457,7 +459,7 @@ setMethod("plot_spatial_or_ST", signature(newdata = "STFDF"),
 setMethod("plot_spatial_or_ST", signature(newdata = "SpatialPointsDataFrame"), 
           function(newdata, column_names,  map_layer = NULL, 
                    subset_time = NULL, palette = "Spectral", 
-                   plot_over_world = FALSE, ...) {
+                   plot_over_world = FALSE, labels_from_coordnames = TRUE, ...) {
     
     ## Get the coordinate names, and time_name is NULL in the spatial setting
     coord_names <- coordnames(newdata)
@@ -466,7 +468,9 @@ setMethod("plot_spatial_or_ST", signature(newdata = "SpatialPointsDataFrame"),
     .plot_spatial_or_ST_common(
         newdata = newdata, column_names = column_names, coord_names = coord_names, 
         time_name = time_name, map_layer = map_layer, 
-        palette = palette, plot_over_world = plot_over_world, ...
+        palette = palette, plot_over_world = plot_over_world, 
+        labels_from_coordnames = labels_from_coordnames, 
+        ...
     )
 })
 
@@ -475,7 +479,7 @@ setMethod("plot_spatial_or_ST", signature(newdata = "SpatialPointsDataFrame"),
 setMethod("plot_spatial_or_ST", signature(newdata = "SpatialPixelsDataFrame"), 
           function(newdata, column_names,  map_layer = NULL, 
                    subset_time = NULL, palette = "Spectral", 
-                   plot_over_world = FALSE, ...) {
+                   plot_over_world = FALSE, labels_from_coordnames = TRUE,...) {
             
             ## Get the coordinate names, and time_name is NULL in the spatial setting
             coord_names <- coordnames(newdata)
@@ -484,7 +488,9 @@ setMethod("plot_spatial_or_ST", signature(newdata = "SpatialPixelsDataFrame"),
             .plot_spatial_or_ST_common(
               newdata = newdata, column_names = column_names, coord_names = coord_names, 
               time_name = time_name, map_layer = map_layer, 
-              palette = palette, plot_over_world = plot_over_world, ...
+              palette = palette, plot_over_world = plot_over_world, 
+              labels_from_coordnames = labels_from_coordnames, 
+              ...
             )
           })
 
@@ -494,7 +500,7 @@ setMethod("plot_spatial_or_ST", signature(newdata = "SpatialPixelsDataFrame"),
 setMethod("plot_spatial_or_ST", signature(newdata = "SpatialPolygonsDataFrame"), 
           function(newdata, column_names,  map_layer = NULL, 
                    subset_time = NULL, palette = "Spectral", 
-                   plot_over_world = FALSE, ...) {
+                   plot_over_world = FALSE, labels_from_coordnames = TRUE, ...) {
             
             ## Get the coordinate names, and time_name is NULL in the spatial setting
             coord_names <- coordnames(newdata)
@@ -503,12 +509,14 @@ setMethod("plot_spatial_or_ST", signature(newdata = "SpatialPolygonsDataFrame"),
             .plot_spatial_or_ST_common(
               newdata = newdata, column_names = column_names, coord_names = coord_names, 
               time_name = time_name, map_layer = map_layer, 
-              palette = palette, plot_over_world = plot_over_world, ...
+              palette = palette, plot_over_world = plot_over_world, 
+              labels_from_coordnames = labels_from_coordnames, 
+              ...
             )
           })
 
 .plot_spatial_or_ST_common <- function(
-    newdata, column_names, coord_names, time_name, map_layer, palette, plot_over_world, ...
+    newdata, column_names, coord_names, time_name, map_layer, palette, plot_over_world, labels_from_coordnames, ...
 ) {
   
     ## Inclusion of "-" characters can cause problems; convert to "_"
@@ -538,7 +546,8 @@ setMethod("plot_spatial_or_ST", signature(newdata = "SpatialPolygonsDataFrame"),
     ## Plot the requested columns
     plots <- lapply(1:length(column_names), 
                     function(i, x, y, ...) {
-                        .plot(df, x[i], coord_names, time_name, sp_type, map_layer, y[i], plot_over_world, ...)
+                        .plot(df, x[i], coord_names, time_name, sp_type, map_layer, 
+                              y[i], plot_over_world, labels_from_coordnames, ...)
                     }, x = column_names, y = palette, ...)
     
     suppressMessages( # suppress message about adding a new coordinate system
@@ -555,7 +564,7 @@ setMethod("plot_spatial_or_ST", signature(newdata = "SpatialPolygonsDataFrame"),
 
 #### This function creates the individual plots.
 
-.plot <- function(df, column_name, coord_names, time_name, sp_type, map_layer, palette, plot_over_world, ...){
+.plot <- function(df, column_name, coord_names, time_name, sp_type, map_layer, palette, plot_over_world, labels_from_coordnames, ...){
     
     ## Basic plot
     if (!is.null(map_layer)) {
@@ -615,6 +624,9 @@ setMethod("plot_spatial_or_ST", signature(newdata = "SpatialPolygonsDataFrame"),
     
     if (!is.null(time_name))
         gg <- gg + facet_wrap(as.formula(paste("~", time_name)))
+    
+    if (!labels_from_coordnames)
+      gg <- gg + labs(x = expression(s[1]), y = expression(s[2]))
 
     return(gg)
 }

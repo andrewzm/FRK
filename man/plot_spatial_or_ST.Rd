@@ -15,6 +15,7 @@ plot_spatial_or_ST(
   subset_time = NULL,
   palette = "Spectral",
   plot_over_world = FALSE,
+  labels_from_coordnames = TRUE,
   ...
 )
 
@@ -25,6 +26,7 @@ plot_spatial_or_ST(
   subset_time = NULL,
   palette = "Spectral",
   plot_over_world = FALSE,
+  labels_from_coordnames = TRUE,
   ...
 )
 
@@ -35,6 +37,7 @@ plot_spatial_or_ST(
   subset_time = NULL,
   palette = "Spectral",
   plot_over_world = FALSE,
+  labels_from_coordnames = TRUE,
   ...
 )
 
@@ -45,6 +48,7 @@ plot_spatial_or_ST(
   subset_time = NULL,
   palette = "Spectral",
   plot_over_world = FALSE,
+  labels_from_coordnames = TRUE,
   ...
 )
 
@@ -55,6 +59,7 @@ plot_spatial_or_ST(
   subset_time = NULL,
   palette = "Spectral",
   plot_over_world = FALSE,
+  labels_from_coordnames = TRUE,
   ...
 )
 }
@@ -70,6 +75,8 @@ plot_spatial_or_ST(
 \item{palette}{the palette supplied to the argument \code{palette} of \code{scale_*_distiller()}. Alternatively, if \code{palette} = "nasa", a vibrant colour palette is created using \code{scale_*_gradientn()}}
 
 \item{plot_over_world}{logical; if \code{TRUE}, \code{coord_map("mollweide")} and \code{\link{draw_world}} are used to plot over the world}
+
+\item{labels_from_coordnames}{logical; if \code{TRUE}, the coordinate names of \code{newdata} (i.e., \code{coordnames(newdata)}) are used as the horizontal- and vertical-axis labels. Otherwise, generic names, s_1 and s_2, are used}
 
 \item{...}{optional arguments passed on to whatever geom is appropriate for the \code{Spatial*DataFrame} or \code{STFDF} object (\code{geom_point}, \code{geom_tile}, \code{geom_raster}, or \code{geom_polygon})}
 }
