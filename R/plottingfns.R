@@ -311,11 +311,17 @@ setMethod("plot", signature(x = "SRE", y = "SpatialPolygonsDataFrame"), function
                  user_args)
   plots <- do.call(plot_spatial_or_ST, args_list)
   
+
+  ## First we determine if the user has predicted over the BAUs or over arbitrary
+  ## prediction regions. To assess this, we will test if newdata has the same 
+  ## number of elements as the BAUs (this is not foolproof, but good enough).
+  pred_over_BAUs <- length(object@BAUs) == length(newdata)
+  
   ## Edit labels
   split_column_names <- strsplit(column_names, "_")
   names(split_column_names) <- column_names
   for (i in column_names) {
-    plots[[i]] <- plots[[i]] + .custom_lab(split_column_names[[i]])
+    plots[[i]] <- plots[[i]] + .custom_lab(split_column_names[[i]], pred_over_BAUs)
   }
   
   ## Now plot the data. Note that here we use a simple call to plot_spatial_or_ST(), 
@@ -395,7 +401,7 @@ setMethod("plot", signature(x = "SRE", y = "SpatialPolygonsDataFrame"), function
 
 
 
-.custom_lab <- function(v) {
+.custom_lab <- function(v, pred_over_BAUs) {
     # v is a vector, with first entry indicating the type of plot we are making a 
     ## label for, and the second entry indicating the quantity of interest    
     type <- v[1]; x <- v[2]
@@ -403,9 +409,16 @@ setMethod("plot", signature(x = "SRE", y = "SpatialPolygonsDataFrame"), function
     ## Set the unicode character for the quantity of interest
     ## See https://en.wikipedia.org/wiki/List_of_Unicode_characters#Greek_and_Coptic
     # for the a list of unicode characters.
-    unicode <- if (x == "Y") "Y" else if (x == "mu") "\U03BC" else if (x == "prob") "\U03C0" else if (x == "Z") "Z"
+    unicode <- if (x == "Y") "Y" else if (x == "mu") "\U03BC" else if (x == "prob") "\U03C0" else if (x == "Z") "Z*"
     
-    process <- bquote(paste(.(unicode), "(\U00B7)"))
+    # browser()
+    if (pred_over_BAUs) {
+      # process <- bquote(paste(.(unicode), "(\U00B7)"))
+      process <-  bquote(bold(.(unicode)))
+    } else {
+      process <-  bquote(bold(.(unicode))[P])
+    }
+    
     expectation <- bquote(paste("E(", .(process), " | ", bold(Z), ", ", bold("\U03B8"), ")    "))
     
     ## Construct the labels
