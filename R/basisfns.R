@@ -840,6 +840,58 @@ setMethod("remove_basis",signature(Basis="Basis"),function(Basis,rmidx) {
     return(Basis)                     # return basis object
 })
 
+
+#' @rdname combine_basis
+#' @aliases combine_basis,Basis-method
+setMethod("combine_basis",signature(Basis_list="list"),function(Basis_list) {
+
+  if (!is.list(Basis_list))
+    stop("Basis_list should be a list of objects of class Basis")
+  
+  if(!all(sapply(Basis_list, function(x) class(x) == "Basis")))
+    stop("Basis_list should be a list of objects of class Basis")
+  
+  ## Check that only one manifold is present:
+  if (sapply(Basis_list, manifold) %>% unique %>% length != 1) {
+    stop("Multiple manifolds detected: Please only combine basis functions that 
+         are defined on the same manifold.")
+  } else {
+    manifold <- Basis_list[[1]]@manifold
+  }
+  
+  ## Find the number of unique resolutions in each basis object: 
+  num_resolutions_in_each_basis <- length(unique(sapply(Basis_list, function(x) length(unique(x@df$res)))))
+  if (num_resolutions_in_each_basis != 1) {
+    stop("Currently only allow each element of Basis_list to contain basis functions at one resolution")
+  } else {
+    df <- Basis_list[[1]]@df
+    df$res <- 1
+    for (i in 2:length(Basis_list)) {
+      Basis_list[[i]]@df$res <- i
+      df <- rbind(df, Basis_list[[i]]@df)
+    }
+  }
+  
+  n <- sum(sapply(Basis_list, nbasis))
+  
+  ## Easiest just to combine the list slots using a for loop
+  fn <- pars <- list()
+  for (i in 1:length(Basis_list)) {
+    fn <- c(fn, Basis_list[[i]]@fn)
+    pars <- c(pars, Basis_list[[i]]@pars)
+  }
+  
+  regular <- sapply(Basis_list, function(x) x@regular) %>% as.logical %>% all
+  
+
+  Basis(manifold = manifold, 
+        n = n, 
+        fn = fn, 
+        pars = pars, 
+        df = df, 
+        regular = regular)
+})
+
 #' @rdname remove_basis
 #' @aliases remove_basis,Basis-method
 setMethod("remove_basis", signature(Basis="Basis", rmidx = "SpatialPolygons"), function(Basis,rmidx) {

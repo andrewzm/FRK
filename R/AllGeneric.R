@@ -219,6 +219,29 @@ setGeneric("remove_basis", function(Basis,rmidx)
     standardGeneric("remove_basis"))
 
 
+#' @title Combine basis functions
+#' @description Takes a list of objects of class \code{Basis} and returns a 
+#' single object of class \code{Basis}.   
+#' @param Basis_list a list of objects of class \code{Basis}. Each element of the list is assumed to 
+#' represent a single resolution of basis functions
+#' @export
+#' @seealso \code{\link{auto_basis}} for automatically constructing basis functions and \code{\link{show_basis}} for visualising basis functions
+#' @examples
+#'## Construct two resolutions of basis functions using local_basis() 
+#'Basis1 <- local_basis(manifold = real_line(), 
+#'                      loc = matrix(seq(0, 1, length.out = 3), ncol = 1), 
+#'                      scale = rep(0.4, 3))
+#'
+#'Basis2 <- local_basis(manifold = real_line(), 
+#'                      loc = matrix(seq(0, 1, length.out = 6), ncol = 1), 
+#'                      scale = rep(0.2, 6))
+#'
+#'## Combine basis-function resolutions into a single Basis object
+#'combine_basis(list(Basis1, Basis2)) 
+setGeneric("combine_basis", function(Basis_list)
+    standardGeneric("combine_basis"))
+
+
 
 #' @title Observed (or unobserved) BAUs
 #' @description Computes the indices (a numeric vector) of the observed (or unobserved) BAUs
