@@ -428,7 +428,8 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   if (kriging == "simple")    Q_posterior <- M@Q_posterior[-(1:p), -(1:p)]
   Q_L <- sparseinv::cholPermute(Q = Q_posterior)
   
-  ## Generate Monte Carlo samples at all BAUs
+  ## Generate Monte Carlo samples at all BAUs (or over arbitrary prediction 
+  ## regions given in the argument newdata)
   MC <- .MC_sampler(M = M, X = X, type = type, obs_fs = obs_fs, 
                     n_MC = n_MC, k = k, Q_L = Q_L, obsidx = obsidx, 
                     predict_BAUs = predict_BAUs, CP = CP, kriging = kriging)
@@ -661,10 +662,14 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   
   ## Create the relevant link functions.
   if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
-    finv    <- .link_fn("Y_to_prob", link = M@link)
-    hinv     <- .link_fn("prob_to_mu", response = M@response)
+    finv  <- .link_fn("Y_to_prob", link = M@link)
   } else {
-    ginv     <- .link_fn("Y_to_mu", link = M@link) 
+    ginv  <- .link_fn("Y_to_mu", link = M@link) 
+  }
+  
+  if(M@response %in% c("binomial", "negative-binomial")) {
+    hinv  <- .link_fn("prob_to_mu", response = M@response)
+    h     <- .link_fn("mu_to_prob", response = M@response)
   }
   
   ## Create the mu samples (and prob parameter if applicable)
@@ -673,10 +678,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     mu_samples   <- hinv(p = prob_samples, k = k)
   } else if (M@response == "negative-binomial" & M@link %in% c("log", "square-root")) {
     mu_samples   <- k * ginv(Y_samples) 
-    ## Don't use prob_samples in any of the following computations, but construct
-    ## the samples anyway as they may be of interest. 
-    f            <- .link_fn(kind = "mu_to_prob", response = M@response)
-    prob_samples <- f(mu = mu_samples, k = k)
+    prob_samples <- h(mu = mu_samples, k = k)
   } else if (M@response == "gaussian" && M@link == "identity" && obs_fs) {
     mu_samples <- Y_smooth_samples
   } else {
@@ -686,15 +688,17 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   
   # ---- Predicting over arbitrary polygons ----
   
-  if (!predict_BAUs) 
-    mu_samples <- as.matrix(CP %*% mu_samples)
+  if (!predict_BAUs) mu_samples <- as.matrix(CP %*% mu_samples)
+  
+  if (!predict_BAUs & M@response %in% c("binomial", "negative-binomial")) {
+    k_P <- CP %*% k
+    prob_samples <- as.matrix(h(mu_samples, k_P))
+  }
   
   ## Output the mean samples. If probability parameter was computed, and 
   ## we are predicting over the BAUs, also output.
   MC$mu_samples <- mu_samples
-  if (exists("prob_samples") & predict_BAUs) 
-    MC$prob_samples <- prob_samples
-  
+  if (exists("prob_samples")) MC$prob_samples <- prob_samples
   
   ## If the response is not a quanitity of interest, exit the function
   if (!("response" %in% type)) return(MC)
