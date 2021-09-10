@@ -410,10 +410,8 @@ setMethod("plot", signature(x = "SRE", y = "SpatialPolygonsDataFrame"), function
     ## See https://en.wikipedia.org/wiki/List_of_Unicode_characters#Greek_and_Coptic
     # for the a list of unicode characters.
     unicode <- if (x == "Y") "Y" else if (x == "mu") "\U03BC" else if (x == "prob") "\U03C0" else if (x == "Z") "Z*"
-    
-    # browser()
+
     if (pred_over_BAUs) {
-      # process <- bquote(paste(.(unicode), "(\U00B7)"))
       process <-  bquote(bold(.(unicode)))
     } else {
       process <-  bquote(bold(.(unicode))[P])
@@ -425,11 +423,14 @@ setMethod("plot", signature(x = "SRE", y = "SpatialPolygonsDataFrame"), function
     ## NB: Add a couple of spaces to ensure no overlap between label and the 
     ## fill box when arranged with legend at top
     label <- if (type == "p") {
-      expectation
+      # expectation
+      # bquote(paste("Prediction\n", .(expectation)))
+      bquote(atop("Prediction    ", .(expectation)))
     } else if (type == "RMSPE") {
         bquote(paste("RMSPE(", .(expectation), ", ", .(process),")  "))
     } else if (type == "interval90") {
-        bquote(paste("90% prediction-\ninterval width for " * .(process), "  "))
+        # bquote(paste("90% prediction-\ninterval width for " * .(process), "  "))
+        bquote(atop("90% prediction-", "interval width for " * .(process), "  "))
     }
     
     return(labs(fill = label))
