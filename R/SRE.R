@@ -232,7 +232,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                 normalise_basis = TRUE, 
                 response = c("gaussian", "poisson", "gamma",
                              "inverse-gaussian", "negative-binomial", "binomial"), 
-                link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"), 
+                link = c("identity", "log", "sqrt", "logit", "probit", "cloglog", "inverse", "inverse-squared"), 
                 include_fs = TRUE, fs_by_spatial_BAU = FALSE,
                 ...) {
   

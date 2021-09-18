@@ -2,7 +2,8 @@
 #' @export
 SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
                     lambda = 0, print_lik = FALSE, optimiser = nlminb, 
-                    known_sigma2fs = NULL, taper = NULL, ...) {
+                    known_sigma2fs = NULL, taper = NULL, 
+                    simple_kriging_fixed = FALSE, ...) {
   
   ## Deprecation coercion
   tmp <- list(...)
@@ -37,7 +38,11 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
                  response = object@response, K_type = object@K_type, link = object@link, 
                  known_sigma2fs = known_sigma2fs,
                  BAUs = object@BAUs,
-                 optimiser = optimiser, taper = taper, ...) # control parameters to optimiser() 
+                 optimiser = optimiser, taper = taper, 
+                 simple_kriging_fixed = simple_kriging_fixed, 
+                 ...) # control parameters to optimiser() 
+    
+    object@simple_kriging_fixed <- simple_kriging_fixed
     
     ## Call internal fitting function with checked arguments
     object <- .SRE.fit(object = object, n_EM = n_EM, tol = tol, 
@@ -719,7 +724,11 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   }
   
   if (is.null(taper) && (K_type %in% c("block-exponential", "precision-block-exponential"))) {
-    cat("The argument taper was not specified. Since we are using TMB, and we are using either a covariance matrix (K_type = 'block-exponential'), or the sparse neighbour-based precision matrix cannot be used because we have irregular basis functions (object@basis@regular = 0) or the manifold is not the plane(), we must use tapering for computational reasons: Setting taper = 3.\n")
+    cat("The argument taper was not specified. Since we are using method = 'TMB' 
+         with either i) a covariance matrix (K_type = 'block-exponential') 
+         or ii) irregular basis functions (object@basis@regular = 0) or iii) a 
+         non-plane() manifold, we must use tapering for computational reasons. 
+         Setting taper = 3.\n")
     taper <- 3
     info_fit$taper <- taper
   }
@@ -754,8 +763,8 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   parameters$logsigma2_t <- pmin(pmax(parameters$logsigma2_t, -4), 8)
   
   ## Checks to catch catastrophic errors. 
-  ## If we allow nonsensical values into TMB, R will crash without providing
-  ## an informative warning. 
+  ## If we allow nonsensical values into TMB, R may crash without providing
+  ## an informative warning. These checks will hopefully ensure that will not happen. 
   if (any(sapply(data, function(x) any(length(x) == 0) || any(is.na(x)) || any(is.null(x)))))
     stop("Something has gone wrong in the data preparation for TMB: Some entries are numeric(0), NA, or NULL. Please contact the package maintainer.")
   if (any(sapply(parameters, function(x) any(length(x) == 0) || any(is.na(x)) || any(is.null(x)))))
@@ -819,13 +828,22 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   ## the random effects in isolation.
   s <- length(estimates$random_effects) # Number of random effects
   
-  ## We need to use sdreport() if we wish to use the uncertainty of the
-  ## parameters and fixed effects, as opposed to using obj$env$spHess(par = obj$env$last.par.best, random = TRUE) 
-  ## We will only retain the uncertainty in the fixed effects
-  ## (i.e., in alpha), and not the parameters.
-  Q_posterior <- sdreport(obj, getJointPrecision = TRUE)$jointPrecision
-  retain_idx  <- rownames(Q_posterior) %in% c("alpha", "random_effects") 
-  Q_posterior <- Q_posterior[retain_idx, retain_idx]
+  if (object@simple_kriging_fixed) {
+    ## Extract the precision matrix of the random effects only
+    Q_posterior <- obj$env$spHess(par = obj$env$last.par.best, random = TRUE)
+  } else {
+    ## if we wish to extract the uncertainty of the parameters and fixed effects
+    ## in order to do universal kriging (or, at least give us the OPTION to do 
+    ## it during the prediction stage), We need to use sdreport().
+    ## This can be computationally demanding, which is why we provide the
+    ## argument simple_kriging_fixed.
+    Q_posterior <- sdreport(obj, getJointPrecision = TRUE)$jointPrecision
+    
+    ## We will only retain the uncertainty in the fixed effects
+    ## (i.e., in alpha), and not the parameters.
+    retain_idx  <- rownames(Q_posterior) %in% c("alpha", "random_effects") 
+    Q_posterior <- Q_posterior[retain_idx, retain_idx]
+  }
   
   ## Update the slots of object
   ## Convert to Matrix as these SRE slots require class "Matrix"
@@ -1014,7 +1032,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   ## Create altered data to avoid the problems of applying g() to Z.
   ## This altered data is used only during the initialisation stage.
   Z0 <- Z
-  if (object@link %in% c("log", "square-root")) {
+  if (object@link %in% c("log", "sqrt")) {
     Z0[Z <= 0] <- 0.1      
   } else if (object@response == "negative-binomial" & object@link %in% c("logit", "probit", "cloglog")) {
     Z0[Z == 0]   <- 0.1
@@ -1042,7 +1060,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   ## Transformed data: convert from data scale to Gaussian Y-scale.
   if (object@response %in% c("binomial", "negative-binomial") & object@link %in% c("logit", "probit", "cloglog")) {
     Y_O <- f(h(mu_O, k_BAU_O)) 
-  } else if (object@response == "negative-binomial" & object@link %in% c("log", "square-root")) {
+  } else if (object@response == "negative-binomial" & object@link %in% c("log", "sqrt")) {
     Y_O <- g(mu_O / k_BAU_O) 
   } else {
     Y_O <- g(mu_O)

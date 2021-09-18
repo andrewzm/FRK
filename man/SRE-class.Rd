@@ -86,6 +86,8 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 \item{\code{fs_by_spatial_BAU}}{if \code{TRUE}, then each BAU is associated with its own fine-scale variance parameter}
 
 \item{\code{obsidx}}{indices of observed BAUs}
+
+\item{\code{simple_kriging_fixed}}{logical indicating whether one wishes to commit to simple kriging at the fitting stage: If \code{TRUE}, model fitting is faster, but the option to conduct universal kriging at the prediction stage is removed}
 }}
 
 \references{

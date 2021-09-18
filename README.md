@@ -111,8 +111,8 @@ zdf$z <- rpois(m, lambda = zdf$z^2)
 
 ## Run FRK
 S <- FRK(f = z ~ 1, list(zdf),                          
-         response = "poisson",                # Poisson data model
-         link = "square-root")                # square-root link function
+         response = "poisson",         # Poisson data model
+         link = "sqrt")                # square-root link function
 pred <- predict(S)                            
 
 ## Plotting

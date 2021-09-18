@@ -94,19 +94,19 @@
   ## Check that valid data model and link function have been chosen
   if (!(response %in% c("gaussian", "poisson", "gamma", "inverse-gaussian", "negative-binomial", "binomial")))
     stop("Invalid response argument")
-  if (!(link %in% c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared")))
+  if (!(link %in% c("identity", "log", "sqrt", "logit", "probit", "cloglog", "inverse", "inverse-squared")))
     stop("Invalid link argument")
   ## Check that an appropriate response-link combination has been chosen
-  if (response == "gaussian" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "square-root")) ||
-      response == "poisson" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "square-root")) ||
-      response == "gamma" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "square-root")) ||
-      response == "inverse-gaussian" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "square-root")) ||
-      response == "negative-binomial" & !(link %in% c("log", "square-root", "logit", "probit", "cloglog")) ||
+  if (response == "gaussian" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "sqrt")) ||
+      response == "poisson" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "sqrt")) ||
+      response == "gamma" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "sqrt")) ||
+      response == "inverse-gaussian" & !(link %in% c("identity", "inverse", "log", "inverse-squared", "sqrt")) ||
+      response == "negative-binomial" & !(link %in% c("log", "sqrt", "logit", "probit", "cloglog")) ||
       response == "binomial" & !(link %in% c("logit", "probit", "cloglog"))) {
     stop("Invalid response-link combination selected. Please choose an appropriate link function for the specified response distribution.")
   }
   ## Provide a warning if a possibly problematic combination is chosen
-  if (response == "gaussian" & link %in% c("log", "inverse-squared", "square-root") ||
+  if (response == "gaussian" & link %in% c("log", "inverse-squared", "sqrt") ||
       response == "poisson" & link %in% c("identity", "inverse", "inverse-squared") ||
       response == "gamma" & link %in% c("identity", "inverse", "inverse-squared") ||
       response == "inverse-gaussian" & link %in% c("inverse-squared")) {
@@ -160,7 +160,7 @@
 ## Checks arguments for the SRE.fit() function. Code is self-explanatory
 .check_args2 <- function(n_EM, tol, lambda, method, print_lik, optimiser, 
                          response, K_type, link, fs_by_spatial_BAU, known_sigma2fs, 
-                         BAUs, taper, ...) {
+                         BAUs, taper, simple_kriging_fixed, ...) {
   
   if(!is.numeric(n_EM)) stop("n_EM needs to be an integer")
   if(!(n_EM <- round(n_EM)) > 0) stop("n_EM needs to be greater than 0")
@@ -234,19 +234,21 @@
     }
   }
 
+  if (!is.logical(simple_kriging_fixed)) stop("simple_kriging_fixed should be a logical")
 }
 
 ## Checks arguments for the predict() function. Code is self-explanatory
 .check_args3 <- function(obs_fs, newdata, pred_polys,
                          pred_time, covariances, object, type, 
                          k, percentiles, kriging, ...) {
-  # if(!is.null(newdata)) {
-  #   if(!all(coordnames(newdata) == coordnames(object@BAUs)))
-  #     stop("The coordinate names of newdata do not match those of the BAUs.")
-  # }
-
+  
   if(kriging != "simple" && object@method == "EM")
     stop("Universal kriging is only available when method = 'TMB'")
+  
+  if (kriging == "universal" && object@simple_kriging_fixed) 
+    stop("You cannot set kriging = 'universal' at the prediction stage if you 
+         set simple_kriging_fixed = TRUE in the fitting stage: Please either refit 
+         the model with simple_kriging_fixed = FALSE or set kriging = 'simple'.")
   
   if(!(obs_fs %in% 0:1)) stop("obs_fs needs to be logical")
   

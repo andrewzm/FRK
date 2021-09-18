@@ -425,7 +425,13 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   ## matrix of the fixed and random effects. If we are doing simple kriging, 
   ## use only the random effect block of the precision matrix.
   if (kriging == "universal") Q_posterior <- M@Q_posterior
-  if (kriging == "simple")    Q_posterior <- M@Q_posterior[-(1:p), -(1:p)]
+  if (kriging == "simple") {
+    if (M@simple_kriging_fixed) {
+      Q_posterior <- M@Q_posterior
+    } else {
+      Q_posterior <- M@Q_posterior[-(1:p), -(1:p)]
+    }
+  } 
   Q_L <- sparseinv::cholPermute(Q = Q_posterior)
   
   ## Generate Monte Carlo samples at all BAUs (or over arbitrary prediction 
@@ -676,7 +682,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
     prob_samples <- finv(Y = Y_samples)
     mu_samples   <- hinv(p = prob_samples, k = k)
-  } else if (M@response == "negative-binomial" & M@link %in% c("log", "square-root")) {
+  } else if (M@response == "negative-binomial" & M@link %in% c("log", "sqrt")) {
     mu_samples   <- k * ginv(Y_samples) 
     prob_samples <- h(mu = mu_samples, k = k)
   } else if (M@response == "gaussian" && M@link == "identity" && obs_fs) {

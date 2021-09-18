@@ -339,7 +339,7 @@ Type objective_function<Type>::operator() ()
       } else if (response == "binomial") {
         mu_O *= k_BAU_O; 
       }
-    } else if (link == "log" || link == "square-root") {
+    } else if (link == "log" || link == "sqrt") {
       if (response == "negative-binomial") {
         mu_O *= k_BAU_O;
       } 
@@ -465,7 +465,7 @@ Type inverseLinkFunction(Type Y_Z, std::string link) {
   }else if (link == "inverse"){          mu_Z = 1.0 / Y_Z;
   }else if (link == "inverse-squared"){  mu_Z = 1.0 / sqrt(Y_Z);
   }else if (link == "log"){              mu_Z = exp(Y_Z) + epsilon;
-  }else if (link == "square-root"){      mu_Z = Y_Z * Y_Z + epsilon;
+  }else if (link == "sqrt"){      mu_Z = Y_Z * Y_Z + epsilon;
   }else if (link == "logit"){            mu_Z = 1.0 / (1.0 + exp(-1.0 * Y_Z));
   }else if (link == "probit"){           mu_Z = pnorm(Y_Z);
   }else if (link == "cloglog"){          mu_Z = 1.0 - exp(-exp(Y_Z));

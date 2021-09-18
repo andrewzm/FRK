@@ -33,11 +33,12 @@ FRK <- function(f,                     # formula (compulsory)
                 print_lik = FALSE,     # print log-likelihood at each iteration
                 response = c("gaussian", "poisson", "gamma",
                              "inverse-gaussian", "negative-binomial", "binomial"), 
-                link = c("identity", "log", "square-root", "logit", "probit", "cloglog", "inverse", "inverse-squared"),
+                link = c("identity", "log", "sqrt", "logit", "probit", "cloglog", "inverse", "inverse-squared"),
                 optimiser = nlminb,    # Optimiser for fitting (applicable only if method = 'TMB')
                 fs_by_spatial_BAU = FALSE,
                 known_sigma2fs = NULL, 
                 taper = NULL, 
+                simple_kriging_fixed = FALSE,
                 ...)                   # other arguments for BAUs/basis-function construction, or 
 {
 
@@ -83,7 +84,8 @@ FRK <- function(f,                     # formula (compulsory)
     .check_args2(n_EM = n_EM, tol = tol, method = method, print_lik = print_lik, 
                  response = response, link = link, K_type = K_type, lambda = lambda,
                  optimiser = optimiser, fs_by_spatial_BAU = fs_by_spatial_BAU, 
-                 known_sigma2fs = known_sigma2fs, BAUs = BAUs, taper = taper, ...)                      
+                 known_sigma2fs = known_sigma2fs, BAUs = BAUs, taper = taper, 
+                 simple_kriging_fixed = simple_kriging_fixed, ...)                      
 
     ## if there is a measurement error declared in all datasets then
     ## don't estimate it
@@ -214,6 +216,7 @@ FRK <- function(f,                     # formula (compulsory)
                  optimiser = optimiser, 
                  known_sigma2fs = known_sigma2fs,
                  taper = taper,
+                 simple_kriging_fixed = simple_kriging_fixed,
                  ...) 
 
     ## Return fitted SRE model
