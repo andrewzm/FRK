@@ -828,7 +828,7 @@ setMethod("remove_basis",signature(Basis="Basis"),function(Basis,rmidx) {
              1 and the number of basis functions.")
     
     if (length(rmidx) == 0) {
-      warning("length(rmidx) == 0; not removing any basis functions")
+      cat("length(rmidx) == 0; not removing any basis functions\n")
       return(Basis)
     }
 

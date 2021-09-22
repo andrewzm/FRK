@@ -338,7 +338,7 @@ setMethod("plot", signature(x = "SRE", y = "SpatialPolygonsDataFrame"), function
         ## observations are associated with multiple BAUs; don't do it in this case.
         Cmat_dgT <- as(object@Cmat, "dgTMatrix")
         if (!all(tabulate(Cmat_dgT@i + 1) == 1) || any(tabulate(Cmat_dgT@j + 1) > 1)) {
-          warning("The data set stored in object@data is of class STIDF. In this case, 
+         cat("The data set stored in object@data is of class STIDF. In this case, 
                   we normally use the binned data in object@Z to plot over the BAUs. However,
                   some observations are associated with multiple BAUs, or there 
                   are some BAUs associated with multiple observations (probably because 
@@ -351,11 +351,7 @@ setMethod("plot", signature(x = "SRE", y = "SpatialPolygonsDataFrame"), function
           ## If NAs are present (i.e., some of the BAUs are unobserved), 
           ## tell the user. This will illuminate a warning thrown later as well.
           if (any(is.na(binned_data))) {
-            warning("To plot the STIDF data provided in the SRE object, we use the 
-                    binned data in object@Z to plot over the BAUs. The unobserved 
-                    BAUs (i.e., those that are not associated with any 
-                    elements of object@Z) are given a value of NA. 
-                    ")
+            cat("To plot the STIDF data provided in the SRE object, we use the binned data in object@Z to plot over the BAUs. The unobserved BAUs (i.e., those that are not associated with any elements of object@Z) are given a value of NA.\n")
           }
           object@BAUs@data[, response_name] <- binned_data
           data_plots <- plot_spatial_or_ST(object@BAUs, response_name, ...)
@@ -364,9 +360,8 @@ setMethod("plot", signature(x = "SRE", y = "SpatialPolygonsDataFrame"), function
         ## We may have a combination of STIDF and STFDF, and we don't know which 
         ## dataset each element of object@Z is associated with. This is a bit 
         ## complicated, so we don't do it. 
-        warning("Multiple data sets were used in the analysis, and because at 
-                least one is of class STIDF, we will not plot the data. 
-                Please contact the package maintainer if you would like help plotting the data.")
+        cat("Multiple data sets were used in the analysis, and because at 
+                least one is of class STIDF, we will not plot the data (we don't have a method for this).\n")
       }
     } else {
       data_plots <- sapply(object@data, plot_spatial_or_ST, response_name, ...)
@@ -604,10 +599,7 @@ setMethod("plot_spatial_or_ST", signature(newdata = "SpatialPolygonsDataFrame"),
     ## If NAs are present, tell the user that we hard-code the colour/fill for 
     ## the pixels with NA values to be transparent 
     if (any(is.na(df[, column_name]))) {
-      warning("NA values detected in the data, which will be transparent in the 
-      final plot. If you want them to show up in the plot, take the returned 
-      plot object and add a colour/fill scale with na.value equal to whatever 
-      colour you want.")
+      cat("NA values detected in the data, which will be transparent in the final plot. If you want them to show up in the plot, take the returned plot object and add a colour/fill scale with na.value equal to whatever colour you want.\n ")
     }
     if (palette == "nasa") {
       colour_fn <- scale_colour_gradientn(colours = nasa_palette, na.value = "transparent")
@@ -676,7 +668,7 @@ setMethod("plot_spatial_or_ST", signature(newdata = "SpatialPolygonsDataFrame"),
     ## check all original column names are present
     if (!all(original_names %in% names(df)))
       warning("Some of the original names in newdata were not retained when newdata was coerced to a data.frame. 
-              This can sometimes happen if some of the column names contain '-', which get converted to '.'.")
+              This can sometimes happen if some of the column names contain '-', which get converted to '.'")
     
     return(list(df = df, sp_type = sp_type))
 }

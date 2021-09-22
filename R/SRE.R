@@ -266,9 +266,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     normalise_wts <- FALSE 
     BAUs$wts      <- 1
 
-    cat("The response distribution has an associated size parameter (i.e., it is 
-    binomial or negative-binomial). For simplicity, we enforce the non-zero 
-    elements of the incidence matrices (C_Z and C_P) to be 1 and normalise_wts = FALSE.\n") 
+    cat("The response distribution has an associated size parameter (i.e., it is binomial or negative-binomial). For simplicity, we enforce the non-zero elements of the incidence matrices (C_Z and C_P) to be 1 and normalise_wts = FALSE.\n") 
     
     if(any(sapply(data, function(x) is(x, "SpatialPoints")))) {
       ## Enforce average_in_BAU = TRUE for simplicity
@@ -279,9 +277,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
       ## Remove possible duplicates of all.vars(f)[1] and "k_Z"
       sum_variables  <- unique(sum_variables) 
       
-      cat("For SpatialPoints binomial and negative-binomial data, we enforce 
-    average_in_BAU = TRUE, and include the response name and the size parameter 
-        in sum_variables (i.e., all.vars(f)[1] and 'k_Z' are included in sum_variables).\n")
+      cat("For point-referenced binomial and negative-binomial data, we enforce average_in_BAU = TRUE, and include the response name and the size parameter in the argument sum_variables.\n")
     }
   }
 

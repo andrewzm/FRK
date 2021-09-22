@@ -269,7 +269,7 @@
   ## Check k (for predictions)
   if (object@response %in% c("binomial", "negative-binomial")) {
     if(length(k) == 1){
-      warning("Single number k provided for all BAUs: assuming k is invariant over the whole spatial domain.")
+      cat("Single number k provided for all BAUs: assuming k is invariant over the whole spatial domain.\n")
     } else if (!(class(k) %in% c("numeric", "integer"))) {
       stop("k must contain only positive integers.")
     } else if (any(k < 0) | any(k != round (k))) {
