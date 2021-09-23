@@ -15,15 +15,11 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     method <- match.arg(method)
     optimiser <- match.fun(optimiser)
     
-    if (!is.null(known_sigma2fs)) 
-        object@sigma2fshat <- known_sigma2fs
+    if (!is.null(known_sigma2fs)) object@sigma2fshat <- known_sigma2fs
     
     if (method == "TMB" & object@K_type == "block-exponential") {
-      tmp <- readline(cat("You have selected method = 'TMB' and K_type = 'block-exponential'. Whilst this combination is allowed, it is significantly more computationally demanding than K_type = 'precision'. Please enter Y if you would like to continue with the block-exponential formulation, or N if you would like to change to the sparse precision matrix formulation."))
-      tmp <- toupper(tmp)
-      if (tmp != "Y" && tmp != "N") {
-        stop("You did not enter Y or N.")
-      } else if (tmp == "N") {
+      answer <- user_decision("You have selected method = 'TMB' and K_type = 'block-exponential'. While this combination is allowed, it is significantly more computationally demanding than K_type = 'precision'. Please enter Y if you would like to continue with the block-exponential formulation, or N if you would like to change to the sparse precision matrix formulation.\n")
+      if (answer == "N") {
         object@K_type <- "precision"
         cat("Setting K-type = 'precision'.\n")
       }
@@ -45,9 +41,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     
     object@simple_kriging_fixed <- simple_kriging_fixed
     
-    if (simple_kriging_fixed & method == "TMB")
-      cat("simple_kriging_fixed = TRUE is faster but precludes universal kriging in the prediction stage: Proceed if you are happy to commit to simple kriging.\n")
-    
+
     ## Call internal fitting function with checked arguments
     object <- .SRE.fit(object = object, n_EM = n_EM, tol = tol, 
                           method = method, lambda = lambda, print_lik = print_lik, 

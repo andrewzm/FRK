@@ -495,3 +495,23 @@ nasa_palette <- c("#03006d","#02008f","#0000b6","#0001ef","#0000f6","#0428f6","#
   return(list(Q = Q, nnz = nnz))
 }
 
+# Facilitates user input regardless of how this script was invoked
+user_decision <- function(prompt) {
+  
+  if (interactive()) {
+    answer <- readline(prompt)
+  } else {
+    cat(prompt)
+    answer <- readLines("stdin", n = 1)
+  }
+  
+  answer <- toupper(answer)
+  
+  if (answer != "Y" && answer != "N") {
+    cat("Please enter Y or N.\n")
+    answer <- user_decision(prompt)
+  }
+  
+  return(answer)
+}
+

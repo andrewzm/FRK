@@ -234,7 +234,12 @@
     }
   }
 
-  if (!is.logical(simple_kriging_fixed)) stop("simple_kriging_fixed should be a logical")
+  if (!is.logical(simple_kriging_fixed)) 
+    stop("simple_kriging_fixed should be a logical")
+  
+  if (simple_kriging_fixed && method == "TMB")
+    cat("simple_kriging_fixed = TRUE is faster but precludes universal kriging in the prediction stage: Proceed if you are happy to commit to simple kriging.\n")
+  
 }
 
 ## Checks arguments for the predict() function. Code is self-explanatory
