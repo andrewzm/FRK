@@ -801,17 +801,15 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   info_fit$message     <- fit$message
   
   cat("Optimisation completed.\n")
+
+  
+  # ---- Joint precision/covariance matrix of random effects ----
+  
   cat("Extracting estimates of the parameters and the joint precision matrix of the random effects from TMB...\n")
   
-  ## Re-estimate the fine-scale variance using better estimates. 
-  ## Need to refit the model using the final results and the new version of sigma2fs,
-  ## then repeat this process several times until the fine-scale variance parameter converges. 
   ## Extract parameter and random effect estimates
   par <- obj$env$last.par.best
   estimates <- split(par, names(par)) # convert to named list object
-  
-  
-  # ---- Joint precision/covariance matrix of random effects ----
   
   ## TMB treats all parameters (fixed effects, variance components, 
   ## and random effects) as random quantities, and so the joint precision 
@@ -842,6 +840,8 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     retain_idx  <- rownames(Q_posterior) %in% c("alpha", "random_effects") 
     Q_posterior <- Q_posterior[retain_idx, retain_idx]
   }
+  
+  cat("Extraction completed.\n")
   
   ## Update the slots of object
   ## Convert to Matrix as these SRE slots require class "Matrix"
