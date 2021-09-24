@@ -4,14 +4,25 @@
 \alias{auto_BAUs}
 \title{Automatic BAU generation}
 \usage{
-auto_BAUs(manifold, type = NULL, cellsize = NULL, isea3h_res = NULL,
-  data = NULL, nonconvex_hull = TRUE, convex = -0.05, tunit = NULL,
-  xlims = NULL, ylims = NULL, ...)
+auto_BAUs(
+  manifold,
+  type = NULL,
+  cellsize = NULL,
+  isea3h_res = NULL,
+  data = NULL,
+  nonconvex_hull = TRUE,
+  convex = -0.05,
+  tunit = NULL,
+  xlims = NULL,
+  ylims = NULL,
+  spatial_BAUs = NULL,
+  ...
+)
 }
 \arguments{
 \item{manifold}{object of class \code{manifold}}
 
-\item{type}{either ``grid'' or ``hex'', indicating whether gridded or hexagonal BAUs should be used}
+\item{type}{either ``grid'' or ``hex'', indicating whether gridded or hexagonal BAUs should be used. If \code{type} is unspecified, ``hex'' will be used if we are on the sphere, and ``grid'' will used otherwise}
 
 \item{cellsize}{denotes size of gridcell when \code{type} = ``grid''. Needs to be of length 1 (square-grid case) or a vector of length \code{dimensions(manifold)} (rectangular-grid case)}
 
@@ -28,6 +39,8 @@ auto_BAUs(manifold, type = NULL, cellsize = NULL, isea3h_res = NULL,
 \item{xlims}{limits of the horizontal axis (overrides automatic selection)}
 
 \item{ylims}{limits of the vertical axis (overrides automatic selection)}
+
+\item{spatial_BAUs}{object of class \code{SpatialPolygonsDataFrame} or \code{SpatialPixelsDataFrame} representing the spatial BAUs to be used in a spatio-temporal setting (if left \code{NULL}, the spatial BAUs are constructed automatically using the data)}
 
 \item{...}{currently unused}
 }

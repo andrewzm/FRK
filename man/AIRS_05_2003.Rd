@@ -4,7 +4,8 @@
 \name{AIRS_05_2003}
 \alias{AIRS_05_2003}
 \title{AIRS data for May 2003}
-\format{A data frame with 209631 rows and 7 variables:
+\format{
+A data frame with 209631 rows and 7 variables:
 \describe{
   \item{year}{year of retrieval}
   \item{month}{month of retrieval}
@@ -13,7 +14,8 @@
   \item{lat}{latitude coordinate of retrieval}
   \item{co2avgret}{CO2 mole fraction retrieval in ppm}
   \item{co2std}{standard error of CO2 retrieval in ppm}
-}}
+}
+}
 \usage{
 AIRS_05_2003
 }

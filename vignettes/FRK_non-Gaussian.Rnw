@@ -1,0 +1,627 @@
+\documentclass{article}
+
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{Modelling of spatial and spatio-temporal non-Gaussian data with FRK}
+
+%% Specific this vignette
+\usepackage[margin=1in]{geometry}
+\renewcommand{\tt} {\texttt}
+\let\code=\texttt
+\newcommand{\pkg}[1]{{\fontseries{b}\selectfont #1}}
+\let\proglang=\textsf
+\usepackage{hyperref}
+
+
+
+% ---- Math mode commands ----
+
+
+\usepackage{siunitx} % si units
+
+\usepackage{rotating} % \rotatebox
+
+\usepackage{amsmath}	% align environment.
+\usepackage{amsfonts}	% \mathbb{} (used for Real number symbol, etc.)
+\usepackage{amsthm}		% mathy stuff (Theorems, Lemmas, etc.)
+% \usepackage{commath}
+%\usepackage{bbm} % \mathbb{} doesn't support digits (1, 2, 3, etc.), so use \mathbbm{} in these instances
+% \usepackage{mathtools} % \vdotswithin command to have vertical dots between equals signs
+
+%% Lists
+\usepackage{enumerate}
+
+%% Formatting tables
+\usepackage{pbox} % formatting cells with a table (forced line break within a cell)
+\usepackage{multirow}
+\newenvironment{tabnote}{\par\footnotesize}{\par}
+
+%% recommended packages
+\usepackage{thumbpdf,lmodern}
+
+%% another package (only for this demo article)
+\usepackage{framed}
+
+%% new custom commands
+\newcommand{\class}[1]{`\code{#1}'}
+\newcommand{\fct}[1]{\code{#1()}}
+
+%% Nice boldface math
+\def\mbf#1{{%         \mbf{X} makes X a math bold letter
+\mathchoice%          selects with respect to current style
+{\hbox{\boldmath$\displaystyle{#1}$}}%      case 1 is displaystyle
+{\hbox{\boldmath$\textstyle{#1}$}}%         case 2 is textstyle
+{\hbox{\boldmath$\scriptstyle{#1}$}}%       case 3 is scriptstyle
+{\hbox{\boldmath$\scriptscriptstyle{#1}$}}% case 4 is scriptscriptstyle
+}}
+\def\vec{\mbf}
+
+
+%% General maths commands
+\newcommand{\lr}[1]{\left(#1\right)} 
+\def\d{\textrm{d}} % Define the "d" for use in integrals.
+\newcommand{\logit}[1]{\text{logit}\!\left(#1\right)} % logit function
+\newcommand{\logistic}[1]{\text{logistic}\!\left(#1\right)} % logistic function
+\DeclareMathOperator*{\argmax}{arg\,max} % argmax
+\DeclareMathOperator*{\argmin}{arg\,min} % argmin
+\DeclareMathOperator{\Lagr}{\mathcal{L}} % Lagrangian L
+\newcommand\numberthis{\addtocounter{equation}{1}\tag{\theequation}} % number within align*
+\newcommand{\explr}[1]{\exp\!\left(#1\right)} % exp function with brackets (makes converting between e^{#1} and exp(#1) extremely easy)
+\newcommand{\lnlr}[1]{\ln\!\left(#1\right)} % ln function with brackets 
+\newcommand{\loglr}[1]{\log\!\left(#1\right)} % ln function with brackets 
+
+%% General stats commands 
+\newcommand{\Gau}{{\text{Gau}}}
+\def\inddist{\:\stackrel{\text{ind}}{\sim}\:}
+\newcommand{\simiid}{\overset{\text{iid}}{\sim}}
+\newcommand{\E}[1]{\mathbb{E}\left(#1\right)} % Expectation operator
+\newcommand{\ENoLR}[1]{\mathbb{E}(#1)} % Expectation operator
+\newcommand{\ECurly}[1]{\mathbb{E}\left\{#1\right\}} % Expec operator, curly brackets
+\newcommand{\ESquare}[1]{\mathbb{E}\left[#1\right]} % Expec operator, square brackets
+\newcommand{\var}[1]{{\rm var}\left(#1\right)} % variance operator
+\newcommand{\precision}[1]{{\rm prec}\left(#1\right)} % precision operator
+\newcommand{\precisionNoLR}[1]{{\rm prec}(#1)} % precision operator
+\newcommand{\varCurly}[1]{{\rm var}\left\{#1\right\}} % variance operator, curly brackets
+\newcommand{\varSquare}[1]{{\rm var}\left[#1\right]} % variance operator, square brackets 
+\newcommand{\cov}[2]{{\rm cov}\left(#1,\;\; #2\right)} % covariance operator
+\newcommand{\covCurly}[2]{{\rm cov}\left\{#1,\;\; #2\right\}} % covariance operator, curly brackets
+\newcommand{\covCurlyConditional}[3]{{\rm cov}\left\{#1,\; #2 \mid #3\right\}} % covariance operator, curly brackets
+\newcommand{\covSquare}[2]{{\rm cov}\left[#1,\;\; #2\right]} % covariance operator, square brackets
+\newcommand{\indep}{\rotatebox[origin=c]{90}{$\models$}} % Independent Symbol: \indep
+
+%% Linear algebra commands
+\newcommand{\rank}[1]{{\rm rank}\left(#1\right)}
+\newcommand{\tr}[1]{{\rm tr}\left(#1\right)}
+\newcommand{\tp}{{\!\scriptscriptstyle \top}}
+\newcommand{\vecFN}[1]{{\rm vec \!}\left(#1\right)} % vec operator
+\newcommand{\diag}[1]{\text{diag}\left(#1\right)} % diag function: \diag
+
+%% Predictor and MSPE definitions 
+\newcommand{\pYgivenZ}[1]{\hat{p}_{Y|\vec{Z}}\left(#1\right)} 
+\newcommand{\pmugivenZ}[1]{\hat{p}_{\mu|\vec{Z}}\left(#1\right)} 
+\newcommand{\pmugivenZApprox}[1]{\check{p}_{\mu|\vec{Z}}\left(#1\right)} 
+\newcommand{\pZgivenZ}[1]{\hat{p}_{Z|\vec{Z}}\left(#1\right)} 
+\newcommand{\MSPE}[1]{\text{MSPE}\left\{#1\right\}} 
+\newcommand{\MSPEtwoarg}[2]{\text{MSPE}\left\{#1, #2\right\}} 
+
+
+% %% Define a \hat{} that will fit over any function input. 
+% \usepackage{scalerel,stackengine}
+% \stackMath
+% \newcommand\reallywidehat[1]{%
+% \savestack{\tmpbox}{\stretchto{%
+%   \scaleto{%
+%     \scalerel*[\widthof{\ensuremath{#1}}]{\kern-.6pt\bigwedge\kern-.6pt}%
+%     {\rule[-\textheight/2]{1ex}{\textheight}}%WIDTH-LIMITED BIG WEDGE
+%   }{\textheight}% 
+% }{0.5ex}}%
+% \stackon[1pt]{#1}{\tmpbox}%
+% }
+
+
+
+
+\author{Matthew Sainsbury-Dale, Andrew Zammit-Mangion, and Noel Cressie}
+
+\title{Modelling of spatial and spatio-temporal non-Gaussian data with \pkg{FRK}}
+
+\usepackage[authoryear]{natbib}
+
+\bibliographystyle{plainnat}
+
+\begin{document}
+
+<<setup, include=FALSE, cache=FALSE>>=
+library(knitr)
+# set global chunk options
+# opts_chunk$set(fig.path='figure/minimal-', fig.align='center', fig.show='hold')
+# options(formatR.arrow=TRUE,width=90)
+knitr::opts_chunk$set(dpi=100)
+@
+
+\maketitle
+
+\begin{abstract}
+ Non-Gaussian spatial and spatial-temporal data are becoming increasingly prevalent, arising from studies as diverse as small area demographics (counts) and global remote sensing (radiant energies). 
+  \pkg{FRK} is an \proglang{R} package for spatial/spatio-temporal modelling and prediction with large data sets. 
+In this vignette, we provide examples where we model non-Gaussian data using \pkg{FRK} version 2.x and above. 
+ All of the functionality that \pkg{FRK} offers in a Gaussian setting extends to a non-Gaussian setting: See also the vignette ``FRK\_intro'', which describes how the BAUs and basis functions work; inference over different spatial manifolds (such as the sphere); inference in a spatio-temporal setting; and spatial change of support. 
+\end{abstract}
+
+
+
+\tableofcontents 
+
+ % In Section \ref{SEC:Methodology}, we provide an overview of the model used by \pkg{FRK} in a non-Gaussian setting. 
+ % In Section \ref{sec:simulated_example} we use a small simulated data set to demonstrate the basic work flow of \pkg{FRK}. 
+ % In Section \ref{sec:Americium}, we provide a real-world example analysing lognormally distributed soil data, and generate predictions throughout the spatial domain, and over pre-specifed spatial regions known as blocks. 
+
+
+\section{Methodology}\label{SEC:Methodology}
+
+The statistical model used by \pkg{FRK} in a non-Gaussian setting is a spatial generalised linear mixed (GLMM) model \citep{Diggle_1998_spatial_GLMM}, a hierarchical model consisting of two layers.
+ In the \textit{process} layer, we model the conditional mean of the data as a transformation of a latent spatial process, where the spatial process is modelled as a low-rank spatial random effects model; see Section  \ref{subsection:04-01:ProcessLayer}. 
+ The process layer, which governs the conditional mean of the data, retains many similarities to that in previous versions of the package, as described by \cite{FRK_paper} and in the vignette ``FRK\_intro''. 
+ In the \textit{data} layer, we use a conditionally independent exponential-family model for the data; see Section \ref{subsection:04-02:DataLayer}. 
+In Sections \ref{subsection:02-03:Estimation} and \ref{subsection:04-03:Prediction} we briefly discuss parameter estimation, and spatial prediction and uncertainty quantification.
+
+\subsection{The process layer}\label{subsection:04-01:ProcessLayer}
+
+ Denote the latent spatial process as $Y(\cdot) \equiv \{Y(\vec{s}) \colon \vec{s}\in D\}$, where $\vec{s}$ indexes space in the spatial domain of interest $D$. 
+ The model for $Y(\cdot)$ is the so-called spatial random effects (SRE) model \citep{Cressie_Johannesson_2008_FRK}, 
+\begin{equation}\label{eqn:04-01:Y(s)}
+    Y(\vec{s}) = \vec{t}(\vec{s})^\tp \vec{\alpha} + \vec{\phi}(\vec{s})^\tp \vec{\eta} + \xi(\vec{s}); \quad \vec{s} \in D, 
+\end{equation}
+where $\vec{t}(\cdot)$ are spatially referenced covariates with associated regression parameters $\vec{\alpha}$, $\vec{\phi}(\cdot) \equiv \left(\phi_1(\cdot), \dots, \phi_r(\cdot) \right)^\tp$ is an $r$-dimensional vector of pre-specified spatial basis functions with associated random coefficients $\vec{\eta}$, and $\xi(\cdot)$ is a fine-scale random process that is `almost' uncorrelated.
+
+\pkg{FRK} discretises the domain of interest $D$ into $N$ small, non-overlapping basic areal units (BAUs) $\{A_i:i = 1, \dots, N\}$ such that $D = \cup_{i = 1}^N A_i$. 
+BAUs are a key element of \pkg{FRK}, as they provide a framework that allows one to use both point-referenced and areal data simultaneously, and one that facilitates the spatial change-of-support problem. 
+After discretisation via the BAUs, we obtain the vectorised version of (\ref{eqn:04-01:Y(s)}), 
+\begin{equation}\label{Ch4:eqn:vecY}
+    \vec{Y} = \vec{T}\vec{\alpha} + \vec{S}\vec{\eta} + \vec{\xi},
+\end{equation}
+ where $\vec{Y}$ is an $N$-dimensional vector, $\vec{T}$ and $\vec{S}$ are known design matrices, and $\vec{\xi}$ is the vector associated with the fine-scale process. 
+
+ We model the fine-scale random effects as being independent and identically distributed Gaussian random variables with variance $\sigma^2_\xi$; we model $\vec{\eta}$ as a mean-zero multivariate-Gaussian random variable, typically using a sparse precision matrix parametrisation formualtion in a non-Gaussian setting.
+ 
+Following standard generalised linear model theory \citep{McCullagh_Nelder_1989_GLM}, \pkg{FRK} v.2 uses a link function, $g(\cdot)$, to model $Y(\cdot)$ as a transformation of the mean process, $\mu(\cdot)$:
+\[
+g\left(\mu(\vec{s})\right) = Y(\vec{s}); \quad \vec{s} \in D.
+\]
+The mean process evaluated over the BAUs is 
+\[
+\mu_i = g^{-1}(Y_i), \; i = 1, \dots, N,
+\]
+where $g^{-1}(\cdot)$ is the inverse link function. An identity link function and a Gaussian data model yields the standard Gaussian FRK model.
+
+
+\subsection{The data layer}\label{subsection:04-02:DataLayer}
+
+Given $m$ observations with footprints spanning one or more BAUs, we define the observation supports as $B_j \equiv \cup_{i\in c_j} A_i$ for $j = 1, \dots, m$, where $c_j$ is a non-empty set in the power set of $\{1, \dots, N\}$, and define $D^O \equiv \{B_j : j = 1, \dots, m\}$. 
+Let $Z_j \equiv Z(B_j)$, $j = 1, \dots, m$. 
+The vector of observations (the data vector) is then $\vec{Z} \equiv \left(Z_1, \dots, Z_m\right)^\tp$.
+
+Since each $B_j \in D^O$ is either a BAU or a union of BAUs, one can construct an $m\times N$ matrix 
+\[
+\vec{C}_Z \equiv \Big(w_i\mathbb{I}(A_i \subset B_j) : i = 1, \dots, N; j = 1, \dots, m\Big),
+\]
+where $\mathbb{I}(\cdot)$ is the indicator function, which creates a linear mapping from $\vec{\mu} \equiv (\mu_i: i = 1, \dots, N)^\tp$ to evaluations of the mean process over the observation supports;
+\begin{equation}\label{eqn:04-01:mu_Z}
+\vec{\mu}_Z \equiv \vec{C}_Z\vec{\mu}.  
+\end{equation}
+% In \pkg{FRK} v.2, the weights $w_i$ may be controlled through the \code{wts} field of the BAU object. 
+% If \code{wts} is \code{NULL}, each $w_i$ is set to one, so that all BAUs are equally weighted. 
+The \mbox{\code{normalise\_wts}} argument in \fct{SRE} controls whether the linear mapping of $\vec{C}_Z$ corresponds to a weighted sum or a weighted average; if \mbox{\code{normalise\_wts = TRUE}}, then the weights $w_i$ are normalised so that the rows of $\vec{C}_Z$ sum to one, and the mapping represents a weighted average.
+
+
+We assume that $[Z_j \mid \mu(\cdot), \psi] = [Z_j \mid \vec{\mu}_{Z, j}, \psi]$, where $\psi$ is a (nuisance) dispersion parameter and, for a generic random quantities $A$ and $B$, $[A \mid B]$ denotes the probability distribution of $A$ given $B$. 
+That is, a given observation depends only on the value of the mean process at the corresponding observation support, rather than on the process over the whole domain. 
+As a result, conditional on the latent spatial process, all observations are conditionally independent:
+\[
+[\vec{Z} \mid \mu(\cdot), \psi] = \prod_{j=1}^m[Z_j \mid \vec{\mu}_{Z, j}, \psi].
+\]
+We model the conditional distribution $[Z_j \mid \vec{\mu}_{Z, j}, \psi]$ as a member of the exponential family \citep[Sec.~2.2.2]{McCullagh_Nelder_1989_GLM}, with conditional expectation 
+$\mu(B_j) \equiv \ECurly{Z_j \mid \vec{\mu}_{Z, j}, \psi}$.   
+
+The model employed by \pkg{FRK} v.2 can be summarised as follows. 
+\begin{gather}
+    Z_j \mid \vec{\mu}_{Z,j}, \psi \inddist \text{EF}(\vec{\mu}_{Z,j}, \psi), \quad j = 1, \dots, m, \label{eqn:new_model_Z}\\
+    \vec{\mu}_Z = \vec{C}_Z \vec{\mu}, \\
+    g(\vec{\mu}) = \vec{Y}, \\
+    \vec{Y} = \vec{T} \vec{\alpha} + \vec{S} \vec{\eta} + \vec{\xi}, \label{eqn:new_model_Y}\\
+    \vec{\eta} \mid \vec{\vartheta} \sim \Gau(\vec{0}, \vec{Q}^{-1}), \\
+    \vec{\xi} \mid \sigma^2_\xi \sim \Gau(\vec{0}, \sigma^2_\xi \vec{V}) \label{eqn:new_model_priors}.
+\end{gather}
+ where $\vec{V}$ is a known diagonal matrix with positive entries on the diagonal and $\sigma^2_\xi$ is either unknown and estimated, or provided by the user. 
+
+\subsection{Estimation}\label{subsection:02-03:Estimation}
+
+The complete-data likelihood function for our model is
+\begin{equation}\label{eqn:04:Joint_Likelihood}
+    L(\vec{\theta}; \vec{Z}, \vec{\eta}, \vec{\xi})
+    \equiv 
+    [\vec{Z}, \vec{\eta}, \vec{\xi}]
+    =
+    [\vec{Z} \mid \vec{\mu}_Z, \psi]
+    [\vec{\eta} \mid \vec{\vartheta}]
+    [\vec{\xi} \mid \sigma^2_\xi], 
+\end{equation}
+ where $
+ \vec{\theta}
+ \equiv
+ (
+ \vec{\alpha}^\tp,
+ \vec{\vartheta}^\tp, 
+ \sigma^2_\xi, 
+ \psi
+ )^\tp$ and $\vec{\vartheta}$ are variance components, and its logarithm is 
+\begin{equation}\label{eqn:04:Joint_Log_Likelihood}
+    l(\vec{\theta}; \vec{Z}, \vec{\eta}, \vec{\xi}) 
+    \equiv 
+    \ln{L(\vec{\theta}; \vec{Z}, \vec{\eta}, \vec{\xi})}
+    =
+    \ln{[\vec{Z} \mid \vec{\mu}_Z, \psi]}
+    +
+    \ln{[\vec{\eta} \mid \vec{\vartheta}]}
+    +
+    \ln{[\vec{\xi} \mid \sigma^2_\xi]}.
+\end{equation}
+Under our modelling assumptions, the conditional density functions  $[\vec{\eta}\mid\vec{\vartheta}]$ and $[\vec{\xi} \mid \sigma^2_\xi]$ are invariant to the specified link function and assumed distribution of the response variable. 
+ Of course, this invariance does not hold for $[\vec{Z} \mid \vec{\mu}_Z, \psi]$. 
+As we only consider data models in the exponential family, $\ln{[\vec{Z}  \mid  \vec{\mu}_Z, \psi]}$ may be expressed as  
+\begin{equation}\label{eqn:ln[Z|Y],ExpFam}
+\ln{[\vec{Z} \mid \vec{\mu}_Z, \psi]}
+=
+\sum_{j=1}^m\left\{
+\frac{Z_j\lambda(\mu_{Z, j}) - b(\lambda(\mu_{Z, j}))}{a(\psi)} + c(Z_j, \psi)\right\},
+\end{equation}
+where $a(\cdot)$, $b(\cdot)$, and $c(\cdot, \cdot)$ are deterministic functions specific to the exponential family member, and $\lambda(\cdot)$ is the canonical parameter. 
+
+The marginal likelihood, which does not depend on the random effects, is given by
+\begin{equation}\label{eqn:02-04:LikelihoodTheta}
+    L^*(\vec{\theta}; \vec{Z}) 
+    \equiv
+    \int_{\mathbb{R}^{{p}}}
+    L(\vec{\theta} ; \vec{Z}, \vec{u}) \d \vec{u}, 
+\end{equation}
+where $\vec{u} \equiv (\vec{\eta}^\tp, \vec{\xi}^\tp)^\tp \in \mathbb{R}^{p}$, and ${p}$ is the total number of random effects in the model.
+When the data are non-Gaussian, the integral in (\ref{eqn:02-04:LikelihoodTheta}) is typically intractable and must be approximated either numerically or analytically. 
+In \pkg{FRK}, we use the Laplace approximation, implemented using the \proglang{R} package \pkg{TMB} \citep{Kristensen_2016_TMB}. 
+
+
+Given as input a \proglang{C++} template function which defines the complete-data log-likelihood function (\ref{eqn:04:Joint_Log_Likelihood}), \pkg{TMB} \citep{Kristensen_2016_TMB} computes the Laplace approximation of the marginal log-likelihood, and automatically computes its derivatives, which are then called from within \pkg{FRK} by an optimising function specified by the user (\fct{nlminb} is used by default). 
+ \pkg{TMB} uses \pkg{CppAD} \citep{CppAD_Package} for automatic differentiation, and the linear algebra libraries \pkg{Eigen} \citep{Eigen} and \pkg{Matrix} \citep{Matrix_Package} for vector and matrix operations in \proglang{C++} and \proglang{R}, respectively; use of these packages yields good computational efficiency. 
+\pkg{TMB}'s implementation of automatic differentiation is a key reason why we can cater for a variety of response distributions and link functions, as we do not need to consider each combination on a case-by-case basis.
+
+
+\subsection{Prediction and uncertainty quantification}\label{subsection:04-03:Prediction}
+
+There are three primary quantities of interest in this framework: The latent process $Y(\cdot)$, the  mean process $\mu(\cdot)$, and the noisy data process. 
+ To produce predictions and associated uncertainties, we need to determine the posterior distribution of these quantities.
+
+It can be shown that the Laplace approximation implies that the posterior distribution of the random effects, $\vec{u} \mid \vec{Z}, \vec{\theta}$ is approximated to be Gaussian. 
+ This, in turn, implies that the posterior distribution of $\vec{Y}$ is also approximated to be Gaussian, and hence inference on $Y(\cdot)$ can be done using closed form solutions. 
+  However, the posterior distribution of non-linear functions of $Y(\cdot)$ (e.g., the mean process) are typically not available in closed form, and in this case some form of approximation is required.
+   Hence, we choose to use a Monte Carlo (MC) framework.
+   
+For each quantity, we use the posterior expectation as our predictor. 
+A commonly used metric for uncertainty quantification is the root-mean-squared prediction error (RMSPE). 
+In a non-Gaussian setting, it can be difficult to interpret the RMSPE, and it is often more intuitive to quantify uncertainty through the width of the posterior predictive intervals. Hence, in \pkg{FRK}, we also provide the user with user-specified percentiles of the posterior predictive distribution. 
+ These quantities can be computed straightforwardly using MC sampling. 
+
+
+
+\subsubsection{Arbitrary prediction regions}
+
+
+Often, one does not wish to predict over a single BAU, but over regions spanning multiple BAUs.
+Define the set of prediction regions as 
+$D^P \equiv \{\tilde{B}_k : k = 1, \dots, N_P\}$, where $\tilde{B}_k \equiv \cup_{i\in c_k} A_i$, and where $c_k$ is some non-empty set in the power set of $\{1, \dots, N\}$. 
+Like the data, the prediction regions $\{\tilde{B}_k\}$ may overlap.  
+In practice, $\tilde{B}_k$  may not include entire BAUs; in this case, we assume that a prediction region contains a BAU if and only if there is at least some overlap between the BAU and the prediction region.
+Prediction over $D^P$ requires some form of aggregation across relevant BAUs.
+Since in the non-Gaussian setting aggregation must be done on the original scale, we restrict prediction over arbitrary regions to the mean (or the noisy data process). 
+Therefore, predictions of the latent process $Y(\cdot)$ are not allowed over arbitrary prediction regions. 
+
+Consider the predictions $\{\mu_P(\tilde{B}_k) : k = 1, \dots, N_P\}$, where $\mu_P(\cdot) \equiv \mu(\cdot \mid \vec{Z}, \vec{\theta})$. 
+These predictions are weighted sums of the predictions over the associated BAUs. 
+Specifically,
+\[
+    \mu_{P, k} \equiv \mu_P(\tilde{B}_k) = 
+   \sum_{i = 1}^N \tilde{w}_i \mathbb{I}(A_i \subset \tilde{B}_k)\mu_i; \quad i = 1, \dots, N;\;  k = 1, \dots, N_P;\; \tilde{B}_k \in D^P,
+\]
+where, in a similar fashion to the incidence matrix $\vec{C}_Z$, the weights $\{\tilde{w}_i\}$ are optionally provided by the user in the \code{wts} field of the BAU object, and may be normalised if \mbox{\code{normalise\_wts = TRUE}}. 
+If \code{wts} is \code{NULL}, the BAUs are assumed to be equally weighted. 
+Define $\vec{\mu}_P \equiv (\mu_{P, k} : k = 1, \dots, N_P)^\tp$. 
+Since each element in $D^P$ is the union of subsets of $D^G$, one can construct a matrix, 
+\[
+\vec{C}_P \equiv \left(\tilde{w}_i : i = 1, \dots, N; k = 1, \dots, N_P\right),
+\]
+such that $\vec{\mu}_P = \vec{C}_P \vec{\mu}$. Again, we use MC sampling to predict $\vec{\mu}_P$. 
+
+\section{Example: Simulated Non-Gaussian, point-referenced spatial data}\label{sec:simulated_example}
+
+First, load the required packages. 
+ <<eval=TRUE,message=FALSE,warning=FALSE>>=
+library("FRK")       # for carrying out FRK       
+library("sp")        # for defining points/polygons
+library("dplyr")     # for easy data manipulation
+library("ggplot2")   # for plotting
+@
+
+Now, simulate some Poisson distributed spatial data. 
+
+ <<eval=TRUE,message=FALSE,warning=FALSE>>=
+m <- 250                                                   # Sample size
+RNGversion("3.6.0"); set.seed(1)                           # Fix seed
+zdf <- data.frame(x = runif(m), y= runif(m))               # Generate random locs
+zdf$Y <- 3 + sin(7 * zdf$x) + cos(9 * zdf$y)               # Latent process
+zdf$z <- rpois(m, lambda = exp(zdf$Y))                     # Simulate data
+coordinates(zdf) = ~x+y                                    # Turn into sp object
+@
+
+There is an `expert' way of using \pkg{FRK} that involves using the functions \fct{auto\_BAUs} and \fct{auto\_basis} to automatically construct BAUs and basis functions from the data, and \fct{SRE} and \fct{SRE.fit} to initialise and fit the SRE model object. 
+ This `expert' way is documented in the vignette ``FRK\_intro''.
+ Alternatively, there is a `simple' way of using \pkg{FRK} that uses the high-level wrapper function \fct{FRK} that calls these functions under-the-hood; in this vignette, we will use the `simple' way.
+<<eval=TRUE,message=FALSE,warning=FALSE,results='hide'>>=
+S <- FRK(f = z ~ 1,               # Formula to FRK
+         list(zdf),               # All datasets are supplied in list
+         nres = 2,                # Low-rank model to reduce run-time
+         response = "poisson",    # data model
+         link = "log",            # link function 
+         nonconvex_hull = FALSE)  # convex hull                     
+pred <- predict(S)                # prediction stage
+@
+\pkg{FRK} includes two plotting methods, \fct{plot} and \fct{plot\_spatial\_or\_ST}; the former takes an SRE object and the result of a call to predict, and returns a list of \class{ggplot} objects containing the predictions and uncertainty quantification of those predictions, while the latter is a general-purpose function for \class{Spatial*DataFrame} and \class{STFDF} objects.
+<<eval=TRUE,message=FALSE,warning=FALSE,results='hide'>>=
+plot_list <- plot(S, pred$newdata)
+plot_list <- c(plot_list, plot_spatial_or_ST(zdf, "z"))
+@
+This list of plot objects can then be arranged using one of the many functions for arranging \class{ggplot} objects: See Figure \ref{fig:example1}.
+
+<<echo=FALSE, warning=FALSE,fig.align='center',fig.cap="(Left) Simulated Poisson spatial data. (Centre) Prediction of the mean process. (Right) Uncertainty quantification of predictions; specifically the width of the 90\\% posterior predictive interval.\\label{fig:example1}",fig.subcap=c("",""), fig.width = 10, fig.height = 4>>=
+ggpubr::ggarrange(plot_list$z + labs(fill = "data"),
+          plot_list$p_mu + labs(fill = "pred."),
+          plot_list$interval90_mu + labs(fill = "pred.\nuncertainty"),
+          nrow = 1, legend = "top")
+@
+
+
+\section{Example: Lognormally distributed soil data, point and block-level predictions}\label{sec:Americium}
+
+Between 1954 and 1963, nuclear devices were detonated at Area 13 of the Nevada Test Site in the United States, contaminating the surrounding soil with the radioactive element americium (Am). 
+In 1971, the Nevada Applied Ecology Group measured Am concentrations in a region surrounding Ground Zero (GZ), the location where the devices were detonated \citep{Paul_Cressie_2011_lognormal_kriging_block_prediction}. 
+The total number of measurements (including some that are collocated) is 212.
+ In the following, we load this data set (supplied by \pkg{FRK}), and define GZ. 
+
+<<eval=TRUE,message=FALSE,warning=FALSE>>=
+data("Am_data")
+coordinates(Am_data) = ~ Easting + Northing # convert to sp object
+GZ_df <- data.frame("Easting" = 219868.09, "Northing" = 285320.8)
+@
+
+The left and centre panels of Figure \ref{fig:Am_data} shows the data on the original scale and on the log scale, respectively.
+\cite{Paul_Cressie_2011_lognormal_kriging_block_prediction} note that these Am concentrations are lognormally distributed, and that soil remediation is often made by averaging the contaminant over pre-specified spatial regions of $D$ called blocks.
+Hence, this application requires lognormal prediction over blocks, a task well suited to \pkg{FRK}. 
+ The right panel of Figure \ref{fig:Am_data} shows a blocking scheme containing five blocks that we will predict over, which is centred on GZ.
+ 
+
+<<echo=FALSE, warning=FALSE, results='hide'>>=
+
+# centre, width, and height
+makeRectangle <- function(centre, w, h) {
+  vertices <- rbind(c(centre[, 1] - w/2, centre[, 2] - h/2),
+                    c(centre[, 1] - w/2, centre[, 2] + h/2),
+                    c(centre[, 1] + w/2, centre[, 2] + h/2),
+                    c(centre[, 1] + w/2, centre[, 2] - h/2),
+                    c(centre[, 1] - w/2, centre[, 2] - h/2))
+  Polygon(vertices)
+}
+
+
+## Following Paul and Cressie (2011),
+## we predict over a series of concentric square blocks centred at Ground Zero 
+## (GZ), as well as a series of concentric square blocks away from GZ.
+  n_schemes <- 1
+  n_block <- 5
+construct_block_scheme <- function() {
+  
+  ratio <- 1.03  # width to height ratio of the blocks
+  w     <- seq(43, 250, length.out = n_block)
+  h     <- w / ratio
+  
+  ## Treat GZ as the centre, and expand relative to GZ.
+  blocks <- list()
+  for(i in 1:n_block) {
+    blocks[[i]] <- makeRectangle(centre = GZ_df, w = w[i], h = h[i])
+    blocks[[i]] <- Polygons(list(blocks[[i]]), paste0("block", i))
+  }
+  
+  if (n_schemes == 2) {
+    ## Now shift away from GZ
+    centre <- GZ_df
+    centre[, 1] <- GZ_df[, 1] - 153
+    centre[, 2] <- GZ_df[, 2] + 125
+    for(i in (n_block + 1):(2 * n_block)) {
+      blocks[[i]] <- makeRectangle(centre = centre, w = w[i - n_block], h = h[i- n_block])
+      blocks[[i]] <- Polygons(list(blocks[[i]]), paste0("block", i))
+    }
+  }
+  
+  ## (set the plotting order from largest to smallest)
+  pred_polygons <- SpatialPolygons(blocks, (n_schemes * n_block):1)
+  coordnames(pred_polygons) <- c("Easting", "Northing")
+  
+  pred_polygons$Scheme <- rep(as.character(n_schemes:1), each = length(pred_polygons)/n_schemes) 
+  
+  return(pred_polygons)
+}
+
+blocks <- construct_block_scheme()
+@
+
+<<echo=FALSE, warning=FALSE, results='hide', fig.align='center',fig.cap="Americium soil data and blocking scheme.\\label{fig:Am_data}", fig.width = 13.6, fig.height = 4.5>>=
+nasa_palette <- c("#03006d","#02008f","#0000b6","#0001ef","#0000f6","#0428f6","#0b53f7","#0f81f3",
+                  "#18b1f5","#1ff0f7","#27fada","#3efaa3","#5dfc7b","#85fd4e","#aefc2a","#e9fc0d","#f6da0c","#f5a009",
+                  "#f6780a","#f34a09","#f2210a","#f50008","#d90009","#a80109","#730005")
+
+lab1 <- xlab(as.expression(bquote("Easting /" ~ 10^5 ~ "m")))
+lab2 <- ylab(as.expression(bquote("Northing /" ~ 10^5 ~ "m")))
+
+formatter <- function(x){ 
+    x/10^5 
+}
+x_scale <- scale_x_continuous(breaks = 10^5 *c(2.197, 2.199, 2.201), labels = formatter)  
+y_scale <- scale_y_continuous(breaks = 10^5 * c(2.852, 2.854, 2.856), labels = formatter)
+
+## Basic plot to reduce code repetition
+p_basic <- ggplot(data = as.data.frame(Am_data), 
+                  aes(x = Easting, y = Northing)) +
+  lab1 + lab2 + x_scale + y_scale + theme_bw() + coord_fixed()
+
+## Data on the original scale
+p_data <- p_basic +
+  geom_point(aes(colour = Am), size = 1)  +
+  geom_point(data = GZ_df, shape = 4, size = 5) +
+  scale_colour_gradientn(colours = nasa_palette,
+                         labels = scales::scientific, 
+                         breaks = c(250000, 750000))
+
+## Data on the log scale
+p_data_log_scale <- p_basic +
+  geom_point(aes(colour = log(Am)), size = 1) +
+  geom_point(data = GZ_df, shape = 4, size = 5) +
+  scale_colour_gradientn(colours = nasa_palette,
+                         name = "Log-Americium", 
+                         breaks = c(9, 11, 13))
+
+## Blocking scheme
+p_Scheme_1_2 <- p_basic +
+  geom_point(size = 0.3) +
+  geom_point(data = GZ_df, shape = 4, size = 5) +
+  geom_polygon(data = FRK::SpatialPolygonsDataFrame_to_df(blocks), 
+               aes(group = id, colour = Scheme), alpha = 0) +
+  labs(colour = "Blocking Scheme")
+
+ggpubr::ggarrange(p_data + theme(legend.text=element_text(angle = 20)) + 
+            theme(text = element_text(size=17)), 
+          p_data_log_scale + theme(text = element_text(size=17)), 
+          p_Scheme_1_2 + theme(text = element_text(size=17)), 
+          nrow = 1, align = "hv", legend = "top")
+@
+
+
+Following \cite{Paul_Cressie_2011_lognormal_kriging_block_prediction}, we use a piecewise linear trend, where observations within a distance of 30.48m from GZ follow a different trend to those observations beyond 30.48m from GZ.
+ In \pkg{FRK}, covariates must be defined at the BAU level.  
+ 
+<<eval=TRUE,message=FALSE,warning=FALSE>>=
+BAUs <- auto_BAUs(manifold = plane(), 
+                  type = "grid",            
+                  data = Am_data,           
+                  nonconvex_hull = FALSE) 
+
+## Add covariates to the BAUs
+d_cutoff <- 30.48  
+d_BAU <- distR(coordinates(BAUs), GZ_df)
+BAUs$x1 <- as.numeric(d_BAU < d_cutoff)
+BAUs$x2 <- d_BAU * BAUs$x1
+BAUs$x3 <- as.numeric(d_BAU >= d_cutoff)
+BAUs$x4 <- d_BAU * (BAUs$x3)
+@
+
+In the following, we indicate that a scalar covariance matrix should be used for the fine-scale variation term (implicit when allowing \fct{FRK} to construct that BAUs), and we replicate lognormal kriging by fixing the measurement-error standard deviation to a small value. 
+Then, we run \fct{FRK} as usual, set \code{est\_error = FALSE} so that the measurement-error standard deviation is not estimated.
+
+<<eval=TRUE,message=FALSE,warning=FALSE,results='hide'>>=
+BAUs$fs     <- 1     
+Am_data$std <- 1
+
+S <- FRK(f = Am ~ -1 + x1 + x2 + x3 + x4, data = list(Am_data),
+         response = "gaussian", 
+         link = "log",
+         BAUs = BAUs, 
+         nres = 2, 
+         est_error = FALSE)
+@
+
+By predicting over the BAUs, one may generate predictions over the entire spatial domain. In \fct{predict}, we set \code{type = c("link", "mean")} to obtain predictions for both the latent process $Y(\cdot)$, and the mean process $\mu(\cdot)$. Figure \ref{fig:Am_BAU_predictions} shows BAU level predictions and uncertainty using \pkg{FRK}. 
+
+<<eval=TRUE,message=FALSE,warning=FALSE,results='hide'>>=
+pred <- predict(S, type = c("link", "mean"))
+plot_list <- plot(S, pred$newdata)
+@
+
+<<echo=FALSE, message=FALSE,warning=FALSE,results='hide',fig.align='center',fig.cap="Americium point predictions.\\label{fig:Am_BAU_predictions}",fig.subcap=c("",""),fig.width = 8, fig.height = 5>>=
+plot_list <- lapply(
+  plot_list, 
+  function(gg) gg + lab1 + lab2 + x_scale + y_scale)
+
+ggpubr::ggarrange(
+  plot_list$p_Y + labs(fill = "Y pred.") +   
+    scale_fill_gradientn(colours = nasa_palette, labels = scales::scientific),
+  plot_list$RMSPE_Y + labs(fill = "RMSPE Y"),
+  plot_list$p_mu + labs(fill = "mu pred.") +    
+    scale_fill_gradientn(colours = nasa_palette, labels = scales::scientific),
+  plot_list$RMSPE_mu + labs(fill = "RMSPE mu"), 
+  align = "hv", nrow = 2, ncol =2) 
+@
+
+
+Alternatively, by passing a \class{SpatialPolygonsDataFrame} object into the \code{newdata} argument of \fct{predict}, one may straightforwardly generate block-level predictions. When predicting over arbitrary spatial regions, \pkg{FRK} is limited to prediction of the mean process. 
+
+<<eval=TRUE,message=FALSE,warning=FALSE,results='hide'>>=
+pred <- predict(S, newdata = blocks) 
+@
+
+ These block level predictions may be plotted with the help of \fct{SpatialPolygonsDataFrame\_to\_df}; see Figure \ref{fig:Am_block_predictions_spatial}. 
+
+% FRK_results <- pred$newdata@data
+% FRK_results$area_sqrt <- sapply(blocks@polygons, function(x) sqrt(x@area))
+% # FRK_results$Scheme <- as.numeric(blocks@data$Scheme)
+% 
+% FRK_results <- FRK_results %>%
+%   dplyr::select(c("p_mu", "RMSPE_mu", "area_sqrt")) %>% #, "Scheme")) %>% 
+%   reshape2::melt(id.vars = c("area_sqrt"))#, "Scheme")) %>% 
+%   ## alter the levels to change the facet_wrap titles:
+%   mutate(variable = factor(
+%     variable, 
+%     labels = c("'Block prediction /' ~ 10^3 ~ 'counts' ~ min^-1", 
+%                "'RMSPE from block prediction /' ~ 10^3 ~ 'counts' ~ min^-1")
+%     ))
+%
+% ggplot(data = FRK_results, aes(x = area_sqrt)) +
+%     geom_line(aes(y = value)) +
+%     facet_wrap(~variable, scales = "free", labeller = label_parsed) + 
+%     labs(x = "Block size (m)", y = "", 
+%          colour = "Blocking Scheme") +
+%     theme_bw() + scale_y_continuous(labels = scales::scientific) + 
+%     theme(text = element_text(size=17))
+
+<<echo=FALSE, warning=FALSE,fig.align='center',fig.cap="Americium block level predictions.\\label{fig:Am_block_predictions_spatial}",fig.subcap=c("",""),fig.width = 9.5, fig.height = 3.7>>=
+
+block_pred_df <- FRK::SpatialPolygonsDataFrame_to_df(pred$newdata)
+
+## Change level order to reverse the order that the blocks are plotted.
+block_pred_df$block <- factor(block_pred_df$id,
+                              levels = paste0("block", (n_schemes * n_block):1))
+p_block <- p_basic +
+  geom_point(size = 0.3) + 
+  geom_polygon(data = block_pred_df, aes(fill = p_mu, group = block),
+               alpha = 1, colour = "black") + 
+  labs(fill = "mu pred.") +   
+  scale_fill_gradientn(colours = nasa_palette, labels = scales::scientific)
+  
+
+p_block_RMSPE <- p_basic +
+  geom_point(size = 0.3) +
+  geom_polygon(data = block_pred_df, aes(fill = RMSPE_mu, group = block),
+               alpha = 1, colour = "black") +
+  scale_fill_distiller(palette = "BrBG",
+                       labels = scales::scientific) + 
+  labs(fill = "RMSPE mu")
+
+ggpubr::ggarrange(p_block, p_block_RMSPE, nrow = 1, align = "hv")
+@
+
+\bibliography{FRK_non-Gaussian}
+
+\end{document}

@@ -15,7 +15,7 @@
 
 #' @title Generic basis-function constructor
 #' @description This function is meant to be used for manual construction of arbitrary basis functions. For
-#' 'local' basis functions, please use the function \code{\link{local_basis}} instead.
+#' `local' basis functions, please use the function \code{\link{local_basis}} instead.
 #' @param manifold object of class \code{manifold}, for example, \code{sphere}
 #' @param n number of basis functions (should be an integer)
 #' @param fn a list of functions, one for each basis function. Each function should be encapsulated within an environment
@@ -25,8 +25,9 @@
 #' @param pars A list containing a list of parameters for each function. For local basis functions these would correspond
 #' to location and scale parameters.
 #' @param df A data frame containing one row per basis function, typically for providing informative summaries.
-#' @details This constructor checks that all the parameters are valid before constructing the basis functions
-#' using \code{new}. The requirement that every function is encapsulated is tedious, but necessary for
+#' @param regular logical indicating if the basis functions (of each resolution) are in a regular grid
+#' @details This constructor checks that all parameters are valid before constructing the basis functions. 
+#' The requirement that every function is encapsulated is tedious, but necessary for
 #' FRK to work with a large range of basis functions in the future. Please see the example below which exemplifies
 #' the process of constructing linear basis functions from scratch using this function.
 #' @seealso \code{\link{auto_basis}} for constructing basis functions automatically, \code{\link{local_basis}} for
@@ -47,7 +48,7 @@
 #' \dontrun{
 #' eval_basis(G, s = matrix(seq(0,1, by = 0.1), 11, 1))}
 #' @export
-Basis <- function(manifold, n, fn, pars, df) {
+Basis <- function(manifold, n, fn, pars, df, regular = FALSE) {
     if(!is(manifold, "manifold")) stop("manifold needs to be of class manifold")
     if(!is.numeric(n)) stop("n needs to be of class numeric")
     if(ceiling(n) <= 0) stop("n needs to be greated than 0")
@@ -61,8 +62,12 @@ Basis <- function(manifold, n, fn, pars, df) {
         stop("manifold needs to be in the environment of every function")
     if(!all(sapply(fn, function(f) names(formals(f)) == "s")))
         stop("all functions need to take s as input argument")
+    
+    # if(!is.logical(regular)) stop("regular should be of class logical")
+    ## regular has been coded to 0 and 1. So, convert to numeric before constructing.
+    regular <- as.numeric(regular)
 
-    new("Basis", manifold = manifold,  n = n, fn = fn, pars = pars, df = df)
+    new("Basis", manifold = manifold,  n = n, fn = fn, pars = pars, df = df, regular = regular)
 }
 
 #' @title Construct a set of local basis functions
@@ -71,6 +76,8 @@ Basis <- function(manifold, n, fn, pars, df) {
 #' @param loc a matrix of size \code{n} by \code{dimensions(manifold)} indicating centres of basis functions
 #' @param scale vector of length \code{n} containing the scale parameters of the basis functions; see details
 #' @param type either ``bisquare'', ``Gaussian'', ``exp'', or ``Matern32''
+#' @param res vector of length \code{n} containing the resolutions of the basis functions
+#' @param regular logical indicating if the basis functions (of each resolution) are in a regular grid
 #' @details This functions lays out local basis functions in a domain of interest based on pre-specified location and scale parameters. If \code{type} is ``bisquare'', then
 #'\deqn{\phi(u) = \left(1- \left(\frac{\| u \|}{R}\right)^2\right)^2 I(\|u\| < R),}
 #' and \code{scale} is given by \eqn{R}, the range of support of the bisquare function. If \code{type} is ``Gaussian'', then
@@ -89,15 +96,19 @@ Basis <- function(manifold, n, fn, pars, df) {
 #'                    type="bisquare")
 #' \dontrun{show_basis(G)}
 #' @export
+
 local_basis <- function(manifold=sphere(),          # default manifold is sphere
                         loc=matrix(c(1,0),nrow=1),  # one centroid at (1,0)
-                        scale=1,                    # std = 1, and Gaussian RBF
-                        type=c("bisquare","Gaussian","exp","Matern32")) {
-
+                        scale = 1,                    # std = 1, and Gaussian RBF
+                        type=c("bisquare","Gaussian","exp","Matern32"), 
+                        res = 1, 
+                        regular = FALSE) {
+  
+    regular <- as.numeric(regular)
+    
     ## Basic checks
     if(!is.matrix(loc)) stop("loc needs to be a matrix")
-    if(!(dimensions(manifold) == ncol(loc))) stop("number of columns in loc needs to be the
-                                                  same as the number of manifold dimensions")
+    if(!(dimensions(manifold) == ncol(loc))) stop("number of columns in loc needs to be the same as the number of manifold dimensions")
     if(!(length(scale) == nrow(loc))) stop("need to have as many scale parameters as centroids")
     type <- match.arg(type)
 
@@ -122,16 +133,16 @@ local_basis <- function(manifold=sphere(),          # default manifold is sphere
         pars[[i]] <- list(loc = matrix(loc[i,],nrow=1), scale=scale[i])
     }
 
-    ## Create a data frame which summarises info about the functions. Set resolution = 1
-    df <- data.frame(loc,scale,res=1)
+    ## Create a data frame which summarises info about the functions, and set the resolution.
+    df <- data.frame(loc, scale, res = res)
 
     ## Create new basis function, using the manifold, n, functions, parameters list, and data frame.
-    this_basis <- Basis(manifold = manifold,  n = n, fn = fn, pars = pars, df = df)
+    this_basis <- Basis(manifold = manifold,  n = n, fn = fn, pars = pars, df = df, regular = regular)
     return(this_basis)
 }
 
 #' @title Automatic basis-function placement
-#' @description Generate automatically a set of local basis functions in the domain, and automatically prune in regions of sparse data.
+#' @description Automatically generate a set of local basis functions in the domain, and automatically prune in regions of sparse data.
 #' @param manifold object of class \code{manifold}, for example, \code{sphere} or \code{plane}
 #' @param data object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame} containing the data on which basis-function placement is based, or a list of these; see details
 #' @param regular an integer indicating the number of regularly-placed basis functions at the first resolution. In two dimensions, this dictates the smallest number of basis functions in a row or column at the coarsest resolution. If \code{regular=0}, an irregular grid is used, one that is based on the triangulation of the domain with increased mesh density in areas of high data density; see details
@@ -144,6 +155,8 @@ local_basis <- function(manifold=sphere(),          # default manifold is sphere
 #' @param scale_aperture the aperture (in the case of the bisquare, but similar interpretation for other basis) width of the basis function is the minimum distance between all the basis function centroids multiplied by \code{scale_aperture}. Typically this ranges between 1 and 1.5 and is defaulted to 1 on the sphere and 1.25 on the other manifolds.
 #' @param bndary a \code{matrix} containing points containing the boundary. If \code{regular == 0} this can be used to define a boundary in which irregularly-spaced basis functions are placed
 #' @param verbose a logical variable indicating whether to output a summary of the basis functions created or not
+#' @param buffer a numeric between 0 and 0.5 indicating the size of the buffer of basis functions along the boundary. The buffer is added by computing the number of basis functions in each dimension, and increasing this number by a factor of \code{buffer}. A buffer may be needed when the prior distribution of the basis-function coefficients is formulated in terms of a precision matrix
+#' @param tunit temporal unit, required when constructing a spatio-temporal basis. Should be the same as used for the BAUs. Can be "secs", "mins", "hours", "days", "years", etc.
 #' @param ... unused
 #' @details This function automatically places basis functions within the domain of interest. If the domain is a plane or the real line, then the object \code{data} is used to establish the domain boundary.
 #'
@@ -164,13 +177,13 @@ local_basis <- function(manifold=sphere(),          # default manifold is sphere
 #'
 #' If the manifold is the surface of a sphere, then basis functions are placed on the centroids of the discrete global grid (DGG), with the first basis resolution corresponding to the third resolution of the DGG (ISEA3H resolution 2, which yields 92 basis functions globally).  It is not recommended to go above \code{nres == 3} (ISEA3H resolutions 2--4) for the whole sphere; \code{nres=3} yields a total of 1176 basis functions. Up to ISEA3H resolution 6 is available with \code{FRK}; for finer resolutions; please install \code{dggrids} from \code{https://github.com/andrewzm/dggrids} using \code{devtools}.
 #'
-#' Basis functions that are not influenced by data points may hinder convergence of the EM algorithm when \code{K_type = ``unstructured''}, since the associated hidden states are, by and large, unidentifiable. We hence provide a means to automatically remove such basis functions through the parameter \code{prune}. The final set only contains basis functions for which the column sums in the associated matrix \eqn{S} (which, recall, is the value/average of the basis functions at/over the data points/polygons) is greater than \code{prune}. If \code{prune == 0}, no basis functions are removed from the original design.
+#' Basis functions that are not influenced by data points may hinder convergence of the EM algorithm when \code{K_type = "unstructured"}, since the associated hidden states are, by and large, unidentifiable. We hence provide a means to automatically remove such basis functions through the parameter \code{prune}. The final set only contains basis functions for which the column sums in the associated matrix \eqn{S} (which, recall, is the value/average of the basis functions at/over the data points/polygons) is greater than \code{prune}. If \code{prune == 0}, no basis functions are removed from the original design.
 #' @examples
 #' \dontrun{
 #' library(sp)
 #' library(ggplot2)
 #'
-#' ### Create a synthetic dataset
+#' ## Create a synthetic dataset
 #' set.seed(1)
 #' d <- data.frame(lon = runif(n=1000,min = -179, max = 179),
 #'                 lat = runif(n=1000,min = -90, max = 90),
@@ -178,16 +191,17 @@ local_basis <- function(manifold=sphere(),          # default manifold is sphere
 #' coordinates(d) <- ~lon + lat
 #' proj4string(d)=CRS("+proj=longlat +ellps=sphere")
 #'
-#' ### Now create basis functions over sphere
+#' ## Now create basis functions over sphere
 #' G <- auto_basis(manifold = sphere(),data=d,
 #'                 nres = 2,prune=15,
 #'                 type = "bisquare",
 #'                 subsamp = 20000)
 #'
-#' ### Plot
-#' \dontrun{show_basis(G,draw_world())}
+#' ## Plot
+#' show_basis(G,draw_world())
 #' }
 #' @export
+#' @seealso \code{\link{remove_basis}} for removing basis functions and \code{\link{show_basis}} for visualising basis functions
 auto_basis <- function(manifold = plane(),
                        data,
                        regular = 1,
@@ -200,7 +214,73 @@ auto_basis <- function(manifold = plane(),
                        bndary = NULL,
                        scale_aperture = ifelse(is(manifold,"sphere"),1,1.25),
                        verbose = 0L,
+                       buffer = 0,
+                       tunit = NULL,
                        ...) {      # currently unused
+  
+   ## If called from FRK(), ... may contain regular and buffer.
+   if("buffer" %in% names(list(...))) buffer <- list(...)$buffer
+   if("regular" %in% names(list(...))) regular <- list(...)$regular
+   
+   ## If the data is spatio-temporal, construct spatio-temporal basis functions
+   ## using the tensor product of spatial and temporal basis functions. 
+   ## Note that we put this here, because there is a call to auto_basis() 
+   ## when constructing the spatial basis, at which point the arguments will be 
+   ## checked. 
+   if (is(manifold, "STplane") || is(manifold, "STsphere")) {
+     if(is.null(tunit)) {
+       stop("Please specify tunit (the temporal unit) if you want to construct a spatio-temporal basis. Note that this should be the same as the BAUs.")
+     }
+     ## Set up the spatial basis functions
+     if (is(manifold, "STplane")) {
+       spatial_manifold <- plane()
+     } else if (is(manifold, "STsphere")) {
+       spatial_manifold <- sphere()
+     }
+     B_spatial <- auto_basis(manifold = plane(), data = as(data, "Spatial"), 
+                             regular = regular, nres = nres, prune = prune, 
+                             max_basis = max_basis, subsamp = subsamp, 
+                             type = type, isea3h_lo = isea3h_lo, bndary = bndary, 
+                             scale_aperture = scale_aperture, verbose = verbose, 
+                             buffer = buffer)
+     
+     ## Set up the temporal basis functions
+     end_loc <-  max(data@endTime) - min(data@endTime)
+     units(end_loc) <- "secs" 
+     
+     ## We always compute the difference in terms of times. Then, we convert to 
+     ## whatever unit was specified.
+     end_loc <- as.numeric(end_loc)
+     if (tunit == "secs") {
+       # Do nothing
+     } else if (tunit == "mins") {
+       end_loc <- end_loc / 60
+     } else if (tunit == "hours") {
+       end_loc <- end_loc / (60 * 60)
+     } else if (tunit == "days") {
+       end_loc <- end_loc / (60 * 60 * 24)
+     } else if (tunit == "weeks") {
+       end_loc <- end_loc / (60 * 60 * 24 * 7)
+     } else if (tunit == "months") {
+       end_loc <- end_loc / (60 * 60 * 24 * 7 * (52/12))
+     } else if (tunit  == "years") {
+       end_loc <- end_loc / (60 * 60 * 24 * 7 * (52/12) * 12)
+     } else {
+       stop("tunit should be a one of: secs, mins, hours, days, weeeks, months, years")
+     }
+     end_loc <- ceiling(end_loc) + 1 # add 1 as a buffer
+     
+     B_temporal <- local_basis(manifold = real_line(),     
+                               type = "Gaussian",          
+                               loc = matrix(seq(0, end_loc, length.out = 10)), 
+                               scale = rep(end_loc / 10, 10), regular = TRUE)   
+     
+     ## Spatio-temporal basis functions generated with a tensor product
+     B <- TensorP(B_spatial, B_temporal) 
+     
+     return(B)
+   }
+  
 
     ## Basic checks
     type <- match.arg(type)
@@ -216,17 +296,24 @@ auto_basis <- function(manifold = plane(),
         stop("isea3h_lo needs to be an integer greater than 0")
     if(!(is.numeric(nres) | is.null(nres)))
         stop("nres needs to be greater than zero or NULL")
+    if (!is.numeric(buffer))
+      stop("buffer needs to be a numeric")
+    if (buffer < 0 | buffer > 0.5)
+      stop("buffer needs to be between 0 and 0.5")
+    if (buffer != 0 & regular != 1)
+      stop("A buffer of basis functions along the boundary can only be computed if regular == 1")
 
+    
     ## If the user has specified a maximum number of basis functions then
     ## we need to add resolutions iteratively and stop when exceed the maximum
     ## of basis functions
-    if(!is.null(max_basis)) {
-        cat("...Automatically choosing number of functions...\n")
+    if(!is.null(max_basis) & length(max_basis) != 0) {
+        cat("Automatically choosing number of functions...\n")
         tot_basis <- 0                  # start of with 0 basis functions
         tot_data <- length(data)        # number of data points
         nres <- 1                       # start off with one resolution (we have a minimum of one resolution)
         while(tot_basis <= max_basis) { # while we have less basis than the max
-            nres <- nres + 1            # incremement the res number
+            nres <- nres + 1            # increment the res number
             G <- .auto_basis(manifold = manifold,  # arguments as described above
                              data = data,
                              prune = prune,
@@ -237,17 +324,19 @@ auto_basis <- function(manifold = plane(),
                              isea3h_lo = isea3h_lo,
                              bndary = bndary,
                              scale_aperture = scale_aperture,
-                             verbose = 0)  # force verbose to 0 for this procedure of finding the
-            # number of basis functions
+                             verbose = 0) # force verbose to 0 for this procedure of finding the  number of basis functions
+                             
             tot_basis <- nbasis(G)      # record the number of basis functions
         }
         nres <- nres - 1  # nres resolutions was too much, deduct by one
     }
 
     ## Now call the local function with checked parameters
-    .auto_basis(manifold=manifold,data=data,regular=regular,nres=nres,
-                prune=prune,subsamp=subsamp,type=type,isea3h_lo = isea3h_lo,
-                bndary=bndary, scale_aperture = scale_aperture, verbose=verbose)
+    return(.auto_basis(manifold = manifold, data = data, regular = regular, nres = nres,
+                prune = prune, subsamp = subsamp, type = type, isea3h_lo = isea3h_lo,
+                bndary = bndary, scale_aperture = scale_aperture, verbose = verbose, 
+                buffer = buffer))
+  
 }
 
 
@@ -261,7 +350,9 @@ auto_basis <- function(manifold = plane(),
                         isea3h_lo = 2,
                         bndary = NULL,
                         scale_aperture = ifelse(is(manifold,"sphere"),1,1.25),
-                        verbose = 0L) {
+                        verbose = 0L, 
+                        buffer = 0) {
+
 
     type <- match.arg(type)            # match type
     m <- manifold                      # abbreviate for convenience
@@ -270,11 +361,11 @@ auto_basis <- function(manifold = plane(),
 
     ## Irregular basis function placement can only proceed with INLA. Throw an error
     ## if INLA is not installed
-    if(is(m,"plane") & regular == 0 & is.null(bndary)) {
+    if(is(m,"plane") & !regular & is.null(bndary)) {
         if(!requireNamespace("INLA"))
             stop("For irregularly-placed basis-function generation INLA needs to be installed
                  for constructing basis function centres. Please install it
-                 using install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\")")
+                 using install.packages(\"INLA\", repos=\"https://www.math.ntnu.no/inla/R/stable\")")
     }
 
     ## Subsamp can be used to make the placement/pruning process more efficient with big data.
@@ -290,7 +381,7 @@ auto_basis <- function(manifold = plane(),
     ## If we are on the plane and want an irregular function placement, then call INLA
     ## and find a nonconvex hull in which the basis functions can be enclosed. If
     ## a boundary is supplied as a matrix, convert it an inla.mesh.segment object.
-    if(is(m,"plane") & regular == 0) {
+    if(is(m,"plane") & !regular) {
         if(is.null(bndary)) {
             bndary_seg = INLA::inla.nonconvex.hull(coords,concave = 0)
         } else {
@@ -306,7 +397,7 @@ auto_basis <- function(manifold = plane(),
     ## the aspect ratio < 1, or number of basis functions in x = regular
     ## if the aspect ratio >= 1. The number of basis functions in the other
     ## axis is then amplified by 1/aspect ratio, or aspect ratio, respectively
-    if(is(m,"plane") & regular > 0) {
+    if(is(m,"plane") & regular) {
         asp_ratio <- diff(yrange) / diff(xrange)
         if(asp_ratio < 1) {
             ny <- regular
@@ -336,7 +427,7 @@ auto_basis <- function(manifold = plane(),
     for(i in 1:nres) {
 
         ## If we are on the plane and we do not want a regular set
-        if(is(m,"plane") & (regular == 0)) {
+        if(is(m,"plane") & !regular) {
             ## Generate mesh using INLA and use the triangle vertices as notes
             ## The maximum and minimum triangle edges are a function of i
             ## The exact constants were found to be suitable by trial and error
@@ -350,7 +441,7 @@ auto_basis <- function(manifold = plane(),
             this_res_locs <- unique(this_res_locs)
 
             ## If we want a regular set of basis functions
-        } else if(is(m,"plane") & (regular > 0)) {
+        } else if(is(m,"plane") & regular) {
             ## Make a grid that gets more dense as i increases
             xgrid <- seq(xrange[1], xrange[2], length = round(nx*(3^(i)))) # x coordinates of centroids
             ygrid <- seq(yrange[1], yrange[2], length = round(ny*(3^(i)))) # y coordinates of centroids
@@ -399,7 +490,7 @@ auto_basis <- function(manifold = plane(),
             this_res_basis <- local_basis(manifold = m,
                                           loc=this_res_locs,
                                           scale=ifelse(type=="bisquare",1.5,0.7)*this_res_scales,
-                                          type=type)
+                                          type=type, regular = regular)
 
             ## Now refine/prune these basis functions
             if(prune > 0 & nrow(D)>0) {
@@ -436,15 +527,91 @@ auto_basis <- function(manifold = plane(),
             G[[i]] <-  local_basis(manifold = m,
                                    loc=this_res_locs,
                                    scale=ifelse(type=="bisquare",1.5,0.7)*this_res_scales,
-                                   type=type)
+                                   type=type, regular = regular)
             G[[i]]$res=i  # put resolution in the basis function data frame
         }
     }
 
     ## Finally concatenate all the basis functions together using the S4 method concat
-    G_basis <- Reduce("concat",G)
-    G_basis
+    G_basis <- Reduce("concat", G)
+    
+    ## Add a buffer if requested (note that this is only allowed if regular == 1, 
+    ## which has already been checked at this stage of the function, i.e., if 
+    ## the user specifies a non-zero buffer with regular == 0, an error is 
+    ## thrown upon entry of auto_basis)
+    if (buffer != 0) G_basis <- .buffer(G_basis, buffer = buffer, type = type)  
+    
+    return(G_basis)
 }
+
+## Function to add a buffer of basis functions along the boundary.
+## buffer indicates the percentage increase in the number of basis functions 
+## in each dimension.
+.buffer <- function(basis, buffer, type) {
+  
+  L      <- length(unique(basis@df$res))   # number of resolutions of basis functions
+  dimens <- basis@manifold@measure@dim     # dimension of the manifold
+  dim_names <- c(paste0("loc",1:(dimens))) # names of each dimension
+  basis_locs_list <- list()
+  scale <- res <- c()
+  
+  for (k in 1:L) { # for each resolution
+  
+    ## Extract basis function dataframe for the kth resolution
+    basis_df <- basis@df[basis@df$res == k, ]
+    
+    ## unique locations for all dimensions
+    ## NB: need to consider rectangular domains too
+    unique_locs <- lapply(basis_df[, dim_names, drop = FALSE], function(x) sort(unique(x)))  
+    
+    ## Compute the distance between locations 
+    ## (assumes equally spaced basis functions in each dimension, i.e., regular = TRUE)
+    dist_btwn_locs <- sapply(unique_locs, function(x) diff(x)[1])
+    
+    ## Compute number of extra terms to add in each direction of each dimension
+    ## (divide buffer by 2 because we add locations in both directions of a 
+    ## given dimension)
+    n_add <- sapply(unique_locs, function(x) ceiling(buffer/2 * length(x)))
+    
+    ## Compute the new unique locations of basis functions for each dimension. 
+    ## First, define a function to add n_add elements separated by a units to 
+    ## the head and tail of a vector x.
+    .add_head_tail <- function(x, n_add, a) {
+      c(min(x) - (n_add:1) * a, 
+        x, 
+        max(x) + (1:n_add) * a)
+    }
+
+    ## Now generate new unique locations in each dimension
+    tmp <- names(unique_locs)
+    names(tmp) <- names(unique_locs)
+    unique_locs_new <- lapply(tmp, 
+                              function(id, x, n, a) .add_head_tail(x[[id]], n[id], a[id]), 
+                              x = unique_locs, n = n_add, a = dist_btwn_locs)
+    
+    ## Now create new basis function locations, and append to previously 
+    ## computed basis function locations. Conveniently, expand.grid() allows 
+    ## lists to be passed as arguments.
+    basis_locs_list[[k]] <- as.matrix(expand.grid(unique_locs_new))
+    
+    scale <- c(scale, rep(basis_df$scale[1], nrow(basis_locs_list[[k]])))
+    
+    res <- c(res, rep(k, nrow(basis_locs_list[[k]])))
+  }
+  
+  ## Convert to matrix
+  basis_locs <- do.call(rbind, basis_locs_list)
+  
+  ## Convert to a basis 
+  basis_buffer <- local_basis(manifold = basis@manifold, 
+                              loc = basis_locs, 
+                              scale = scale, 
+                              type = type, 
+                              res = res, 
+                              regular = basis@regular)
+  return(basis_buffer)
+}
+
 
 
 #' @rdname TensorP
@@ -484,13 +651,15 @@ setMethod("TensorP",signature(Basis1="Basis",Basis2="Basis"),function(Basis1,Bas
       warning("Tensor product has resulted in more than 5000 functions.
       Please reduce the number of spatial or temporal basis functions.")
 
-
+    regular <- Basis1@regular && Basis2@regular
+    
     ## Create new Tensor Basis function from this information
     new("TensorP_Basis",
         Basis1 = Basis1,
         Basis2 = Basis2,
         n = nbasis_tot,
-        df = df)
+        df = df, 
+        regular = regular)
 })
 
 
@@ -604,7 +773,7 @@ setMethod("eval_basis",signature(basis="TensorP_Basis",s="matrix"),
               n1 <- dimensions(basis@Basis1) # spatial dimensions
               S1 <- eval_basis(basis@Basis1,s[,1:n1,drop=FALSE])    # evaluate at spatial locations
               S2 <- eval_basis(basis@Basis2,s[,-(1:n1),drop=FALSE]) # evaluate at temporal locations
-
+              
               ## Order: Construct S matrix over space and time
               ## This is ordered as first space then time, therefore we take S2[,1]*S1 as our first block
               ## Then S2[,2]*S1 as our second block etc.
@@ -657,14 +826,89 @@ setMethod("remove_basis",signature(Basis="Basis"),function(Basis,rmidx) {
     if(!all(rmidx %in% 1:ntot))
         stop("Please make sure indices are numeric and within
              1 and the number of basis functions.")
+    
+    if (length(rmidx) == 0) {
+      cat("length(rmidx) == 0; not removing any basis functions\n")
+      return(Basis)
+    }
 
     Basis_df <- data.frame(Basis)     # extract data frame
     Basis@fn <- Basis@fn[-rmidx]      # remove functions
     Basis@pars <- Basis@pars[-rmidx]  # remove parameters
     Basis@df <- Basis@df[-rmidx,]     # remove rows from data frame
     Basis@n <- nrow(Basis@df)         # reduce n as appropriate
-    Basis                             # return basis object
+    return(Basis)                     # return basis object
 })
+
+
+#' @rdname combine_basis
+#' @aliases combine_basis,Basis-method
+setMethod("combine_basis",signature(Basis_list="list"),function(Basis_list) {
+
+  if (!is.list(Basis_list))
+    stop("Basis_list should be a list of objects of class Basis")
+  
+  if(!all(sapply(Basis_list, function(x) class(x) == "Basis")))
+    stop("Basis_list should be a list of objects of class Basis")
+  
+  ## Check that only one manifold is present:
+  if (sapply(Basis_list, manifold) %>% unique %>% length != 1) {
+    stop("Multiple manifolds detected: Please only combine basis functions that 
+         are defined on the same manifold.")
+  } else {
+    manifold <- Basis_list[[1]]@manifold
+  }
+  
+  ## Find the number of unique resolutions in each basis object: 
+  num_resolutions_in_each_basis <- length(unique(sapply(Basis_list, function(x) length(unique(x@df$res)))))
+  if (num_resolutions_in_each_basis != 1) {
+    stop("Currently only allow each element of Basis_list to contain basis functions at one resolution")
+  } else {
+    df <- Basis_list[[1]]@df
+    df$res <- 1
+    for (i in 2:length(Basis_list)) {
+      Basis_list[[i]]@df$res <- i
+      df <- rbind(df, Basis_list[[i]]@df)
+    }
+  }
+  
+  n <- sum(sapply(Basis_list, nbasis))
+  
+  ## Easiest just to combine the list slots using a for loop
+  fn <- pars <- list()
+  for (i in 1:length(Basis_list)) {
+    fn <- c(fn, Basis_list[[i]]@fn)
+    pars <- c(pars, Basis_list[[i]]@pars)
+  }
+  
+  regular <- sapply(Basis_list, function(x) x@regular) %>% as.logical %>% all
+  
+
+  Basis(manifold = manifold, 
+        n = n, 
+        fn = fn, 
+        pars = pars, 
+        df = df, 
+        regular = regular)
+})
+
+#' @rdname remove_basis
+#' @aliases remove_basis,Basis-method
+setMethod("remove_basis", signature(Basis="Basis", rmidx = "SpatialPolygons"), function(Basis,rmidx) {
+
+  if (!is(Basis@manifold, "plane")) stop("remove_basis with SpatialPolygons only works on the plane")
+  
+  ## Using remove_basis() 
+  sp_df <- Basis@df
+  coordinates(sp_df) <- ~ loc1 + loc2
+  spatial_object <- rmidx
+  rmidx <- which(is.na(over(sp_df, spatial_object)))
+  Basis <- remove_basis(Basis, rmidx)
+  
+  return(Basis)
+})
+
+
 
 
 #' @rdname local_basis
@@ -719,7 +963,7 @@ setMethod( "data.frame<-", "TensorP_Basis", # Allows easy assignment of data.fra
            function(x, value){x@df <- value; x})
 
 #' @title Basis-function data frame object
-#' @description Tools for retrieving and manipulating the data frame within the Basis objects. Use the assignment \code{data.frame()<-} with care; no checks are made to make sure the data frame conforms with the object. Only use if you know what you're doing.
+#' @description Tools for retrieving and manipulating the data frame within Basis objects. Use the assignment \code{data.frame()<-} with care; no checks are made to ensure the data frame conforms with the object.
 #' @param x the obect of class \code{Basis} we are assigning the new data to or retrieving data from
 #' @param value the new data being assigned to the Basis object
 #' @param name the field name to which values will be retrieved or assigned inside the Basis object's data frame
@@ -796,6 +1040,7 @@ setMethod("count_res",signature="TensorP_Basis", # Returns count by resolution f
 print.Basis <- function(x,...) {
     cat("Number of basis functions:",nbasis(x),"\n")
     cat("Number of resolutions:",nres(x),"\n")
+    cat("Regular:",x@regular,"\n")
     cat("Type of manifold:",type(manifold(x)),"\n")
     cat("Dimension of manifold:",dimensions(manifold(x)),"\n")
     cat("First basis function:\n",deparse(x@fn[[1]]),"\n")
@@ -811,7 +1056,8 @@ print.TensorP_Basis <- function(x,...) {
     cat("Second set of basis functions\n")
     cat("-----------------------------\n")
     print(x@Basis2)
-    cat("\n\nTotal number of basis functions:",nbasis(x))
+    cat("\n\nTotal number of basis functions:",nbasis(x), "\n")
+    cat("Regular:",x@regular,"\n")
 }
 setMethod("show",signature(object="TensorP_Basis"),function(object) print(object))
 
@@ -830,6 +1076,11 @@ print.summary.Basis <- function(x,...) {
     cat("For object properties use show().\n")
     invisible(x)
 }
+
+
+
+
+
 
 ######################################################
 ###########  FUNCTIONS NOT EXPORTED ##################

@@ -4,7 +4,7 @@
 \alias{Basis}
 \title{Generic basis-function constructor}
 \usage{
-Basis(manifold, n, fn, pars, df)
+Basis(manifold, n, fn, pars, df, regular = FALSE)
 }
 \arguments{
 \item{manifold}{object of class \code{manifold}, for example, \code{sphere}}
@@ -20,14 +20,16 @@ and returns a vector which contains the basis function evaluations at \code{s}.}
 to location and scale parameters.}
 
 \item{df}{A data frame containing one row per basis function, typically for providing informative summaries.}
+
+\item{regular}{logical indicating if the basis functions (of each resolution) are in a regular grid}
 }
 \description{
 This function is meant to be used for manual construction of arbitrary basis functions. For
-'local' basis functions, please use the function \code{\link{local_basis}} instead.
+`local' basis functions, please use the function \code{\link{local_basis}} instead.
 }
 \details{
-This constructor checks that all the parameters are valid before constructing the basis functions
-using \code{new}. The requirement that every function is encapsulated is tedious, but necessary for
+This constructor checks that all parameters are valid before constructing the basis functions. 
+The requirement that every function is encapsulated is tedious, but necessary for
 FRK to work with a large range of basis functions in the future. Please see the example below which exemplifies
 the process of constructing linear basis functions from scratch using this function.
 }

@@ -27,3 +27,5 @@ bigstudies
 rhipe_fns.R$
 ^Permissions
 ^pres
+^doc$
+^Meta$

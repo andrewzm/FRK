@@ -39,11 +39,11 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 
 \item{\code{Cmat}}{incidence matrix mapping the observations to the BAUs}
 
-\item{\code{X}}{matrix of covariates}
+\item{\code{X}}{matrix of covariates at all the data locations}
 
-\item{\code{K_type}}{type of prior covariance matrix of random effects. Can be "block-exponential" (correlation between effects decays as a function of distance between the basis-function centroids), or "unstructured" (all elements in \code{K} are unknown and need to be estimated)}
+\item{\code{K_type}}{type of prior covariance matrix of random effects. Can be "block-exponential" (correlation between effects decays as a function of distance between the basis-function centroids), "unstructured" (all elements in \code{K} are unknown and need to be estimated), or "neighbour" (a sparse precision matrix is used, whereby only neighbouring basis functions have non-zero precision matrix elements).}
 
-\item{\code{mu_eta}}{updated expectation of random effects (estimated)}
+\item{\code{mu_eta}}{updated expectation of the basis function random effects (estimated)}
 
 \item{\code{S_eta}}{updated covariance matrix of random effects (estimated)}
 
@@ -60,9 +60,39 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 \item{\code{fs_model}}{type of fine-scale variation (independent or CAR-based). Currently only "ind" is permitted}
 
 \item{\code{info_fit}}{information on fitting (convergence etc.)}
+
+\item{\code{response}}{A character string indicating the assumed distribution of the response variable}
+
+\item{\code{link}}{A character string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted.}
+
+\item{\code{mu_xi}}{updated expectation of the fine-scale random effects at all BAUs (estimated)}
+
+\item{\code{Q_posterior}}{updated joint precision matrix of the basis function random effects and observed fine-scale random effects (estimated)}
+
+\item{\code{log_likelihood}}{the log likelihood of the fitted model}
+
+\item{\code{method}}{the fitting procedure used to fit the SRE model}
+
+\item{\code{phi}}{the estimated dispersion parameter (assumed constant throughout the spatial domain)}
+
+\item{\code{k_Z}}{vector of known size parameters at the data support (only applicable to binomial and negative-binomial response distributions)}
+
+\item{\code{k_BAU}}{vector of known size parameters at the observed BAUs (only applicable to binomial and negative-binomial response distributions)}
+
+\item{\code{include_fs}}{flag indicating whether the fine-scale variation should be included in the model}
+
+\item{\code{normalise_wts}}{if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)}
+
+\item{\code{fs_by_spatial_BAU}}{if \code{TRUE}, then each BAU is associated with its own fine-scale variance parameter}
+
+\item{\code{obsidx}}{indices of observed BAUs}
+
+\item{\code{simple_kriging_fixed}}{logical indicating whether one wishes to commit to simple kriging at the fitting stage: If \code{TRUE}, model fitting is faster, but the option to conduct universal kriging at the prediction stage is removed}
 }}
 
+\references{
+Zammit-Mangion, A. and Cressie, N. (2017). FRK: An R package for spatial and spatio-temporal prediction with large datasets. Journal of Statistical Software, 98(4), 1-48. doi:10.18637/jss.v098.i04.
+}
 \seealso{
 \code{\link{SRE}} for details on how to construct and fit SRE models.
 }
-\keyword{spatial}

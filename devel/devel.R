@@ -22,7 +22,6 @@
 #' @slot Khat_inv prior precision matrix of random effects (estimated)
 #' @slot alphahat fixed-effect regression coefficients (estimated)
 #' @slot sigma2fshat fine-scale variation scaling (estimated)
-#' @keywords Spatial random effects, fixed rank kriging
 setClass("SRE2",representation(data="list",
                               basis="Basis_obj",
                               BAUs="ANY",     # should be SpatialPolygonsDataFrame, SpatialPixelsDataFrame or STFDF
@@ -59,14 +58,15 @@ setClass("SRE2",representation(data="list",
 #' @param BAUs object of class \code{SpatialPolygonsDataFrame}, the data frame which must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality. If the function \code{FRK} is used directly, then BAUs are created automatically but only coordinates can then be used as covariates
 #' @param est_error flag indicating whether the measurement-error variance should be estimated from variogram techniques. If this is set to 0, then \code{data} must contain a field \code{std}. Measurement-error estimation is not implemented for spatio-temporal datasets
 #' @param average_in_BAU if \code{TRUE}, then multiple data points falling in the same BAU are averaged; the measurement error of the averaged data point is taken as the average of the individual measurement errors
-#' @param fs_model if "ind" then the fine-scale variation is independent at the BAU level. If "ICAR", then an ICAR model is placed on the BAUs
+#' @param fs_model if "ind" then the fine-scale variation is independent at the BAU level. Currently only "ind" is supported
+# #' If "ICAR", then an ICAR model is placed on the BAUs. 
 #' @param SRE_model object returned from the constructor \code{SRE()}
 #' @param n_EM maximum number of iterations for the EM algorithm
 #' @param tol convergence tolerance for the EM algorithm
 #' @param method parameter estimation method to employ. Currently only ``EM'' is supported
 #' @param print_lik flag indicating whether likelihood should be printed or not on convergence of the estimation algorithm
 # #' @param use_centroid flag indicating whether the basis functions are averaged over the BAU, or whether the basis functions are evaluated at the BAUs centroid in order to construct the matrix \eqn{S}. The flag can safely be set when the basis functions are approximately constant over the BAUs in order to reduce computational time
-#' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error) or in the process model (process fine-scale variation, default)
+#' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error; indicated by \code{obs_fs = TRUE}) or in the process model (process fine-scale variation; indicated by \code{obs_fs = FALSE}, default)
 #' @param pred_polys object of class \code{SpatialPoylgons} indicating the regions over which prediction will be carried out. The BAUs are used if this option is not specified
 #' @param pred_time vector of time indices at which we wish to predict. All time points are used if this option is not specified
 #' @param vgm_model an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm} containing the variogram model to fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified the variogram used is \code{gstat::vgm(1, "Lin", d, 1)} where \code{d} is approximately one third of the maximum distance between any two points
@@ -76,7 +76,7 @@ setClass("SRE2",representation(data="list",
 #' @param ... other parameters passed on to \code{auto_basis} and \code{auto_BAUs}
 #' @details \code{SRE()} is the main function in the package as it constructs a spatial random effects model from the user-defined formula, data object, basis functions and a set of Basic Areal Units (BAUs). The function first takes each object in the list \code{data} and maps it to the BAUs -- this entails binning the point-referenced data into BAUs (and averaging within the BAU) if \code{average_in_BAU = TRUE}, and finding which BAUs are influenced by the polygon datasets. Following this, the incidence matrix \code{Cmat} is constructed, which appears in the observation model \eqn{Z = CY + e}, where \eqn{C} is the incidence matrix.
 #'
-#' The SRE model is given by \eqn{Y = T\alpha + S\eta + \delta}, where \eqn{X} are the covariates at BAU level, \eqn{\alpha} are the regression coefficients, \eqn{S} are the basis functions evaluated at the BAU level, \eqn{\eta} are the basis function weights, and \eqn{\delta} is the fine scale variation (at the BAU level). The covariance matrix of \eqn{\delta} is diagonal and proportional to the field `fs' in the BAUs (typically set to one). The constant of proportionality is estimated in the EM algorithm. All required matrices (\eqn{S,T} etc.) are computed and returned as part of the object, please see \code{\link{SRE-class}} for more details.
+#' The SRE model is given by \eqn{Y = T\alpha + S\eta + \delta}, where \eqn{T} are the covariates at BAU level, \eqn{\alpha} are the regression coefficients, \eqn{S} are the basis functions evaluated at the BAU level, \eqn{\eta} are the basis function weights, and \eqn{\delta} is the fine scale variation (at the BAU level). The covariance matrix of \eqn{\delta} is diagonal and proportional to the field `fs' in the BAUs (typically set to one). The constant of proportionality is estimated in the EM algorithm. All required matrices (\eqn{S,T} etc.) are computed and returned as part of the object, please see \code{\link{SRE-class}} for more details.
 #'
 #'\code{SRE.fit()} takes an object of class \code{SRE} and estimates all unknown parameters, namely the covariance matrix \eqn{K}, the fine scale variance \eqn{\sigma^2_{\delta}} and the regression parameters \eqn{\alpha}. The only method currently implemented is the Expectation Maximisation (EM) algorithm, which the user configures through \code{n_EM} and \code{tol}. The latter parameter, \code{tol}, is used as in Katzfuss and Cressie to, that is, the log-likelihood (given in Equation (16) in that work) is evaluated at each iteration at the current parameter estimate, and convergence is assumed to have been reached when this quantity stops changing by more than \code{tol}.
 #'
@@ -141,7 +141,7 @@ SRE2 <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mod
 
     S <- Ve <- Vfs <- X <- Z <- Cmat <- list()
 
-    print("Normalising basis function evaluations at BAU level ...")
+    print("Normalising basis function evaluations at BAU level...")
     S0 <- eval_basis(basis,.polygons_to_points(BAUs))
     xx <- sqrt(rowSums((S0) * S0))
     xx <- xx + 1*(xx == 0) ## Where there are no basis functions do not divide zero by zero..
@@ -159,7 +159,7 @@ SRE2 <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mod
         }
 
 
-        print("Binning data ...")
+        print("Binning data...")
         data_proc <- map_data_to_BAUs(data[[i]],
                                       BAUs,
                                       av_var = av_var,
@@ -247,7 +247,7 @@ SRE2 <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mod
     #K_init <- var(Z[,1])*K_norm
     K_init = Diagonal(n=nbasis(basis),x = 1/(1/var(Z[,1])))
     K_inv_init = Diagonal(n=nbasis(basis),x = (1/var(Z[,1])))
-
+    
     new("SRE",
         data=data,
         basis=basis,
@@ -277,21 +277,21 @@ SRE2 <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mod
         lambda = 0)
 }
 
-.SRE.EMstep.ICAR <- function(Sm) {
+.SRE.EMstep.ICAR <- function(object) {
 
-    alpha <- Sm@alphahat
-    K <- Sm@Khat
-    Kinv <- Sm@Khat_inv
-    sigma2fs <- Sm@sigma2fshat
-    Qfs_norm <- Sm@Qfs_BAUs %>% as("dgTMatrix")
-    Cmat <- Sm@Cmat
+    alpha <- object@alphahat
+    K <- object@Khat
+    Kinv <- object@Khat_inv
+    sigma2fs <- object@sigma2fshat
+    Qfs_norm <- object@Qfs_BAUs %>% as("dgTMatrix")
+    Cmat <- object@Cmat
     r <- nrow(K)
-    n <- length(Sm@BAUs)
-    Qe <- solve(Sm@Ve)
+    n <- length(object@BAUs)
+    Qe <- solve(object@Ve)
 
     GAMMA <- as(bdiag(Kinv,(1/sigma2fs) * Qfs_norm),"symmetricMatrix") %>% as("dgTMatrix")
-    PI <- cBind(Sm@S, Cmat %*% .symDiagonal(n=length(Sm@BAUs)))
-    Qx <- (t(PI) %*% solve(Sm@Ve) %*% PI + GAMMA) %>% as("dgTMatrix")
+    PI <- cBind(object@S, Cmat %*% .symDiagonal(n=length(object@BAUs)))
+    Qx <- (t(PI) %*% solve(object@Ve) %*% PI + GAMMA) %>% as("dgTMatrix")
 
     ## Add (zero) elements to Qx so that all covariance elements associated with eta are computed
     ## This may be removed in the future if we work with uniformly sparse K
@@ -302,7 +302,7 @@ SRE2 <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mod
     Qx@x <- c(Qx@x,rep(0L,nrow(miss_idx)))
     Qx <- as(Qx,"dgCMatrix")
     temp <- cholPermute(Qx)
-    ybar <- t(PI) %*% Qe %*% (Sm@Z - Sm@X %*% alpha)
+    ybar <- t(PI) %*% Qe %*% (object@Z - object@X %*% alpha)
     x_mean <- cholsolve(Qx,ybar,perm=TRUE,cholQp = temp$Qpermchol, P = temp$P)
     Cov <- Takahashi_Davis(Qx,cholQp = temp$Qpermchol,P = temp$P) # PARTIAL
 
@@ -310,18 +310,18 @@ SRE2 <- function(f,data,basis,BAUs,est_error=FALSE,average_in_BAU = TRUE, fs_mod
                                      x = x_mean[GAMMA@i+1] * x_mean[GAMMA@j+1])
     MeanOuter_eta <- tcrossprod(Matrix(x_mean[1:r]))
 
-    Sm@Khat <- .regularise_K(Sm = Sm,
+    object@Khat <- .regularise_K(object = object,
                              S_eta = as(forceSymmetric(Cov[(1:r),(1:r)]),"symmetricMatrix"),
                              mu_eta = (Matrix(x_mean[1:r])))
-    Sm@Khat_inv <- chol2inv(chol(Sm@Khat))
+    object@Khat_inv <- chol2inv(chol(object@Khat))
 
-    Sm@sigma2fshat <- sum(Qfs_norm * (Cov[-(1:r),-(1:r)] + MeanOuter_sparse[-(1:r),-(1:r)]))/ length(Sm@BAUs)
-    Sm@alphahat <- solve(t(Sm@X) %*% Qe %*% Sm@X) %*% t(Sm@X) %*% Qe %*% (Sm@Z - PI %*% x_mean)
-    Sm@mu_eta <- Matrix(x_mean[1:r])
-    Sm@mu_xi <- Matrix(x_mean[-(1:r)])
-    Sm@S_eta <- Cov[1:r,1:r]
-    Sm
-
+    object@sigma2fshat <- sum(Qfs_norm * (Cov[-(1:r),-(1:r)] + MeanOuter_sparse[-(1:r),-(1:r)]))/ length(object@BAUs)
+    object@alphahat <- solve(t(object@X) %*% Qe %*% object@X) %*% t(object@X) %*% Qe %*% (object@Z - PI %*% x_mean)
+    object@mu_eta <- Matrix(x_mean[1:r])
+    object@mu_xi <- Matrix(x_mean[-(1:r)])
+    object@S_eta <- Cov[1:r,1:r]
+    
+    return(object)
 }
 
 .loglik.ICAR <- function(Sm) {
@@ -497,12 +497,12 @@ SRE.fit2 <- function(SRE_model,n_EM = 100L, tol = 0.01, lambda = 0, method="EM",
 
         # Still in development:
         # if(i == 2) {
-        #     print("Normalising basis function evaluations at BAUs ...")
+        #     print("Normalising basis function evaluations at BAUs...")
         #     S0 <- eval_basis(SRE_model@basis,as.matrix(SRE_model@BAUs[coordnames(SRE_model@data[[1]])]@data))
         #     xx <<- sqrt(rowSums((S0 %*% SRE_model@S_eta) * S0))
         #     S0 <- S0/xx
         #     SRE_model@S <- SRE_model@Cmat %*% S0
-        #     print("Done ...")
+        #     print("Done...")
         # }
 
         SRE_model <- .SRE.Estep(SRE_model)
@@ -654,7 +654,6 @@ sp_to_ST_basis <- function(G_spatial,t_knots = 1,manifold=STsphere()) {
 #' @title Plotting themes
 #' @description Formats a ggplot object for neat plotting.
 #' @return Object of class \code{ggplot}
-#' @keywords ggplot
 #' @export
 #' @details \code{LinePlotTheme()} creates \code{ggplot} object with a white background, a relatively large font and grid lines. \code{EmptyTheme()} on the other hand creates a \code{ggplot} object with no axes or legends.
 #' @examples
@@ -949,11 +948,11 @@ clip_polygons_lonlat <- function(d,key) {
 SRE.simulate <- function(S,obs_fs) {
 
     ## Still in development:
-    print("Normalising basis function evaluations at BAUs ...")
+    print("Normalising basis function evaluations at BAUs...")
     xx <- sqrt(rowSums(S0* S0))
     xx <- xx + 1*(xx == 0) ## Where there are no basis functions do not divide zero by zero..
     S0 <- S0/xx
-    print("Done ...")
+    print("Done...")
 
 }
 

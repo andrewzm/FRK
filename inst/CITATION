@@ -1,0 +1,17 @@
+citHeader("To cite FRK in publications use:")
+
+citEntry(
+  entry    = "Article",
+  title    = "FRK: an R package for spatial and spatio-temporal prediction with large datasets",
+  author   = personList(as.person("Andrew Zammit-Mangion"), as.person("Noel Cressie")),
+  journal  = "Journal of Statistical Software",
+  year     = "2021",
+  volume   = "98",
+  number   = "4",
+  pages    = "1--48",
+  textVersion  = paste(
+        "Zammit-Mangion A, Cressie N (2021).",
+        "FRK: an R package for spatial and spatio-temporal prediction with large datasets.", 
+        "Journal of Statistical Software, 98(4), 1–48."
+        )
+)
