@@ -10,12 +10,12 @@ cache: packages
 
 env:
  global:
-   - CRAN: http://cran.rstudio.com
+   - CRAN: https://cran.rstudio.com
 
 #env:
 #  global:
 #    - NOT_CRAN=true
-#before_install: echo "options(repos = c(CRAN='http://cran.rstudio.com'))" > ~/.Rprofile
+#before_install: echo "options(repos = c(CRAN='https://cran.rstudio.com'))" > ~/.Rprofile
 
 before_install:
   - sudo apt-get -y install libudunits2-dev
@@ -26,27 +26,33 @@ notifications:
     on_failure: change
 
 install:
-- Rscript -e 'install.packages("devtools", repos = "http://cran.rstudio.com")'
-- Rscript -e 'install.packages("knitr", repos = "http://cran.rstudio.com")'
-- Rscript -e 'install.packages("dplyr", repos = "http://cran.rstudio.com")'
-- Rscript -e 'install.packages("sp", repos = "http://cran.rstudio.com")'
-- Rscript -e 'install.packages("spacetime", repos = "http://cran.rstudio.com")'
-- Rscript -e 'install.packages("digest", repos = "http://cran.rstudio.com")'
-- Rscript -e 'install.packages("plyr", repos = "http://cran.rstudio.com")'
-- Rscript -e 'install.packages("dplyr", repos = "http://cran.rstudio.com")'
-- Rscript -e 'install.packages("ggplot2", repos = "http://cran.rstudio.com")'
-- Rscript -e 'install.packages("splancs", repos = "http://cran.rstudio.com")'
+- Rscript -e 'install.packages("devtools", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("knitr", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("dplyr", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("sp", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("spacetime", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("digest", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("plyr", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("dplyr", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("ggplot2", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("splancs", repos = "https://cran.rstudio.com")'
 - Rscript -e 'install.packages("rgdal", repos = "http://cran.rstudio.com")'
-- Rscript -e 'install.packages("mapproj", repos = "http://cran.rstudio.com")'
-- Rscript -e 'install.packages("rgeos", repos = "http://cran.rstudio.com")'
-- Rscript -e 'install.packages("sparseinv", repos = "http://cran.rstudio.com")'
-- Rscript -e 'install.packages("gstat", repos = "http://cran.rstudio.com")'
-- Rscript -e 'install.packages("Hmisc", repos = "http://cran.rstudio.com")'
-- Rscript -e 'install.packages("testthat", repos = "http://cran.rstudio.com")'
-- Rscript -e 'install.packages("spdep", repos = "http://cran.rstudio.com")'
-- Rscript -e 'install.packages("verification", repos = "http://cran.rstudio.com")'
-- Rscript -e 'install.packages("covr", repos = "http://cran.rstudio.com")'
-- Rscript -e 'install.packages("lintr", repos = "http://cran.rstudio.com")'
+- Rscript -e 'install.packages("mapproj", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("rgeos", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("sparseinv", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("gstat", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("Hmisc", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("testthat", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("TMB", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("RcppEigen", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("spdep", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("verification", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("covr", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("lintr", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("statmod", repos = "https://cran.rstudio.com")'
+# - Rscript -e 'install.packages("VCA", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("ggpubr", repos = "https://cran.rstudio.com")'
+- Rscript -e 'install.packages("reshape2", repos = "https://cran.rstudio.com")'
 
 
 
@@ -54,9 +60,9 @@ install:
 - Rscript -e 'devtools::install_github("andrewzm/inla")'
 # - Rscript -e 'devtools::install_github("jimhester/covr")'
 # - Rscript -e 'devtools::install_github("jimhester/lintr")'
-# - Rscript -e "install.packages('INLA', repos='http://www.math.ntnu.no/inla/R/stable')"
-# - Rscript -e "if (!require('covr')) install.packages('covr',repos='http://cran.us.r-project.org')"
-# - Rscript -e "if (!require('knitr')) install.packages('knitr',repos='http://cran.us.r-project.org')"
+# - Rscript -e "install.packages('INLA', repos='https://www.math.ntnu.no/inla/R/stable')"
+# - Rscript -e "if (!require('covr')) install.packages('covr',repos='https://cran.us.r-project.org')"
+# - Rscript -e "if (!require('knitr')) install.packages('knitr',repos='https://cran.us.r-project.org')"
 
 
 r_binary_packages:

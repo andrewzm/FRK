@@ -36,7 +36,7 @@
 #' @title NOAA maximum temperature data for 1990--1993
 #' @description Maximum temperature data obtained from the National Oceanic and Atmospheric
 #' Administration (NOAA) for a part of the USA between 1990 and 1993 (inclusive).
-#' See http://iridl.ldeo.columbia.edu/ SOURCES/.NOAA/.NCDC/.DAILY/.FSOD/.
+#' See https://iridl.ldeo.columbia.edu/ SOURCES/.NOAA/.NCDC/.DAILY/.FSOD/.
 #' @format A data frame with 196,253 rows and 8 variables:
 #' \describe{
 #'   \item{year}{year of retrieval}
@@ -56,12 +56,12 @@
 #' @title ISEA Aperture 3 Hexagon (ISEA3H) Discrete Global Grid
 #'
 #' @description The data used here were obtained from
-#' http://webpages.sou.edu/~sahrk/dgg/isea.old/gen/isea3h.html and represent ISEA
+#' https://webpages.sou.edu/~sahrk/dgg/isea.old/gen/isea3h.html and represent ISEA
 #' discrete global grids (DGGRIDs) generated using the \code{DGGRID} software.
 #' The original .gen files were converted to a data frame using the function \code{dggrid_gen_to_df},
 #' available with the \code{dggrids} package. Only resolutions 0--6 are supplied with \code{FRK}
 #' and note that resolution 0 of ISEA3H is equal to resolution 1 in \code{FRK}. For higher
-#' resolutions \code{dggrids} can be installed from \code{https://github.com/andrewzm/dggrids}
+#' resolutions \code{dggrids} can be installed from \code{https://github.com/andrewzm/dggrids/}
 #' using \code{devtools}.
 #' @format A data frame with 284,208 rows and 5 variables:
 #' \describe{
@@ -94,3 +94,36 @@
 #' Brownrigg, R. Enhancements have been made by Minka, T.P. and Deckmyn, A. (2015)
 #' maps: Draw Geographical Maps, R package version 3.0.1.
 "worldmap"
+
+
+
+#' @title MODIS cloud data
+#' @description An image of a cloud taken by the Moderate Resolution
+#' Imaging Spectroradiometer (MODIS) instrument aboard the Aqua satellite (MODIS
+#' Characterization Support Team, 2015). 
+#' @format A data frame with 33,750 rows and 3 variables:
+#' \describe{
+#'   \item{x}{x-coordinate}
+#'   \item{y}{y-coordinate}
+#'   \item{z}{binary dependent variable: 1 if cloud is present, 0 if no cloud. This
+#'   variable has been thresholded from the original continuous measurement of
+#'   radiance supplied by the MODIS instrument}
+#'   \item{z_unthresholded}{The original continuous measurement of
+#'   radiance supplied by the MODIS instrument}
+#' }
+#' @docType data
+#' @references  MODIS Characterization Support Team (2015). MODIS 500m Calibrated Radiance Product.NASA MODIS Adaptive Processing System, Goddard Space Flight Center, USA.
+"MODIS_cloud_df"
+
+
+#' @title Americium soil data
+#' @description Americium (Am) concentrations in a spatial domain immediately surrounding the location at which nuclear devices were detonated at Area 13 of the Nevada Test Site, between 1954 and 1963. 
+#' @format A data frame with 212 rows and 3 variables:
+#' \describe{
+#'   \item{Easting}{Easting in metres}
+#'   \item{Northing}{Northing in metres}
+#'   \item{Am}{Americium concentration in 1000 counts per minute}
+#' }
+#' @docType data
+#' @references Paul R, Cressie N (2011). “Lognormal block kriging for contaminated soil.” European Journal of Soil Science, 62, 337–345.
+"Am_data"

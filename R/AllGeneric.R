@@ -99,7 +99,7 @@ setGeneric("distance", function(d,x1,x2=NULL) standardGeneric("distance"))
 #'
 #' ### Create a synthetic dataset
 #' set.seed(1)
-#' d <- data.frame(lon = runif(n=5000,min = -179, max = 179),
+#' d <- data.frame(lon = runif(n=500,min = -179, max = 179),
 #'                 lat = runif(n=500,min = -90, max = 90),
 #'                 z = rnorm(500))
 #' coordinates(d) <- ~lon + lat
@@ -191,11 +191,11 @@ setGeneric("BAUs_from_points", function(obj,offset = 1e-10)
     standardGeneric("BAUs_from_points"))
 
 #' @title Removes basis functions
-#' @description Takes a an object of class \code{Basis} and returns an object of class \code{Basis} with selected basis functions removed.
+#' @description Takes an object of class \code{Basis} and returns an object of class \code{Basis} with selected basis functions removed
 #' @param Basis object of class \code{Basis}
-#' @param rmidx indices of basis functions to remove
+#' @param rmidx indices of basis functions to remove. Or a \code{SpatialPolygons} object; basis functions overlapping this \code{SpatialPolygons} object will be \emph{retained}
 #' @export
-#' @seealso \code{\link{auto_basis}} for automatically constructing basis functions and \code{\link{show_basis}} for visualising basis functions.
+#' @seealso \code{\link{auto_basis}} for automatically constructing basis functions and \code{\link{show_basis}} for visualising basis functions
 #' @examples
 #' library(sp)
 #' df <- data.frame(x = rnorm(10),
@@ -203,45 +203,133 @@ setGeneric("BAUs_from_points", function(obj,offset = 1e-10)
 #' coordinates(df) <- ~x+y
 #' G <- auto_basis(plane(),df,nres=1)
 #' data.frame(G) # Print info on basis
-#' G <- remove_basis(G,1:(nbasis(G)-1))
-#' data.frame(G)
+#' 
+#' ## Removing basis functions by index
+#' G_subset <- remove_basis(G, 1:(nbasis(G)-1))
+#' data.frame(G_subset)
+#' 
+#' ## Removing basis functions using SpatialPolygons
+#' x <- 1
+#' poly <- Polygon(rbind(c(-x, -x), c(-x, x), c(x, x), c(x, -x), c(-x, -x)))
+#' polys <- Polygons(list(poly), "1")
+#' spatpolys <- SpatialPolygons(list(polys))
+#' G_subset <- remove_basis(G, spatpolys)
+#' data.frame(G_subset)
 setGeneric("remove_basis", function(Basis,rmidx)
     standardGeneric("remove_basis"))
 
-#' @title Retrieve fit information for SRE model
-#' @description Takes a an object of class \code{SRE} and returns a list containing all the relevant information on parameter estimation
-#' @param SRE_model object of class \code{SRE}
+
+#' @title Combine basis functions
+#' @description Takes a list of objects of class \code{Basis} and returns a 
+#' single object of class \code{Basis}.   
+#' @param Basis_list a list of objects of class \code{Basis}. Each element of the list is assumed to 
+#' represent a single resolution of basis functions
 #' @export
-#' @seealso See \code{\link{SRE}} for more information on the SRE model and available fitting methods.
+#' @seealso \code{\link{auto_basis}} for automatically constructing basis functions and \code{\link{show_basis}} for visualising basis functions
 #' @examples
-#' # See example in the help file for SRE
-setGeneric("info_fit", function(SRE_model)
+#'## Construct two resolutions of basis functions using local_basis() 
+#'Basis1 <- local_basis(manifold = real_line(), 
+#'                      loc = matrix(seq(0, 1, length.out = 3), ncol = 1), 
+#'                      scale = rep(0.4, 3))
+#'
+#'Basis2 <- local_basis(manifold = real_line(), 
+#'                      loc = matrix(seq(0, 1, length.out = 6), ncol = 1), 
+#'                      scale = rep(0.2, 6))
+#'
+#'## Combine basis-function resolutions into a single Basis object
+#'combine_basis(list(Basis1, Basis2)) 
+setGeneric("combine_basis", function(Basis_list)
+    standardGeneric("combine_basis"))
+
+
+
+#' @title Observed (or unobserved) BAUs
+#' @description Computes the indices (a numeric vector) of the observed (or unobserved) BAUs
+#' @param object object of class \code{SRE}
+#' @seealso See \code{\link{FRK}} for more information on the SRE model and available fitting methods.
+#' @examples 
+#' # See example in the help file for FRK
+#' @export
+setGeneric("observed_BAUs", function(object)
+    standardGeneric("observed_BAUs"))
+
+#' @rdname observed_BAUs
+#' @export
+setGeneric("unobserved_BAUs", function(object)
+    standardGeneric("unobserved_BAUs"))
+
+#' @title Retrieve fit information for SRE model
+#' @description Takes an object of class \code{SRE} and returns a list containing all the relevant information on parameter estimation
+#' @param object object of class \code{SRE}
+#' @seealso See \code{\link{FRK}} for more information on the SRE model and available fitting methods.
+#' @examples
+#' # See example in the help file for FRK
+#' @export
+setGeneric("info_fit", function(object)
     standardGeneric("info_fit"))
 
-#' @title Retrieve estimated regression coefficients
-#' @description Takes a an object of class \code{SRE} and returns a numeric vector with the estimated regression coefficients.
+
+
+#' @title Retrieve log-likelihood
+#' @description Takes an object of class \code{SRE} and returns the log-likelihood function.
 #' @param object object of class \code{SRE}
-#' @param ... currently unused
 #' @export
-#' @seealso \code{\link{SRE}} for more information on how to construct and fit an SRE model.
+#' @seealso \code{\link{FRK}} for more information on how to construct and fit an SRE model, and other available methods for an object of class SRE.
 #' @examples
-#' library(sp)
-#' simdata <- SpatialPointsDataFrame(
-#'                coords = matrix(runif(100), 50, 2),
-#'                 data = data.frame(z = rnorm(50)))
-#' BAUs <- BAUs_from_points(SpatialPoints(simdata))
-#' BAUs$fs <- 1
-#' S <- SRE(f = z ~ 1 + coords.x1,
-#'          basis = local_basis(plane()),
-#'          BAUs = BAUs,
-#'          data = list(simdata))
-#' est_reg_coeff <- coef(S)
+#' # See example in the help file for FRK
+setGeneric("loglik", function(object)
+    standardGeneric("loglik"))
+
+
+#' @title Plot a Spatial*DataFrame or STFDF object
+#' @description Takes an object of class \code{Spatial*DataFrame} or \code{STFDF}, and plots requested data columns using \code{ggplot2}
+#' @param newdata an object of class \code{Spatial*DataFrame} or \code{STFDF}
+#' @param column_names a vector of strings indicating the columns of the data to plot
+#' @param map_layer (optional) a \code{ggplot} layer or object to add below the plotted layer, often a map
+#' @param subset_time (optional) a vector of times to be included; applicable only for \code{STFDF} objects
+#' @param palette the palette supplied to the argument \code{palette} of \code{scale_*_distiller()}. Alternatively, if \code{palette} = "nasa", a vibrant colour palette is created using \code{scale_*_gradientn()}
+#' @param plot_over_world logical; if \code{TRUE}, \code{coord_map("mollweide")} and \code{\link{draw_world}} are used to plot over the world
+#' @param labels_from_coordnames logical; if \code{TRUE}, the coordinate names of \code{newdata} (i.e., \code{coordnames(newdata)}) are used as the horizontal- and vertical-axis labels. Otherwise, generic names, s_1 and s_2, are used
+#' @param ... optional arguments passed on to whatever geom is appropriate for the \code{Spatial*DataFrame} or \code{STFDF} object (\code{geom_point}, \code{geom_tile}, \code{geom_raster}, or \code{geom_polygon})
+#' @return A list of \code{ggplot} objects corresponding to the provided \code{column_names}. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.
+#' @seealso \code{\link{plot}}
+#' @export
+#' @examples 
+#' ## See example in the help file for FRK
+setGeneric("plot_spatial_or_ST", function(newdata, column_names,  map_layer=NULL, 
+                                          subset_time=NULL, palette="Spectral", plot_over_world=FALSE, 
+                                          labels_from_coordnames = TRUE, ...)
+    standardGeneric("plot_spatial_or_ST"))
+
+
+## INHERITED GENERICS
+
+#' @export
 setGeneric("coef", function(object)
     standardGeneric("coef"))
 
 #' @export
 setGeneric("predict", function(object, ...)
     standardGeneric("predict"))
+
+#' @title Plot predictions from FRK analysis 
+#' @description This function acts as a wrapper around 
+#' \code{\link{plot_spatial_or_ST}}. It plots the fields of the 
+#' \code{Spatial*DataFrame} or \code{STFDF} object corresponding to 
+#' prediction and prediction uncertainty quantification. It also uses the 
+#' \code{@data} slot of \code{SRE} object to plot the training data set(s), 
+#' and generates informative, latex-style legend labels for each of the plots. 
+#' @param x object of class \code{SRE} 
+#' @param y the \code{Spatial*DataFrame} or \code{STFDF} object resulting from the call \code{predict(x)}. 
+#' Keep in mind that \code{predict()} returns a \code{list} when \code{method} = "TMB"; the element \code{$newdata} contains the required \code{Spatial}/\code{ST} object. 
+#' If the list itself is passed, you will receive the error: "x" and "y" lengths differ.  
+#' @param ... optional arguments passed on to \code{\link{plot_spatial_or_ST}}
+#' @return A list of \code{ggplot} objects consisting of the observed data, predictions, and standard errors. This list can then be supplied to, for example, \code{ggpubr::ggarrange()}.
+#' @export
+#' @examples 
+#' ## See example in the help file for SRE
+setGeneric("plot", function(x, y, ...)
+    standardGeneric("plot"))
 
 
 ########################
@@ -271,9 +359,10 @@ setGeneric("auto_BAU", function(manifold,type,cellsize,resl,d,nonconvex_hull,con
 #' @param variogram.formula formula used for detrending the data for variogram estimation of the observation error. Should be identical to that used for \code{SRE()}
 #' @param est_error flag indicating whether variogram estimation of the observation error should be carried out or no. This can take a long time with large datasets
 #' @param average_in_BAU flag indicating whether to summarise data that fall into a single BAU by simply taking an average of the data and the standard devitation of the data within each BAU (suitable for extremely large datasets)
+#' @param sum_variables if \code{average_in_BAU == TRUE}, the string \code{sum_variables} indicates which data variables (can be observations or covariates) are to be summed rather than averaged
 #' @details This generic function is not called directly. It is called in the SRE function for binning data in BAUs
 #' @noRd
-setGeneric("map_data_to_BAUs", function(data_sp,sp_pols,variogram.formula=NULL,est_error=T,average_in_BAU = TRUE) standardGeneric("map_data_to_BAUs"))
+setGeneric("map_data_to_BAUs", function(data_sp,sp_pols,variogram.formula=NULL,est_error=T,average_in_BAU = TRUE, sum_variables = NULL, silently = FALSE) standardGeneric("map_data_to_BAUs"))
 
 #' @title Concatenation
 #' @description Concatenates FRK objects of the same class together. This is primarily

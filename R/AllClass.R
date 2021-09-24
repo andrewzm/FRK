@@ -62,31 +62,32 @@ setClass("STsphere",representation(radius="numeric"),contains="STmanifold")
 #' @docType class
 #' @title Basis functions
 #'
-#' @description An object of class \code{Basis} contains the basis functions used to construct the matrix \eqn{S} in FRK. It contains five slots, described below.
+#' @description An object of class \code{Basis} contains the basis functions used to construct the matrix \eqn{S} in FRK. 
 #' @slot manifold an object of class \code{manifold} that contains information on the manifold and the distance measure used on the manifold. See \code{\link{manifold-class}} for more details
 #' @slot n  the number of basis functions in this set
 #' @slot fn a list of length \code{n}, with each item the function of a specific basis function
 #' @slot pars a list of parameters where the \eqn{i}-th item in the list contains the parameters of the \eqn{i}-th basis function, \code{fn[[i]]}
 #' @slot df a data frame containing other attributes specific to each basis function (for example the geometric centre of the local basis function)
+#' @slot regular logical indicating if the basis functions (of each resolution) are in a regular grid
 #' @details Basis functions are a central component of \code{FRK}, and the package is designed to work with user-defined specifications of these. For convenience, however, several functions are available to aid the user to construct a basis set for a given set of data points. Please see \code{\link{auto_basis}} for more details. The function \code{\link{local_basis}} helps the user construct a set of local basis functions (e.g., bisquare functions) from a collection of location and scale parameters.
 #' @seealso \code{\link{auto_basis}} for automatically constructing basis functions and \code{\link{show_basis}} for visualising basis functions.
 #' @rdname Basis-class
 setClass("Basis_obj", representation(n = "numeric","VIRTUAL"))
 
 #' @rdname Basis-class
-setClass("Basis",contains="Basis_obj", representation(manifold="manifold",fn="list",pars="list", df="data.frame"))
+setClass("Basis",contains="Basis_obj", representation(manifold="manifold",fn="list",pars="list", df="data.frame", regular = "numeric"))
 
 #' @rdname Basis-class
-setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Basis2="Basis",n = "integer", df = "data.frame"))
+setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Basis2="Basis",n = "integer", df = "data.frame", regular="logical"))
 
 #' @title Spatial Random Effects class
 #' @description This is the central class definition of the \code{FRK} package, containing the model and all other information required for estimation and prediction.
 #' @details The spatial random effects (SRE) model is the model employed in Fixed Rank Kriging, and the \code{SRE} object contains all information required for estimation and prediction from spatial data. Object slots contain both other objects (for example, an object of class \code{Basis}) and matrices derived from these objects (for example, the matrix \eqn{S}) in order to facilitate computations.
 #'
 #' @slot f formula used to define the SRE object. All covariates employed need to be specified in the object \code{BAUs}
-#'@slot data the original data from which the model's parameters are estimated
-#'@slot basis object of class \code{Basis} used to construct the matrix \eqn{S}
-#'@slot BAUs object of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame} of \code{STFDF} that contains the Basic Areal Units (BAUs) that are used to both (i) project the data onto a common discretisation if they are point-referenced and (ii) provide a BAU-to-data relationship if the data has a spatial footprint
+#' @slot data the original data from which the model's parameters are estimated
+#' @slot basis object of class \code{Basis} used to construct the matrix \eqn{S}
+#' @slot BAUs object of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame} of \code{STFDF} that contains the Basic Areal Units (BAUs) that are used to both (i) project the data onto a common discretisation if they are point-referenced and (ii) provide a BAU-to-data relationship if the data has a spatial footprint
 #' @slot S matrix constructed by evaluating the basis functions at all the data locations (of class \code{Matrix})
 #' @slot S0 matrix constructed by evaluating the basis functions at all BAUs (of class \code{Matrix})
 #' @slot D_basis list of distance-matrices of class \code{Matrix}, one for each basis-function resolution
@@ -96,9 +97,9 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot Qfs_BAUs fine-scale precision matrix at the BAU centroids (typically diagonal and of class \code{Matrix}) up to a constant of proportionality estimated using the EM algorithm
 #' @slot Z vector of observations (of class \code{Matrix})
 #' @slot Cmat incidence matrix mapping the observations to the BAUs
-#' @slot X matrix of covariates
-#' @slot K_type type of prior covariance matrix of random effects. Can be "block-exponential" (correlation between effects decays as a function of distance between the basis-function centroids), or "unstructured" (all elements in \code{K} are unknown and need to be estimated)
-#' @slot mu_eta updated expectation of random effects (estimated)
+#' @slot X matrix of covariates at all the data locations
+#' @slot K_type type of prior covariance matrix of random effects. Can be "block-exponential" (correlation between effects decays as a function of distance between the basis-function centroids), "unstructured" (all elements in \code{K} are unknown and need to be estimated), or "neighbour" (a sparse precision matrix is used, whereby only neighbouring basis functions have non-zero precision matrix elements).
+#' @slot mu_eta updated expectation of the basis function random effects (estimated)
 #' @slot S_eta updated covariance matrix of random effects (estimated)
 #' @slot Q_eta updated precision matrix of random effects (estimated)
 #' @slot Khat prior covariance matrix of random effects (estimated)
@@ -107,8 +108,23 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot sigma2fshat fine-scale variation scaling (estimated)
 #' @slot fs_model type of fine-scale variation (independent or CAR-based). Currently only "ind" is permitted
 #' @slot info_fit information on fitting (convergence etc.)
+#' @slot response A character string indicating the assumed distribution of the response variable
+#' @slot link A character string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted. 
+#' @slot mu_xi updated expectation of the fine-scale random effects at all BAUs (estimated)
+#' @slot Q_posterior updated joint precision matrix of the basis function random effects and observed fine-scale random effects (estimated)
+#' @slot log_likelihood the log likelihood of the fitted model
+#' @slot method the fitting procedure used to fit the SRE model
+#' @slot phi the estimated dispersion parameter (assumed constant throughout the spatial domain)
+#' @slot k_Z vector of known size parameters at the data support (only applicable to binomial and negative-binomial response distributions) 
+#' @slot k_BAU vector of known size parameters at the observed BAUs (only applicable to binomial and negative-binomial response distributions) 
+#' @slot include_fs flag indicating whether the fine-scale variation should be included in the model
+#' @slot normalise_wts if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)
+#' @slot fs_by_spatial_BAU if \code{TRUE}, then each BAU is associated with its own fine-scale variance parameter
+#' @slot obsidx indices of observed BAUs
+#' @slot simple_kriging_fixed logical indicating whether one wishes to commit to simple kriging at the fitting stage: If \code{TRUE}, model fitting is faster, but the option to conduct universal kriging at the prediction stage is removed 
 #' @seealso \code{\link{SRE}} for details on how to construct and fit SRE models.
-#' @keywords spatial
+#' @references
+#' Zammit-Mangion, A. and Cressie, N. (2017). FRK: An R package for spatial and spatio-temporal prediction with large datasets. Journal of Statistical Software, 98(4), 1-48. doi:10.18637/jss.v098.i04.
 setClass("SRE",representation(data="list",
                               basis="Basis_obj",
                               BAUs="ANY",     # should be SpatialPolygonsDataFrame, SpatialPixelsDataFrame or STFDF
@@ -132,4 +148,18 @@ setClass("SRE",representation(data="list",
                               alphahat = "Matrix",
                               sigma2fshat = "numeric",
                               fs_model = "character",
-                              info_fit = "list"))
+                              info_fit = "list", 
+                              response = "character", 
+                              link = "character", 
+                              mu_xi = "Matrix",
+                              Q_posterior = "dsCMatrix",
+                              log_likelihood = "numeric", 
+                              method = "character",
+                              phi = "numeric", 
+                              k_Z = "numeric", 
+                              k_BAU_O = "numeric", 
+                              include_fs = "logical", 
+                              normalise_wts = "logical", 
+                              fs_by_spatial_BAU = "logical", 
+                              obsidx = "numeric", 
+                              simple_kriging_fixed = "logical"))

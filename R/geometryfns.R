@@ -193,7 +193,7 @@ gc_dist_time <- function(R=NULL) {
 #' @description This function extends \code{dist} to accept two arguments.
 #' @param x1 matrix of size N1 x n
 #' @param x2 matrix of size N2 x n
-#' @details Computes the distances between the coordinates in \code{x1} and the coordinates in \code{x2}. The matrices \code{x1} and \code{x2} do not need to have the same number of rows, but need to have the same number of columns (dimensions).
+#' @details Computes the distances between the coordinates in \code{x1} and the coordinates in \code{x2}. The matrices \code{x1} and \code{x2} do not need to have the same number of rows, but need to have the same number of columns (e.g., manifold dimensions).
 #' @return Matrix of size N1 x N2
 #' @export
 #' @examples
@@ -201,26 +201,21 @@ gc_dist_time <- function(R=NULL) {
 #' D <- distR(A,A[-3,])
 distR <- function (x1, x2 = NULL)  {
     ## Try to coerce to matrix
-    if (!is.matrix(x1)) {
-        x1 <- as.matrix(x1)
-    }
+    if (!is.matrix(x1)) x1 <- as.matrix(x1)
 
-    ## If x2 is not specified set it equatl to x1
-    if (is.null(x2)) {
-        x2 <- x1
-    }
+    ## If x2 is not specified set it equal to x1
+    if (is.null(x2)) x2 <- x1
 
     ## If it is specified, coerce it to matrix
-    if (!is.matrix(x2)) {
-        x2 <- as.matrix(x2)
-    }
+    if (!is.matrix(x2)) x2 <- as.matrix(x2)
 
     ## Basic check
     if(!(ncol(x1) == ncol(x2)))
         stop("x1 and x2 have to have same number of columns")
 
     ## Compute the distance in C (distR_C is a wrapper)
-    distR_C(x1,x2)
+    sqdisps <- lapply(1:ncol(x1), function(i) outer(x1[,i], x2[,i], FUN = '-')^2)
+    return(sqrt(Reduce("+", sqdisps)))
 }
 
 ## Retrieve the border points
@@ -294,7 +289,7 @@ setMethod("coordnames",signature(x="STIDF"),function(x) {
 #' @title Automatic BAU generation
 #' @description This function calls the generic function \code{auto_BAU} (not exported) after a series of checks and is the easiest way to generate a set of Basic Areal Units (BAUs) on the manifold being used; see details.
 #' @param manifold object of class \code{manifold}
-#' @param type either ``grid'' or ``hex'', indicating whether gridded or hexagonal BAUs should be used
+#' @param type either ``grid'' or ``hex'', indicating whether gridded or hexagonal BAUs should be used. If \code{type} is unspecified, ``hex'' will be used if we are on the sphere, and ``grid'' will used otherwise 
 #' @param cellsize denotes size of gridcell when \code{type} = ``grid''. Needs to be of length 1 (square-grid case) or a vector of length \code{dimensions(manifold)} (rectangular-grid case)
 #' @param isea3h_res resolution number of the isea3h DGGRID cells for when type is ``hex'' and manifold is the surface of a \code{sphere}
 #' @param data object of class \code{SpatialPointsDataFrame}, \code{SpatialPolygonsDataFrame},  \code{STIDF}, or \code{STFDF}. Provision of \code{data} implies that the domain is bounded, and is thus necessary when the manifold is a \code{real_line, plane}, or \code{STplane}, but is not necessary when the manifold is the surface of a \code{sphere}
@@ -303,6 +298,7 @@ setMethod("coordnames",signature(x="STIDF"),function(x) {
 #' @param tunit temporal unit when requiring space-time BAUs. Can be "secs", "mins", "hours", etc.
 #' @param xlims limits of the horizontal axis (overrides automatic selection)
 #' @param ylims limits of the vertical axis (overrides automatic selection)
+#' @param spatial_BAUs object of class \code{SpatialPolygonsDataFrame} or \code{SpatialPixelsDataFrame} representing the spatial BAUs to be used in a spatio-temporal setting (if left \code{NULL}, the spatial BAUs are constructed automatically using the data)
 #' @param ... currently unused
 #' @details \code{auto_BAUs} constructs a set of Basic Areal Units (BAUs) used both for data pre-processing and for prediction. As such, the BAUs need to be of sufficienly fine resolution so that inferences are not affected due to binning.
 #'
@@ -343,12 +339,13 @@ setMethod("coordnames",signature(x="STIDF"),function(x) {
 #' @export
 auto_BAUs <- function(manifold, type=NULL,cellsize = NULL,
                       isea3h_res=NULL,data=NULL,nonconvex_hull=TRUE,
-                      convex=-0.05,tunit=NULL,xlims=NULL,ylims=NULL,...) {
-
+                      convex=-0.05,tunit=NULL,xlims=NULL,ylims=NULL,
+                      spatial_BAUs = NULL, ...) {
+    
     ## Basic checks and setting of defaults
     if(!(is(data,"Spatial") | is(data,"ST") | is(data,"Date") | is.null(data)))
         stop("Data needs to be of class 'Spatial', 'ST', 'Date', or NULL")
-    if(is(data,"Spatial") | is(data,"ST"))           # if data is not NULL
+    if(is(data,"Spatial") | is(data,"ST"))           # if data is not NULL or "Data"
         if((class(coordnames(data)) == "NULL"))
             stop("data needs to have coordinate names")
     if(!is(manifold,"manifold"))
@@ -356,9 +353,7 @@ auto_BAUs <- function(manifold, type=NULL,cellsize = NULL,
 
     on_sphere <- grepl("sphere",type(manifold))
 
-    if(is.null(type)) {
-        type <- ifelse(on_sphere,"hex","grid")
-    }
+    if(is.null(type)) type <- ifelse(on_sphere,"hex","grid")
 
     ## If user has specified the ISEA3h resolution
     if(!is.null(isea3h_res)) {
@@ -373,7 +368,7 @@ auto_BAUs <- function(manifold, type=NULL,cellsize = NULL,
         if(!(isea3h_res >=0 & isea3h_res <= 9)) stop("isea3h_res needs to be between 0 and 9")
 
         ## Coerce type to hex if user wants to use the ISEA3h
-        if(type=="grid") {
+        if(type == "grid") {
             type = "hex"
             message("Only hex BAUs possible when setting isea3h_res. Coercing type to 'hex'")
         }
@@ -381,8 +376,8 @@ auto_BAUs <- function(manifold, type=NULL,cellsize = NULL,
         ## Ensure the resolution is an integer and assign to resl
         resl <- round(isea3h_res)
     } else {
-        ## If user did not specify ISEA3h then just set resl to NULL
-        resl <- NULL
+        ## If user did not specify ISEA3h then just set resl to 3
+        resl <- 3L
     }
 
     ## If we are on the sphere set defaults for type and resolution if not already specified
@@ -429,19 +424,30 @@ auto_BAUs <- function(manifold, type=NULL,cellsize = NULL,
     if(grepl("ST",class(manifold)) & is.null(tunit))
         tunit <- .choose_BAU_tunit_from_data(data)
 
+    ## Check that spatial_BAUs is the correct class, and we are in a space-time setting
+    if(!is.null(spatial_BAUs)) {
+        if(!grepl("ST",class(manifold)))
+            stop("The argument spatial_BAUs only applicable in a space-time setting")
+        if(!(is(spatial_BAUs, "SpatialPolygons") | is(spatial_BAUs, "SpatialPixels")))
+            stop("The argument spatial_BAUs should be of class SpatialPolygonsDataFrame, or SpatialPixelsDataFrame")
+    }
+
+        
+    
     ## Call the internal function with checked arguments
     auto_BAU(manifold=manifold,type=type,cellsize=cellsize,resl=resl,d=data,
-             nonconvex_hull=nonconvex_hull,convex=convex,tunit=tunit,xlims=xlims,ylims=ylims)
+             nonconvex_hull=nonconvex_hull,convex=convex,tunit=tunit,xlims=xlims,ylims=ylims, 
+             spatial_BAUs = spatial_BAUs)
 }
 
 ## Automatically generate BAUs on the real line
 setMethod("auto_BAU",signature(manifold="real_line"),
-          function(manifold,type="grid",cellsize = 1,resl=resl,d=NULL,xlims=NULL,...) {
+          function(manifold,type="grid",cellsize = 1,resl=resl,d=NULL,xlims=NULL, ...) {
 
               if(is.null(d))
                   stop("Data must be supplied when generating BAUs on a plane")
 
-              crs <- CRS(proj4string(d))     # CRS of data
+              crs <- .quiet_CRS(proj4string(d))     # CRS of data
               coords <- coordinates(d)       # coordinates of data
 
               if(is.null(xlims))               # if x limits are not specified
@@ -555,16 +561,17 @@ setMethod("auto_BAU",signature(manifold="plane"),
               if(nonconvex_hull)
                   if(!requireNamespace("INLA"))
                       stop("For creating a non-convex hull INLA needs to be installed. Please install it using
-                           install.packages(\"INLA\", repos=\"http://www.math.ntnu.no/inla/R/stable\"). Alternatively
+                           install.packages(\"INLA\", repos=\"https://www.math.ntnu.no/inla/R/stable\"). Alternatively
                            please set nonconvex_hull=FALSE to use a simple convex hull.")
 
               if(is.null(d))
                   stop("Data must be supplied when generating BAUs on a plane")
 
-              crs <- CRS(proj4string(d))   # CRS of data
+              crs <- .quiet_CRS(proj4string(d))   # CRS of data
 
               X1 <- X2 <- NULL             # Suppress bindings warning
 
+              
               if(is(d,"SpatialPoints")){    # If data are spatial points
                   coords <- coordinates(d)  # extract coordinates
               } else if(is(d,"SpatialPolygons")){ # if polygons
@@ -581,7 +588,7 @@ setMethod("auto_BAU",signature(manifold="plane"),
 
               if(is.null(ylims))             # if ylims not specified
                   yrange <- range(coords[,2])  # y-range of coordinates
-              else yrange = ylims            # else just allocate
+              else yrange <- ylims            # else just allocate
 
               ## Increase convex until domain is contiguous and smooth
               ## (i.e., the distance betweeen successive points is small)
@@ -623,8 +630,8 @@ setMethod("auto_BAU",signature(manifold="plane"),
 
               ## Create x and y grid with 20% buffer and selected cellsizes
               ## If the user has specified the limits do not do buffer
-              bufferx <- ifelse(is.null(xlims),0.2,0) # x buffer
-              buffery <- ifelse(is.null(ylims),0.2,0) # y buffer
+              bufferx <- if(is.null(xlims)) 0.2 else 0 
+              buffery <- if(is.null(ylims)) 0.2 else 0 
 
               xgrid <- seq(xrange[1] - drangex*bufferx,
                            xrange[2] + drangex*bufferx,
@@ -693,19 +700,26 @@ setMethod("auto_BAU",signature(manifold="plane"),
 
           })
 
+## This function allows us to call CRS() without getting all of the warnings  
+## that have arison as a result from going to PROJ6. This is only a temporary 
+## solution.
+.quiet_CRS <- function(...) {
+    suppressWarnings(CRS(...))
+}
+
 ## Constructing BAUs on the surface of the sphere
 setMethod("auto_BAU",signature(manifold="sphere"),
-          function(manifold,type="grid",cellsize = c(1,1),resl=2,d=NULL,xlims=NULL,ylims=NULL,...) {
-
+          function(manifold,type="grid",cellsize = c(1,1),resl=2,d=NULL,xlims=NULL,ylims=NULL, ...) {
+              
               ## For this function d (the data) may be NULL in which case the whole sphere is covered with BAUs
               if(is.null(d))                                  # set CRS if data not provided
-                  prj <- CRS("+proj=longlat +ellps=sphere")
+                  prj <- .quiet_CRS("+proj=longlat +ellps=sphere")
               else {
-                  prj <- CRS(proj4string(d))                # extract CRS
+                  prj <- .quiet_CRS(proj4string(d))         # extract CRS # FIXME: Warning comes from here
                   coords <- data.frame(coordinates(d))      # extract coordinates
 
                   ## When modelling on the sphere, the CRS needs to be CRS("+proj=longlat +ellps=sphere")
-                  if(!identical(prj,CRS("+proj=longlat +ellps=sphere")))
+                  if(!identical(prj, .quiet_CRS("+proj=longlat +ellps=sphere")))
                       stop("If modelling on the sphere please set the CRS of
                            the data to CRS('+proj=longlat +ellps=sphere)")
 
@@ -717,7 +731,7 @@ setMethod("auto_BAU",signature(manifold="sphere"),
 
               ## If the user wants hexagonal BAUs
               if(type == "hex") {
-
+                  
                   ## Suppress bindings warnings
                   isea3h <- res <- lon <- centroid <- lat <- in_chull <- NULL
 
@@ -848,7 +862,7 @@ setMethod("auto_BAU",signature(manifold="sphere"),
 ## Constructing BAUs on the surface of the sphere x time
 setMethod("auto_BAU",signature(manifold = c("STmanifold")),
           function(manifold,type="grid",cellsize = c(1,1,1),resl=resl,d=NULL,
-                   nonconvex_hull=TRUE,convex=-0.05,xlims=NULL,ylims=NULL,...) {
+                   nonconvex_hull=TRUE,convex=-0.05,xlims=NULL,ylims=NULL, spatial_BAUs, ...) {
 
               ## In this function user can opt to just supply a Date object, in which case
               ## the whole surface of the sphere is covered and the temporal part of the BAUs
@@ -873,21 +887,52 @@ setMethod("auto_BAU",signature(manifold = c("STmanifold")),
                   spat_manifold <- sphere()
               } else stop("Cannot recognise manifold")
 
-              ## Set cellsize if not supplied. Time cellsize defaults to 1
-              if(is.null(cellsize) & !is.null(space_part)) {
+              ## Set cellsize if not supplied. Time cellsize defaults to 1.
+              ## We only need the temporal cellsize if spatial_BAUs are provided 
+              ## by the user. Also cater for the possiblity that the user provides 
+              ## only the temporal cellsize when they have set the spatial_BAUs 
+              ## (which makes sense to do). Do this by just tkaing the last element 
+              ## of cellsize, which will be the only element if it is a scalar, 
+              ## and the third element if they provide three elements as was the previous
+              ## required behaviour.
+              
+              if(!is.null(spatial_BAUs)) {
+                  if(is.null(cellsize)) {
+                      cellsize_temp <- 1
+                  } else {
+                      cellsize_temp <- last(cellsize)
+                  }
+              } else if(is.null(cellsize) & !is.null(space_part)) {
                   cellsize_spat <-  .choose_BAU_cellsize_from_data(space_part)
                   cellsize_temp <- 1
               } else {
-                  cellsize_spat <- cellsize[1:2]
+                  cellsize_spat <- cellsize[1:2] 
                   cellsize_temp <- cellsize[3]
               }
 
 
-              ## Construct the spatial BAUs
-              spatial_BAUs <- auto_BAU(manifold=spat_manifold,cellsize=cellsize_spat,
-                                       resl=resl,type=type,d=space_part,nonconvex_hull=nonconvex_hull,
-                                       convex=convex,xlims=xlims,ylims=ylims,...)
+              ## Redefine the data if spatial_BAUs was provided. 
+              ## This is so that the spatial_BAUs play nicely with other functions, 
+              ## and in case the user wants to specify covariates in the final 
+              ## ST_BAUs object (in which case, they cannot have the same covariate
+              ## names as those stored in spatial_BAUs, so here we will prevent that 
+              ## possible naming clash). I will define it in a way that recreates 
+              ## the behaviour of auto_BAUS() when spatial_BAUs is NULL; specifically, 
+              ## the only data we want is the spatial coordinates.
+              ## (Also, creating  data converts SpatialPolygons to SpatialPolygonsDataFrame)
+              if(!is.null(spatial_BAUs)) {
+                  spatial_BAUs$tmp <- 1
+                  spatial_BAUs@data <- as.data.frame(coordinates(spatial_BAUs))
+              }
+                 
 
+
+              ## Construct the spatial BAUs (if spatial_BAUs not provided)
+              if(is.null(spatial_BAUs)) 
+                  spatial_BAUs <- auto_BAU(manifold=spat_manifold,cellsize=cellsize_spat,
+                                           resl=resl,type=type,d=space_part,nonconvex_hull=nonconvex_hull,
+                                           convex=convex,xlims=xlims,ylims=ylims,...)
+              
               ## Construct the temporal BAUs
               temporal_BAUs <- auto_BAU(manifold=real_line(), cellsize=cellsize_temp,
                                         resl=resl,type=type,d=time_part,convex=convex,...)
@@ -904,6 +949,7 @@ setMethod("auto_BAU",signature(manifold = c("STmanifold")),
               STBAUs <- STFDF(spatial_BAUs,
                               temporal_BAUs,
                               data = df_info)
+
 
               ## Return the ST BAUs
               return(STBAUs)
@@ -1015,6 +1061,61 @@ SpatialPolygonsDataFrame_to_df <- function(sp_polys, vars = names(sp_polys)) {
 }
 
 
+
+STFDF_to_df <- function(ST_obj) {
+    
+    if(!(is(ST_obj,"STFDF")))
+        stop("sp_polys needs to be of class STFDF")
+    
+    
+    ## The STFDF class consists of a single spatial frame @sp replicated
+    ## over a given number of time points (say, nt time points). 
+    ## To create a useful dataframe for ggplot, our strategy is to construct a 
+    ## dataframe from @sp using SpatialPolygonsDataFrame_to_df(), and then 
+    ## replicate this dataframe nt times. Then, we will map the data stored in 
+    ## ST_obj@data to this dataframe.
+    ns <- length(ST_obj@sp)
+    nt <- length(ST_obj@time)
+    
+    df_polys <- SpatialPolygonsDataFrame_to_df(ST_obj@sp)
+    
+    
+    ## replicate df_polys nt more times
+    df_polys_all_times <- df_polys 
+    for (dummy in 1:(nt - 1)) {
+        df_polys_all_times <- rbind(df_polys_all_times, df_polys)
+    }
+    
+    ## Now replicate @data 
+    ## Number of times to repeat each observation. We need to count the number of
+    ## occurences of id in the polygons dataframe, AND maintain the order!
+    ## (see here: https://stackoverflow.com/a/23055565)
+    # x <- df_polys$id %>% factor(levels = unique(df_polys$id)) %>% table
+    
+    ## An even neater option is rle():
+    ## (see here: https://stackoverflow.com/a/23055638)
+    x <- rle(df_polys$id)$lengths
+    
+    ## Initialise empty dataframe to store the replicated version of @data:
+    df_data <- ST_obj@data[-(1:nrow(ST_obj@data)), ] 
+    
+    
+    for (i in 1:nt) { # Over each timepoint
+        ## Get the data at current timepoint
+        df <- ST_obj@data[((i - 1) * ns + 1):(i * ns), ]  
+        
+        ## Repeat it the required number of times, and add it to the rest of the data
+        df_data <- rbind(df_data, df[rep(row.names(df), x), ])
+    }
+    
+    ## Combine the polygon data and the replicated @data:
+    df_polys_all_times <- cbind(df_polys_all_times, df_data)
+    
+    return(df_polys_all_times)
+}
+
+
+
 ## Create very small square polygon BAUs around SpatialPoints
 #' @rdname BAUs_from_points
 #' @aliases BAUs_from_points,SpatialPoints-method
@@ -1040,7 +1141,7 @@ setMethod("BAUs_from_points",signature(obj = "SpatialPoints"),
 
               ## Now create polygons from the above paths, and keep same projection
               sp_obj_pols <- df_to_SpatialPolygons(sp_obj_pols,coords=cnames,keys="id",
-                                                   proj = CRS(proj4string(obj)))
+                                                   proj = .quiet_CRS(proj4string(obj)))
 
               ## We assign the centroid of the BAU to the data object
               df_data <- as.data.frame(coords)
@@ -1085,15 +1186,15 @@ setMethod("show",signature(object="manifold"),function(object) print(object))
 ## Returns a SpatialPointsDataFrame with the points aligned at the BAU centroids
 #' @aliases map_data_to_BAUs,Spatial-method
 setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
-          function(data_sp,sp_pols,average_in_BAU = TRUE) {
-
+          function(data_sp, sp_pols, average_in_BAU = TRUE, sum_variables = NULL, silently = FALSE) {
+              
               ## Suppress bindings warnings
               . <- BAU_name <- NULL
 
               ## Add BAU ID to the data frame of the SP object
               sp_pols$BAU_name <- as.character(row.names(sp_pols))
 
-              ## Add coordinates to the @data aswell if not aleady there
+              ## Add coordinates to @data if not already there
               if(!(all(coordnames(sp_pols) %in% names(sp_pols@data))))
                   sp_pols@data <- cbind(sp_pols@data,coordinates(sp_pols))
 
@@ -1143,23 +1244,37 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
                   ## take averages over quantities that are not numeric, it just returns the first
                   ## element of the vector (so, e.g., the below does not crash when averages over
                   ## BAU names are sought)
-                  if(average_in_BAU)
-                      Data_in_BAU <- group_by(data_over_sp,BAU_name) %>%  # group by BAU
-                      summarise_all(.safe_mean) %>%             # apply safe mean to each column BAU
-                      as.data.frame()                                     # convert to data frame
-                  else Data_in_BAU <- data_over_sp                        # otherwise don't average
-                  })                                                          # end timer
-
+                  if(average_in_BAU) {
+                      
+                      ## Average the columns which will not be summed
+                      tmp1 <- data_over_sp[, !names(data_over_sp) %in% sum_variables] %>%
+                          group_by(BAU_name) %>%             # group by BAU
+                          summarise_all(.safe_mean) %>%      # apply safe mean to each column BAU
+                          as.data.frame()                    # convert to data frame
+                      
+                      ## Sum specified columns; if(is.null(sum_variables)), 
+                      ## then tmp1 will just be the BAU_name column (which will be dropped once we merge afterwards). 
+                      tmp2 <- select(data_over_sp, c(sum_variables, BAU_name)) %>% # Need BAU_name in order to summarise by group; BAU_name is a string, so safe.sum() will just return the first element
+                          group_by(BAU_name) %>%                       # group by BAU
+                          summarise_all(.safe_sum) %>%                 # apply safe mean to each column BAU
+                          as.data.frame()                              # convert to data frame 
+                      
+                      ## merge the dataframes (removes duplicate columns automatically)
+                      Data_in_BAU <- merge(tmp1, tmp2)
+                  } else 
+                      Data_in_BAU <- data_over_sp                       # otherwise don't average
+                  })                                                    # end timer
+             
 
               ## We now create a new SpatialPointsDataFrame but this time the data
               ## is averaged over the BAUs, and we have at most one data point per BAU
               new_sp_pts <- SpatialPointsDataFrame(
                   coords=Data_in_BAU[coordnames(data_sp)],         # coordinates of summarised data
                   data=Data_in_BAU,                                # data frame
-                  proj4string = CRS(proj4string(data_sp)))         # CRS of original data
-
+                  proj4string = .quiet_CRS(proj4string(data_sp)))         # CRS of original data
+              
               ## Report time taken to bin data
-              cat("Binned data in",timer[3],"seconds\n")
+              if (!silently) cat("Binned data in",timer[3],"seconds\n")
 
               ## Return new matched data points
               new_sp_pts
@@ -1169,66 +1284,86 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
 ## data_sp: data (SpatialPolygons object)
 ## sp_pols: BAUs (SpatialPolygonsDataFrame or SpatialPixelsDataFrame)
 ## average_in_BAU: flag indicating whether we want to average data/standard errors in BAUs
+## sum_variables: string indicating the variables which are to be summed in a BAU rather than averaged
 #' @aliases map_data_to_BAUs,Spatial-method
 setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
-          function(data_sp,sp_pols,average_in_BAU = TRUE)
+          function(data_sp,sp_pols, average_in_BAU = TRUE, sum_variables = NULL, silently = FALSE)
           {
               ## Suppress bindings warnings
               . <- BAU_name <- NULL
 
-              ## SpatialPixels have equal area while SpatialPolygons need not.
-              ## Currently we are not weighting by the different BAU area.
-              ## Inform user of this
-              if(!is(sp_pols,"SpatialPixels"))
-                  message("BAUs are Polygons and not Pixels. Currently BAU of identical
-                          area are being assumed when computing the incidence matrix
-                          from observations having a large support.
-                          Handling of different areas will be catered for in a future revision.
-                          Please report this issue to the package maintainer.")
-
               ## Attach the ID of the data polygon to the data frame
-              data_sp$id <- row.names(data_sp)
-              data_sp$id <- as.character(data_sp$id)
-
-              ## Assume the BAUs are so small that it is sufficient to see whether the
-              ## BAU centroid falls in the data polygon. To do this we first make
-              ## A SpatialPointsDataFrame from the BAUs reflecting the BAU centroids
-              BAU_as_points <- SpatialPointsDataFrame(coordinates(sp_pols),
-                                                      sp_pols@data,
-                                                      proj4string = CRS(proj4string(sp_pols)))
+              data_sp$id <- as.character(row.names(data_sp))
+              
+              ## If the BAUs are SpatialPixels, assume the BAUs are so small 
+              ## that it is sufficient to see whether the BAU centroid falls in 
+              ## the data polygon. To do this we first make
+              ## A SpatialPointsDataFrame from the BAUs reflecting the BAU centroids.
+              ## If the BAUs are SpatialPolygons, it is possible for the centroid of a concave polygon to lie 
+              ## outside of the polygon. Hence, instead of using the BAU centroids, 
+              ## we sample a random point inside of the polygon.
+              if (is(sp_pols, "SpatialPolygons")) {
+                  BAU_as_points <- .sample_point_in_polygons(sp_pols) 
+              } else if (is(sp_pols, "SpatialPixels")) {
+                  BAU_as_points <- SpatialPointsDataFrame(coordinates(sp_pols),
+                                                          sp_pols@data,
+                                                          proj4string = .quiet_CRS(proj4string(sp_pols)))
+              }
 
               ## Now see which centroids fall into the BAUs
               ## The following returns a data frame equal in number of rows to
               ## the data polygons, with all the BAU features averaged (hence if
               ## BAU_as_points$xx = c(1,2,3) for those BAUs inside the data polygon
-              ## BAUs_aux_data$xx = 3.
-              BAUs_aux_data <- .parallel_over(data_sp,BAU_as_points,fn=.safe_mean)
-
+              ## BAUs_aux_data$xx = 2. 
+              if (!is.null(sum_variables)) {
+                  warning("sum_variables argument is not implemented for 'SpatialPolygons' data. Please set sum_variables to NULL, or contact the package maintainer if you think sum_variables is required for your problem.")
+              } else {
+                  BAUs_aux_data <- .parallel_over(data_sp, BAU_as_points, fn=.safe_mean)
+              }
+              
+              
               ## Now include the ID in the table so we merge by it later
               BAUs_aux_data$id <- as.character(row.names(BAUs_aux_data))
-
+              
               ## Do the merging
               updated_df <- left_join(data_sp@data,
                                       BAUs_aux_data,
                                       by="id")
-
+              
               ## Make sure the rownames are OK
               row.names(updated_df) <- data_sp$id
-
+              
               ## Allocated data frame to SpatialPolygons object
               data_sp@data <- updated_df
-
+              
               ## Return Spatial object
-              data_sp
+              return(data_sp) 
           })
+
+## Sometimes the BAUs are concave polygons, in which case the BAU centroid may
+## lie OUTSIDE of the polygon; this can cause issues when determining if one 
+## polygon overlaps another.
+## This function takes a SpatialPolygonsDataFrame and samples a point in each of
+## the polygon objects. The returned object is a SpatialPointsDataFrame.
+.sample_point_in_polygons <- function(sp_pols) {
+    BAU_as_points <- coordinates(sp_pols) # pre-allocating the matrix
+    for (i in 1:length(sp_pols)) { # for all BAUs, sample a point inside the BAU
+        BAU_as_points[i, ] <- coordinates(sp::spsample(sp_pols@polygons[[i]], type = "random", n = 1)) 
+    }
+    BAU_as_points <- SpatialPointsDataFrame(BAU_as_points,
+                                            sp_pols@data,
+                                            proj4string = .quiet_CRS(proj4string(sp_pols)))
+    return(BAU_as_points)
+}
 
 ## Map the data to the BAUs. This is done after BAU construction
 ## data_sp: data (SpatialPixels object)
 ## sp_pols: BAUs (SpatialPolygonsDataFrame or SpatialPixelsDataFrame)
 ## average_in_BAU: flag indicating whether we want to average data/standard errors in BAUs
+## sum_variables: vector of strings indicating which variables are to be summed rather than averaged.
 #' @aliases map_data_to_BAUs,Spatial-method
 setMethod("map_data_to_BAUs",signature(data_sp="SpatialPixels"),
-          function(data_sp,sp_pols,average_in_BAU = TRUE) {
+          function(data_sp,sp_pols, average_in_BAU = TRUE, sum_variables = NULL, silently = FALSE) {
               coordlabels <- coordnames(data_sp)
               if(is(data_sp, "SpatialPixelsDataFrame")) {
                   data_sp <- as(data_sp, "SpatialPolygonsDataFrame")
@@ -1236,26 +1371,27 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPixels"),
                   data_sp <- as(data_sp, "SpatialPolygons")
               }
               coordnames(data_sp) <- coordlabels
-              map_data_to_BAUs(data_sp, sp_pols, average_in_BAU = average_in_BAU)
+              map_data_to_BAUs(data_sp, sp_pols, average_in_BAU = average_in_BAU, sum_variables = sum_variables, silently = silently)
           })
 
 ## Returns either a STIDF with the data at the BAU centroids (if data_sp is STIDF)
 ## Or else an STFDF with the original data shifted to the BAU time points and with BAU
 ## features averaged over the ST data polygons
 setMethod("map_data_to_BAUs",signature(data_sp="ST"),
-          function(data_sp,sp_pols,average_in_BAU = TRUE) {
+          function(data_sp,sp_pols,average_in_BAU = TRUE, sum_variables = NULL, silently = FALSE) {
 
               if(!(class(data_sp) == "STIDF"))
                   stop("Currently spatio-temporal data where the spatial
                       component is areal is under maintenance.
                        Please contact the package maintainer")
-
+              
+              
               ## Initialise to no spatial field
               sp_fields <- NULL
 
               ## Coerce to STIDF if necessary and then project all the space-time data onto space
               data_all_spatial <- as(as(as(data_sp,"STIDF"),"Spatial"),
-                                    "SpatialPointsDataFrame")
+                                     "SpatialPointsDataFrame")
 
               ## Now we require all dates to be POSIXct, therefore convert
               if(!all(class(data_all_spatial$time) == "POSIXct")) {
@@ -1302,7 +1438,9 @@ setMethod("map_data_to_BAUs",signature(data_sp="ST"),
                                           ## Map the now spatial data the now spatial BAUs
                                           map_data_to_BAUs(data_spatial,
                                                            BAU_spatial,
-                                                           average_in_BAU = average_in_BAU)
+                                                           average_in_BAU = average_in_BAU, 
+                                                           sum_variables = sum_variables, 
+                                                           silently = silently)
                                       } else {
                                           NULL
                                       }})
@@ -1374,16 +1512,24 @@ setMethod("BuildC",signature(data="SpatialPoints"),
                                       n =1:length(BAUs))          # column number of C matrix
               i_idx <- 1:length(data)                             # row number (simply 1:ndata)
               j_idx <- BAU_index[data$BAU_name,]                  # column number reflects the BAU the data falls in
-              list(i_idx=i_idx,j_idx=j_idx)                       # return the (i,j) indices of nonzeros
+              list(i_idx=i_idx,j_idx=j_idx, x_idx=1)                       # return the (i,j) indices of nonzeros
           })
 
 ## The BuildC method for when we have Polygon data. Note that in this case we haven't allocated
 ## the BAUs to the data yet
 setMethod("BuildC",signature(data="SpatialPolygons"),
           function(data,BAUs) {
+      
               data$id <- 1:length(data)                           # polygon number
-              BAU_as_points <- SpatialPoints(coordinates(BAUs))   # convert BAUs to SpatialPoints
-              i_idx <- j_idx <-  NULL                             # initialise
+
+              # convert BAUs to SpatialPoints
+              if (is(BAUs, "SpatialPolygons")) {
+                  BAU_as_points <- SpatialPoints(.sample_point_in_polygons(BAUs))
+              } else if (is(BAUs, "SpatialPixels")) {
+                  BAU_as_points <- SpatialPoints(coordinates(BAUs))  
+              }
+              
+              i_idx <- j_idx <- x_idx <- NULL                     # initialise
               for (i in 1L:length(data)) {                        # for each data point
 
                   this_poly <- SpatialPolygons(list(data@polygons[[i]]),1L) # extract polygon
@@ -1394,7 +1540,7 @@ setMethod("BuildC",signature(data="SpatialPolygons"),
                   ## If data does not overlap any BAU centroid, then the area
                   ## is very small -- simply find which polygon this data point falls in
                   if(length(overlap) == 0) {
-                      crs <- CRS(proj4string(BAUs))
+                      crs <- .quiet_CRS(proj4string(BAUs))
                       datum_as_point <- SpatialPoints(this_poly, proj4string = crs)
                       overlap <- over(datum_as_point, BAUs)$n
                   }
@@ -1402,6 +1548,7 @@ setMethod("BuildC",signature(data="SpatialPolygons"),
                   
                   i_idx <- c(i_idx,rep(i,length(overlap)))                  # the row index is the data number repeated
                   j_idx <- c(j_idx,as.numeric(overlap))                     # the column index is the BAU number
+                  x_idx <- c(x_idx, BAUs$wts[overlap])                      # the weight is the the weight associated with the current BAU
               }
 
               ## If no overlap was found it means the user generated the BAUs and that
@@ -1413,17 +1560,17 @@ setMethod("BuildC",signature(data="SpatialPolygons"),
                                          large support observations. Are you sure all
                                          observations are covered by BAUs?")
 
-              list(i_idx=i_idx,j_idx=j_idx)  # return the (i,j) indices of nonzeros
+              list(i_idx = i_idx, j_idx = j_idx, x_idx = x_idx)  # return the (i,j) indices of nonzeros
           })
 
 ## If we have an STIDF the BAUs and the data both need to have a field "n"
-## which can be used for mapping. Tese fields are automatically created
+## which can be used for mapping. These fields are automatically created
 ## by auto_BAUs and map_data_to_BAUs
 setMethod("BuildC",signature(data="STIDF"),
           function(data,BAUs) {
               i_idx <- 1:length(data)       # the row index is simple 1:ndata
               j_idx <- BAUs$n[data@data$n]  # the column index is whatever BAU the data falls in
-              list(i_idx=i_idx,j_idx=j_idx) # return the (i,j) indices of nonzeros
+              list(i_idx=i_idx,j_idx=j_idx, x_idx = 1) # return the (i,j) indices of nonzeros
           })
 
 setMethod("BuildC",signature(data="STFDF"),
@@ -1469,7 +1616,7 @@ setMethod("BuildC",signature(data="STFDF"),
                   }
                   count <- count + 1                           # increment count
               }
-              list(i_idx=i_idx,j_idx=j_idx)                     # return the (i,j) indices of nonzeros
+              list(i_idx=i_idx,j_idx=j_idx, x_idx = 1)                     # return the (i,j) indices of nonzeros
           })
 
 ## Does the over function in parallel
@@ -1824,6 +1971,14 @@ process_isea3h <- function(isea3h,resl) {
     } else { x[1] }
 }
 
+## Replica of the .safe_mean function but for summation rather than averaging. 
+## Used for summing within BAUs when the data is a count.
+.safe_sum <- function(x) {
+    if(is(x,"logical") | is(x,"numeric")) {
+        sum(x)
+    } else { x[1] }
+}
+
 ## Takes a formula including covariates, and returns a formula with only the intercept term
 .formula_no_covars <- function(f) {
     labs <- all.names(f)                                      # extract all sub-strings in formula
@@ -1858,3 +2013,4 @@ process_isea3h <- function(isea3h,resl) {
     interleaved                                           # return
 
 }
+

@@ -1,5 +1,5 @@
 [![Build Status](https://travis-ci.org/andrewzm/FRK.svg)](https://travis-ci.org/andrewzm/FRK)
-[![codecov.io](http://codecov.io/github/andrewzm/FRK/coverage.svg?branch=master)](http://codecov.io/github/andrewzm/FRK?branch=master)
+[![codecov.io](https://codecov.io/github/andrewzm/FRK/coverage.svg?branch=master)](https://codecov.io/github/andrewzm/FRK?branch=master)
 
 Fixed Rank Kriging 
 ================
@@ -7,29 +7,31 @@ Fixed Rank Kriging
 <img src="./man/figures/FRK_logo.svg" width=100>
 
 
+
 Installation 
 ------------
 
-The package `FRK` is now at v0.1.8 and available on CRAN! To install, please type
+The package `FRK` is now at v1.0.0 and available on CRAN! To install, please type
 
 ```r
 install.packages("FRK")
 ```
 
-To install the most recent (development) version, first please install `INLA` from `http://www.r-inla.org/download`, then please load `devtools` and type
+To install the most recent (development) version, first please install `INLA` from `https://www.r-inla.org/download`, then please load `devtools` and type
 
 ```r
 install_github("andrewzm/FRK", dependencies = TRUE, build_vignettes = TRUE)
 ```
 
-A document containing a description, details on the underlying maths and computations, as well as several examples, is available as a vignette. To load this vignette please type
+A document containing a description, details on the underlying maths and computations for the EM algorithm (only applicable for Gaussian data), as well as several examples, is available as a vignette titled "FRK_intro". Another vignette, "FRK_non-Gaussian", summarises the maths in a non-Gaussian setting, and contains a couple of examples using nonGaussian data and the newly available plotting methods. To load these vignettes please type
 
 ```r
 library("FRK")
 vignette("FRK_intro")
+vignette("FRK_non-Gaussian")
 ```
 
-A draft paper with more details, currently under review, is available from [here](https://arxiv.org/abs/1705.08105).
+A draft paper with more details, currently in press, is available from [here](https://arxiv.org/abs/1705.08105). A draft paper which details the approach to modelling non-Gaussian data is available **LINK TO FRK v2 PAPER**.
 
 Description
 ------------
@@ -40,15 +42,20 @@ Type: Package
 
 Title: Fixed Rank Kriging
 
-Version: 0.2.3
+Version: 2.0.0
 
-Date: 2019-02-07
+Date: 2021-05-26
 
-Author: Andrew Zammit-Mangion
+Author: Andrew Zammit-Mangion, Matthew Sainsbury-Dale
 
 Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
 
-Description: Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling and prediction with large datasets. The approach, discussed in Cressie and Johannesson (2008), decomposes the field, and hence the covariance function, using a fixed set of *n* basis functions, where *n* is typically much smaller than the number of data points (or polygons) *m*. The method naturally allows for non-stationary, anisotropic covariance functions and the use of observations with varying support (with known error variance). The projected field is a key building block of the Spatial Random Effects (SRE) model, on which this package is based. The package FRK provides helper functions to model, fit, and predict using an SRE with relative ease. Reference: Cressie, N., & Johannesson, G. (2008). Fixed rank kriging for very large spatial data sets. Journal of the Royal Statistical Society: Series B, 70, 209-226.
+Description: Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling and prediction with large datasets. The approach decomposes the field, and hence the covariance function, using a fixed set of *r* basis functions, where *r* is typically much smaller than the number of data points (or polygons) *m*. This low-rank basis-function representation facilitates the modelling of 'big' spatial/spatio-temporal data. The method naturally allows for non-stationary, anisotropic covariance functions. Discretisation of the spatial domain into so-called basic areal units (BAUs) facilitates the use of observations with varying support (i.e., both point-referenced and areal supports, potentially simultaneously), and prediction over arbitrary user-specified regions. The package `FRK` caters for Gaussian and non-Gaussian data, employing a spatial generalised linear mixed model (GLMM) framework  to cater for Poisson, binomial, negative-binomial, gamma, and inverse-Gaussian distributed data. `FRK` also supports inference over various manifolds, including the 2D plane and 3D sphere, and it provides helper functions to model, fit, predict, and plot with relative ease. Zammit-Mangion and Cressie (2021) describe `FRK` in a Gaussian setting, 
+and detail it's use of basis functions and BAUs. 
+
+* Cressie, N., & Johannesson, G. (2008). Fixed rank kriging for very large spatial data sets. Journal of the Royal Statistical Society: Series B, 70, 209–226.
+* Zammit-Mangion A, Cressie N (2021). “FRK: an R package for spatial and spatio-temporal prediction with large datasets.” Journal of Statistical Software, In press.
+
 
 License: GPL (>= 2)
 
@@ -56,41 +63,123 @@ License: GPL (>= 2)
 Quick start
 ------------
 
+### Gaussian data
+
+
 ```r
-library(sp)
-library(ggplot2)
-library(FRK)
+library("FRK")
+library("sp")
+library("ggplot2")
+library("ggpubr")
 
 ## Setup
-set.seed(1)                                               # Fix seed
-zdf <- Z <- data.frame(x = runif(1000), y= runif(1000))   # Generate random locs
-zdf$z <- Z$z <- sin(8*Z$x) + cos(8*Z$y) + 0.5*rnorm(100)  # Simulate data
-coordinates(Z) = ~x+y                                     # Turn into sp object
+m <- 1000                                                  # Sample size
+RNGversion("3.6.0"); set.seed(1)                           # Fix seed
+zdf <- data.frame(x = runif(m), y= runif(m))               # Generate random locs
+zdf$z <- sin(8 * zdf$x) + cos(8 * zdf$y) + 0.5 * rnorm(m)  # Simulate data
+coordinates(zdf) = ~x+y                                    # Turn into sp object
 
 ## Run FRK
-S <- FRK(f = z~1,                             # Formula to FRK
-         list(Z),                             # All datasets are supplied in list
-         n_EM = 10)                           # Max number of EM iterations
-Pred <- SRE.predict(SRE_model = S)            # Prediction stage
-
-xy <- data.frame(coordinates(Pred))           # Extract info from predictions
-xy$mu <- Pred$mu
-xy$se <- Pred$sd
+S <- FRK(f = z ~ 1,                         # Formula to FRK
+         list(zdf),                         # All datasets are supplied in list
+         n_EM = 10)                         # Max number of EM iterations
+pred <- predict(S)                          # Prediction stage
 
 ## Plotting
-ggplot(zdf) + geom_point(aes(x,y,colour=z)) + 
-             scale_colour_distiller(palette="Spectral") + theme_bw() + coord_fixed()
-ggplot(xy) + geom_raster(aes(x,y,fill=mu)) + 
-             scale_fill_distiller(palette="Spectral") + theme_bw() + coord_fixed()
-ggplot(xy) + geom_tile(aes(x,y,fill=se)) + 
-             geom_point(data=zdf,aes(x,y),pch=46) +
-             scale_fill_distiller(palette="Spectral") + theme_bw() + coord_fixed()
+plot_list <- plot(S, pred)
+ggarrange(plotlist = plot_list, nrow = 1, legend = "top")
 
+```
+
+<!---
+ggsave( 
+  filename = "Gaussian_data.png", device = "png", 
+  width = 10, height = 4,
+  path = "~/Dropbox/FRK/man/figures/"
+)
+--->
+
+![(Left) Gaussian data. (Centre) Predictions. (Right) Standard errors.](/man/figures/Gaussian_data.png?raw=true)
+
+### Non-Gaussian data
+
+Here we analyse simulated Poisson data. We signify a Poisson data model with a mean response that is modelled using the square-root link function by setting `response = "poisson"` and `link = "square-root"` in `FRK()`. Other non-Gaussian data models available in `FRK` are the binomial, negative-binomial, gamma, and inverse-Gaussian. 
+
+```r
+## Simulate Poisson data using the previous example's data to construct a mean 
+zdf$z <- rpois(m, lambda = zdf$z^2)
+
+## Run FRK
+S <- FRK(f = z ~ 1, list(zdf),                          
+         response = "poisson",         # Poisson data model
+         link = "sqrt")                # square-root link function
+pred <- predict(S)                            
+
+## Plotting
+plot_list <- plot(S, pred$newdata)
+ggarrange(plot_list$z, plot_list$p_mu, plot_list$interval90_mu, 
+          nrow = 1, legend = "top")
+             
 ```    
+<!---
+ggsave( 
+  filename = "Poisson_data.png", device = "png", 
+  width = 10, height = 4,
+  path = "~/Dropbox/FRK/man/figures/"
+)
+--->
 
-![data](https://www.dropbox.com/s/vq21ycwbhukx8uj/FRK_ex_data.png?raw=true "Data")
-![mu](https://www.dropbox.com/s/galrk0ekf5ksyp6/FRK_ex_mu.png?raw=true "mu")
-![se](https://www.dropbox.com/s/2x5yt1z0vlffm2y/FRK_ex_se.png?raw=true "se")
+![(Left) Poisson data. (Centre) Prediction of the mean response. (Right) Prediction interval width of the mean response.](/man/figures/Poisson_data.png?raw=true)
+
+
+### Spatio-temporal data
+
+We now analyse spatio-temporal data, using the NOAA dataset.
+
+```r
+## Setup
+data("NOAA_df_1990")
+Tmax <- subset(NOAA_df_1990, month %in% 7 & year == 1993)
+Tmax <- within(Tmax, {time = as.Date(paste(year,month,day,sep="-"))})
+STObj <- stConstruct(x = Tmax, space = c("lon","lat"), time = "time", interval = TRUE)
+
+## BAUs: spatial BAUs are 1x1 pixels, temporal BAUs are 1 day intervals
+BAUs <- auto_BAUs(manifold = STplane(), 
+                       cellsize = c(1, 1, 1),    
+                       data=STObj, tunit = "days")
+BAUs$fs <- 1 # scalar fine-scale variance matrix, implicit in previous examples
+
+## Basis functions
+G <- auto_basis(manifold = STplane(), data = STObj, nres = 2, tunit = "days")
+
+## Run FRK
+STObj$std <- 2 # fix the measurement error variance
+S <- FRK(f = z ~ 1 + lat, data = list(STObj), 
+         basis = G, BAUs = BAUs, est_error = FALSE, method = "TMB")
+pred <- predict(S, percentiles = NULL)
+
+## Plotting: include only some times via the argument subset_time
+plot_list <- plot(S, pred$newdata, subset_time = c(1, 7, 13, 19, 25, 31)) 
+ggarrange(plotlist = plot_list, nrow = 1, legend = "top") 
+```
+
+<!---
+## Apply a labeller so the facet shows day x rather than just x
+facet_names <- paste0("day ", unique(pred$newdata$t))
+names(facet_names) <- unique(pred$newdata$t)
+plot_list <- lapply(
+  plot_list, 
+  function(gg) gg + facet_wrap(~t, labeller = as_labeller(facet_names)))
+  
+ggsave( 
+  filename = "ST_data.png", device = "png", 
+  width = 12.5, height = 3.8,
+  path = "~/Dropbox/FRK/man/figures/"
+)
+--->
+
+![(Left) Prediction of spatio-temporal process. (Right) Prediction interval width.](/man/figures/ST_data.png?raw=true)
+
 
 [//]: # (Currently `FRK` is not installing on OSX with `build_vignettes=TRUE` as it fails to find `texi2dvi`. Set `build_vignettes=FALSE` to ensure installation. Then download the `.Rnw` file in the `vignettes` folder and compile the pdf file separately in `RStudio` with `knitr`. )
 

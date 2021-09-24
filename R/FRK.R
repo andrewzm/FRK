@@ -13,15 +13,17 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
-#' Fixed Rank Kriging
-#'
-#' Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling and prediction with large datasets. The approach, discussed in Cressie and Johannesson (2008), decomposes the field, and hence the covariance function, using a fixed set of n basis functions, where dimension n is typically much smaller than the number of data points (or polygons) m. The method naturally allows for non-stationary, anisotropic covariance functions and the use of observations with varying support (with known error variance). The dimension-reduced field is a key building block of the Spatial Random Effects (SRE) model, upon which this package is based. The package FRK provides helper functions to model, fit, and predict using an SRE with relative ease. Reference: Cressie, N. and Johannesson, G. (2008) <DOI:10.1111/j.1467-9868.2007.00633.x>.
-#' @name FRK-package
+## #' Fixed Rank Kriging
+## #'
+## #' Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling and prediction with large datasets. The approach, discussed in Cressie and Johannesson (2008), decomposes the field, and hence the covariance function, using a fixed set of n basis functions, where n is typically much smaller than the number of data points (or polygons) m. The method naturally allows for non-stationary, anisotropic covariance functions and the use of observations with varying support (with known error variance). The dimension-reduced field is a key building block of the Spatial Random Effects (SRE) model, upon which this package is based. The package FRK provides helper functions to model, fit, and predict using an SRE with relative ease. Reference: Cressie, N. and Johannesson, G. (2008) <DOI:10.1111/j.1467-9868.2007.00633.x>.
+## #' @name FRK-package
 #' @docType package
 #' @useDynLib FRK, .registration=TRUE
 #' @import methods
 #' @import ggplot2
 #' @import Matrix
+#' @import TMB
+#' @import Rcpp
 #' @import sp
 #' @import spacetime
 #' @import parallel
@@ -32,6 +34,11 @@
 #' @importFrom digest digest
 #' @importFrom Rcpp cppFunction
 #' @importFrom grDevices chull
-#' @importFrom stats .getXlevels coefficients dist kmeans lm median model.extract model.frame model.matrix na.fail optim runif sd terms var time rnorm formula
+#' @importFrom stats .getXlevels coefficients dist kmeans lm median model.extract model.frame model.matrix na.fail optim runif sd terms var time rnorm formula nlminb pnorm qnorm quantile rbinom rgamma rnbinom rpois
 #' @importFrom utils data
+#' @importFrom statmod rinvgauss
+#' @importFrom stats as.formula
+#' @importFrom scales scientific
+#' @importFrom ggpubr ggarrange
+#' @importFrom reshape2 melt
 NULL

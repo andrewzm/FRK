@@ -1,22 +1,14 @@
 Package: FRK
 Type: Package
 Title: Fixed Rank Kriging
-Version: 1.0.0
-Date: 2021-02-17
+Version: 2.0.1
+Date: 2021-05-26
 Authors@R: c(
-    person("Andrew", "Zammit-Mangion", , "andrewzm@gmail.com", c("aut", "cre")))
+    person("Andrew", "Zammit-Mangion", , "andrewzm@gmail.com", c("aut", "cre")),
+    person("Matthew", "Sainsbury-Dale", , "msdale@uow.edu.au", c("aut")))
 Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
 VignetteBuilder: knitr
-Description: Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling
-    and prediction with large datasets. The approach, discussed in Cressie and
-    Johannesson (2008) <DOI:10.1111/j.1467-9868.2007.00633.x>, decomposes the field, 
-    and hence the covariance function, using a fixed set of n basis functions, 
-    where n is typically much smaller than the number of data points (or polygons) m. 
-    The method naturally allows for non-stationary, anisotropic covariance functions 
-    and the use of observations with varying support (with known error variance). The 
-    projected field is a key building block of the Spatial Random Effects (SRE) model, 
-    on which this package is based. The package FRK provides helper functions to model, 
-    fit, and predict using an SRE with relative ease.
+Description: Fixed Rank Kriging is a tool for spatial/spatio-temporal modelling and prediction with large datasets. The approach models the field, and hence the covariance function, using a set of r basis functions, where r is typically much smaller than the number of data points (or polygons) m. This low-rank basis-function representation facilitates the modelling of 'big' spatial/spatio-temporal data. The method naturally allows for non-stationary, anisotropic covariance functions. Discretisation of the spatial domain into so-called basic areal units (BAUs) facilitates the use of observations with varying support (i.e., both point-referenced and areal supports, potentially simultaneously), and prediction over arbitrary user-specified regions. `FRK` also supports inference over various manifolds, including the 2D plane and 3D sphere, and it provides helper functions to model, fit, predict, and plot with relative ease. Version 2.0.0 and above of the package `FRK` also supports modelling of non-Gaussian data, by employing a spatial generalised linear mixed model (GLMM) framework  to cater for Poisson, binomial, negative-binomial, gamma, and inverse-Gaussian distributions.  Zammit-Mangion and Cressie <doi:10.18637/jss.v098.i04> describe `FRK` in a Gaussian setting, and detail its use of basis functions and BAUs.
 BugReports: https://github.com/andrewzm/FRK/issues/
 Depends:
     R (>= 3.5.0)
@@ -43,16 +35,22 @@ Imports:
     Matrix,
     methods,
     plyr,
-    Rcpp (>= 0.12.12),
+    Rcpp (>= 0.12.12), 
     sp,
     spacetime,
     sparseinv,
+    statmod,
     stats,
-    utils
-Additional_repositories: https://andrewzm.github.io/dggrids-repo, 
-                         https://inla.r-inla-download.org/R/stable
+    TMB, 
+    utils,
+    ggpubr, 
+    reshape2, 
+    scales
+Additional_repositories: https://andrewzm.github.io/dggrids-repo/, 
+                         https://inla.r-inla-download.org/R/stable/
 License: GPL (>= 2)
 NeedsCompilation: yes
 LazyData: true
-RoxygenNote: 6.1.1
-LinkingTo: Rcpp
+RoxygenNote: 7.1.1
+LinkingTo: Rcpp, TMB, RcppEigen
+Encoding: UTF-8

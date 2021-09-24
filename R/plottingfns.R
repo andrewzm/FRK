@@ -17,7 +17,7 @@
 #' @description Layers a \code{ggplot2} map of the world over the current \code{ggplot2} object.
 #' @param g initial ggplot object
 #' @param inc_border flag indicating whether a map border should be drawn or not; see details.
-#' @details This function uses \code{ggplot2::map_data} in order to create a world map. Since, by default, this creates lines crossing the world at the (-180,180) longitude boundary, function \code{.homogenise_maps} is used to split the polygons at this boundary into two. If \code{inc_border} is TRUE, then a border is drawn around the lon-lat space; this option is most useful for projections that do not yield rectangular plots (e.g., the sinusoidal global projection).
+#' @details This function uses \code{ggplot2::map_data()} in order to create a world map. Since, by default, this creates lines crossing the world at the (-180,180) longitude boundary, the function \code{.homogenise_maps()} is used to split the polygons at this boundary into two. If \code{inc_border} is TRUE, then a border is drawn around the lon-lat space; this option is most useful for projections that do not yield rectangular plots (e.g., the sinusoidal global projection).
 #' @seealso the help file for the dataset \code{\link{worldmap}}
 #' @export
 #' @examples
@@ -167,17 +167,22 @@ LinePlotTheme <- function() {
     g <- ggplot() + theme(panel.background = element_rect(fill='white', colour='black'),text = element_text(size=20),
                           panel.grid.major =  element_line(colour = "light gray", size = 0.05),
                           panel.border  = element_rect(fill=NA, colour='black'))
-    return (g)
+    return(g)
 }
 
 #' @rdname plotting-themes
 #' @export
 EmptyTheme <- function() {
-    g <- ggplot() +  theme(panel.background = element_rect(fill='white', colour='white'),
-                           panel.grid=element_blank(),axis.ticks=element_blank(),
-                           panel.grid.major=element_blank(),panel.grid.minor=element_blank(),
-                           axis.text.x=element_blank(),axis.text.y=element_blank())
+    g <- ggplot() + .EmptyTheme_theme_only()
     return (g)
+}
+
+## this is so I can add it to already-constructed plots
+.EmptyTheme_theme_only <- function() {
+    theme(panel.background = element_rect(fill='white', colour='white'),
+          panel.grid=element_blank(),axis.ticks=element_blank(),
+          panel.grid.major=element_blank(),panel.grid.minor=element_blank(),
+          axis.text.x=element_blank(),axis.text.y=element_blank())
 }
 
 #####################################################
@@ -193,7 +198,7 @@ EmptyTheme <- function() {
     return(data.frame(x = xx, y = yy))          # return in data frame
 }
 
-## This function ensures that there aer no lines crossing the map due to countries traversing the
+## This function ensures that there are no lines crossing the map due to countries traversing the
 ## -180, +180 boundary
 .homogenise_maps <- function(worldmap) {
     group <- long <- prob <- NULL # suppress bindings note
@@ -223,5 +228,447 @@ EmptyTheme <- function() {
         worldmap <- rbind(worldmap,CA,CB)                        # add these to the world map
     }
     worldmap <- filter(worldmap,!(group %in% W$group))           # remove the problematic countries
-    worldmap                                                     # return fixed world map
+    return(worldmap)                                             # return fixed world map
+}
+
+# ---- FUNCTIONS SPECIFIC TO PLOT() -----
+
+#' @rdname plot
+#' @export 
+setMethod("plot", signature(x = "SRE", y = "STFDF"), function(x, y, ...) .plot_common(x, y, ...))
+
+#' @rdname plot
+#' @export 
+setMethod("plot", signature(x = "SRE", y = "SpatialPointsDataFrame"), function(x, y, ...) .plot_common(x, y, ...))
+
+#' @rdname plot
+#' @export 
+setMethod("plot", signature(x = "SRE", y = "SpatialPixelsDataFrame"), function(x, y, ...) .plot_common(x, y, ...))
+
+#' @rdname plot
+#' @export 
+setMethod("plot", signature(x = "SRE", y = "SpatialPolygonsDataFrame"), function(x, y, ...) .plot_common(x, y, ...))
+
+
+.plot_common <- function(object, newdata, ...) {
+  
+  ## Determine columns we need to plot, and which palette to use
+  if (object@method == "EM") {
+    
+    ## Here we will just rename the columns produced by the EM side to 
+    ## align with those of the TMB side.
+    newdata$p_mu <- newdata$mu 
+    newdata$RMSPE_mu <- newdata$sd
+    column_names <- c("p_mu", "RMSPE_mu")
+    palette <- c("Spectral", "BrBG")
+    
+  } else if (object@method == "TMB") {
+    
+    ## Unfortunately, we don't know the value of type specified in predict().
+    ## We will just check the existence of quantities using if statements. 
+    ## Usually, people want prediction interval widths, but the output of predict
+    ## doesn't give interval widths directly. Instead, it gives user-specified
+    ## percentiles, so here we construct some interval widths assuming the user
+    ## has specified the 5th and 95th percentiles (default).
+    
+    ## If the 5th and 95th percentiles are present, construct the 90% predictive interval width. 
+    if (all(c("Y_percentile_5","Y_percentile_95") %in% names(newdata@data))) 
+      newdata@data$interval90_Y <- newdata$Y_percentile_95 - newdata$Y_percentile_5 
+    if (all(c("mu_percentile_5","mu_percentile_95") %in% names(newdata@data))) 
+      newdata@data$interval90_mu <- newdata@data$mu_percentile_95 - newdata@data$mu_percentile_5 
+    if (all(c("prob_percentile_5","prob_percentile_95") %in% names(newdata@data))) 
+      newdata@data$interval90_prob <- newdata@data$prob_percentile_95 - newdata@data$prob_percentile_5 
+    if (all(c("Z_percentile_5","Z_percentile_95") %in% names(newdata@data))) 
+      newdata@data$interval90_Z <- newdata@data$Z_percentile_95 - newdata@data$Z_percentile_5 
+    
+    ## Determine which quantities we are actually plotting
+    QOI <- c("Y", "mu", "prob", "Z") # Possible Quantities of interest
+    column_names <- paste0(rep(c("p_", "RMSPE_", "interval90_"), each = length(QOI)), QOI)
+    palette <- rep(c("Spectral", "BrBG", "BrBG"), each = length(QOI)) 
+    keep <- column_names %in% names(newdata@data)
+    column_names <- column_names[keep]
+    palette  <-  palette[keep] 
+  }
+  
+  ## plot() decides the palette for each graphic based on whether it is 
+  ## the term is related to prediction or prediction uncertainty quantification.
+  ## This means that the palette argument cannot be provided by the user via 
+  ## ... argument. An exception is if the user has specified palette = "nasa", 
+  ## in which case we will use it for the prediction plots.
+  user_args <- list(...)
+  if (!is.null(user_args$palette) && user_args$palette == "nasa") {
+    palette <- gsub(pattern = "Spectral", replacement = "nasa", palette)
+  }
+  
+  ## Need to use do.call(), as it allows arguments to be provided as a list. 
+  ## Otherwise, there is no way to remove the original value of palette supplied
+  ## by the user. Remove potential clashes:
+  user_args$palette      <- NULL
+  user_args$column_names <- NULL
+  args_list <- c(list(newdata = newdata, 
+                      column_names = column_names, 
+                      palette = palette), 
+                 user_args)
+  plots <- do.call(plot_spatial_or_ST, args_list)
+  
+
+  ## First we determine if the user has predicted over the BAUs or over arbitrary
+  ## prediction regions. To assess this, we will test if newdata has the same 
+  ## number of elements as the BAUs (this is not foolproof, but good enough).
+  pred_over_BAUs <- length(object@BAUs) == length(newdata)
+  
+  ## Edit labels
+  split_column_names <- strsplit(column_names, "_")
+  names(split_column_names) <- column_names
+  for (i in column_names) {
+    plots[[i]] <- plots[[i]] + .custom_lab(split_column_names[[i]], pred_over_BAUs)
+  }
+  
+  ## Now plot the data. Note that here we use a simple call to plot_spatial_or_ST(), 
+  ## rather than via do.call(), because we have not constructed a custom palette 
+  ## within this function.
+  response_name <- all.vars(object@f)[1]
+  if (is.data.frame(object@data)) {
+    ## This will never happen, but add a check just in case
+    warning("Cannot plot the data stored in object@data, as it is a data.frame")
+  } else if (is.list(object@data)) {
+    if (any(sapply(object@data, function(d) is(d, "STIDF")))) {
+      if (length(object@data) == 1) {
+        ## Plot the binned data over the BAUs. This is a bit difficult if any 
+        ## observations are associated with multiple BAUs; don't do it in this case.
+        Cmat_dgT <- as(object@Cmat, "dgTMatrix")
+        if (!all(tabulate(Cmat_dgT@i + 1) == 1) || any(tabulate(Cmat_dgT@j + 1) > 1)) {
+         cat("The data set stored in object@data is of class STIDF. In this case, 
+                  we normally use the binned data in object@Z to plot over the BAUs. However,
+                  some observations are associated with multiple BAUs, or there 
+                  are some BAUs associated with multiple observations (probably because 
+                  average_in_BAU = FALSE). This makes things a bit tricky, so we will not plot the data.")
+        } else {
+          obs_BAUs <- Cmat_dgT@j + 1 # BAUs associated with each observation
+          data_idx <- Cmat_dgT@i + 1 # data index
+          binned_data <- rep(NA, length(object@BAUs))
+          binned_data[obs_BAUs] <- object@Z[, 1][data_idx]
+          ## If NAs are present (i.e., some of the BAUs are unobserved), 
+          ## tell the user. This will illuminate a warning thrown later as well.
+          if (any(is.na(binned_data))) {
+            cat("To plot the STIDF data provided in the SRE object, we use the binned data in object@Z to plot over the BAUs. The unobserved BAUs (i.e., those that are not associated with any elements of object@Z) are given a value of NA.\n")
+          }
+          object@BAUs@data[, response_name] <- binned_data
+          data_plots <- plot_spatial_or_ST(object@BAUs, response_name, ...)
+        }
+      } else {
+        ## We may have a combination of STIDF and STFDF, and we don't know which 
+        ## dataset each element of object@Z is associated with. This is a bit 
+        ## complicated, so we don't do it. 
+        cat("Multiple data sets were used in the analysis, and because at 
+                least one is of class STIDF, we will not plot the data (we don't have a method for this).\n")
+      }
+    } else {
+      data_plots <- sapply(object@data, plot_spatial_or_ST, response_name, ...)
+    }
+  } else if (is(object@data, "SpatialPointsDataFrame") ||
+             is(object@data, "SpatialPixelsDataFrame") ||
+             is(object@data, "SpatialPolygonsDataFrame") ||
+             is(object@data, "STFDF")) { 
+    ## this shouldn't happen, but add just in case
+    data_plots <- plot_spatial_or_ST(object@data, response_name, ...)
+  } else {
+    warning("Couldn't plot the data stored in object@data as the type was unrecognised.")
+  }
+  
+  ## Give the data plots meaningful labels, and combine them with the prediction 
+  ## and uncertainty quantification plots.
+  if (exists("data_plots")) {
+    if (length(data_plots) == 1) {
+      names(data_plots) <- response_name
+    } else {
+      names(data_plots) <- paste(response_name, "dataset", 1:length(data_plots), sep = "_")
+      data_legend_name <- paste(response_name, "\ndataset", 1:length(data_plots), sep = " ")
+      for (i in 1:length(data_plots)) {
+        data_plots[[i]] <- data_plots[[i]] + labs(colour = data_legend_name[i], fill = data_legend_name[i])
+      }
+    }
+    plots <- c(data_plots, plots) 
+  }
+  
+  return(plots)
+}
+
+
+
+.custom_lab <- function(v, pred_over_BAUs) {
+    # v is a vector, with first entry indicating the type of plot we are making a 
+    ## label for, and the second entry indicating the quantity of interest    
+    type <- v[1]; x <- v[2]
+    
+    ## Set the unicode character for the quantity of interest
+    ## See https://en.wikipedia.org/wiki/List_of_Unicode_characters#Greek_and_Coptic
+    # for the a list of unicode characters.
+    unicode <- if (x == "Y") "Y" else if (x == "mu") "\U03BC" else if (x == "prob") "\U03C0" else if (x == "Z") "Z*"
+
+    if (pred_over_BAUs) {
+      process <-  bquote(bold(.(unicode)))
+    } else {
+      process <-  bquote(bold(.(unicode))[P])
+    }
+    
+    expectation <- bquote(paste("E(", .(process), " | ", bold(Z), ", ", bold("\U03B8"), ")    "))
+    
+    ## Construct the labels
+    ## NB: Add a couple of spaces to ensure no overlap between label and the 
+    ## fill box when arranged with legend at top
+    label <- if (type == "p") {
+      # expectation
+      # bquote(paste("Prediction\n", .(expectation)))
+      bquote(atop("Prediction    ", .(expectation)))
+    } else if (type == "RMSPE") {
+        bquote(paste("RMSPE(", .(expectation), ", ", .(process),")  "))
+    } else if (type == "interval90") {
+        # bquote(paste("90% prediction-\ninterval width for " * .(process), "  "))
+        bquote(atop("90% prediction-", "interval width for " * .(process), "  "))
+    }
+    
+    return(labs(fill = label))
+}
+
+
+# ---- MAIN PLOTTING FUNCTIONS ----
+
+
+#' @rdname plot_spatial_or_ST
+#' @export
+setMethod("plot_spatial_or_ST", signature(newdata = "STFDF"), 
+          function(newdata, column_names,  map_layer = NULL, 
+                   subset_time = NULL, palette = "Spectral", 
+                   plot_over_world = FALSE, labels_from_coordnames = TRUE, ...) {
+      
+      ## Get the coordinate names 
+      coord_names <- coordnames(newdata)
+      
+      ## Remove the coordinate corresponding to time. coord_names is just spatial.
+      time_name <- coord_names[3]
+      coord_names <- coord_names[1:2]
+      
+      if (!is.null(subset_time)) 
+          newdata <- newdata[, subset_time]
+                  
+      plots <- .plot_spatial_or_ST_common(
+          newdata = newdata, column_names = column_names, coord_names = coord_names, 
+          time_name = time_name, map_layer = map_layer, 
+          palette = palette, plot_over_world = plot_over_world, 
+          labels_from_coordnames = labels_from_coordnames,
+          ...
+          )
+      return(plots)
+})        
+
+
+#' @rdname plot_spatial_or_ST
+#' @export
+setMethod("plot_spatial_or_ST", signature(newdata = "SpatialPointsDataFrame"), 
+          function(newdata, column_names,  map_layer = NULL, 
+                   subset_time = NULL, palette = "Spectral", 
+                   plot_over_world = FALSE, labels_from_coordnames = TRUE, ...) {
+    
+    ## Get the coordinate names, and time_name is NULL in the spatial setting
+    coord_names <- coordnames(newdata)
+    time_name <- NULL
+    
+    .plot_spatial_or_ST_common(
+        newdata = newdata, column_names = column_names, coord_names = coord_names, 
+        time_name = time_name, map_layer = map_layer, 
+        palette = palette, plot_over_world = plot_over_world, 
+        labels_from_coordnames = labels_from_coordnames, 
+        ...
+    )
+})
+
+#' @rdname plot_spatial_or_ST
+#' @export
+setMethod("plot_spatial_or_ST", signature(newdata = "SpatialPixelsDataFrame"), 
+          function(newdata, column_names,  map_layer = NULL, 
+                   subset_time = NULL, palette = "Spectral", 
+                   plot_over_world = FALSE, labels_from_coordnames = TRUE,...) {
+            
+            ## Get the coordinate names, and time_name is NULL in the spatial setting
+            coord_names <- coordnames(newdata)
+            time_name <- NULL
+            
+            .plot_spatial_or_ST_common(
+              newdata = newdata, column_names = column_names, coord_names = coord_names, 
+              time_name = time_name, map_layer = map_layer, 
+              palette = palette, plot_over_world = plot_over_world, 
+              labels_from_coordnames = labels_from_coordnames, 
+              ...
+            )
+          })
+
+
+#' @rdname plot_spatial_or_ST
+#' @export
+setMethod("plot_spatial_or_ST", signature(newdata = "SpatialPolygonsDataFrame"), 
+          function(newdata, column_names,  map_layer = NULL, 
+                   subset_time = NULL, palette = "Spectral", 
+                   plot_over_world = FALSE, labels_from_coordnames = TRUE, ...) {
+            
+            ## Get the coordinate names, and time_name is NULL in the spatial setting
+            coord_names <- coordnames(newdata)
+            time_name <- NULL
+            
+            .plot_spatial_or_ST_common(
+              newdata = newdata, column_names = column_names, coord_names = coord_names, 
+              time_name = time_name, map_layer = map_layer, 
+              palette = palette, plot_over_world = plot_over_world, 
+              labels_from_coordnames = labels_from_coordnames, 
+              ...
+            )
+          })
+
+.plot_spatial_or_ST_common <- function(
+    newdata, column_names, coord_names, time_name, map_layer, palette, plot_over_world, labels_from_coordnames, ...
+) {
+  
+    ## Inclusion of "-" characters can cause problems; convert to "_"
+    column_names <- gsub("-", "_", column_names)
+    names(newdata@data) <- gsub("-", "_", names(newdata@data))
+    
+    ## Classify the kind of spatial data we have, and convert newdata to a data.frame
+    tmp <- .classify_sp_and_convert_to_df(newdata)
+    df      <- tmp$df
+    sp_type <- tmp$sp_type
+    
+    ## Remove duplicate columns (can sometimes happen when we convert the Spatial* 
+    ## object, e.g., if the coordinates are already present)
+    df <- df[, unique(colnames(df))]
+    
+    # ## Edit the time column so that the facets display t = ...
+    # if(!is.null(time_name))
+    # df[, time_name] <- factor(
+    #    df[, time_name], ordered = TRUE,
+    #    labels = paste(time_name, sort(unique(df[, time_name])), sep = " = ")
+    # )
+    
+    if (length(palette) == 1) 
+        palette <- rep(palette, length(column_names))
+  
+    
+    ## Plot the requested columns
+    plots <- lapply(1:length(column_names), 
+                    function(i, x, y, ...) {
+                        .plot(df, x[i], coord_names, time_name, sp_type, map_layer, 
+                              y[i], plot_over_world, labels_from_coordnames, ...)
+                    }, x = column_names, y = palette, ...)
+    
+    suppressMessages( # suppress message about adding a new coordinate system
+        if(plot_over_world) {
+            plots <- lapply(plots, function(gg) {
+                (gg + .EmptyTheme_theme_only() + coord_map("mollweide")) %>%  
+                    draw_world(inc_border = TRUE)
+            })
+        }
+    )
+    names(plots) <- column_names
+    return(plots)
+}
+
+#### This function creates the individual plots.
+
+.plot <- function(df, column_name, coord_names, time_name, sp_type, map_layer, palette, plot_over_world, labels_from_coordnames, ...){
+    
+    ## Basic plot
+    if (!is.null(map_layer)) {
+        if ("ggplot" %in% class(map_layer)) {
+            ## Do it this way, because we cannot add map_layer to a ggplot object if
+            ## map_layer is a gg object itself (e.g., if map_layer is a result from a
+            ## call to ggmap(), which is often the case)
+            gg <- map_layer 
+            gg <- gg %+% df # change the default data to df
+        } else {
+            ## If map_layer is not a ggplot object, it is probably a layer 
+            ## (e.g., the result of a call to geom_polygon)
+            gg <- ggplot(df) + map_layer
+        }
+        
+    } else {
+        gg <- ggplot(df) 
+    }
+    ## change/add the default aesthetics, and add some themes for nice plots
+    gg <- gg %+% aes_string(x = coord_names[1], y = coord_names[2]) + 
+        theme_bw() + coord_fixed()
+    
+    ## If NAs are present, tell the user that we hard-code the colour/fill for 
+    ## the pixels with NA values to be transparent 
+    if (any(is.na(df[, column_name]))) {
+      cat("NA values detected in the data, which will be transparent in the final plot. If you want them to show up in the plot, take the returned plot object and add a colour/fill scale with na.value equal to whatever colour you want.\n ")
+    }
+    if (palette == "nasa") {
+      colour_fn <- scale_colour_gradientn(colours = nasa_palette, na.value = "transparent")
+      fill_fn <- scale_fill_gradientn(colours = nasa_palette, na.value = "transparent")
+    } else {
+      colour_fn <- scale_colour_distiller(palette = palette, na.value = "transparent")
+      fill_fn <- scale_fill_distiller(palette = palette, na.value = "transparent")
+    }
+    
+    ## Plot based on data type
+    if (sp_type == "points") { # this is only for observation data
+        gg <- gg + geom_point(aes_string(colour = column_name), ...) + colour_fn
+    } else {
+        if (sp_type == "pixels") {
+          ## geom_raster is typically faster, but it doesn't work if we are 
+          ## plotting over the plane. For simplicity, just use geom_tile instead.
+          if (plot_over_world) {
+            gg <- gg + geom_tile(aes_string(fill = column_name), ...)
+          } else {
+            gg <- gg + geom_raster(aes_string(fill = column_name), ...)
+          }
+          
+        } else if (sp_type == "polygons") {
+            gg <- gg + geom_polygon(aes_string(group = "id", fill = column_name), ...) 
+        }
+        gg <- gg + fill_fn
+    }
+    
+    if (!is.null(time_name))
+        gg <- gg + facet_wrap(as.formula(paste("~", time_name)))
+    
+    if (!labels_from_coordnames)
+      gg <- gg + labs(x = expression(s[1]), y = expression(s[2]))
+
+    return(gg)
+}
+
+
+.classify_sp_and_convert_to_df <- function(newdata) {
+  
+    
+    original_names <- names(newdata@data)
+  
+    ## NB: I don't use is() because is(newdata, "SpatialPointsDataFrame") returns 
+    ## TRUE when class(newdata) == "SpatialPixelsDataFrame"
+    if (class(newdata) == "SpatialPointsDataFrame") {
+        df <- cbind(newdata@data, coordinates(newdata))
+        sp_type <- "points"
+    } else if (class(newdata) == "SpatialPixelsDataFrame") {
+        df <- cbind(newdata@data, coordinates(newdata))
+        sp_type <- "pixels"
+    } else if (class(newdata) == "SpatialPolygonsDataFrame") {
+        df <- .SpatialPolygonsDataFrame_to_df(newdata)
+        sp_type <- "polygons"
+    } else if (class(newdata) == "STFDF") {
+        if (is(newdata@sp, "SpatialPolygons")) {
+            sp_type <- "polygons"
+        } else if (is(newdata@sp, "SpatialPixels")) {
+            sp_type <- "pixels"
+        }
+        df <- STFDF_to_df(newdata) 
+    } else {
+        stop("Class of newdata is not recognised.")
+    }
+
+    ## check all original column names are present
+    if (!all(original_names %in% names(df)))
+      warning("Some of the original names in newdata were not retained when newdata was coerced to a data.frame. 
+              This can sometimes happen if some of the column names contain '-', which get converted to '.'")
+    
+    return(list(df = df, sp_type = sp_type))
 }

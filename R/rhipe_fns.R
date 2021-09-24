@@ -45,12 +45,10 @@ rhwrapper <- function(Ntot = 20, N = 10,type="data.frame",f_expr,...) {
         #parameters = c(list(...),f_expr=f_expr,N=N,Ntot=Ntot,type=type)
     )
 
-    browser()
-
      Y <- do.call("rbind",lapply(mapreduce1,function(x) unserialize(x[[2]])))
 
 
-    Y
+    return(Y)
 }
 
 #' @title sp::over using Rhipe

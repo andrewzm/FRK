@@ -23,3 +23,8 @@ pres/
 bigstudies
 Permissions
 *.dll
+FRKTMB_paper
+.DS_Store
+Github_example.R
+doc
+Meta
