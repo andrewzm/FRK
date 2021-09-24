@@ -115,9 +115,12 @@ FRK <- function(f,                     # formula (compulsory)
                           ...)
         BAUs$fs <- 1                           #Default fine-scale variation at BAU level
     } else {
-        cat("Assuming fine-scale variation is homoscedastic\n")
-        if(is.null(BAUs$fs)) BAUs$fs <- 1      # If user supplied BAUs without fs field
-                                               # then add on the default and inform user
+        # If user supplied BAUs without fs field
+        # then add on the default and inform user
+        if(is.null(BAUs$fs)) {
+            cat("Assuming fine-scale variation is homoscedastic\n")
+            BAUs$fs <- 1 
+        }     
     }
 
     if(is.null(basis)) {
