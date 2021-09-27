@@ -11,7 +11,7 @@ Fixed Rank Kriging
 Installation 
 ------------
 
-The package `FRK` is now at v1.0.0 and available on CRAN! To install, please type
+The package `FRK` is now at v2.0.1 and available on CRAN! To install, please type
 
 ```r
 install.packages("FRK")
@@ -23,7 +23,7 @@ To install the most recent (development) version, first please install `INLA` fr
 install_github("andrewzm/FRK", dependencies = TRUE, build_vignettes = TRUE)
 ```
 
-A document containing a description, details on the underlying maths and computations for the EM algorithm (only applicable for Gaussian data), as well as several examples, is available as a vignette titled "FRK_intro". Another vignette, "FRK_non-Gaussian", summarises the maths in a non-Gaussian setting, and contains a couple of examples using nonGaussian data and the newly available plotting methods. To load these vignettes please type
+A document containing a description, details on the underlying maths and computations for the EM algorithm (only applicable for Gaussian data), as well as several examples, is available as a vignette titled "FRK_intro". Another vignette, "FRK_non-Gaussian", summarises the maths in a non-Gaussian setting, and contains a couple of examples using non-Gaussian data and the newly available plotting methods. To load these vignettes please type
 
 ```r
 library("FRK")
@@ -31,7 +31,10 @@ vignette("FRK_intro")
 vignette("FRK_non-Gaussian")
 ```
 
-A draft paper with more details, currently in press, is available from [here](https://arxiv.org/abs/1705.08105). A draft paper which details the approach to modelling non-Gaussian data is available **LINK TO FRK v2 PAPER**.
+A paper with more details is available [here](https://www.jstatsoft.org/article/view/v098i04). If you use `FRK` in your work, please cite it using the information provided by `citation("FRK")`. 
+<!---
+A draft paper which details the approach to modelling non-Gaussian data is available [here](**LINK TO FRK v2 PAPER**).
+--->
 
 Description
 ------------
@@ -42,7 +45,7 @@ Type: Package
 
 Title: Fixed Rank Kriging
 
-Version: 2.0.0
+Version: 2.0.1
 
 Date: 2021-05-26
 
@@ -93,7 +96,7 @@ ggarrange(plotlist = plot_list, nrow = 1, legend = "top")
 
 <!---
 ggsave( 
-  filename = "Gaussian_data.png", device = "png", 
+  filename = "Gaussian_data_tmp.png", device = "png", 
   width = 10, height = 4,
   path = "~/Dropbox/FRK/man/figures/"
 )
@@ -103,7 +106,7 @@ ggsave(
 
 ### Non-Gaussian data
 
-Here we analyse simulated Poisson data. We signify a Poisson data model with a mean response that is modelled using the square-root link function by setting `response = "poisson"` and `link = "square-root"` in `FRK()`. Other non-Gaussian data models available in `FRK` are the binomial, negative-binomial, gamma, and inverse-Gaussian. 
+Here we analyse simulated Poisson data. We signify a Poisson data model with a mean response that is modelled using the square-root link function by setting `response = "poisson"` and `link = "sqrt"` in `FRK()`. Other non-Gaussian response distributions available in `FRK` are the binomial, negative-binomial, gamma, and inverse-Gaussian distributions. 
 
 ```r
 ## Simulate Poisson data using the previous example's data to construct a mean 

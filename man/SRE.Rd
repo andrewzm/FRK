@@ -34,7 +34,7 @@ FRK(
   fs_by_spatial_BAU = FALSE,
   known_sigma2fs = NULL,
   taper = NULL,
-  simple_kriging_fixed = FALSE,
+  simple_kriging_fixed = TRUE,
   ...
 )
 
@@ -70,7 +70,7 @@ SRE.fit(
   optimiser = nlminb,
   known_sigma2fs = NULL,
   taper = NULL,
-  simple_kriging_fixed = FALSE,
+  simple_kriging_fixed = TRUE,
   ...
 )
 
@@ -133,6 +133,8 @@ SRE.fit(
 \item{known_sigma2fs}{known value of the fine-scale variance parameter. If \code{NULL} (the default), the fine-scale variance parameter is estimated as usual. If \code{known_sigma2fs} is not \code{NULL}, the fine-scale variance is fixed to the supplied value; this may be a scalar, or vector of length equal to the number of spatial BAUs (if \code{fs_by_spatial_BAU = TRUE})}
 
 \item{taper}{positive numeric indicating the strength of the covariance/partial-correlation tapering. Only applicable if \code{K_type} = "block-exponential", or if \code{K_type} = "precision" and the the basis-functions are irregular or the manifold is not the plane. If \code{taper} is \code{NULL} (default) and \code{method} = "EM", no tapering is applied; if \code{method} = "TMB", tapering must be applied (for computational reasons), and we set it to 3 if it is unspecified}
+
+\item{simple_kriging_fixed}{logical indicating whether one wishes to commit to simple kriging at the fitting stage: If \code{TRUE}, model fitting is faster, but the option to conduct universal kriging at the prediction stage is removed}
 
 \item{...}{other parameters passed on to \code{auto_basis()} and \code{auto_BAUs()} when calling \code{FRK()}, or the user specified function \code{optimiser()} when calling \code{FRK()} or \code{SRE.fit()}}
 
@@ -300,7 +302,7 @@ zdf$Y <- 3 + sin(7 * zdf$x) + cos(9 * zdf$y)               # Latent process
 zdf$z <- rnorm(m, mean = zdf$Y)                            # Simulate data
 coordinates(zdf) = ~x+y                                    # Turn into sp object
 
-## Construct BAUs and basis functions 
+## Construct BAUs and basis functions
 BAUs <- auto_BAUs(manifold = plane(), data = zdf, 
                   nonconvex_hull = FALSE, cellsize = c(0.03, 0.03), type="grid") 
 BAUs$fs <- 1 # scalar fine-scale covariance matrix
@@ -313,8 +315,8 @@ S <- SRE(f = z ~ 1, list(zdf), basis = basis, BAUs = BAUs)
 observed_BAUs(S)
 unobserved_BAUs(S)   
 
-## Fit with 5 EM iterations so as not to take too much time
-S <- SRE.fit(S,n_EM = 5, tol = 0.01, print_lik = TRUE)
+## Fit with 2 EM iterations so to take as little time as possible
+S <- SRE.fit(S, n_EM = 2, tol = 0.01, print_lik = TRUE)
 
 ## Check fit info, final log-likelihood, and estimated regression coefficients
 info_fit(S)

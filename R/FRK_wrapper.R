@@ -38,7 +38,7 @@ FRK <- function(f,                     # formula (compulsory)
                 fs_by_spatial_BAU = FALSE,
                 known_sigma2fs = NULL, 
                 taper = NULL, 
-                simple_kriging_fixed = FALSE,
+                simple_kriging_fixed = TRUE,
                 ...)                   # other arguments for BAUs/basis-function construction, or 
 {
 
@@ -69,7 +69,7 @@ FRK <- function(f,                     # formula (compulsory)
     }
     if (method == "TMB") {
         if (K_type != "precision") 
-            cat("For computational efficiency, setting K_type = 'precision', because method = 'TMB'; if you really want to use the K_type = 'block-exponential' with method = 'TMB', use SRE() and SRE.fit().\n")
+            cat("Since method = 'TMB', setting K_type = 'precision' for computational efficiency: If you really want to use K_type = 'block-exponential' with method = 'TMB', use SRE() and SRE.fit().\n")
         K_type <- "precision"
     }
     

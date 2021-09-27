@@ -238,7 +238,10 @@
     stop("simple_kriging_fixed should be a logical")
   
   if (simple_kriging_fixed && method == "TMB")
-    cat("simple_kriging_fixed = TRUE is faster but precludes universal kriging in the prediction stage: Proceed if you are happy to commit to simple kriging.\n")
+    cat("simple_kriging_fixed = TRUE is faster but precludes universal kriging in the prediction stage: Proceed if you are happy to commit to simple kriging (if you are unfamiliar with simple vs. universal kriging, ignore this message and proceed).\n")
+  
+  if (!simple_kriging_fixed && method == "EM")
+    warning("simple_kriging_fixed is ignored if method = 'EM', since universal kriging is not implemented for method = 'EM'")
   
 }
 

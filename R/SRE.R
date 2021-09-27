@@ -53,6 +53,7 @@
 #' @param n_MC (applicable only if \code{method} = "TMB") a positive integer indicating the number of MC samples at each location
 #' @param k (applicable only if \code{response} is "binomial" or "negative-binomial") vector of size parameters at each BAU
 #' @param percentiles (applicable only if \code{method} = "TMB") a vector of scalars in (0, 100) specifying the desired percentiles of the posterior predictive distribution; if \code{NULL}, no percentiles are computed
+#' @param simple_kriging_fixed logical indicating whether one wishes to commit to simple kriging at the fitting stage: If \code{TRUE}, model fitting is faster, but the option to conduct universal kriging at the prediction stage is removed 
 #' @param ... other parameters passed on to \code{auto_basis()} and \code{auto_BAUs()} when calling \code{FRK()}, or the user specified function \code{optimiser()} when calling \code{FRK()} or \code{SRE.fit()}
 #' @details 
 #' \strong{Model description}
@@ -196,7 +197,7 @@
 #' zdf$z <- rnorm(m, mean = zdf$Y)                            # Simulate data
 #' coordinates(zdf) = ~x+y                                    # Turn into sp object
 #' 
-#' ## Construct BAUs and basis functions 
+#' ## Construct BAUs and basis functions
 #' BAUs <- auto_BAUs(manifold = plane(), data = zdf, 
 #'                   nonconvex_hull = FALSE, cellsize = c(0.03, 0.03), type="grid") 
 #' BAUs$fs <- 1 # scalar fine-scale covariance matrix
@@ -209,8 +210,8 @@
 #' observed_BAUs(S)
 #' unobserved_BAUs(S)   
 #' 
-#' ## Fit with 5 EM iterations so as not to take too much time
-#' S <- SRE.fit(S,n_EM = 5, tol = 0.01, print_lik = TRUE)
+#' ## Fit with 2 EM iterations so to take as little time as possible
+#' S <- SRE.fit(S, n_EM = 2, tol = 0.01, print_lik = TRUE)
 #' 
 #' ## Check fit info, final log-likelihood, and estimated regression coefficients
 #' info_fit(S)
@@ -235,8 +236,6 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                 link = c("identity", "log", "sqrt", "logit", "probit", "cloglog", "inverse", "inverse-squared"), 
                 include_fs = TRUE, fs_by_spatial_BAU = FALSE,
                 ...) {
-  
-  # stop()
   
   ## Strings that must be lower-case (this allows users to enter 
   ## response = "Gaussian", for example, without causing issues)
@@ -305,7 +304,6 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   ## using Monte Carlo integration with 1000 samples per BAU. 
   ## Otherwise, evaluate the basis functions over the BAU centroids.
   S0 <- eval_basis(basis, if(ns < n_basis_spatial) BAUs else .polygons_to_points(BAUs))
-  ## ^^THIS IS WHERE THE ERROR OCCURS^^
   
   ## Normalise basis functions for the prior process to have constant variance. This was seen to pay dividends in
   ## latticekrig, however we only do it once initially
@@ -343,8 +341,6 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     ## We can either average data points falling in the same 
     ## BAU (average_in_BAU == TRUE) or not (average_in_BAU == FALSE).
     cat("Binning data...\n")
-    
-
     
     data_proc <- map_data_to_BAUs(data[[i]],       
                                   BAUs,           
