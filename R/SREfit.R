@@ -886,17 +886,12 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 }
 
 
+# sapply(slotNames(object), function(x) object %>% slot(x) %>%  object.size %>% format(units = "auto"))
+
+
 ## Initialise the fixed effects, random effects, and parameters for method = 'TMB'.
-
-.TMB_initialise <- function(...) {
-  .TMB_initialise_complex(...)
-}
-
-
-## There is a lot of code repetition between the simple and complex 
-## versions of the initialisation. This is OK, because .TMB_initialise_complex()
-## is not currently used, and I will probably end up deleting it in the future.  
-.TMB_initialise_simple <- function(object, K_type, C_O, X_O, S_O) {
+.TMB_initialise <- function(object, K_type, C_O, X_O, S_O) {   
+  
   cat("Initialising parameters and random effects...\n")
   
   nres    <- max(object@basis@df$res) 
@@ -904,7 +899,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   
   # ---- Estimate Y over the observed BAUs ----
   
-  Y_O <- .compute_Y_O(object, C_O = C_O)
+  Y_O <- .compute_Y_O(object, C_O = C_O) 
   
   # ---- Parameter and random effect initialisations ----
   
@@ -928,14 +923,12 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     l$phi <- var(as.numeric(object@Z))
   }
   
-  
-  
   ## Variance components of the spatial basis-function coefficients
   l$sigma2  <- var(as.vector(Y_O)) * (0.1)^(0:(nres - 1))
   l$tau     <- (1 / 3)^(1:nres)
+  ## If we are using a precision matrix, these are precision parameters, so 
+  ## invert them:
   if (K_type != "block-exponential") {
-    # l$sigma2   <- 1 / exp(l$sigma2) 
-    # l$tau      <- 1 / exp(l$tau)   
     l$sigma2   <- 1 / l$sigma2
     l$tau      <- 1 / l$tau
   } 
@@ -958,52 +951,59 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   l$sigma2_t    <- 1
   l$rho_t       <- 0.1
   
-  for (iteration_dummy in 1:5) {
+  ## iii. Basis function random-effects and fine-scale random effects
+  
+  # Because of complications caused by the MAP estimate of the random effects, 
+  # we have hard-code the use of a simple initialisation procedure. 
+  simple_init <- TRUE 
+  if (simple_init) {
+    ## Fine-scale variance parameter
+    l$sigma2fs <- 0.05
     
-    ## iii. Basis function random-effects 
-    regularising_weight <- if (!is.null(l$sigma2fs)) l$sigma2fs else l$sigma2[1] 
+    ## Fine-scale random effects
+    mstar <- length(Y_O) # number of observed BAUs (and hence fine-scale random effects to predict)
+    l$xi_O <- rnorm(mstar, 0, sqrt(l$sigma2fs))
     
-    QInit <- .sparse_Q_block_diag(object@basis@df, 
-                                  # kappa = exp(l$sigma2), 
-                                  # rho = exp(l$tau))$Q      
-                                  kappa = l$sigma2, 
-                                  rho = l$tau)$Q
-    
-    ## Matrix we need to invert
-    mat <- Matrix::t(S_O) %*% S_O / regularising_weight + QInit 
-    
-    ## Invert the matrix
-    mat_inv <- tryCatch(expr = {
-      if (r > 4000) { # Avoid full inverse if we have too many basis functions
-        mat_L <- sparseinv::cholPermute(Q = mat) # Permuted Cholesky factor
-        ## Sparse-inverse-subset (a proxy for the inverse)
-        sparseinv::Takahashi_Davis(Q = mat, cholQp = mat_L$Qpermchol, P = mat_L$P)
-      } else {
-        solve(mat) 
-      }}, 
-      error = function(w){
-        cat("Initialisation phase: could not invert mat, just using diag(r)\n")
-        diag(r)
-      }
-    )
-    
-    if (regularising_weight == 0) { # avoid division by zero
-      warning("In initialisation stage, the regularising_weight is 0; setting it to 1. This is probably not an issue, but feel free to contact the package maintainer.")
-      regularising_weight <- 1
+    ## Now initialise the basis-function coefficients. 
+    ## We will do this by simulating from a mean-zero Gaussian distribution 
+    ## with variance given by the previously computed variance components. 
+    if (K_type != "block-exponential") {
+      ## Recall from above that these are precision parameters: Just take the 
+      ## inverse to get back to variance components. This is all very rough, but
+      ## it doesn't matter because it is only an initialisation. 
+      sigma2 <- 1 / l$sigma2
     }
     
-    ## MAP estimate of eta
-    l$eta  <- (1 / regularising_weight) * mat_inv %*% Matrix::t(S_O)  %*% (Y_O - X_O %*% l$alpha)
+    ## Now need to create a "long" version of sigma2, replicated appropriately. 
+    ## Extract the number of spatial and temporal basis functions at each resolution
+    temporal <- is(object@basis,"TensorP_Basis")
+    if (temporal) {
+      spatial_basis <- object@basis@Basis1
+      temporal_basis <- object@basis@Basis2
+      r_ti  <- as.vector(table(temporal_basis@df$res))
+    }  else {
+      spatial_basis <- object@basis
+      r_ti <- 1
+    }
+    r_si <- as.vector(table(spatial_basis@df$res))
     
-    ## iv. Observed fine-scale random effects xi_O
-    l$xi_O <- Y_O - X_O %*% l$alpha - S_O %*% l$eta
+    sigma2_long <- rep(rep(sigma2, times = r_si), r_ti)
+    ## Toy example for above code: rep(rep(c(6, 7), times = c(1, 2)), 3)
     
-    ## v. Fine-scale variance
-    l$sigma2fs <- var(as.vector(l$xi_O)) 
+    ## Simulate initial values for basis-function coefficients
+    l$eta <- rnorm(r, 0, sqrt(sigma2_long))
+    
+    
+  } else {
+    for (iteration_dummy in 1:5) {
+      l <- .TMB_initialise_MAP_estimates(l, object, S_O, r, Y_O, X_O)
+    }
   }
+
   
   ## Return list of parameter initialisations for TMB
   transform_minus_one_to_one_inverse <- function(x) -0.5 * log(2 / (x + 1) - 1)
+  
   return(list(
     alpha = as.vector(l$alpha),
     logphi = log(l$phi),
@@ -1018,90 +1018,41 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 }
 
 
+## This function computes MAP estimates of the random effects. However, it does 
+## not have good computational properties, and can cause issues with memory. 
+## Hence, we have opted for a very simple initialisation. 
 
-## Previously, we only had the complex initialisation method, but this was 
+## For reference, here
+## are some memory and timing for the problematic sections of code, using the 
+## Chicago example in Section 4.4 of the FRK v2 paper.
+# QInit took 16s to construct, and was 667.8 Kb 
+# mat was 72.2 Mb. This is the main problem: mat is a big that we really should 
+# not be inverting!! note that mat is stored as a sparse matrix, and it is still 
+# very large in memory.
+# mat_L and mat_inv (i.e., the Takahashi_Davis() call) each took about a minute. 
+# mat_L was 132.7 Mb and mat_inv was 265 Mb. 
+
+## Previously, we only had this initialisation method, but this was 
 ## causing problems in some cases (mainly to do with memory and run-time). 
 ## I'll leave this here for now, but it can probably be deleted at some point. 
-.TMB_initialise_complex <- function(object, K_type, C_O, X_O, S_O) {   
+.TMB_initialise_MAP_estimates <- function(l, object, S_O, r, Y_O, X_O) {
   
-  cat("Initialising parameters and random effects...\n")
+  regularising_weight <- if (!is.null(l$sigma2fs)) l$sigma2fs else l$sigma2[1] 
   
-  nres    <- max(object@basis@df$res) 
-  r       <- object@basis@n  
-  
-  # ---- Estimate Y over the observed BAUs ----
-  
-  Y_O <- .compute_Y_O(object, C_O = C_O)
-  
-  # ---- Parameter and random effect initialisations ----
-  
-  ## Now that we have a crude estimate of Y_O, we may initialise the variance
-  ## components and random effect
-  
-  l <- list() # list of initial values
-  
-  ## i. Fixed effects alpha (OLS solution)
-  l$alpha <- solve(t(X_O) %*% X_O) %*% t(X_O) %*% Y_O # OLS solution
-  ## ii. Variance components
-  ## Dispersion parameter depends on response; some require it to be 1. 
-  if (object@response %in% c("poisson", "binomial", "negative-binomial")) {
-    l$phi <- 1
-  } else if (object@response == "gaussian") {
-    l$phi <- mean(diag(object@Ve))
-  } else {
-    ## Use the variance of the data as our estimate of the dispersion parameter.
-    ## This will almost certainly be an overestimate, as the mean-variance 
-    ## relationship is not considered.
-    l$phi <- var(as.numeric(object@Z))
-  }
+  ## NB: This doesn't involve an inverse, as we construct the precision matrix directly. 
+  QInit <- .sparse_Q_block_diag(object@basis@df, 
+                                kappa = l$sigma2, 
+                                rho = l$tau)$Q
 
   
+  # ---- Start of problematic code ---- 
   
-  ## Variance components of the spatial basis-function coefficients
-  l$sigma2  <- var(as.vector(Y_O)) * (0.1)^(0:(nres - 1))
-  l$tau     <- (1 / 3)^(1:nres)
-  if (K_type != "block-exponential") {
-    # l$sigma2   <- 1 / exp(l$sigma2) 
-    # l$tau      <- 1 / exp(l$tau)   
-    l$sigma2   <- 1 / l$sigma2
-    l$tau      <- 1 / l$tau
-  } 
-  
-  
-  if (K_type == "separable") {
-    ## Separability means we have twice as many spatial basis function variance
-    ## components. So, just replicate the already defined parameters.
-    l$sigma2 <- rep(l$sigma2, 2)
-    l$tau    <- rep(l$tau, 2)
-    l$logdelta <- 1 # Dummy value
-  } else if (K_type == "precision-block-exponential") {
-    ## Precision exp requires one extra parameter per resolution
-    l$logdelta <- rnorm(nres)
-  } else {
-    l$logdelta <- 1 # Dummy value
-  }
-  
-  ## Variance components of temporal basis-function coefficients
-  l$sigma2_t    <- 1
-  l$rho_t       <- 0.1
-  
-  for (iteration_dummy in 1:5) {
-    
-    ## iii. Basis function random-effects 
-    regularising_weight <- if (!is.null(l$sigma2fs)) l$sigma2fs else l$sigma2[1] 
-    
-    QInit <- .sparse_Q_block_diag(object@basis@df, 
-                                  # kappa = exp(l$sigma2), 
-                                  # rho = exp(l$tau))$Q      
-                                  kappa = l$sigma2, 
-                                  rho = l$tau)$Q
-    
-    ## Matrix we need to invert
-    mat <- Matrix::t(S_O) %*% S_O / regularising_weight + QInit 
-    
-    ## Invert the matrix
-    mat_inv <- tryCatch(expr = {
-      if (r > 4000) { # Avoid full inverse if we have too many basis functions
+  ## Matrix we need to invert
+  mat <- Matrix::t(S_O) %*% S_O / regularising_weight + QInit
+
+  ## Invert the matrix
+  mat_inv <- tryCatch(expr = {
+    if (r > 4000) { # Avoid full inverse if we have too many basis functions
       mat_L <- sparseinv::cholPermute(Q = mat) # Permuted Cholesky factor
       ## Sparse-inverse-subset (a proxy for the inverse)
       sparseinv::Takahashi_Davis(Q = mat, cholQp = mat_L$Qpermchol, P = mat_L$P)
@@ -1111,37 +1062,26 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     error = function(w){
       cat("Initialisation phase: could not invert mat, just using diag(r)\n")
       diag(r)
-      }
-    )
-
-    if (regularising_weight == 0) { # avoid division by zero
-      warning("In initialisation stage, the regularising_weight is 0; setting it to 1. This is probably not an issue, but feel free to contact the package maintainer.")
-      regularising_weight <- 1
     }
-    
-    ## MAP estimate of eta
-    l$eta  <- (1 / regularising_weight) * mat_inv %*% Matrix::t(S_O)  %*% (Y_O - X_O %*% l$alpha)
-    
-    ## iv. Observed fine-scale random effects xi_O
-    l$xi_O <- Y_O - X_O %*% l$alpha - S_O %*% l$eta
-    
-    ## v. Fine-scale variance
-    l$sigma2fs <- var(as.vector(l$xi_O)) 
+  )
+  
+  # ---- End of problematic code ----
+  
+  if (regularising_weight == 0) { # avoid division by zero
+    warning("In initialisation stage, the regularising_weight is 0; setting it to 1. This is probably not an issue, but feel free to contact the package maintainer.")
+    regularising_weight <- 1
   }
   
-  ## Return list of parameter initialisations for TMB
-  transform_minus_one_to_one_inverse <- function(x) -0.5 * log(2 / (x + 1) - 1)
-  return(list(
-    alpha = as.vector(l$alpha),
-    logphi = log(l$phi),
-    logsigma2 = log(l$sigma2),
-    logtau = log(l$tau),
-    logdelta = l$logdelta,
-    logsigma2_t = log(l$sigma2_t),  
-    frho_t = transform_minus_one_to_one_inverse(l$rho_t),
-    logsigma2fs = log(l$sigma2fs),
-    random_effects = c(as.vector(l$eta), if(object@include_fs) as.vector(l$xi_O))
-  ))
+  ## MAP estimate of eta
+  l$eta  <- (1 / regularising_weight) * mat_inv %*% Matrix::t(S_O)  %*% (Y_O - X_O %*% l$alpha)
+  
+  ## iv. Observed fine-scale random effects xi_O
+  l$xi_O <- Y_O - X_O %*% l$alpha - S_O %*% l$eta
+  
+  ## v. Fine-scale variance
+  l$sigma2fs <- var(as.vector(l$xi_O)) 
+  
+  return(l)
 }
 
 
@@ -1182,7 +1122,6 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   ## First, we estime mu_Z with the (adjusted) data
   mu_Z <- Z0
   
-
   ## Use mu_Z to construct mu_O
   mu_O <- .compute_mu_O(object, C_O, mu_Z)
   
@@ -1327,6 +1266,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
       cat("Some (but not all) observations are associated with multiple BAUs. Estimation of the fine-scale variance parameter will be done using TMB, but note that there should be a reasonable number of fine-unit observations so that TMB can get a handle of the fine-scale variance parameter.\n")
   } 
   
-  data$include_fs   <- as.integer(object@include_fs)
+  data$include_fs <- as.integer(object@include_fs)
+  
   return(data)
 }
