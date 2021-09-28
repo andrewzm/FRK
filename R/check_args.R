@@ -9,8 +9,8 @@
   if(!is(f,"formula")) stop("f needs to be a formula.")
   if(length(all.vars(f)[-1]) == 0 && !attr(terms(f), "intercept"))
     stop("We must have at least one covariate (possibly just an intercept) in the formula f. In particular, f = Z ~ -1 is not permitted.")
-  if(!is(data,"list"))
-    stop("Please supply a list of Spatial objects.")
+  # if(!is(data,"list"))
+  #   stop("Please supply a *list* of Spatial or Spatio-temporal objects.")
   if(!all(sapply(data,function(x) is(x,"Spatial") | is(x,"ST"))))
     stop("All data list elements need to be of class Spatial or ST")
   if(!(is(BAUs,"SpatialPointsDataFrame") | is(BAUs,"SpatialPolygonsDataFrame") | is(BAUs,"SpatialPixelsDataFrame") | is(BAUs,"STFDF")))
@@ -55,14 +55,7 @@
   if(response == "gaussian" && !est_error && !all(sapply(data, function(x) x$std >= 0)))
     stop("If the response is Gaussian and observational error is not going to be estimated,
              the std field must contain only positive numbers")
-  
-  # ## Do we have a mixture of point and areal data?
-  # mixture <- any(sapply(data, is, "SpatialPoints")) && any(sapply(data, is, "SpatialPolygons"))
-  # if (response %in% c("binomial", "negative-binomial") && mixture) {
-  #   stop("If the response distribution is associated with a size-paremeter (e.g., binomial or negative-binomial), 
-  #        all data sets must be the same class")
-  # }
-  
+
   
   if(!(K_type %in% c("block-exponential", "precision", "unstructured")))
     stop("Invalid K_type argument. Please select from 'block-exponential', 'precision', 'unstructured', or 'separable'")
@@ -70,26 +63,6 @@
     stop("The unstructured covariance matrix (K_type = 'unstructured') is not implemented for non-Gaussian response (more specifically, when method = 'TMB')")
   if (K_type == "block-exponential" & response != "gaussian")
     warning("Using the block-exponential covariance matrix (K_type = 'block-exponential') is computationally inefficient with a non-Gaussian response (more specifically, when method = 'TMB'). For these situations, consider using K_type = 'precision'.")
-  
-  # if (K_type == "separable" & is(basis,"TensorP_Basis"))
-  # stop("K_type = 'separable' is not yet implemented in a space-time setting.")
-  
-  # ## If K_type == separable, the basis functions must be in a regular rectangular lattice
-  # if (K_type == "separable") 
-  #   for (i in unique(basis@df$res)) {
-  #     temp <- basis@df[basis@df$res == i, ]
-  #     if (!.test_regular_grid(temp$loc1, temp$loc2, rectangular = TRUE) ) 
-  #       stop("Basis functions must be arranged in a regular rectangular lattice when K_type = 'separable'.")
-  #   }
-  
-  # ## If K_type == "neighbour", we just need basis functions to be in a regular 
-  # ## lattice (does not need to be rectangular)
-  #   if (K_type == "neighbour") 
-  #     for (i in unique(basis@df$res)) {
-  #       temp <- basis@df[basis@df$res == i, ]
-  #       if (!.test_regular_grid(temp$loc1, temp$loc2, rectangular = FALSE) ) 
-  #         stop("Basis functions must be arranged in a regular lattice when K_type = 'precision'.")
-  #     }  
   
   ## Check that valid data model and link function have been chosen
   if (!(response %in% c("gaussian", "poisson", "gamma", "inverse-gaussian", "negative-binomial", "binomial")))

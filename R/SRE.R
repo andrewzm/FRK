@@ -237,6 +237,8 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                 include_fs = TRUE, fs_by_spatial_BAU = FALSE,
                 ...) {
   
+
+  
   ## Strings that must be lower-case (this allows users to enter 
   ## response = "Gaussian", for example, without causing issues)
   response  <- tolower(response)
@@ -248,24 +250,30 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   response <- match.arg(response)
   link     <- match.arg(link)
   
-  ## The weights of the BAUs only really matter if the data are SpatialPolygons. 
-  ## However, we still need a 1 for all other kinds; only produce a warning if 
-  ## we have areal data.
-  if (is.null(BAUs$wts)) {
-    BAUs$wts <- 1
-    if (any(sapply(data, function(x) is(x, "SpatialPolygons"))) &&
-        !response %in% c("binomial", "negative-binomial")) # wts doesn't come into play for binomial or neg. binomial data, as it is forced to 1
-      cat("SpatialPolygons were provided for the data support. No 'wts' field was found in the BAUs, so all BAUs are assumed to be of equal weight; if this is not the case, set the 'wts' field in the BAUs accordingly.\n")
-  }
+  
+  ## data should be a list: Instead of checking this condition in .check_args1() 
+  ## and throwing an error if it doesn't hold, here we just force it to be a list
+  if (!is.list(data)) data <- list(data)
+  
+  ## Check that the arguments are OK
+  .check_args1(f = f, data = data, basis = basis, BAUs = BAUs, est_error = est_error, 
+               response = response, link = link, K_type = K_type, 
+               fs_by_spatial_BAU = fs_by_spatial_BAU, normalise_wts = normalise_wts, 
+               sum_variables = sum_variables, average_in_BAU = average_in_BAU) 
+  
+
+  
   
   ## When the response has a size parameter, restrict the incidence matrices 
-  ## (Cz and Cp) to represent simple sums only. This behaviour is kept vague
-  ## in the paper, but a note is provided to the user.  
+  ## (Cz and Cp) to represent simple sums only. (See Appendix B, last paragraph,
+  ## of the FRK v2 paper). 
+  ## Note that this code has to go here, and not in .check_args1(), because we 
+  ## are altering some of the variables. 
   if (response %in% c("binomial", "negative-binomial")) {
     normalise_wts <- FALSE 
     BAUs$wts      <- 1
-
-    cat("The response distribution has an associated size parameter (i.e., it is binomial or negative-binomial). For simplicity, we enforce the non-zero elements of the incidence matrices (C_Z and C_P) to be 1 and normalise_wts = FALSE.\n") 
+    
+    cat("The response distribution is binomial or negative-binomial: For simplicity, we enforce the non-zero elements of the incidence matrices (Cz and Cp in the FRK papers) to be 1 and normalise_wts = FALSE.\n") 
     
     if(any(sapply(data, function(x) is(x, "SpatialPoints")))) {
       ## Enforce average_in_BAU = TRUE for simplicity
@@ -279,12 +287,19 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
       cat("For point-referenced binomial and negative-binomial data, we enforce average_in_BAU = TRUE, and include the response name and the size parameter in the argument sum_variables.\n")
     }
   }
-
-  ## Check that the arguments are OK
-  .check_args1(f = f, data = data, basis = basis, BAUs = BAUs, est_error = est_error, 
-               response = response, link = link, K_type = K_type, 
-               fs_by_spatial_BAU = fs_by_spatial_BAU, normalise_wts = normalise_wts, 
-               sum_variables = sum_variables, average_in_BAU = average_in_BAU) 
+  
+  
+  ## The weights of the BAUs only really matter if the data are SpatialPolygons. 
+  ## However, we still need a 1 for all other kinds; only produce a warning if 
+  ## we have areal data.
+  if (is.null(BAUs$wts)) {
+    BAUs$wts <- 1
+    if (any(sapply(data, function(x) is(x, "SpatialPolygons"))) &&
+        !response %in% c("binomial", "negative-binomial")) # wts doesn't come into play for binomial or neg. binomial data, as it is forced to 1
+      cat("SpatialPolygons were provided for the data support. No 'wts' field was found in the BAUs, so all BAUs are assumed to be of equal weight; if this is not the case, set the 'wts' field in the BAUs accordingly.\n")
+  }
+  
+  
   
   ## Extract the dependent variable from the formula
   av_var <- all.vars(f)[1]
