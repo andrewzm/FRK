@@ -29,3 +29,4 @@ rhipe_fns.R$
 ^pres
 ^doc$
 ^Meta$
+^man/figures
