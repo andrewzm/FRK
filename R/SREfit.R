@@ -707,10 +707,13 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     
   info_fit$method <- "TMB" 
   
-  ## If we are using a precision matrix formulation, determine if we can use the
-  ## neighbour formulation, or if we need to use the precision-block-exponential.
-  ## This depends on whether the *spatial* basis is regular, or not.
   K_type <- object@K_type
+  
+  ## If we are using a precision matrix formulation, determine if we can use the
+  ## precison matrix based on the Leroux model, or if we need to use the 
+  ## precision matrix based on the distance between basis-function centroids 
+  ## (see Appendix A.2 of the FRK v2 paper).
+  ## This depends on whether or not the *spatial* basis is regular.
 
   if (K_type == "precision") {
     sp_basis <- if (is(object@basis,"TensorP_Basis")) object@basis@Basis1 else object@basis
@@ -725,7 +728,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     cat("The argument taper was not specified. Since we are using method = 'TMB' 
          with either i) a covariance matrix (K_type = 'block-exponential') 
          or ii) irregular basis functions (object@basis@regular = 0) or iii) a 
-         non-plane() manifold, we must use tapering for computational reasons. 
+         non-plane manifold, we must use tapering for computational reasons. 
          Setting taper = 3.\n")
     taper <- 3
     info_fit$taper <- taper
