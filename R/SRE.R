@@ -255,15 +255,6 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   ## and throwing an error if it doesn't hold, here we just force it to be a list
   if (!is.list(data)) data <- list(data)
   
-  ## Check that the arguments are OK
-  .check_args1(f = f, data = data, basis = basis, BAUs = BAUs, est_error = est_error, 
-               response = response, link = link, K_type = K_type, 
-               fs_by_spatial_BAU = fs_by_spatial_BAU, normalise_wts = normalise_wts, 
-               sum_variables = sum_variables, average_in_BAU = average_in_BAU) 
-  
-
-  
-  
   ## When the response has a size parameter, restrict the incidence matrices 
   ## (Cz and Cp) to represent simple sums only. (See Appendix B, last paragraph,
   ## of the FRK v2 paper). 
@@ -292,6 +283,11 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     }
   }
   
+  ## Check that the arguments are OK
+  .check_args1(f = f, data = data, basis = basis, BAUs = BAUs, est_error = est_error, 
+               response = response, link = link, K_type = K_type, 
+               fs_by_spatial_BAU = fs_by_spatial_BAU, normalise_wts = normalise_wts, 
+               sum_variables = sum_variables, average_in_BAU = average_in_BAU) 
   
   ## The weights of the BAUs only really matter if the data are SpatialPolygons. 
   ## However, we still need a 1 for all other kinds; only produce a warning if 
@@ -302,8 +298,6 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         !response %in% c("binomial", "negative-binomial")) # wts doesn't come into play for binomial or neg. binomial data, as it is forced to 1
       cat("SpatialPolygons were provided for the data support. No 'wts' field was found in the BAUs, so all BAUs are assumed to be of equal weight; if this is not the case, set the 'wts' field in the BAUs accordingly.\n")
   }
-  
-  
   
   ## Extract the dependent variable from the formula
   av_var <- all.vars(f)[1]
