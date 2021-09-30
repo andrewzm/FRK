@@ -90,9 +90,14 @@ FRK <- function(f,                     # formula (compulsory)
     ## if there is a measurement error declared in all datasets then
     ## don't estimate it
     if(all(sapply(data,function(x) !is.null(x@data$std)))) {
-        cat("std already supplied with data -- not estimating the measurement error.
+        
+        ## Only report this to the user if est_error was set as TRUE
+        if (est_error) {
+            cat("std already supplied with data -- not estimating the measurement error.
               If you wish to estimate measurement error then set the std field to NULL\n")
-        est_error <- FALSE
+            est_error <- FALSE
+        }
+
     }
 
     ## Attempt to automatically find the manifold from the data

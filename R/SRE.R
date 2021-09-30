@@ -269,13 +269,19 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   ## of the FRK v2 paper). 
   ## Note that this code has to go here, and not in .check_args1(), because we 
   ## are altering some of the variables. 
+  ## Note also that we inform the user of these decisions only if some of the 
+  ## observations are associated with multiple BAUs (these terms are irrelevant 
+  ## otherwise): To check this requires the incidence matrix. 
   if (response %in% c("binomial", "negative-binomial")) {
+    
     normalise_wts <- FALSE 
     BAUs$wts      <- 1
     
-    cat("The response distribution is binomial or negative-binomial: For simplicity, we enforce the non-zero elements of the incidence matrices (Cz and Cp in the FRK papers) to be 1 and normalise_wts = FALSE.\n") 
-    
     if(any(sapply(data, function(x) is(x, "SpatialPoints")))) {
+      
+      ## NOTE: The users are informed of these decisions later, only if they are 
+      ## found to be relevant. 
+      
       ## Enforce average_in_BAU = TRUE for simplicity
       average_in_BAU <- TRUE
       ## sum_variables is a vector of variable names that are to be summed
@@ -283,8 +289,6 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
       sum_variables  <- c(all.vars(f)[1], "k_Z", sum_variables)
       ## Remove possible duplicates of all.vars(f)[1] and "k_Z"
       sum_variables  <- unique(sum_variables) 
-      
-      cat("For point-referenced binomial and negative-binomial data, we enforce average_in_BAU = TRUE, and include the response name and the size parameter in the argument sum_variables.\n")
     }
   }
   
@@ -432,15 +436,31 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   if(response %in% c("binomial", "negative-binomial")) {
     k_Z <- as.numeric(do.call("rbind", k_Z))
     
+    Cmat_dgT <- as(Cmat, "dgTMatrix")
+    num_obs_each_BAU <- table(Cmat_dgT@j)
+    if (!all(num_obs_each_BAU == 1)) {
+      cat("For point-referenced binomial and negative-binomial data, FRK enforces average_in_BAU = TRUE, and the size parameter and response variable of observations falling into the same BAU are summed rather than averaged: That is, the response name and the size parameter are included in the argument 'sum_variables'.\n")
+    }
+    
     ## Size parameter associated with observed BAUs.
     ## If any observations are associated with multiple BAUs, 
     ## we require the size parameter in a field of the BAUs;
     ## otherwise, we just use the observation size parameters.
-    num_BAUs_each_data_support <- table(as(Cmat, "dgTMatrix")@i)
-    if (!all(num_BAUs_each_data_support == 1)) {
-      if (!("k_BAU" %in% names(BAUs))) 
+
+    num_BAUs_each_obs <- table(Cmat_dgT@i)
+    if (!all(num_BAUs_each_obs == 1)) {
+      
+      ## Inform the user of our restrictions to BAUs$wts and normalise_wts 
+      ## (These terms are only applicable if some observations are associated 
+      ## with multiple BAUs)
+      cat("Since the response distribution is binomial or negative-binomial, FRK enforces the non-zero elements of the incidence matrices (Cz and Cp in the papers) to be 1 and normalise_wts = FALSE: This means that aggregation over the BAUs is a simple, unweighted sum.\n") 
+      
+      if (!("k_BAU" %in% names(BAUs))) {
         stop("When dealing with binomial or negative-binomial data, and some data supports are associated with multiple BAUs (e.g., areal data), the size parameter must be provided in the BAUs objects, in a field named 'k_BAU'.") 
+      }
+        
       k_BAU_O <- BAUs$k_BAU[obsidx] 
+      
     } else {
       ## Note that we have to re-order the observation size parameters, so that element i
       ## of k_Z is associated with the same BAU as element i of k_BAU_O;

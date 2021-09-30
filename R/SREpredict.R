@@ -14,6 +14,9 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                                                percentiles = c(5, 95), 
                                                kriging = "simple") {
   
+  ## Note that the following code must be done before .check_args3() because it
+  ## alters the input, rather than simpling throwing a warning or error. 
+  
   ## Need to add prediction and uncertainty at each location, and so newdata 
   ## must be a Spatial*DataFrame (not just a Spatial* object).
   newdata <- .Coerce_SpatialDataFrame(newdata)
@@ -21,20 +24,34 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   ## The user can either provide k in object@BAUs$k_BAU, or in the predict call.
   ## This is so that the user can change k without having to call SRE() and SRE.fit() again.
   ## The k supplied in predict() will take precedence over the k stored in object@BAUs$k.
+
+  k_BAU <- object@BAUs$k_BAU # size parameter at the BAU level (could be NULL)
+  N <- length(object@BAUs)   # number of BAUs
+  
   if (object@response %in% c("binomial", "negative-binomial")) {
-    if (is.null(k) && is.null(object@BAUs$k_BAU)) {
-      k <- rep(1, length(object@BAUs))
-      cat("The size parameter, k, was not provided for prediction: assuming k is equal to 1 for all prediction locations.\n")
-    } else if (is.null(k) && !is.null(object@BAUs$k_BAU)) {
-        if (any(is.na(object@BAUs$k_BAU))) {
-          k <- rep(1, length(object@BAUs))
-          cat("The size parameter, k, at the BAU level contained some NAs: simply assuming k is equal to 1 for all prediction locations.\n")
+    if (is.null(k)) {
+      if(is.null(k_BAU)) {
+        k <- rep(1, N)
+        cat("Assuming the size parameter, k, is equal to 1 for all prediction locations: If you want to change this, use the argument 'k' in predict.\n")
+      } else {
+        if (any(is.na(k_BAU))) {
+          
+          ## If there's only a single non-NA value, it's safe to assume 
+          ## That this value can be used for all BAUs (this typically happens
+          ## in the case of Bernoulli data, where the non-NA value is 1).
+          k_BAU_NA_removed <- k_BAU[!is.na(k_BAU)]
+          if (length(unique(k_BAU_NA_removed)) == 1) {
+            k <- rep(unique(k_BAU_NA_removed), N)
+          } else {
+            k <- rep(1, N)
+            cat("Assuming the size parameter, k, is equal to 1 for all prediction locations: If you want to change this, use the argument 'k' in predict.\n")
+          }
         } else {
-          k <- object@BAUs$k_BAU
+          k <- k_BAU
         }
+      }
     }
   }
-
   
   ## Check the arguments are OK
   .check_args3(obs_fs = obs_fs, newdata = newdata, 
