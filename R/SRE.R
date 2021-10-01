@@ -437,35 +437,41 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     }
     
     ## Size parameter associated with observed BAUs.
-    ## If any observations are associated with multiple BAUs, 
-    ## we require the size parameter in a field of the BAUs;
-    ## otherwise, we just use the observation size parameters.
-
     num_BAUs_each_obs <- table(Cmat_dgT@i)
     if (!all(num_BAUs_each_obs == 1)) {
       
+      ## NB: Note that k_Z is not used in this scenario; i.e., it does not need
+      ## to be provided. 
+      
+      ## If any observations are associated with multiple BAUs, 
       ## Inform the user of our restrictions to BAUs$wts and normalise_wts 
       ## (These terms are only applicable if some observations are associated 
       ## with multiple BAUs)
       cat("Since the response distribution is binomial or negative-binomial, FRK enforces the non-zero elements of the incidence matrices (Cz and Cp in the papers) to be 1 and normalise_wts = FALSE: This means that aggregation over the BAUs is a simple, unweighted sum.\n") 
       
+      ## If any observations are associated with multiple BAUs, 
+      ## we require the size parameter in a field of the BAUs:
       if (!("k_BAU" %in% names(BAUs))) {
         stop("When dealing with binomial or negative-binomial data, and some data supports are associated with multiple BAUs (e.g., areal data), the size parameter must be provided in the BAUs objects, in a field named 'k_BAU'.") 
+      } else {
+        k_BAU_O <- BAUs$k_BAU[obsidx] 
       }
-        
-      k_BAU_O <- BAUs$k_BAU[obsidx] 
+      
+      ## FIXME: Shouldn't we define k_Z here? 
+      
       
     } else {
-      ## Note that we have to re-order the observation size parameters, so that element i
-      ## of k_Z is associated with the same BAU as element i of k_BAU_O;
-      ## Cmat@i contains the index of the observation associated with BAU Cmat@j
-      tmp <- as(Cmat, "dgTMatrix")
-      k_BAU_O <- k_Z[tmp@i + 1]
       
-      ## If all observations are associated with exactly one BAU, we can assign
-      ## the data level size parameter (k_Z) to the BAU object. Note that it is 
-      ## OK if non-observed BAUs do not have a size parameter. 
-      BAUs@data[tmp@j + 1, "k_BAU"] <- k_BAU_O
+      ## If all observations are associated with a single BAU only, 
+      ## we just map the size parameters associated with the observations to 
+      ## the BAUs, as described in Section 2.5 of the FRK v2 paper.
+      ## Note that it is OK if non-observed BAUs do not have a size parameter.
+      
+      ## We msut first re-order the observation size parameters, so that element i
+      ## of k_Z is associated with the same BAU as element i of k_BAU_O;
+      ## Cmat_dgT@i contains the index of the observation associated with BAU Cmat_dgT@j
+      k_BAU_O <- k_Z[Cmat_dgT@i + 1]
+      BAUs@data[Cmat_dgT@j + 1, "k_BAU"] <- k_BAU_O
     }
 
     if (any(is.na(k_BAU_O))) 

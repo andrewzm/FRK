@@ -87,6 +87,7 @@
   }
   
   ## Check k_Z (size parameter for data)
+  ## FIXME: Not sure about these conditions
   if (response %in% c("binomial", "negative-binomial")) {
     if (!all(sapply(data, function(l) "k_Z" %in% names(l)))) {
       stop("For binomial or negative-binomial data, the known constant size parameter must be provided for each observation. Please provide this in the data object, in a field called 'k_Z'.")
