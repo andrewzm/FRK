@@ -405,9 +405,8 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     ## S0 is the matrix S in the vignette. Here S is the matrix SZ in the vignette.
     S[[i]] <- Cmat[[i]] %*% S0
     
-    ## Construct k_Z the same way Z is constructed
-    if(response %in% c("binomial", "negative-binomial")) 
-      k_Z[[i]] <- Matrix(data_proc$k_Z) 
+    ## Construct k_Z in the same way that Z is constructed
+    if("k_Z" %in% names(data_proc)) k_Z[[i]] <- Matrix(data_proc$k_Z) 
   }
   
   if(fs_model == "ind") {
@@ -428,48 +427,72 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   
   # Size parameter 
   if(response %in% c("binomial", "negative-binomial")) {
-    k_Z <- as.numeric(do.call("rbind", k_Z))
     
     Cmat_dgT <- as(Cmat, "dgTMatrix")
     num_obs_each_BAU <- table(Cmat_dgT@j)
     if (!all(num_obs_each_BAU == 1)) {
-      cat("For point-referenced binomial and negative-binomial data, FRK enforces average_in_BAU = TRUE, and the size parameter and response variable of observations falling into the same BAU are summed rather than averaged: That is, the response name and the size parameter are included in the argument 'sum_variables'.\n")
+      cat("For binomial and negative-binomial data, FRK enforces average_in_BAU = TRUE, and the size parameter and response variable of observations falling into the same BAU are summed rather than averaged (i.e., the response and the size parameter are included in the argument 'sum_variables').\n")
     }
     
-    ## Size parameter associated with observed BAUs.
     num_BAUs_each_obs <- table(Cmat_dgT@i)
+    
     if (!all(num_BAUs_each_obs == 1)) {
       
-      ## NB: Note that k_Z is not used in this scenario; i.e., it does not need
-      ## to be provided. 
+      ## At least one observations is associated with multiple BAUs.
+      ## Note: k_Z is not used in this scenario; i.e., it does not need
+      ## to be provided by the user. 
       
-      ## If any observations are associated with multiple BAUs, 
       ## Inform the user of our restrictions to BAUs$wts and normalise_wts 
-      ## (These terms are only applicable if some observations are associated 
-      ## with multiple BAUs)
+      ## (These terms are only applicable in this scenario)
       cat("Since the response distribution is binomial or negative-binomial, FRK enforces the non-zero elements of the incidence matrices (Cz and Cp in the papers) to be 1 and normalise_wts = FALSE: This means that aggregation over the BAUs is a simple, unweighted sum.\n") 
-      
-      ## If any observations are associated with multiple BAUs, 
-      ## we require the size parameter in a field of the BAUs:
+
+      ## We require the size parameter in a field of the BAUs:
       if (!("k_BAU" %in% names(BAUs))) {
-        stop("When dealing with binomial or negative-binomial data, and some data supports are associated with multiple BAUs (e.g., areal data), the size parameter must be provided in the BAUs objects, in a field named 'k_BAU'.") 
+        stop("If the response distribution is binomial or negative-binomial and some observations supports are associated with multiple BAUs (e.g., areal data), the size parameter must be provided in the BAUs objects in a field named 'k_BAU'.") 
       } else {
         k_BAU_O <- BAUs$k_BAU[obsidx] 
       }
       
-      ## FIXME: Shouldn't we define k_Z here? 
-      
+      k_Z <- Cmat %*% BAUs$k_BAU # construct k_Z by aggregating over the BAUs
       
     } else {
       
-      ## If all observations are associated with a single BAU only, 
-      ## we just map the size parameters associated with the observations to 
-      ## the BAUs, as described in Section 2.5 of the FRK v2 paper.
-      ## Note that it is OK if non-observed BAUs do not have a size parameter.
+      ## Each observation is associated with a single BAU only (e.g., we have 
+      ## point-referenced data, or areal data where the observation supports and 
+      ## BAUs coincide). In this case, the user need only provide the size 
+      ## parameters associated with the observation supports, k_Z: See Section 
+      ## 2.5 of the FRK v2 paper for details. 
       
-      ## We msut first re-order the observation size parameters, so that element i
-      ## of k_Z is associated with the same BAU as element i of k_BAU_O;
-      ## Cmat_dgT@i contains the index of the observation associated with BAU Cmat_dgT@j
+      
+      ## Check that k_Z is provided
+      if (!all(sapply(data, function(l) "k_Z" %in% names(l)))) {
+        
+        ## If k_Z was not provided, 
+        ## as a back up convenience for the user, in the special case that each 
+        ## observation is associated with a single BAU only AND 
+        ## each BAU is associated with at most one observation support, 
+        ## k_Z and k are essentially the same, and we can use k_BAU if it 
+        ## was provided:
+        if (all(num_obs_each_BAU == 1) && "k_BAU" %in% names(BAUs)) {
+          k_Z <- Cmat %*% BAUs$k_BAU # construct k_Z by aggregating over the BAUs
+        } else {
+          stop("For binomial or negative-binomial data where each observation is associated with a single BAU only, the known constant size parameter must be provided for each observation. Please provide this in the data object, in a field called 'k_Z'.")
+        }
+        
+      } else {
+        ## k_Z was provided, and here we construct it from the binning process:
+        k_Z <- as.numeric(do.call("rbind", k_Z))
+      }
+      
+      ## Note: it is OK if non-observed BAUs do not have a size parameter, 
+      ## because these non-observed BAUs are "zeroed" out by the incidence 
+      ## matrix, Cz.
+      ## Note: The aggregation described above was already done during the data 
+      ## binning stage (i.e., k_Z is treated as a covariate and summed). 
+      ## Note: Below, we must first re-order the observation size parameters, 
+      ## so that element i of k_Z is associated with the same BAU as element i 
+      ## of k_BAU_O; Cmat_dgT@i contains the index of the observation associated 
+      ## with BAU Cmat_dgT@j
       k_BAU_O <- k_Z[Cmat_dgT@i + 1]
       BAUs@data[Cmat_dgT@j + 1, "k_BAU"] <- k_BAU_O
     }
@@ -478,6 +501,10 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
       stop("The size parameter is required at all observed BAUs")
 
   } 
+  
+  ## Irrespective of whether it was provided by the user or infered from the 
+  ## BAU-level size parameters, from this point forward we have a value for 
+  ## k_Z, the size-parameters associated with the observations.
   
   ## If we are estimating a unique fine-scale variance at each spatial BAU, 
   ## simply replicate the initialisation of sigma2fs ns times. 

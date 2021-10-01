@@ -86,20 +86,40 @@
     warning("Due to the implied range of the mean function, and the permitted support of the mean for the specified response, nonsensical results are possible with the chosen link function. Consider using a link function which ensures the mean is mapped to the correct support.")
   }
   
-  ## Check k_Z (size parameter for data)
-  ## FIXME: Not sure about these conditions
+
+  ## Check the known-constant size parameters
   if (response %in% c("binomial", "negative-binomial")) {
-    if (!all(sapply(data, function(l) "k_Z" %in% names(l)))) {
-      stop("For binomial or negative-binomial data, the known constant size parameter must be provided for each observation. Please provide this in the data object, in a field called 'k_Z'.")
-    } else if (!all(sapply(data, function(l) class(l$k_Z) %in% c("numeric", "integer")))) {
-      stop("The known constant size parameter must contain only positive integers.")
-    } else if (any(sapply(data, function(l) any(l$k_Z <= 0))) | 
-               !all(sapply(data, function(l) all(l$k_Z == round(l$k_Z))))) {
-      stop("The known constant size parameter must contain only positive integers.")
+    
+    ## Check that either the BAU-level size parameter, k_BAU, or the 
+    ## observation-support size parameters, k_Z, are provided:
+    k_BAU_present <- "k_BAU" %in% names(BAUs)
+    k_Z_present <- all(sapply(data, function(l) "k_Z" %in% names(l)))
+    
+    if (!k_BAU_present && !k_Z_present) {
+      stop("For binomial or negative-binomial data, the known constant size parameters (e.g., the number of trials or the target number of 'successes') must be provided with either the observations or the BAUs (see Section 2.5 of the FRK v2 paper for details).")
+    } else if (k_BAU_present && k_Z_present) {
+      cat("You have provided the size parameter with both the observations and the BAUs: Only one set of size parameters will be used in the model fitting stage (see Section 2.5 of the FRK v2 paper for details).\n")
     }
+    
+    ## Now check that the provided size parameters are positive integers
+    if (k_Z_present) {
+      if (!all(sapply(data, function(l) class(l$k_Z) %in% c("numeric", "integer")))) {
+        stop("The known constant size parameters must contain only positive integers.")
+      } else if (any(sapply(data, function(l) any(l$k_Z <= 0))) |
+                 !all(sapply(data, function(l) all(l$k_Z == round(l$k_Z))))) {
+        stop("The known constant size parameters must contain only positive integers.")
+      }
+    } else if (k_BAU_present) {
+      if (!(class(BAUs@data[, "k_BAU"]) %in% c("numeric", "integer"))) {
+        stop("The known constant size parameters must contain only positive integers.")
+      } 
+    }
+    
   } else {
-    ## it is unlikely to occur, but here we ensure that k_Z and k_BAU 
-    ## are not used for other variables: these terms are treated specially.
+    ## If we do not have binomial or negative-binomial data, ensure that k_Z and 
+    ## k_BAU are not used: these terms are treated specially in FRK, and are 
+    ## hence reserved words. (Note that this is why we use 'k_BAU' rather than
+    ## 'k', as 'k' could be used quite often by the user.)
     if(any(sapply(data,function(x) any("k_Z" %in% names(x@data)))))
       stop("k_Z is a reserved keyword for the size parameter in a binomial or negative-binomial setting; please do not include it as a covariate name in the data objects.")
     if("k_BAU" %in% names(BAUs@data))

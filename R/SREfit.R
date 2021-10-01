@@ -1088,7 +1088,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 .compute_Y_O <- function(object, C_O) {
   
   Z       <- as.vector(object@Z)         
-  k_Z     <- object@k_Z       # NB: 
+  k_Z     <- object@k_Z      
   k_BAU_O <- object@k_BAU_O 
   
   ## Create the relevant link functions. When a probability parameter is 
