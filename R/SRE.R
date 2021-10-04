@@ -56,16 +56,19 @@
 #' @param simple_kriging_fixed logical indicating whether one wishes to commit to simple kriging at the fitting stage: If \code{TRUE}, model fitting is faster, but the option to conduct universal kriging at the prediction stage is removed 
 #' @param ... other parameters passed on to \code{auto_basis()} and \code{auto_BAUs()} when calling \code{FRK()}, or the user specified function \code{optimiser()} when calling \code{FRK()} or \code{SRE.fit()}
 #' @details 
+#' FIXME: Add references to the two papers: FRK v1 paper, which introduced FRK
+#' and describes the basis functions and BAUs... FRK v2 paper, which describes
+#' non-Gaussian extension. 
 #' \strong{Model description}
 #' 
-#' The hierarchical model implemented in \code{FRK} is a spatial generalised 
+#' The hierarchical model implemented in \pkg{FRK} is a spatial generalised 
 #' linear mixed model (GLMM), which may be summarised as
 #' \deqn{Z_j \mid \mu_{Z,j}, \psi \sim EF(\mu_{Z, j}, \psi)}
 #' \deqn{\mu_Z = C\mu}
 #' \deqn{g(\mu) = Y}
 #' \deqn{Y = T\alpha + S\eta + \xi}
 #' \deqn{\alpha \mid \theta \sim N(0, K)}
-#' \deqn{\xi \mid \sigma^2_\xi \sim N(0, \sigma^2_\xi V),}
+#' \deqn{\xi \mid \sigma^2_\xi \sim N(0, \Sigma_\xi),}
 #' where \eqn{Z_j} denotes a datum, \eqn{EF(\cdot)} denotes an exponential 
 #' family member with mean parameter \eqn{\mu_{Z, j}}, \eqn{\mu} is the mean 
 #' process evaluated over the BAUs, \eqn{g(\cdot)} is a link function that links
@@ -76,12 +79,18 @@
 #' \eqn{\eta} are the random coefficients associated with the basis functions, and \eqn{\xi} is 
 #' a vector containing fine-scale variation at the BAU level. The prior 
 #' distribution of the basis-function coefficients, \eqn{\eta}, are formulated 
-#' using either a covariance or precision matrix, depending on the argument 
+#' using either a covariance matrix or precision matrix, depending on the argument 
 #' \code{K_type}; the parameters of these matrices are estimated during model 
-#' fitting. The covariance matrix of \eqn{\xi} is diagonal, with its 
-#' diagonal elements proportional to the field `fs' in the 
-#' BAUs (typically set to one). The constant of proportionality is estimated 
-#' during model fitting. 
+#' fitting. 
+#' The covariance matrix of \eqn{\xi}, \eqn{\Sigma_\xi}, is diagonal. 
+#' By default, \eqn{\Sigma_\xi = \sigma^2_\xi V}, where \eqn{V} is a 
+#' known, positive-definite diagonal matrix whose elements are provided in the 
+#' field `fs' in the BAUs; in the absence of problem 
+#' specific fine-scale information, `fs' can simply be set to 1, so that 
+#' \eqn{V = I}. In a spatio-temporal setting, another model for \eqn{\Sigma_\xi}
+#' can be used by setting \code{fs_by_spatial_BAU = TRUE}, in which case each 
+#' spatial BAU is associated with its own fine-scale variance parameter (see 
+#' Section 2.6 of the FRK v2 paper for details). FIXME: reference
 #' 
 #' \emph{Gaussian data model}
 #' 
@@ -97,7 +106,7 @@
 #' distribution and the negative-binomial distribution, have an assumed-known 
 #' ‘size’ parameter and a ‘probability of success’ parameter. 
 #' Given the vector of size parameters associated with the data, \eqn{\mathbf{k}_Z}, 
-#' the parameterisation used in \pkg{FRK} v2 assumes that \eqn{Z_j} represents 
+#' the parameterisation used in \pkg{FRK} assumes that \eqn{Z_j} represents 
 #' either the number of `successes' from \eqn{k_{Z_j}} trials (binomial data 
 #' model) or that it represents the number of failures before \eqn{k_{Z_j}} 
 #' successes (negative-binomial data model). 
@@ -119,7 +128,8 @@
 #' \eqn{\mathbf{k}} must be provided with the BAUs, as we cannot meaningfully 
 #' distribute \eqn{k_{Z_j}} over the BAUs associated with datum \eqn{Z_j}. 
 #' In this case, we infer \eqn{\mathbf{k}_Z} using 
-#' \eqn{k_{Z_j} = \sum_{i \in c_j} k_i}, \eqn{j = 1, \dots, m}.
+#' \eqn{k_{Z_j} = \sum_{i \in c_j} k_i}, \eqn{j = 1, \dots, m}, where \eqn{c_j} 
+#' denotes the indices of the BAUs associated with observation \eqn{Z_j}.
 #' 
 #' \strong{Set-up}
 #' 
@@ -170,7 +180,7 @@
 #' or \eqn{\sigma^2_{\xi}}, are dependent, these two updates are iterated until
 #' the change in \eqn{\sigma^2_{\cdot}} is no more than 0.1\%.}
 #'  \item{MLE via \code{TMB}. }{This method is implemented for
-#'  all available data models and link functions offered by \code{FRK}. Furthermore,
+#'  all available data models and link functions offered by \pkg{FRK}. Furthermore,
 #'  this method faciliates the inclusion of many more basis function than possible
 #'  with the EM algorithm (in excess of 10,000). \code{TMB} applies
 #'  the Laplace approximation to integrate out the latent random effects from the
@@ -206,7 +216,7 @@
 #' matrix \eqn{S} is found, a standard Gaussian inversion (through conditioning) 
 #' using the estimated parameters is used for prediction.
 #'
-#' \code{predict} returns the BAUs (or an object specified in \code{newdata}), 
+#' \code{predict()} returns the BAUs (or an object specified in \code{newdata}), 
 #' which are of class \code{SpatialPixelsDataFrame}, \code{SpatialPolygonsDataFrame}, 
 #' or \code{STFDF}, with predictions and 
 #' uncertainty quantification added. 
@@ -218,7 +228,8 @@
 #' \code{\link{auto_basis}} for automatically constructing basis functions, and
 #' \code{\link{auto_BAUs}} for automatically constructing BAUs. 
 #' @references
-#' Zammit-Mangion, A. and Cressie, N. (2017). FRK: An R package for spatial and spatio-temporal prediction with large datasets. Journal of Statistical Software, 98(4), 1-48. doi:10.18637/jss.v098.i04.
+#' Zammit-Mangion, A. and Cressie, N. (2021). FRK: An R package for spatial and spatio-temporal prediction with large datasets. Journal of Statistical Software, 98(4), 1-48. doi:10.18637/jss.v098.i04.
+#' Sainsbury-Dale, M. and Zammit-Mangion, A. and Cressie, N. (2021) Modelling, Fitting, and Prediction with Non-Gaussian Spatial and Spatio-Temporal Data using FRK, FIXME: arXiv number
 #' @export
 #' @examples
 #' library("FRK")
