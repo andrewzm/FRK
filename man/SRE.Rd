@@ -92,7 +92,7 @@ SRE.fit(
 \arguments{
 \item{f}{\code{R} formula relating the dependent variable (or transformations thereof) to covariates}
 
-\item{data}{list of objects of class \code{SpatialPointsDataFrame}, \code{SpatialPolygonsDataFrame}, \code{STIDF}, or  \code{STFDF}. If using space-time objects, the data frame must have another field, \code{t}, containing the time index of the data point. If the assumed response distribution is "binomial" or "negative-binomial", the data frame must have another field, \code{k}, containing the known constant parameter \eqn{k} for each observation.}
+\item{data}{list of objects of class \code{SpatialPointsDataFrame}, \code{SpatialPolygonsDataFrame}, \code{STIDF}, or  \code{STFDF}. If using space-time objects, the data frame must have another field, \code{t}, containing the time index of the data point}
 
 \item{basis}{object of class \code{Basis} (or \code{TensorP_Basis})}
 
@@ -122,7 +122,7 @@ SRE.fit(
 
 \item{print_lik}{(applicable only if \code{method} = "EM") flag indicating whether to plot log-likelihood vs. iteration after convergence of the EM estimation algorithm}
 
-\item{response}{string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "negative-binomial", "binomial", "gamma", or "inverse-gaussian". If \code{method} = "EM", only "gaussian" can be used}
+\item{response}{string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "negative-binomial", "binomial", "gamma", or "inverse-gaussian". If \code{method} = "EM", only "gaussian" can be used. Two distributions considered in this framework, namely the binomial distribution and the negative-binomial distribution, have an assumed-known ‘size’ parameter and a ‘probability of success’ parameter; see the details below for the exact parameterisations used, and how to provide these ‘size’ parameters}
 
 \item{link}{string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted. If \code{method} = "EM", only "identity" can be used}
 
@@ -193,11 +193,43 @@ diagonal elements proportional to the field `fs' in the
 BAUs (typically set to one). The constant of proportionality is estimated 
 during model fitting. 
 
+\emph{Gaussian data model}
+
 When the data is Gaussian, and an identity link function is used, the preceding 
 model simplifies considerably: specifically,
 \deqn{Z = CY + C\delta + e,} 
 where \eqn{Z} is the data vector, \eqn{\delta} is systematic error at the 
-BAU level, and \eqn{e} represents independent measurement error.  
+BAU level, and \eqn{e} represents independent measurement error. 
+
+\emph{Distributions with size parameters}
+
+Two distributions considered in this framework, namely the binomial 
+distribution and the negative-binomial distribution, have an assumed-known 
+‘size’ parameter and a ‘probability of success’ parameter. 
+Given the vector of size parameters associated with the data, \eqn{\mathbf{k}_Z}, 
+the parameterisation used in \pkg{FRK} v2 assumes that \eqn{Z_j} represents 
+either the number of `successes' from \eqn{k_{Z_j}} trials (binomial data 
+model) or that it represents the number of failures before \eqn{k_{Z_j}} 
+successes (negative-binomial data model). 
+
+When model fitting, the BAU-level size parameters \eqn{\mathbf{k}} are needed.
+The user must supply these size parameters either through the data or though 
+the BAUs. How this is done depends on whether the data are areal or 
+point-referenced, and whether they overlap common BAUs or not. 
+The simplest case is when each observation is associated with a single BAU 
+only and each BAU is associated with at most one observation support; then, 
+it is straightforward to assign elements from \eqn{\mathbf{k}_Z} to elements 
+of \eqn{\mathbf{k}} and vice-versa, and so the user may provide either 
+\eqn{\mathbf{k}} or \eqn{\mathbf{k}_Z}. If each observation is associated with 
+exactly one BAU, but some BAUs are associated with multiple observations, 
+the user must provide \eqn{\mathbf{k}_Z}, which is used to infer \eqn{\mathbf{k}}; in 
+particular, \eqn{k_i = \sum_{j \in a_i} k_{Z_j}}, \eqn{i = 1, \dots, N}, 
+where \eqn{a_i} denotes the indices of the observations associated with BAU 
+\eqn{A_i}. If one or more observations encompass multiple BAUs, 
+\eqn{\mathbf{k}} must be provided with the BAUs, as we cannot meaningfully 
+distribute \eqn{k_{Z_j}} over the BAUs associated with datum \eqn{Z_j}. 
+In this case, we infer \eqn{\mathbf{k}_Z} using 
+\eqn{k_{Z_j} = \sum_{i \in c_j} k_i}, \eqn{j = 1, \dots, m}.
 
 \strong{Set-up}
 
@@ -217,12 +249,13 @@ sensible defaults. Please see
 The functions \code{observed_BAUs()} and \code{unobserved_BAUs()} return the 
 indices of the observed and unobserved BAUs, respectively. 
 
+
 \strong{Model fitting}
 
 \code{SRE.fit()} takes an object of class \code{SRE} and estimates all unknown
 parameters, namely the covariance matrix \eqn{K}, the fine scale variance
 (\eqn{\sigma^2_{\xi}} or \eqn{\sigma^2_{\delta}}, depending on whether Case 1
-or Case 2 is chosen; see the vignette) and the regression parameters \eqn{\alpha}.
+or Case 2 is chosen; see the vignette "FRK_intro") and the regression parameters \eqn{\alpha}.
 There are two methods of model fitting currently implemented, both of which 
 implement maximum likelihood estimation (MLE).
 \itemize{

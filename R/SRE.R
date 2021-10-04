@@ -18,7 +18,7 @@
 #' @title Construct SRE object, fit and predict
 #' @description The Spatial Random Effects (SRE) model is the central object in FRK. The function \code{FRK} provides a wrapper for the construction and estimation of the SRE object from data, using the functions \code{SRE} (the object constructor) and \code{SRE.fit} (for fitting it to the data). Please see \code{\link{SRE-class}} for more details on the SRE object's properties and methods.
 #' @param f \code{R} formula relating the dependent variable (or transformations thereof) to covariates
-#' @param data list of objects of class \code{SpatialPointsDataFrame}, \code{SpatialPolygonsDataFrame}, \code{STIDF}, or  \code{STFDF}. If using space-time objects, the data frame must have another field, \code{t}, containing the time index of the data point. If the assumed response distribution is "binomial" or "negative-binomial", the data frame must have another field, \code{k}, containing the known constant parameter \eqn{k} for each observation. 
+#' @param data list of objects of class \code{SpatialPointsDataFrame}, \code{SpatialPolygonsDataFrame}, \code{STIDF}, or  \code{STFDF}. If using space-time objects, the data frame must have another field, \code{t}, containing the time index of the data point
 #' @param basis object of class \code{Basis} (or \code{TensorP_Basis})
 #' @param BAUs object of class \code{SpatialPolygonsDataFrame}, \code{SpatialPixelsDataFrame}, \code{STIDF}, or \code{STFDF}. The object's data frame must contain covariate information as well as a field \code{fs} describing the fine-scale variation up to a constant of proportionality. If the function \code{FRK()} is used directly, then BAUs are created automatically, but only coordinates can then be used as covariates
 #' @param est_error (applicable only if \code{response} = "gaussian") flag indicating whether the measurement-error variance should be estimated from variogram techniques. If this is set to 0, then \code{data} must contain a field \code{std}. Measurement-error estimation is currently not implemented for spatio-temporal datasets
@@ -43,7 +43,7 @@
 #' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error; indicated by \code{obs_fs = TRUE}) or in the process model (process fine-scale variation; indicated by \code{obs_fs = FALSE}, default). For non-Gaussian data models, and/or non-identity link functions, if \code{obs_fs = TRUE}, then the fine-scale variation is removed from the latent process \eqn{Y}; however, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}
 #' @param pred_time vector of time indices at which prediction will be carried out. All time points are used if this option is not specified
 #' @param covariances (applicable only for \code{method} = "EM") logical variable indicating whether prediction covariances should be returned or not. If set to \code{TRUE}, a maximum of 4000 prediction locations or polygons are allowed
-#' @param response string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "negative-binomial", "binomial", "gamma", or "inverse-gaussian". If \code{method} = "EM", only "gaussian" can be used
+#' @param response string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "negative-binomial", "binomial", "gamma", or "inverse-gaussian". If \code{method} = "EM", only "gaussian" can be used. Two distributions considered in this framework, namely the binomial distribution and the negative-binomial distribution, have an assumed-known ‘size’ parameter and a ‘probability of success’ parameter; see the details below for the exact parameterisations used, and how to provide these ‘size’ parameters
 #' @param link  string indicating the desired link function. Can be "log", "identity", "logit", "probit", "cloglog", "reciprocal", or "reciprocal-squared". Note that only sensible link-function and response-distribution combinations are permitted. If \code{method} = "EM", only "identity" can be used
 #' @param taper positive numeric indicating the strength of the covariance/partial-correlation tapering. Only applicable if \code{K_type} = "block-exponential", or if \code{K_type} = "precision" and the the basis-functions are irregular or the manifold is not the plane. If \code{taper} is \code{NULL} (default) and \code{method} = "EM", no tapering is applied; if \code{method} = "TMB", tapering must be applied (for computational reasons), and we set it to 3 if it is unspecified
 #' @param optimiser (applicable only if \code{method} = "TMB") the optimising function used for model fitting when \code{method} = "TMB" (default is \code{nlminb}). Users may pass in a function object or a string corresponding to a named function. Optional parameters may be passed to \code{optimiser} via \code{...}. The only requirement of \code{optimiser} is that the first three arguments correspond to the initial parameters, the objective function, and the gradient, respectively (this may be achieved by simply constructing a wrapper function) 
@@ -83,11 +83,43 @@
 #' BAUs (typically set to one). The constant of proportionality is estimated 
 #' during model fitting. 
 #' 
+#' \emph{Gaussian data model}
+#' 
 #' When the data is Gaussian, and an identity link function is used, the preceding 
 #' model simplifies considerably: specifically,
 #' \deqn{Z = CY + C\delta + e,} 
 #' where \eqn{Z} is the data vector, \eqn{\delta} is systematic error at the 
-#' BAU level, and \eqn{e} represents independent measurement error.  
+#' BAU level, and \eqn{e} represents independent measurement error. 
+#' 
+#' \emph{Distributions with size parameters}
+#' 
+#' Two distributions considered in this framework, namely the binomial 
+#' distribution and the negative-binomial distribution, have an assumed-known 
+#' ‘size’ parameter and a ‘probability of success’ parameter. 
+#' Given the vector of size parameters associated with the data, \eqn{\mathbf{k}_Z}, 
+#' the parameterisation used in \pkg{FRK} v2 assumes that \eqn{Z_j} represents 
+#' either the number of `successes' from \eqn{k_{Z_j}} trials (binomial data 
+#' model) or that it represents the number of failures before \eqn{k_{Z_j}} 
+#' successes (negative-binomial data model). 
+#' 
+#' When model fitting, the BAU-level size parameters \eqn{\mathbf{k}} are needed.
+#' The user must supply these size parameters either through the data or though 
+#' the BAUs. How this is done depends on whether the data are areal or 
+#' point-referenced, and whether they overlap common BAUs or not. 
+#' The simplest case is when each observation is associated with a single BAU 
+#' only and each BAU is associated with at most one observation support; then, 
+#' it is straightforward to assign elements from \eqn{\mathbf{k}_Z} to elements 
+#' of \eqn{\mathbf{k}} and vice-versa, and so the user may provide either 
+#' \eqn{\mathbf{k}} or \eqn{\mathbf{k}_Z}. If each observation is associated with 
+#' exactly one BAU, but some BAUs are associated with multiple observations, 
+#' the user must provide \eqn{\mathbf{k}_Z}, which is used to infer \eqn{\mathbf{k}}; in 
+#' particular, \eqn{k_i = \sum_{j \in a_i} k_{Z_j}}, \eqn{i = 1, \dots, N}, 
+#' where \eqn{a_i} denotes the indices of the observations associated with BAU 
+#' \eqn{A_i}. If one or more observations encompass multiple BAUs, 
+#' \eqn{\mathbf{k}} must be provided with the BAUs, as we cannot meaningfully 
+#' distribute \eqn{k_{Z_j}} over the BAUs associated with datum \eqn{Z_j}. 
+#' In this case, we infer \eqn{\mathbf{k}_Z} using 
+#' \eqn{k_{Z_j} = \sum_{i \in c_j} k_i}, \eqn{j = 1, \dots, m}.
 #' 
 #' \strong{Set-up}
 #' 
@@ -107,12 +139,13 @@
 #' The functions \code{observed_BAUs()} and \code{unobserved_BAUs()} return the 
 #' indices of the observed and unobserved BAUs, respectively. 
 #' 
+#' 
 #' \strong{Model fitting}
 #'
 #' \code{SRE.fit()} takes an object of class \code{SRE} and estimates all unknown
 #' parameters, namely the covariance matrix \eqn{K}, the fine scale variance
 #' (\eqn{\sigma^2_{\xi}} or \eqn{\sigma^2_{\delta}}, depending on whether Case 1
-#' or Case 2 is chosen; see the vignette) and the regression parameters \eqn{\alpha}.
+#' or Case 2 is chosen; see the vignette "FRK_intro") and the regression parameters \eqn{\alpha}.
 #' There are two methods of model fitting currently implemented, both of which 
 #' implement maximum likelihood estimation (MLE).
 #' \itemize{
@@ -438,7 +471,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     
     if (!all(num_BAUs_each_obs == 1)) {
       
-      ## At least one observations is associated with multiple BAUs.
+      ## At least one observation is associated with multiple BAUs.
       ## Note: k_Z is not used in this scenario; i.e., it does not need
       ## to be provided by the user. 
       
