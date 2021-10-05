@@ -170,11 +170,6 @@
 #' \ifelse{html}{\out{<i>Z<sub>j</sub></i>}}{\eqn{Z_j}}.
 #' 
 #' 
-## #' \ifelse{html}{\out{<i></i>}}{}
-## #' \ifelse{html}{\out{<i>&sigma;<sup>2</sup><sub>&delta;</sub></i>}}{\eqn{\sigma^2_{\delta}}}
-#' 
-#' 
-#' 
 #' \strong{Set-up}
 #' 
 #' \code{SRE()} 
