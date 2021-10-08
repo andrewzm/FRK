@@ -31,10 +31,8 @@ vignette("FRK_intro")
 vignette("FRK_non-Gaussian")
 ```
 
-A paper with more details is available [here](https://www.jstatsoft.org/article/view/v098i04). If you use `FRK` in your work, please cite it using the information provided by `citation("FRK")`. 
-<!---
-A draft paper which details the approach to modelling non-Gaussian data is available [here](**LINK TO FRK v2 PAPER**).
---->
+A paper with more details is available [here](https://www.jstatsoft.org/article/view/v098i04), and a draft paper detailing the approach in a non-Gaussian setting is available [here](https://arxiv.org/abs/2110.02507). If you use `FRK` in your work, please cite it using the information provided by `citation("FRK")`. 
+
 
 Description
 ------------

@@ -275,9 +275,6 @@ denotes the indices of the BAUs associated with observation
 \ifelse{html}{\out{<i>Z<sub>j</sub></i>}}{\eqn{Z_j}}.
 
 
-
-
-
 \strong{Set-up}
 
 \code{SRE()} 
@@ -413,7 +410,7 @@ ggpubr::ggarrange(plotlist = plotlist, nrow = 1, align = "hv", legend = "top")}
 }
 \references{
 Zammit-Mangion, A. and Cressie, N. (2021). FRK: An R package for spatial and spatio-temporal prediction with large datasets. Journal of Statistical Software, 98(4), 1-48. doi:10.18637/jss.v098.i04.
-Sainsbury-Dale, M. and Zammit-Mangion, A. and Cressie, N. (2021) Modelling, Fitting, and Prediction with Non-Gaussian Spatial and Spatio-Temporal Data using FRK, FIXME: arXiv number
+Sainsbury-Dale, M. and Zammit-Mangion, A. and Cressie, N. (2021) Modelling, Fitting, and Prediction with Non-Gaussian Spatial and Spatio-Temporal Data using FRK, arXiv:2110.02507
 }
 \seealso{
 \code{\link{SRE-class}} for details on the SRE object internals, 
