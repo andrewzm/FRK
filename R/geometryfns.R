@@ -1221,6 +1221,11 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
                   # data_over_sp <- cbind(data_df,data_over_sp)
                   # }
 
+                  ## Assign the CRS from sp_pols to data_sp. Note that the sp_pols
+                  ## are typically the BAUs object, and have not been altered
+                  ## significantly to this point (while data_sp has, and so 
+                  ## its CRS is often NA).
+                  proj4string(data_sp) <- proj4string(sp_pols) 
                   data_over_sp <- .parallel_over(data_sp, sp_pols)
 
                   ## We now cbind the original data with data_over_sp
@@ -1377,24 +1382,32 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPixels"),
 setMethod("map_data_to_BAUs",signature(data_sp="ST"),
           function(data_sp,sp_pols,average_in_BAU = TRUE, sum_variables = NULL, silently = FALSE) {
 
-              if(!(class(data_sp) == "STIDF"))
-                  stop("Currently spatio-temporal data where the spatial
-                      component is areal is under maintenance.
-                       Please contact the package maintainer")
-              
-              
               ## Initialise to no spatial field
               sp_fields <- NULL
 
-              ## Coerce to STIDF if necessary and then project all the space-time data onto space
-              data_all_spatial <- as(as(as(data_sp,"STIDF"),"Spatial"),
-                                     "SpatialPointsDataFrame")
+              ## Project all the space-time data onto space
+              data_all_spatial <- as(as(data_sp, "STIDF"), "Spatial")
 
+              ## If the data are SpatialPolygons, convert to SpatialPointsDataFrame
+              if (is(data_all_spatial, "SpatialPolygonsDataFrame")) {
+                  ## Unfortunately the following doesn't work:
+                  # data_all_spatial <- as(data_all_spatial, "SpatialPointsDataFrame")
+                  ## Instead, we will construct the object by computing the 
+                  ## centroids of each polygon, and then constructing the object 
+                  ## manually:
+                  data_all_spatial <- SpatialPointsDataFrame(
+                      coords = .polygons_to_points(data_all_spatial), 
+                      data = data_all_spatial@data
+                      )
+              } 
+              
+              ## From this point, all data will be SpatialPointsDataFrame
+              
+              
               ## Now we require all dates to be POSIXct, therefore convert
               if(!all(class(data_all_spatial$time) == "POSIXct")) {
                   data_all_spatial$time <- as.POSIXct(data_all_spatial$time)
               }
-
 
               ## Bin every spatial frame separately. The following returns a list of Spatial objects
               ## that are either SpatialPoints or SpatialPolygons, depending on data_sp
