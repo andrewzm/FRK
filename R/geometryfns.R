@@ -1388,7 +1388,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="ST"),
               ## Project all the space-time data onto space
               data_all_spatial <- as(as(data_sp, "STIDF"), "Spatial")
 
-              ## If the data are SpatialPolygons, convert to SpatialPointsDataFrame
+              ## Convert to SpatialPointsDataFrame
               if (is(data_all_spatial, "SpatialPolygonsDataFrame")) {
                   ## Unfortunately the following doesn't work:
                   # data_all_spatial <- as(data_all_spatial, "SpatialPointsDataFrame")
@@ -1399,9 +1399,10 @@ setMethod("map_data_to_BAUs",signature(data_sp="ST"),
                       coords = .polygons_to_points(data_all_spatial), 
                       data = data_all_spatial@data
                       )
-              } 
-              
-              ## From this point, all data will be SpatialPointsDataFrame
+              } else {
+                  ## Almost certainly not necessary, but coerce to SpatialPoints:
+                  data_all_spatial <- as(data_all_spatial, "SpatialPointsDataFrame")
+              }
               
               
               ## Now we require all dates to be POSIXct, therefore convert
