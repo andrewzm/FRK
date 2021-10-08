@@ -388,9 +388,9 @@ auto_BAUs <- function(manifold, type=NULL,cellsize = NULL,
 
     if(is.null(data) & !on_sphere)
         stop("Need to supply data for planar problems")
-
-    ## If user has not supplied cellsize supply it. Note that cellsize is not relevant when not
-    ## on sphere since BAUs are given by ISEA3h in this case
+    
+    ## If user has not supplied cellsize supply it. Note that cellsize is 
+    ## irrelevant when on sphere since BAUs are given by ISEA3h in this case
     if(is.null(cellsize)) {
         ## if we are on the plane (hence isea3h_res is not set) or we are on the sphere or user has
         ## specified type ``grid'' (even with sphere), then find the cellsize
@@ -401,7 +401,6 @@ auto_BAUs <- function(manifold, type=NULL,cellsize = NULL,
             cellsize <- 1
     }
 
-    ## If we are not on the sphere
     if(!on_sphere){
 
         ## Make cellsize have the same dimensions as the manifold if only one number specified
@@ -431,8 +430,6 @@ auto_BAUs <- function(manifold, type=NULL,cellsize = NULL,
         if(!(is(spatial_BAUs, "SpatialPolygons") | is(spatial_BAUs, "SpatialPixels")))
             stop("The argument spatial_BAUs should be of class SpatialPolygonsDataFrame, or SpatialPixelsDataFrame")
     }
-
-        
     
     ## Call the internal function with checked arguments
     auto_BAU(manifold=manifold,type=type,cellsize=cellsize,resl=resl,d=data,
@@ -513,7 +510,7 @@ setMethod("auto_BAU",signature(manifold="real_line",d="xts"),
 
 
 ## Construct the BAUs around some time data
-auto_BAU_time <- function (manifold,type="grid",cellsize = 1,resl=resl,d=NULL,convex=-0.05,...) {
+auto_BAU_time <- function (manifold, type, cellsize, resl, d, convex, ...) {
 
     ## Extract other user-supplied arguments
     l <- list(...)
@@ -532,18 +529,18 @@ auto_BAU_time <- function (manifold,type="grid",cellsize = 1,resl=resl,d=NULL,co
     #dt <- as.difftime(cellsize, units = tunit) # time block size
 
     ## The time spacing
+    if(is.null(cellsize)) cellsize <- 1
     tspacing <- paste(cellsize,tunit)      # e.g., paste(1,"days")
     tgrid <- seq(truncPOSIXt(trange[1],tunit), # create grid based on range and spacing by truncating
                  ceil(trange[2]+1,tunit),      # to this time unit (e.g., "days")
                  by=tspacing)                  # and making the interval equal to tunit
 
     ## Finally round to the time unit (probably not needed)
-    tgrid <- suppressWarnings(roundPOSIXt(tgrid, tunit))
+    tgrid <- roundPOSIXt(tgrid, tunit)
 
-    ## NOTE: A suppresswarnings is needed since there seems to be a bug
-    ## in trunc.POSIXt when using units faster than days and more than
-    ## one element as input. This warning has no adverse affects as far
-    ## as I can see.
+    ## A warning is given from the line above when using units smaller than days 
+    ## and more than one element as input. This warning has no adverse affects as far
+    ## as I can tell.
 
     ## Ensure it's POSIXct, which is what FRK uses
     tgrid <- as.POSIXct(tgrid)
