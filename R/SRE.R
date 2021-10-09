@@ -129,8 +129,8 @@
 #' Given the vector of size parameters associated with the data, 
 #' \ifelse{html}{\out{<i> <b>k</b><sub>Z</sub> </i>}}{\eqn{\boldsymbol{k}_Z}}, the parameterisation used in \pkg{FRK} assumes that 
 #' \ifelse{html}{\out{<i>Z<sub>j</sub></i>}}{\eqn{Z_j}} represents either the number of `successes' from 
-#' \eqn{k_{Z_j}}{kZ_j} trials (binomial data model) or that it represents the number of failures before 
-#' \eqn{k_{Z_j}}{kZ_j} successes (negative-binomial data model). 
+#' \ifelse{html}{\out{<i>k<sub>Z<sub>j</sub></sub></i>}}{\eqn{k_{Z_j}}} trials (binomial data model) or that it represents the number of failures before 
+#' \ifelse{html}{\out{<i>k<sub>Z<sub>j</sub></sub></i>}}{\eqn{k_{Z_j}}} successes (negative-binomial data model). 
 #' 
 #' When model fitting, the BAU-level size parameters 
 #' \ifelse{html}{\out{<i> <b> k </b> </i>}}{\eqn{\boldsymbol{k}}} are needed.
@@ -268,6 +268,7 @@
 #' \code{\link{auto_BAUs}} for automatically constructing BAUs. 
 #' @references
 #' Zammit-Mangion, A. and Cressie, N. (2021). FRK: An R package for spatial and spatio-temporal prediction with large datasets. Journal of Statistical Software, 98(4), 1-48. doi:10.18637/jss.v098.i04.
+#'
 #' Sainsbury-Dale, M. and Zammit-Mangion, A. and Cressie, N. (2021) Modelling, Fitting, and Prediction with Non-Gaussian Spatial and Spatio-Temporal Data using FRK, arXiv:2110.02507
 #' @export
 #' @examples
