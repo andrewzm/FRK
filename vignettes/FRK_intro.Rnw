@@ -10,14 +10,12 @@
 \usepackage{bm}
 \usepackage{bbm}
 \usepackage[margin=1in]{geometry}
-\usepackage{color}
 \usepackage[authoryear]{natbib}
 \usepackage{setspace}
 \usepackage{multirow}
 \usepackage{array}
 \usepackage[normalem]{ulem}
 \usepackage{amsthm}
-\usepackage{xcolor}
 \usepackage{lipsum}
 %\usepackage[printwatermark]{xwatermark}
 %\newwatermark[allpages,color=gray!10,angle=45,scale=2,xpos=0,ypos=0]{CONFIDENTIAL}
@@ -37,9 +35,6 @@
 \newtheorem{proposition}{Proposition}
 \newtheorem{theorem}{Theorem}[section]
 \newtheorem{lemma}{Lemma}[section]
-
-\newcommand{\red}{\textcolor{red}}%
-\newcommand{\blue}{\textcolor{blue}}
 
 \newcommand{\zerob} {{\bf 0}}
 \newcommand{\oneb} {{\bf 1}}
