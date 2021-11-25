@@ -702,6 +702,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   X_O <- .constructX_O(object) 
   S_O <- .constructS_O(object) 
   
+
   info_fit <- list()      
   info_fit$time <- system.time({
     
@@ -772,15 +773,15 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     stop("Something has gone wrong in the parameter initialisation for TMB: Some entries are numeric(0), NA, or NULL. Please contact the package maintainer.")
   if (any(data$nnz < 0) || any(data$col_indices < 0) || any(data$row_indices < 0))
     stop("Something has gone wrong in construction of the precision matrix of the basis-function coefficients: We have negative row-indices, col-indices, or total non-zeros: Please contact the package maintainer. ")
-  if (!all.equal(length(data$x), length(data$col_indices), length(data$row_indices), sum(data$nnz))) 
+  if (!.zero_range(c(length(data$x), length(data$col_indices), length(data$row_indices), sum(data$nnz))))
     stop("Something has gone wrong in construction of the precision matrix of the basis-function coefficients: The number of row-indices, col-indices, or non-zeros is inconsistent. Please contact the package maintainer. ")
-  if(!all.equal(length(object@Z), length(data$Z), nrow(data$C_O), nrow(data$X_O) , nrow(data$S_O)))
+  if(!.zero_range(c(length(object@Z), length(data$Z), nrow(data$C_O), nrow(data$X_O) , nrow(data$S_O))))
     stop("Something has gone wrong in the data preparation for TMB: The dimensions of the C, X, or S matrix is inconsistent with the number of observations. Please contact the package maintainer.")
-  if(!all.equal(nbasis(object@basis), max(data$row_indices + 1), max(data$col_indices + 1), sum(data$r_si)))
+  spatial_basis <- if (is(object@basis, "TensorP_Basis")) object@basis@Basis1 else object@basis
+  if(!.zero_range(c(nbasis(spatial_basis), max(data$row_indices + 1), max(data$col_indices + 1), sum(data$r_si))))
     stop("Something has gone wrong in the data preparation for TMB: The number of basis functions and the matrix indices are inconsistent. Please contact the package maintainer.")
   if (!(K_type %in% c("neighbour", "block-exponential", "precision-block-exponential")))
     stop("Internal error: K_type is not one of neighbour, block-exponential, or precision-block-exponential. Please contact the package maintainer.")
-
 
   ## TMB model compilation
   obj <- MakeADFun(data = data,
