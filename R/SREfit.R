@@ -766,7 +766,8 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   
   ## Checks to catch catastrophic errors. 
   ## If we allow nonsensical values into TMB, R may crash without providing
-  ## an informative warning. These checks will hopefully ensure that will not happen. 
+  ## an informative warning. These checks will hopefully ensure that will not 
+  ## happen. 
   if (any(sapply(data, function(x) any(length(x) == 0) || any(is.na(x)) || any(is.null(x)))))
     stop("Something has gone wrong in the data preparation for TMB: Some entries are numeric(0), NA, or NULL. Please contact the package maintainer.")
   if (any(sapply(parameters, function(x) any(length(x) == 0) || any(is.na(x)) || any(is.null(x)))))

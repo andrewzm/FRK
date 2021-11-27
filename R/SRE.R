@@ -490,7 +490,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     S[[i]] <- Cmat[[i]] %*% S0
     
     ## Construct k_Z in the same way that Z is constructed
-    if("k_Z" %in% names(data_proc)) k_Z[[i]] <- Matrix(data_proc$k_Z) 
+    if("k_Z" %in% names(data_proc@data)) k_Z[[i]] <- Matrix(data_proc$k_Z) 
   }
   
   if(fs_model == "ind") {
@@ -531,7 +531,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
       cat("Since the response distribution is binomial or negative-binomial, FRK enforces the non-zero elements of the incidence matrices (Cz and Cp in the papers) to be 1 and normalise_wts = FALSE: This means that aggregation over the BAUs is a simple, unweighted sum.\n") 
 
       ## We require the size parameter in a field of the BAUs:
-      if (!("k_BAU" %in% names(BAUs))) {
+      if (!("k_BAU" %in% names(BAUs@data))) {
         stop("If the response distribution is binomial or negative-binomial and some observations supports are associated with multiple BAUs (e.g., areal data), the size parameter must be provided in the BAUs objects in a field named 'k_BAU'.") 
       } else {
         k_BAU_O <- BAUs$k_BAU[obsidx] 
@@ -549,7 +549,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
       
       
       ## Check that k_Z is provided
-      if (!all(sapply(data, function(l) "k_Z" %in% names(l)))) {
+      if (!all(sapply(data, function(l) "k_Z" %in% names(l@data)))) {
         
         ## If k_Z was not provided, 
         ## as a back up convenience for the user, in the special case that each 
@@ -557,7 +557,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
         ## each BAU is associated with at most one observation support, 
         ## k_Z and k are essentially the same, and we can use k_BAU if it 
         ## was provided:
-        if (all(num_obs_each_BAU == 1) && "k_BAU" %in% names(BAUs)) {
+        if (all(num_obs_each_BAU == 1) && "k_BAU" %in% names(BAUs@data)) {
           k_Z <- Cmat %*% BAUs$k_BAU # construct k_Z by aggregating over the BAUs
         } else {
           stop("For binomial or negative-binomial data where each observation is associated with a single BAU only, the known constant size parameter must be provided for each observation. Please provide this in the data object, in a field called 'k_Z'.")
