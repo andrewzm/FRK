@@ -174,7 +174,7 @@
   if(method != "TMB" & fs_by_spatial_BAU) stop("fs_by_spatial_BAU can only be TRUE if method = 'TMB'. Please set method = 'TMB', or fs_by_spatial_BAU = FALSE.")
   
   if(print_lik && method == "TMB")
-    cat("The likelihood at each iteration cannot be accessed because you have selected TMB for model fitting: print_lik will be ignored.")
+    cat("The likelihood at each iteration cannot be accessed because you have selected TMB for model fitting: print_lik will be ignored.\n")
   
   ## Check known_sigma2fs 
   ns <- dim(BAUs)[1]
