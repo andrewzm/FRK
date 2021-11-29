@@ -97,10 +97,10 @@ Basis <- function(manifold, n, fn, pars, df, regular = FALSE) {
 #' \dontrun{show_basis(G)}
 #' @export
 
-local_basis <- function(manifold=sphere(),          # default manifold is sphere
-                        loc=matrix(c(1,0),nrow=1),  # one centroid at (1,0)
-                        scale = 1,                    # std = 1, and Gaussian RBF
-                        type=c("bisquare","Gaussian","exp","Matern32"), 
+local_basis <- function(manifold = sphere(),          # default manifold is sphere
+                        loc = matrix(c(1,0),nrow=1),  # one centroid at (1,0)
+                        scale = 1,                    
+                        type = c("bisquare", "Gaussian", "exp", "Matern32"), 
                         res = 1, 
                         regular = FALSE) {
   
@@ -135,7 +135,12 @@ local_basis <- function(manifold=sphere(),          # default manifold is sphere
 
     ## Create a data frame which summarises info about the functions, and set the resolution.
     df <- data.frame(loc, scale, res = res)
-
+    
+    ## For temporal basis functions, which are often constructed using 
+    ## local_basis(), we'll set regular = TRUE if the following conditions hold:
+    if (length(unique(res)) == 1 && length(unique(scale)) == 1 && length(unique(diff(loc))) == 1) {
+      regular = TRUE
+    }
     ## Create new basis function, using the manifold, n, functions, parameters list, and data frame.
     this_basis <- Basis(manifold = manifold,  n = n, fn = fn, pars = pars, df = df, regular = regular)
     return(this_basis)
