@@ -1,3 +1,6 @@
+## v2.0.4
++ Removed <center> tags in html code as per CRAN request
+
 ## v0.1.7
 + Made compatible with new update of Hmisc
 + Added support for change of support spatio-temporal prediction
