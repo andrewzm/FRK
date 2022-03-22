@@ -284,7 +284,7 @@ nasa_palette <- c("#03006d","#02008f","#0000b6","#0001ef","#0000f6","#0428f6","#
 ## }
 .cov_tap <- function(D_matrices, taper){
 
-  if (class(D_matrices) != "list") 
+  if (!is(D_matrices, "list")) 
     stop("D_matrices should be a list of matrices giving the distance between basis functions at each resolution")
   
   ## Taper parameters
@@ -328,7 +328,7 @@ nasa_palette <- c("#03006d","#02008f","#0000b6","#0001ef","#0000f6","#0428f6","#
 ## @return A taper matrix, which is block-diagonal and of class \code{dgCmatrix}.
 .T_beta_taper_matrix <- function(D_matrices, beta) {
   
-  if (class(D_matrices) != "list") 
+  if (!is(D_matrices, "list"))
     stop("D_matrices should be a list of matrices giving the distance between basis functions at each resolution")
   
   spherical_taper <- function(D, beta) {

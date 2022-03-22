@@ -12,7 +12,7 @@ test_that("cholsolve works as expected", {
 
 test_that("other linalg functions", {
   expect_equal(tr(A),sum(diag(A)))
-  expect_equal(diag2(A,A),diag(A %*% A))
+  expect_equal(unname(diag2(A,A)), unname(diag(A %*% A)))
   expect_equal(Takahashi_Davis(A),solve(A))
   expect_equal(Takahashi_Davis(A),Takahashi_Davis(A,cholQp = X$Qpermchol, P = X$P))
   expect_equal(as.numeric(cholsolveAQinvAT(A = b,Lp = X$Qpermchol,P = X$P)),

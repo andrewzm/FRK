@@ -49,7 +49,7 @@ test_that("we can have multiple functions in a Basis object on plane and plot th
     expect_equal(G_basis@n, 5)
     expect_equal(nrow(G_basis@df), 5)
     expect_equal(G_basis@fn[[1]](mu)[1,1],1) # Value of basis at mean is 1
-    expect_equal(diag(eval_basis(G_basis,s = mu)),rep(1,5))
+    expect_equal(unname(diag(eval_basis(G_basis,s = mu))),rep(1,5))
     expect_true({show_basis(G_basis); TRUE})
 })
 
@@ -60,7 +60,7 @@ test_that("we can have multiple functions in a Basis object on real line and plo
     expect_equal(G_basis@n, 10)
     expect_equal(nrow(G_basis@df), 10)
     expect_equal(G_basis@fn[[1]](mu)[1,1],1) # Value of basis at mean is 1
-    expect_equal(diag(eval_basis(G_basis,s = mu)),rep(1,10))
+    expect_equal(unname(diag(eval_basis(G_basis,s = mu))),rep(1,10))
     expect_is(eval_basis(G_basis,s = mu),"Matrix")
     expect_true({show_basis(G_basis); TRUE})
 })

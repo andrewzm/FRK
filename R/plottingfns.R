@@ -645,16 +645,16 @@ setMethod("plot_spatial_or_ST", signature(newdata = "SpatialPolygonsDataFrame"),
   
     ## NB: I don't use is() because is(newdata, "SpatialPointsDataFrame") returns 
     ## TRUE when class(newdata) == "SpatialPixelsDataFrame"
-    if (class(newdata) == "SpatialPointsDataFrame") {
+    if (is(newdata, "SpatialPointsDataFrame")) {
         df <- cbind(newdata@data, coordinates(newdata))
         sp_type <- "points"
-    } else if (class(newdata) == "SpatialPixelsDataFrame") {
+    } else if (is(newdata, "SpatialPixelsDataFrame")) {
         df <- cbind(newdata@data, coordinates(newdata))
         sp_type <- "pixels"
-    } else if (class(newdata) == "SpatialPolygonsDataFrame") {
+    } else if (is(newdata, "SpatialPolygonsDataFrame")) {
         df <- .SpatialPolygonsDataFrame_to_df(newdata)
         sp_type <- "polygons"
-    } else if (class(newdata) == "STFDF") {
+    } else if (is(newdata, "STFDF")) {
         if (is(newdata@sp, "SpatialPolygons")) {
             sp_type <- "polygons"
         } else if (is(newdata@sp, "SpatialPixels")) {

@@ -45,10 +45,10 @@ test_that("SRE 1D works",{
     ### Predict over BAUs using both modes
     grid_BAUs <- predict(S, covariances = TRUE)
     expect_is(grid_BAUs,"list")
-    expect_equal(as.numeric(grid_BAUs$newdata$var), diag(grid_BAUs$Cov))
+    expect_equal(as.numeric(grid_BAUs$newdata$var), unname(diag(grid_BAUs$Cov)))
     grid_BAUs <- predict(S, obs_fs = FALSE, covariances = TRUE)
     expect_is(grid_BAUs,"list")
-    expect_equal(as.numeric(grid_BAUs$newdata$var), diag(grid_BAUs$Cov))
+    expect_equal(as.numeric(grid_BAUs$newdata$var), unname(diag(grid_BAUs$Cov)))
     expect_equal(dim(grid_BAUs$Cov),rep(length(S@BAUs),2))
 
     ### Check covariances option
