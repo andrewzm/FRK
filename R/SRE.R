@@ -319,7 +319,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                 ...) {
   
 
-  
+
   ## Strings that must be lower-case (this allows users to enter 
   ## response = "Gaussian", for example, without causing issues)
   response  <- tolower(response)
@@ -407,9 +407,13 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     xx <- xx + 1*(xx == 0)                                # In the rare case all basis functions evaluate to zero don't do anything
     S0 <- S0 / (as.numeric(xx))                           # Normalise the S matrix
   }
-  
+
   ## Find the distance matrix associated with the basis-function centroids
-  D_basis <- BuildD(basis)
+  if(!(K_type == "precision")) {
+      D_basis <- BuildD(basis)
+  } else {
+      D_basis <- list(as(0, "Matrix"))
+  }
   
   ## For each data object
   for(i in 1:ndata) {

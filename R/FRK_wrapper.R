@@ -23,6 +23,7 @@ FRK <- function(f,                     # formula (compulsory)
                 average_in_BAU = TRUE, # average data into BAUs
                 sum_variables = NULL,  # variables to sum rather than average
                 normalise_wts = TRUE,
+                normalise_basis = TRUE,# normalise basis functions
                 fs_model = "ind",      # fine-scale variation component
                 vgm_model = NULL,      # variogram model for error estimation
                 K_type = c("block-exponential", "precision", "unstructured"), # type of K matrix
@@ -209,6 +210,7 @@ FRK <- function(f,                     # formula (compulsory)
              fs_model = fs_model,              # fs model (only "ind" for now)
              vgm_model = vgm_model,            # vgm model for error estimation
              K_type = K_type,                  # "block-exponential", "unstructured", "precision"
+             normalise_basis = normalise_basis,
              response = response, 
              link = link, 
              fs_by_spatial_BAU = fs_by_spatial_BAU)                  

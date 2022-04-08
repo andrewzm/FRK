@@ -152,7 +152,7 @@ local_basis <- function(manifold = sphere(),          # default manifold is sphe
 #' @param data object of class \code{SpatialPointsDataFrame} or \code{SpatialPolygonsDataFrame} containing the data on which basis-function placement is based, or a list of these; see details
 #' @param regular an integer indicating the number of regularly-placed basis functions at the first resolution. In two dimensions, this dictates the smallest number of basis functions in a row or column at the coarsest resolution. If \code{regular=0}, an irregular grid is used, one that is based on the triangulation of the domain with increased mesh density in areas of high data density; see details
 #' @param nres the number of basis-function resolutions to use
-#' @param prune a threshold parameter that dictates when a basis function is considered irrelevent or unidentifiable, and thus removed; see details
+#' @param prune a threshold parameter that dictates when a basis function is considered irrelevent or unidentifiable, and thus removed; see details [deprecated]
 #' @param max_basis maximum number of basis functions. This overrides the parameter \code{nres}
 #' @param subsamp the maximum amount of data points to consider when carrying out basis-function placement: these data objects are randomly sampled from the full dataset. Keep this number fairly high (on the order of 10^5), otherwise fine-resolution basis functions may be spuriously removed
 #' @param type the type of basis functions to use; see details
@@ -293,6 +293,8 @@ auto_basis <- function(manifold = plane(),
         stop("manifold needs to be an object of class manifold")
     if(!is.numeric(prune) | prune < 0)
         stop("prune needs to be greater than zero")
+    if(prune > 0)
+        warning("it's not considered best practice to use prune anymore and is being deprecated. Please set to 0 as it will be removed in future versions")
     if(!is.numeric(subsamp) | subsamp < 0)
         stop("subsamp needs to be greater than zero")
     if((is(manifold,"sphere")  | is(manifold,"real_line")) & regular == 0)
@@ -467,19 +469,45 @@ auto_basis <- function(manifold = plane(),
         ## Setting the scales and Refinement stage
         ##      Set scales: e.g., set to 1.5x the distance to nearest basis if bisquare
         ##      Refine/Prune: Remove basis which are not influenced by data and re-find the scales
-        for(j in 1:2) { ## Need to go over this twice for refinement
-            D <- FRK::distance(m,this_res_locs,this_res_locs)       # compute distance
-            if(nrow(D) == 1) {                                      # if we only have one basis function
+        for(j in 1:2) { ## Need to go over this twice for refinement when pruning
+            ## Note, prune will be removed in future, and basis functions
+            
+            if(nrow(this_res_locs) == 1) {                                      # if we only have one basis function
                 this_res_scales <-max(diff(xrange),diff(yrange))/2  # set the "base" scale parameter to span most of the range
             } else {
-                ## otherwise set the "base" scale parameter to be based
-                ## on the distance to the nearest centroid (if not on sphere)
-                diag(D) <- Inf
-                this_res_scales <- apply(D,1,min)*scale_aperture
+                if(nrow(this_res_locs) < 5000) {
+                   D <- FRK::distance(m,this_res_locs,this_res_locs)       # compute distance
+                   ## otherwise set the "base" scale parameter to be based
+                   ## on the distance to the nearest centroid (if not on sphere)
+                   diag(D) <- Inf
+                   this_res_scales <- apply(D,1,min)*scale_aperture
+                } else { ## if many basis functions need to batch up unless regular
+                    if(!prune & regular) {
+                        this_res_scales <- rep((xgrid[2] - xgrid[1])^2 +
+                                               (ygrid[2] - ygrid[1])^2,
+                                               nrow(this_res_locs)) * scale_aperture
+                    } else {    
+                        batch_size <- 100
+                        batching <-  cut(1:nrow(this_res_locs),
+                                         breaks = seq(0,nrow(this_res_locs) + batch_size,
+                                                      by=batch_size),
+                                         labels=F)
+                        list_scales <- lapply(unique(batching),
+                                              function(batch) {
+                                                  idx <- which(batching == batch)
+                                                  D <- FRK::distance(m, this_res_locs[idx,],
+                                                                     this_res_locs)
+                                                  D[which(D==0, arr.ind = TRUE)] <- Inf
+                                                  apply(D,1,min)*scale_aperture
+                                              })
+                        this_res_scales <- unlist(list_scales)
+                   }
+                }
+
             }
 
             ## If we have more than one basis at this resolution (could be 0 because of pruning)
-            if(nrow(D) >0)
+            if(nrow(this_res_locs) >0)
                 ## The following code can be used to verify that the following basis functions have a similar shape:
                 ## Bisquare: R = 1.5,
                 ## Gaussian: sigma = 0.7,
@@ -497,8 +525,8 @@ auto_basis <- function(manifold = plane(),
                                           scale=ifelse(type=="bisquare",1.5,0.7)*this_res_scales,
                                           type=type, regular = regular)
 
-            ## Now refine/prune these basis functions
-            if(prune > 0 & nrow(D)>0) {
+            ## Now refine/prune these basis functions [deprecated]
+            if(prune > 0 & nrow(this_res_locs)>0) {
                 ## Only in the first step
                 if(j==1) {
                     ## The basis functions to remove are those which are not "considerably affected"
@@ -528,7 +556,7 @@ auto_basis <- function(manifold = plane(),
 
         ## Now that we actually have the centroids and scales we can construct the basis functions for this
         ## resolution. If all the basis functions have been removed at this resolution don't do anything
-        if(nrow(D) > 0) {
+        if(nrow(this_res_locs) > 0) {
             G[[i]] <-  local_basis(manifold = m,
                                    loc=this_res_locs,
                                    scale=ifelse(type=="bisquare",1.5,0.7)*this_res_scales,

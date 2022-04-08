@@ -1191,7 +1191,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 .TMB_data_prep <- function (object, sigma2fs_hat, K_type, taper, C_O, X_O, S_O) {
   
   cat("Preparing data for TMB...\n")
-  
+
   obsidx <- observed_BAUs(object)       # Indices of observed BAUs
   
   ## measurement error variance (NB: this is a vector)

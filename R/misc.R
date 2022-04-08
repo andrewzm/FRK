@@ -367,7 +367,8 @@ nasa_palette <- c("#03006d","#02008f","#0000b6","#0001ef","#0000f6","#0428f6","#
 ## #' @param diag_neighbours Indicates whether to consider the diagonal neighbours. If FALSE (default), only the horizontal and vertical neighbours are considered
 ## #' @return A "neighbour" matrix with element (i, j), for i not equal to j, equal to 1/l if basis functions i and j are lth order neighbours (provided \code{l <= order}), and 0 otherwise. Diagonal elements indicate the row sums
 .neighbour_matrix <- function(df, order = 1, diag_neighbours = FALSE) {
-   
+
+
   A <- matrix(0, nrow = nrow(df), ncol = nrow(df))
   
   ## absolute difference in each dimension for each knot
@@ -468,7 +469,7 @@ nasa_palette <- c("#03006d","#02008f","#0000b6","#0001ef","#0000f6","#0428f6","#
 ## #' @return list containing the sparse block-diagonal precision matrix (Q) of class "dgCMatrix", and the number of non-zero elements (nnz) at each resolution.
 ## #' @seealso \code{\link{.sparse_Q}}, \code{\link{.neighbour_matrix}}
 .sparse_Q_block_diag <- function(df, kappa, rho, order = 1, diag_neighbours = FALSE) {
-  
+
   if (!("res" %in% names(df)))
     stop("To construct the sparse precision matrix, the basis-function dataframe must contain a column named res, indicating the resolution of the corresponding basis function.")
   nres <- length(unique(df$res))
@@ -481,7 +482,8 @@ nasa_palette <- c("#03006d","#02008f","#0000b6","#0001ef","#0000f6","#0428f6","#
   ## Construct the blocks
   Q_matrices  <- list()
   nnz <- c()
-  for (i in unique(df$res)) { 
+    for (i in unique(df$res)) {
+
     A_i <- .neighbour_matrix(df[df$res == i, loc_idx], order = order, diag_neighbours = diag_neighbours)
     Q_matrices[[i]] <- .sparse_Q(A = A_i,
                                  kappa = kappa[i],
