@@ -31,7 +31,7 @@ auto_basis(
 
 \item{nres}{the number of basis-function resolutions to use}
 
-\item{prune}{a threshold parameter that dictates when a basis function is considered irrelevent or unidentifiable, and thus removed; see details}
+\item{prune}{a threshold parameter that dictates when a basis function is considered irrelevent or unidentifiable, and thus removed; see details [deprecated]}
 
 \item{max_basis}{maximum number of basis functions. This overrides the parameter \code{nres}}
 

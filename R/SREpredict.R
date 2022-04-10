@@ -32,7 +32,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     if (is.null(k)) {
       if(is.null(k_BAU)) {
         k <- rep(1, N)
-        cat("Assuming the size parameter, k, is equal to 1 for all prediction locations: If you want to change this, use the argument 'k' in predict.\n")
+        cat("Assuming the size parameter, k, is equal to 1 for all prediction locations: If you want to change this, use the argument 'k' in predict().\n")
       } else {
         if (any(is.na(k_BAU))) {
           

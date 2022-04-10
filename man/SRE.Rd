@@ -18,6 +18,7 @@ FRK(
   average_in_BAU = TRUE,
   sum_variables = NULL,
   normalise_wts = TRUE,
+  normalise_basis = TRUE,
   fs_model = "ind",
   vgm_model = NULL,
   K_type = c("block-exponential", "precision", "unstructured"),
@@ -106,6 +107,8 @@ SRE.fit(
 
 \item{normalise_wts}{if \code{TRUE}, the rows of the incidence matrices \ifelse{html}{\out{<i><b>C</b><sub>Z</sub></i>}}{\eqn{\boldsymbol{C}_Z}} and \ifelse{html}{\out{<i><b>C</b><sub>P</sub></i>}}{\eqn{\boldsymbol{C}_P}} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)}
 
+\item{normalise_basis}{flag indicating whether to normalise the basis functions so that they reproduce a stochastic process with approximately constant variance spatially}
+
 \item{fs_model}{if "ind" then the fine-scale variation is independent at the BAU level. Only the independent model is allowed for now, future implementation will include CAR/ICAR (in development)}
 
 \item{vgm_model}{(applicable only if \code{response} = "gaussian") an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm}. This object contains the variogram model that will be fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified, the variogram used is \code{gstat::vgm(1, "Lin", d, 1)}, where \code{d} is approximately one third of the maximum distance between any two data points}
@@ -137,8 +140,6 @@ SRE.fit(
 \item{simple_kriging_fixed}{logical indicating whether one wishes to commit to simple kriging at the fitting stage: If \code{TRUE}, model fitting is faster, but the option to conduct universal kriging at the prediction stage is removed}
 
 \item{...}{other parameters passed on to \code{auto_basis()} and \code{auto_BAUs()} when calling \code{FRK()}, or the user specified function \code{optimiser()} when calling \code{FRK()} or \code{SRE.fit()}}
-
-\item{normalise_basis}{flag indicating whether to normalise the basis functions so that they reproduce a stochastic process with approximately constant variance spatially}
 
 \item{include_fs}{(applicable only if \code{method} = "TMB") flag indicating whether the fine-scale variation should be included in the model}
 

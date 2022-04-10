@@ -96,7 +96,7 @@
     k_Z_present   <- all(sapply(data, function(l) "k_Z" %in% names(l@data)))
 
     if (!k_BAU_present && !k_Z_present) {
-      stop("For binomial or negative-binomial data, the known constant size parameters (e.g., the number of trials or the target number of 'successes') must be provided with either the observations or the BAUs (see Section 2.5 of the FRK v2 paper for details).")
+      stop("For binomial or negative-binomial data, the known constant size parameters (e.g., the number of trials or the target number of 'successes') must be provided with either the observations (as a field called 'k_Z') or the BAUs (as a field called 'k_BAU'). See Section 2.5 of the FRK v2 paper for details on the treatment of these size parameters.")
     } else if (k_BAU_present && k_Z_present) {
       cat("You have provided the size parameter with both the observations and the BAUs: Only one set of size parameters will be used in the model fitting stage (see Section 2.5 of the FRK v2 paper for details).\n")
     }

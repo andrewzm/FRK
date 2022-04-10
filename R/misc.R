@@ -1,32 +1,32 @@
-## #' Link and inverse-link function generator.
-## #'
-## #' Create the link function \eqn{g}  and inverse-link function \eqn{\psi},
-## #' which link the conditional mean of the data \eqn{\mu} to the latent
-## #' geostatistical process \eqn{Y} such that \eqn{g(\mu) = Y} and
-## #' \eqn{\mu = \psi(Y)}, respectively.
-## #'
-## #' For families lacking a "known constant" parameter,
-## #' \code{.link_fn} generates the functions linking
-## #' the conditional mean of the data \eqn{\mu} to the latent
-## #' geostatistical process \eqn{Y}. However, for families with a "known constant"
-## #' parameter (such as the "binomial" and "negative-binomial"), \code{.link_fn} generate the functions linking
-## #' the probability parameter \eqn{p} to the latent
-## #' geostatistical process \eqn{Y}, and then the parameter \eqn{p} to the conditional mean \eqn{\mu}.
-## #'
-## #' @param kind A character string indicating which kind of link function is desired. 
-## #' Valid values are 
-## #' \describe{
-## #'   \item{\code{"Y_to_mu"}}{Provides the function \eqn{\psi} such that \eqn{\mu = \psi(Y)}.}
-## #'   \item{\code{"mu_to_Y"}}{Provides the function \eqn{g} such that \eqn{g(\mu) = Y}.}
-## #'   \item{\code{"Y_to_prob"}}{Provides the function \eqn{\zeta} such that \eqn{p = \zeta(Y)}.}
-## #'   \item{\code{"prob_to_Y"}}{Provides the function \eqn{h} such that \eqn{h(p) = Y}.}
-## #'   \item{\code{"prob_to_mu"}}{Provides the function \eqn{\chi} such that \eqn{\mu = \chi(p)}.}
-## #'   \item{\code{"mu_to_prob"}}{Provides the function \eqn{f} such that \eqn{f(\mu) = p}.}
-## #' }
-## #' Note that the latter four values are relevant only to the binomial and negative-binomial distributions with logit, probit, or cloglog link functions. 
-## #' @param link A character string indicating the assumed link function. \emph{Not} required if \code{kind} is \code{"prob_to_mu"} or \code{"mu_to_prob"}. 
-## #' @param response A character string indicating the assumed response distribution. \emph{Only} required if \code{kind} is \code{"prob_to_mu"} or \code{"mu_to_prob"}.
-## #' @return A function.
+## Link and inverse-link function generator.
+##
+## Create the link function \eqn{g}  and inverse-link function \eqn{\psi},
+## which link the conditional mean of the data \eqn{\mu} to the latent
+## geostatistical process \eqn{Y} such that \eqn{g(\mu) = Y} and
+## \eqn{\mu = \psi(Y)}, respectively.
+##
+## For families lacking a "known constant" parameter,
+## \code{.link_fn} generates the functions linking
+## the conditional mean of the data \eqn{\mu} to the latent
+## geostatistical process \eqn{Y}. However, for families with a "known constant"
+## parameter (such as the "binomial" and "negative-binomial"), \code{.link_fn} generate the functions linking
+## the probability parameter \eqn{p} to the latent
+## geostatistical process \eqn{Y}, and then the parameter \eqn{p} to the conditional mean \eqn{\mu}.
+##
+## @param kind A character string indicating which kind of link function is desired. 
+## Valid values are 
+## \describe{
+##   \item{\code{"Y_to_mu"}}{Provides the function \eqn{\psi} such that \eqn{\mu = \psi(Y)}.}
+##   \item{\code{"mu_to_Y"}}{Provides the function \eqn{g} such that \eqn{g(\mu) = Y}.}
+##   \item{\code{"Y_to_prob"}}{Provides the function \eqn{\zeta} such that \eqn{p = \zeta(Y)}.}
+##   \item{\code{"prob_to_Y"}}{Provides the function \eqn{h} such that \eqn{h(p) = Y}.}
+##   \item{\code{"prob_to_mu"}}{Provides the function \eqn{\chi} such that \eqn{\mu = \chi(p)}.}
+##   \item{\code{"mu_to_prob"}}{Provides the function \eqn{f} such that \eqn{f(\mu) = p}.}
+## }
+## Note that the latter four values are relevant only to the binomial and negative-binomial distributions with logit, probit, or cloglog link functions. 
+## @param link A character string indicating the assumed link function. \emph{Not} required if \code{kind} is \code{"prob_to_mu"} or \code{"mu_to_prob"}. 
+## @param response A character string indicating the assumed response distribution. \emph{Only} required if \code{kind} is \code{"prob_to_mu"} or \code{"mu_to_prob"}.
+## @return A function.
 .link_fn <- function (kind, link, response) {
   
   if (kind == "Y_to_mu") {
@@ -146,22 +146,22 @@ nasa_palette <- c("#03006d","#02008f","#0000b6","#0001ef","#0000f6","#0428f6","#
 }
 
 
-## #' Test equality within a given tolerance.
-## #'
-## #' Tests equality between objects \code{x} and \code{y} (within a given tolerance, \code{tol}).
-## #' The primary purpose of this function is to avoid deeming objects to be unequal if they differ
-## #' by some very tiny amount due to floating point inaccuracies.
-## #' Of particular note is that the function can accept a matrix argument for \code{x} and a single numeric
-## #' for \code{y}, and the output will be a matrix with elements 1 and 0 if elements of \code{x} are equal to
-## #' \code{y} or not, respectively; i.e., it does elementwise comparisons.
-## #'
-## #' @param x \code{R} object.
-## #' @param y \code{R} object we wish to compare to \code{x}.
-## #' @param tol Tolerance.
-## #' @return If \code{x} and \code{y} are single numbers, then the function
-## #' returns 1 if \code{x} and \code{y} are equal (within \code{tol}), and 0
-## #' otherwise. However matrices may also be passed, in which case the function
-## #' returns a matrix of equal size with elementwise comparisons.
+## Test equality within a given tolerance.
+##
+## Tests equality between objects \code{x} and \code{y} (within a given tolerance, \code{tol}).
+## The primary purpose of this function is to avoid deeming objects to be unequal if they differ
+## by some very tiny amount due to floating point inaccuracies.
+## Of particular note is that the function can accept a matrix argument for \code{x} and a single numeric
+## for \code{y}, and the output will be a matrix with elements 1 and 0 if elements of \code{x} are equal to
+## \code{y} or not, respectively; i.e., it does elementwise comparisons.
+##
+## @param x \code{R} object.
+## @param y \code{R} object we wish to compare to \code{x}.
+## @param tol Tolerance.
+## @return If \code{x} and \code{y} are single numbers, then the function
+## returns 1 if \code{x} and \code{y} are equal (within \code{tol}), and 0
+## otherwise. However matrices may also be passed, in which case the function
+## returns a matrix of equal size with elementwise comparisons.
 ## Examples:
 ## Note that .equal_within_tol is not exported, so it cannot be used in the 
 ## usual roxygen @examples format. We could use FRK:::.equal_within_tol, 
@@ -180,17 +180,17 @@ nasa_palette <- c("#03006d","#02008f","#0000b6","#0001ef","#0000f6","#0428f6","#
 
 
 
-## #' Computation and concatenation of percentiles to a dataframe.
-## #'
-## #' Computes the percentiles or HPD interval bounds at each prediction location and appends 
-## #' the result to \code{data}. Note that we use percentiles rather than quantiles
-## #' because we including a "dot" (corresponding to the decimal place) in the 
-## #' dataframe column name may cause issues. 
-## #'
-## #' @param data The dataframe we will append percentiles to; the number of rows of the matrices in \code{MC} and  in \code{data} must be equal
-## #' @param MC List of matrices containing Monte Carlo samples
-## #' @param percentiles a vector of scalars in [0, 100] specifying the desired percentiles; if \code{percentiles = NULL}, no percentiles are computed 
-## #' @return The dataframe \code{data} with appended percentiles
+## Computation and concatenation of percentiles to a dataframe.
+##
+## Computes the percentiles or HPD interval bounds at each prediction location and appends 
+## the result to \code{data}. Note that we use percentiles rather than quantiles
+## because we including a "dot" (corresponding to the decimal place) in the 
+## dataframe column name may cause issues. 
+##
+## @param data The dataframe we will append percentiles to; the number of rows of the matrices in \code{MC} and  in \code{data} must be equal
+## @param MC List of matrices containing Monte Carlo samples
+## @param percentiles a vector of scalars in [0, 100] specifying the desired percentiles; if \code{percentiles = NULL}, no percentiles are computed 
+## @return The dataframe \code{data} with appended percentiles
 .concat_percentiles_to_df <- function (data, MC, percentiles) {
   
   if (!is.null(percentiles)) {
@@ -346,106 +346,70 @@ nasa_palette <- c("#03006d","#02008f","#0000b6","#0001ef","#0000f6","#0428f6","#
 }
 
 
-## #' Neighbour matrix.
-## #'
-## #' Creates a matrix \eqn{A} with elements \eqn{A_{i, j}} equal to 1 if basis
-## #' functions i and j (i not equal to j) are first order neighbours, 1/2 if they are second order neighbours, and so on.
-## #' Neighbours with a larger order than specified by \code{order} have 0 in this matrix.
-## #' The diagonal elements of \eqn{A} (i.e. \eqn{A_{i, i}}) indicate the row sums (if 
-## #' the \code{order == 1}, then it is the totalnumber of first order neighbours associated with basis function i).
-## #'
-## #' This function is only designed for basis functions
-## #' at \emph{one resolution}. It also assumes the basis functions are in a
-## #' regularly-spaced lattice; the shape of the lattice is not important, however
-## #' there \emph{must} be constant spacing between basis functions in a given
-## #' direction (horizontal and vertical spacing can be different).
-## #'
-## #' @seealso \code{\link{.sparse_Q}}, \code{\link{.sparse_Q_block_diag}}
-## #'
-## #' @param df a dataframe containing the spatial coordinates
-## #' @param order If order == 1, only first order neighbours are considered. If order == 2, second order neighbours are also considered, and so on
-## #' @param diag_neighbours Indicates whether to consider the diagonal neighbours. If FALSE (default), only the horizontal and vertical neighbours are considered
-## #' @return A "neighbour" matrix with element (i, j), for i not equal to j, equal to 1/l if basis functions i and j are lth order neighbours (provided \code{l <= order}), and 0 otherwise. Diagonal elements indicate the row sums
-.neighbour_matrix <- function(df, order = 1, diag_neighbours = FALSE) {
+## Adjacency (neighbour) matrix for a single dimension
+.A <- function(n) {
+  i <- c(rep(1, 2), rep(2:(n - 1), each = 3), rep(n, 2))
+  j <- c(1, 2, c(outer(1:3, 0:(n - 3), "+")), n - 1, n)
+  sparseMatrix(i = i, j = j, x = 1)
+}
 
 
-  A <- matrix(0, nrow = nrow(df), ncol = nrow(df))
+## Neighbour matrix.
+##
+## Creates a matrix \eqn{A} with elements \eqn{A_{i, j}} equal to 1 if basis
+## functions i and j (i not equal to j) are first order neighbours and zero otherwise. 
+## The diagonal elements of \eqn{A} (i.e., \eqn{A_{i, i}}) indicate the row 
+## sums of the matrix, that is, the total number of first order neighbours 
+## associated with the ith basis function.
+##
+## This function is only designed for basis functions
+## at \emph{one resolution}. It also assumes the basis functions are in a
+## rectangular lattice.
+##
+## @seealso \code{\link{.sparse_Q}}, \code{\link{.sparse_Q_block_diag}}
+##
+## @param df a data.frame containing the centroids of the basis functions
+## @return A "neighbour" (adjacency) matrix.
+.neighbour_matrix <- function(df) {
   
-  ## absolute difference in each dimension for each knot
-  abs_diff <- lapply(df, function(x) abs(outer(x, x, "-")))
+  # Get the number of unique basis function locations in each spatial dimension
+  n <- sapply(df, function(x) length(unique(x)))
+  if (length(n) < 2) stop(".neighbour_matrix() assumes at least two spatial dimensions")
   
-  ## Vectors containing all x and y distances. 
-  ## Note that the first elements in each vector is 0. 
-  ## Note also that we only use 1 row from the abs_diff matrices (this helps 
-  ## to prevents problems with unique() and floating point accuracy and is a 
-  ## bit faster)
-  distances <- lapply(abs_diff, function(X) sort(unique(X[1, ])))
-
-  for (current_order in 1:order) { ## Order is experimental, and is hard-coded to be 1 for now
-    
-    ## Extract the smallest distance which is not zero, provided the basis functions 
-    ## are not in a straight line. 
-    ## If the basis functions have the same coordinate in a given dimension, the 
-    ## corresponding entry in distances will contain only a single element (0), 
-    ## so x[i + 1] doesn't work (results in NA). 
-    min_d <- lapply(distances, function(x) if(length(x) == 1) 0 else x[current_order + 1])
-
-    ## Find the neighbours. This is based on the idea that, provided the basis
-    ## functions are regularly spaced, neighbours in a given dimension should be 
-    ## separated by the minimum distance between basis functions of that dimension (condition1), 
-    ## and have the same coordinates for the other dimensions (condition2). 
-    d <- length(abs_diff) # number of spatial coordinates
-    neighbours <- lapply(seq_along(abs_diff), function(i) {
-      condition1 <- .equal_within_tol(abs_diff[[i]], min_d[[i]])
-      if (d > 1) {
-        condition2 <- lapply((1:d)[-i], function(j) .equal_within_tol(abs_diff[[j]], 0))
-        condition2 <- Reduce("&", condition2) # Convert list of matrices to a single matrix
-      } else {
-        condition2 <- TRUE
-      }
-      return(condition1 & condition2)
-    })
-    
-    ## Consider the diagonal neighbours, if specified.
-    if (diag_neighbours == TRUE) {
-      ## For basis-functions to be diagonal neighbours, they need to have the minimum
-      ## (non-zero distance) between them in each spatial coordinate.
-      diagonal_neighbours <- lapply(seq_along(abs_diff), function(i) {
-        .equal_within_tol(abs_diff[[i]], min_d[[i]])
-      })
-     
-      diagonal_neighbours <-  Reduce("&", diagonal_neighbours) # Convert list of matrices to a single matrix
-      ## Update A
-      A <- A + 1/current_order * diagonal_neighbours
+  # Check that the lattice of basis functions is indeed rectangular
+  if (prod(n) != nrow(df)) stop(".neighbour_matrix() requires a fully-observed rectangular array of basis functions; if the basis functions were constructed using auto_basis(), please set prune = 0.")
+  
+  # Adjacency matrix for the first two spatial dimensions
+  A <- .A(n[1]) %x% Diagonal(n[2]) + Diagonal(n[1]) %x% .A(n[2]) 
+  
+  # If we have more than two spatial dimensions, recursively compute the Kronecker sum 
+  if (length(n) > 2) {
+    for (i in 3:length(n)) {
+      A <- A %x% Diagonal(n[i]) + Diagonal(nrow(A)) %x% .A(n[i])
     }
-    ## Update neighbour matrix (with zeros along the diagonal)
-    ## We weight the neighbours by their order.
-    A <- A + 1/current_order * Reduce("+", neighbours)
   }
   
-  ## Add the sums of each row to the diagonal (required for use in the 
-  ## precision matrix computation later)
+  diag(A) <- 0
   diag(A) <- rowSums(A)
   
   return(A)
 }
 
 
-
-## #' Sparse precision matrix.
-## #'
-## #' Creates a sparse precision matrix \eqn{Q} with off diagonal elements equal
-## #' to -1 if the basis functions are neighbours, and zero otherwise.
-## #' The diagonal elements are equal to the number of neighbours for that basis
-## #' function, plus some amount given by \code{kappa}.
-## #'
-## #' @param A "neighbour" matrix with element (i, j), for i not equal to j,
-## #' equal to 1 if basis functions i and j are neighbours, and 0 otherwise,
-## #' diagonal elements indicating the number of neighbours for that basis function.
-## #' @param kappa Quantity to add to the diagonal elements. This must be positive if Q is to be positive definite.
-## #' @param rho Quantity to multiply matrix by. This must be positive if Q is to be positive definite.
-## #' @return A sparse precision matrix of class \code{dgCMatrix}.
-## #' @seealso \code{\link{.neighbour_matrix}}, \code{\link{.sparse_Q_block_diag}}
+## Sparse precision matrix.
+##
+## Creates a sparse precision matrix \eqn{Q} with off diagonal elements equal
+## to -1 if the basis functions are neighbours, and zero otherwise.
+## The diagonal elements are equal to the number of neighbours for that basis
+## function, plus some amount given by \code{kappa}.
+##
+## @param A "neighbour" matrix with element (i, j), for i not equal to j,
+## equal to 1 if basis functions i and j are neighbours, and 0 otherwise,
+## diagonal elements indicating the number of neighbours for that basis function.
+## @param kappa Quantity to add to the diagonal elements. This must be positive if Q is to be positive definite.
+## @param rho Quantity to multiply matrix by. This must be positive if Q is to be positive definite.
+## @return A sparse precision matrix of class \code{dgCMatrix}.
+## @seealso \code{\link{.neighbour_matrix}}, \code{\link{.sparse_Q_block_diag}}
 .sparse_Q <- function(A, kappa, rho) {
   
   Q <- -A
@@ -457,43 +421,39 @@ nasa_palette <- c("#03006d","#02008f","#0000b6","#0001ef","#0000f6","#0428f6","#
 }
 
 
-
-## #' Block-diagonal sparse precision matrix.
-## #'
-## #' Creates a block-diagonal sparse precision matrix, where the blocks are created
-## #' using \code{sparse_Q}.
-## #'
-## #' @inheritParams .sparse_Q
-## #' @inheritParams .neighbour_matrix
-## #' @param df dataframe containing the spatial coordinates (named "loc1" and "loc2", etc.) and a column indicating the resolution of each basis function (named "res").
-## #' @return list containing the sparse block-diagonal precision matrix (Q) of class "dgCMatrix", and the number of non-zero elements (nnz) at each resolution.
-## #' @seealso \code{\link{.sparse_Q}}, \code{\link{.neighbour_matrix}}
-.sparse_Q_block_diag <- function(df, kappa, rho, order = 1, diag_neighbours = FALSE) {
+## Block-diagonal sparse precision matrix.
+##
+## Creates a block-diagonal sparse precision matrix, where the blocks are created
+## using \code{.sparse_Q}.
+##
+## @inheritParams .sparse_Q
+## @inheritParams .neighbour_matrix
+## @param df data.frame containing the spatial coordinates of the basis function centroids (named "loc1" and "loc2", etc.) and a column indicating the resolution of each basis function (named "res").
+## @return list containing the sparse block-diagonal precision matrix (Q) of class "dgCMatrix", and the number of non-zero elements (nnz) at each resolution.
+## @seealso \code{\link{.sparse_Q}}, \code{\link{.neighbour_matrix}}
+.sparse_Q_block_diag <- function(df, kappa, rho) {
 
   if (!("res" %in% names(df)))
-    stop("To construct the sparse precision matrix, the basis-function dataframe must contain a column named res, indicating the resolution of the corresponding basis function.")
+    stop("To construct the sparse precision matrix, the basis-function data.frame must contain a column named res, indicating the resolution of the corresponding basis functions.")
   nres <- length(unique(df$res))
   if (length(kappa) == 1) kappa <- rep(kappa, nres)
   if (length(rho) == 1) rho <- rep(rho, nres)
-  
+
   ## Find the location columns (should be called loc1, loc2, etc.)
   loc_idx <- grep("loc", names(df))
-  
+
   ## Construct the blocks
   Q_matrices  <- list()
   nnz <- c()
-    for (i in unique(df$res)) {
-
-    A_i <- .neighbour_matrix(df[df$res == i, loc_idx], order = order, diag_neighbours = diag_neighbours)
-    Q_matrices[[i]] <- .sparse_Q(A = A_i,
-                                 kappa = kappa[i],
-                                 rho = rho[i])
+  for (i in unique(df$res)) {
+    A_i <- .neighbour_matrix(df[df$res == i, loc_idx])
+    Q_matrices[[i]] <- .sparse_Q(A = A_i, kappa = kappa[i], rho = rho[i])
     nnz[i] <- Matrix::nnzero(Q_matrices[[i]]) # note that nnzero does not count explicit zeros
   }
-  
+
   ## Block diagonal
   Q <- Matrix::bdiag(Q_matrices)
-  
+
   return(list(Q = Q, nnz = nnz))
 }
 

@@ -758,7 +758,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   
   ## Don't want to pass in variance components that are "too small" or "too big". 
   ## This has caused TMB to explode and cause R to crash in the past, with no 
-  ## explanation as to why the crash occured.
+  ## explanation as to why the crash occurred.
   parameters$logsigma2 <- pmin(pmax(parameters$logsigma2, -4), 8)
   parameters$logtau <- pmin(pmax(parameters$logtau, -4), 8)
   parameters$logdelta <- pmin(pmax(parameters$logdelta, -4), 8)
@@ -785,6 +785,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     stop("Internal error: K_type is not one of neighbour, block-exponential, or precision-block-exponential. Please contact the package maintainer.")
 
   ## TMB model compilation
+  cat("Making the AD fun for TMB...\n")
   obj <- MakeADFun(data = data,
                    parameters = parameters,
                    random = c("random_effects"),
@@ -794,7 +795,6 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   ## The following means we want to print every parameter passed to obj$fn.
   obj$env$tracepar <- opts_FRK$get("verbose")
 
-  
   cat("Optimising with TMB...\n")
 
   ## The optimiser should have arguments: start, objective, gradient. 
@@ -807,7 +807,6 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   
   cat("Optimisation completed.\n")
 
-  
   # ---- Joint precision/covariance matrix of random effects ----
   
   cat("Extracting estimates of the parameters and the joint precision matrix of the random effects from TMB...\n")
@@ -1218,7 +1217,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     data$r_t <- 1
   }
   
-  data$spatial_BAU_id <-  (obsidx - 1) %% ns
+  data$spatial_BAU_id <- (obsidx - 1) %% ns
   data$r_si <- as.vector(table(spatial_basis@df$res))
   
   ## Data which depend on K_type: provide dummy data (can't provide nothing)
