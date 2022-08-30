@@ -94,8 +94,8 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   }
   
   ## Call internal prediction functions depending on which method is used
-  if (object@method == "EM") {
-    pred_locs <- .SRE.predict_EM(Sm = object,              # Fitted SRE model
+    if (object@method == "EM") {
+      pred_locs <- .SRE.predict_EM(Sm = object,              # Fitted SRE model
                                  obs_fs = obs_fs,             # Case 1 or Case 2?
                                  newdata = newdata,           # Prediction polygons
                                  pred_time = pred_time,       # Prediction time points
