@@ -1,6 +1,14 @@
 #' @rdname loglik
 #' @export
 setMethod("loglik", signature="SRE", function(object) {
+  .Deprecated("logLik")
+  return(logLik(object))
+  
+})
+
+#' @rdname SRE
+#' @export
+setMethod("logLik", signature="SRE", function(object) {
   # This is structured this way so that extra models for fs-variation
   # can be implemented later
   if (length(object@log_likelihood) != 0) {
@@ -12,10 +20,27 @@ setMethod("loglik", signature="SRE", function(object) {
   }
 })
 
+#' @rdname SRE
+#' @export
+setMethod("nobs", signature="SRE", function(object, ...) length(object@Z))
+
 #' @rdname observed_BAUs
 #' @export
 setMethod("observed_BAUs", signature(object = "SRE"), function (object) {
   return(object@obsidx)
+})
+
+#' @rdname SRE
+#' @export
+setMethod("binned_data", signature = "SRE", function(object) {
+  # This will contain the binned data for each BAU, and will
+  # feature many missing values in the case of point-referenced data.
+  Cmat_dgT <- .as(object@Cmat, "dgTMatrix")
+  obs_BAUs <- Cmat_dgT@j + 1 # BAUs associated with each observation
+  data_idx <- Cmat_dgT@i + 1 # data index
+  Z <- rep(NA, length(object@BAUs))
+  Z[obs_BAUs] <- object@Z[data_idx] # TODO delete this if the new method works without errors: Z[obs_BAUs] <- object@Z[, 1][data_idx]
+  return(Z)
 })
 
 ## this function is defined so that we can call it in SRE(), before an object of 
@@ -23,7 +48,7 @@ setMethod("observed_BAUs", signature(object = "SRE"), function (object) {
 ## Note that Cmat maps BAUs to the observations. The dimension of object@Cmat is
 ## (number of observations) * (number of BAUs).
 .observed_BAUs_from_Cmat <- function(Cmat) { 
-  return(unique(as(Cmat, "dgTMatrix")@j) + 1)
+  return(unique(.as(Cmat, "dgTMatrix")@j) + 1)
 }
 
 #' @rdname observed_BAUs
@@ -199,7 +224,8 @@ print.summary.SRE <- function(x, ...) {
 .est_obs_error <- function(sp_pts,variogram.formula,vgm_model = NULL,BAU_width = NULL) {
   
   ## Notify user (even if not verbose == TRUE)
-  cat("Fitting variogram for estimating measurement error...\n")
+  ## (after revision, now only notify user if verbose == TRUE)
+  if(opts_FRK$get("verbose")) cat("Fitting variogram for estimating measurement error...\n")
   
   ## Basic checks
   if(!is(variogram.formula,"formula"))

@@ -268,15 +268,10 @@ setGeneric("unobserved_BAUs", function(object)
 setGeneric("info_fit", function(object)
     standardGeneric("info_fit"))
 
-
-
-#' @title Retrieve log-likelihood
-#' @description Takes an object of class \code{SRE} and returns the log-likelihood function.
+#' @title (Deprecated) Retrieve log-likelihood
+#' @description This function is deprecated; please use \code{logLik}
 #' @param object object of class \code{SRE}
 #' @export
-#' @seealso \code{\link{FRK}} for more information on how to construct and fit an SRE model, and other available methods for an object of class SRE.
-#' @examples
-#' # See example in the help file for FRK
 setGeneric("loglik", function(object)
     standardGeneric("loglik"))
 
@@ -305,12 +300,36 @@ setGeneric("plot_spatial_or_ST", function(newdata, column_names,  map_layer=NULL
 ## INHERITED GENERICS
 
 #' @export
+setGeneric("logLik", function(object)
+  standardGeneric("logLik"))
+
+#' @export
 setGeneric("coef", function(object)
     standardGeneric("coef"))
 
 #' @export
 setGeneric("predict", function(object, ...)
     standardGeneric("predict"))
+
+#' @export
+setGeneric("fitted", function(object, ...)
+  standardGeneric("fitted"))
+
+#' @export
+setGeneric("residuals", function(object, ...)
+  standardGeneric("residuals"))
+
+#' @export
+setGeneric("nobs", function(object, ...)
+  standardGeneric("nobs"))
+
+#' @export
+setGeneric("AIC", function(object, ..., k = 2)
+  standardGeneric("AIC"))
+
+#' @export
+setGeneric("BIC", function(object, ...)
+  standardGeneric("BIC"))
 
 #' @title Plot predictions from FRK analysis 
 #' @description This function acts as a wrapper around 
@@ -393,4 +412,9 @@ setGeneric("BuildC", function(data,BAUs) standardGeneric("BuildC"))
 #' @noRd
 setGeneric("BuildD", function(G) standardGeneric("BuildD"))
 
-
+#' @title Retrieve the binned data. 
+#' @description Takes an object of class \code{SRE} and returns the observed data binned into the BAUs. The binned data will feature many missing values in the case of point-referenced data.  The binned data is in the same order as the BAUs, facilitating plotting. 
+#' @param object object of class \code{SRE}
+#' @noRd
+setGeneric("binned_data", function(object)
+  standardGeneric("binned_data"))

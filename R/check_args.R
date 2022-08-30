@@ -154,7 +154,7 @@
 ## Checks arguments for the SRE.fit() function. Code is self-explanatory
 .check_args2 <- function(n_EM, tol, lambda, method, print_lik, optimiser, 
                          response, K_type, link, fs_by_spatial_BAU, known_sigma2fs, 
-                         BAUs, taper, simple_kriging_fixed, ...) {
+                         BAUs, taper, simple_kriging_fixed, include_fs, ...) {
   
   if(!is.numeric(n_EM)) stop("n_EM needs to be an integer")
   if(!(n_EM <- round(n_EM)) > 0) stop("n_EM needs to be greater than 0")

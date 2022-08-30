@@ -37,6 +37,7 @@ FRK <- function(f,                     # formula (compulsory)
                 link = c("identity", "log", "sqrt", "logit", "probit", "cloglog", "inverse", "inverse-squared"),
                 optimiser = nlminb,    # Optimiser for fitting (applicable only if method = 'TMB')
                 fs_by_spatial_BAU = FALSE,
+                include_fs = TRUE,
                 known_sigma2fs = NULL, 
                 taper = NULL, 
                 simple_kriging_fixed = TRUE,
@@ -85,6 +86,7 @@ FRK <- function(f,                     # formula (compulsory)
     .check_args2(n_EM = n_EM, tol = tol, method = method, print_lik = print_lik, 
                  response = response, link = link, K_type = K_type, lambda = lambda,
                  optimiser = optimiser, fs_by_spatial_BAU = fs_by_spatial_BAU, 
+                 include_fs = include_fs,
                  known_sigma2fs = known_sigma2fs, BAUs = BAUs, taper = taper, 
                  simple_kriging_fixed = simple_kriging_fixed, ...)                      
 
@@ -115,7 +117,7 @@ FRK <- function(f,                     # formula (compulsory)
     ## Now construct the BAUs around this dataset
     if(is.null(BAUs)) {
 
-        cat("Constructing BAUs...\n")
+        if(opts_FRK$get("verbose")) cat("Constructing BAUs...\n")
         BAUs <- auto_BAUs(manifold = manifold, # Construct BAUs
                           data = data[[d]],    # Using the dataset with largest extent
                           ...)
@@ -130,7 +132,7 @@ FRK <- function(f,                     # formula (compulsory)
     }
 
     if(is.null(basis)) {
-        cat("Generating basis functions...\n")
+        if(opts_FRK$get("verbose")) cat("Generating basis functions...\n")
         tot_data <- sum(sapply(data,length))         # Total number of data points available
         if(K_type == "unstructured") {               # If unstructured then limit the
             max_sp_basis <- min(tot_data^(0.5),2000) # amount of basis functions to be sqrt
@@ -213,7 +215,8 @@ FRK <- function(f,                     # formula (compulsory)
              normalise_basis = normalise_basis,
              response = response, 
              link = link, 
-             fs_by_spatial_BAU = fs_by_spatial_BAU)                  
+             fs_by_spatial_BAU = fs_by_spatial_BAU, 
+             include_fs = include_fs)                  
 
     ## After constructing SRE model, fit it
     cat("Fitting SRE model...\n")

@@ -10,9 +10,10 @@ SRE.predict <- function(...) {
 #' @export
 setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = FALSE,
                                                pred_time = NULL, covariances = FALSE, 
-                                               n_MC = 400, type = "mean", k = NULL, 
+                                               nsim = 400, type = "mean", k = NULL, 
                                                percentiles = c(5, 95), 
-                                               kriging = "simple") {
+                                               kriging = "simple", 
+                                               conditional_fs = TRUE) {
   
   ## Note that the following code must be done before .check_args3() because it
   ## alters the input, rather than simpling throwing a warning or error. 
@@ -87,7 +88,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   ## compute the full covariance matrix. Note this by setting
   ## predict_BAUs to be FALSE
   if (!is.null(newdata)) {
-    tmp <- as(CP, "dgTMatrix")
+    tmp <- .as(CP, "dgTMatrix")
     if (!all(table(tmp@i) == 1))
       predict_BAUs <- FALSE
   }
@@ -100,20 +101,21 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                                  pred_time = pred_time,       # Prediction time points
                                  covariances = covariances,   # Compute covariances?
                                  CP = CP,                     # Polygon prediction matrix
-                                 predict_BAUs = predict_BAUs) # Are we predicting at BAUs?                   
+                                 predict_BAUs = predict_BAUs,) # Are we predicting at BAUs?                   
     
   } else if (object@method == "TMB") {
-    pred_locs <- .SRE.predict_TMB(M = object,               # Fitted SRE model
+    pred_locs <- .SRE.predict_TMB(object = object,               # Fitted SRE model
                                   newdata = newdata,           # Prediction polygons
                                   CP = CP,                     # Polygon prediction matrix
                                   predict_BAUs = predict_BAUs, # Are we predicting at BAUs?
                                   pred_time = pred_time,       # Prediction time points
-                                  n_MC = n_MC,                 # Desired number of MC simulations
+                                  nsim = nsim,                 # Desired number of MC simulations
                                   obs_fs = obs_fs,             # Case 1 or Case 2?
                                   type = type,                 # Whether we are interested in the "link" (Y-scale), "mean", "response"
                                   k = k,                       # Size parameter
                                   percentiles = percentiles,   # Desired percentiles of MC samples
-                                  kriging = kriging)          
+                                  kriging = kriging, 
+                                  conditional_fs = conditional_fs)          
   } 
   
   ## If the user provided irregular points (SpatialPoints* or STI*) to predict over, 
@@ -242,8 +244,8 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   if(is(newdata,"Spatial")) {
     
     ## The needed BAUs are the nonzero column indices of CZ and CP
-    needed_BAUs <- union(as(CP,"dgTMatrix")@j+1,
-                         as(CZ,"dgTMatrix")@j+1)
+    needed_BAUs <- union(.as(CP,"dgTMatrix")@j+1,
+                         .as(CZ,"dgTMatrix")@j+1)
     
     ## Filter the BAUs and the matrices
     BAUs <- BAUs[needed_BAUs,]
@@ -251,14 +253,6 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     CZ <- CZ[,needed_BAUs]
     Sm@S0 <- Sm@S0[needed_BAUs,]
   }
-  
-  # Deprecated:
-  # if(is(BAUs,"ST")){
-  #     needed_BAUs <- BAUs[,pred_time]$n
-  #     BAUs <- BAUs[,pred_time]
-  #     CP <- CP[,needed_BAUs]
-  #     CZ <- CZ[,needed_BAUs]
-  # }
   
   ## Retrieve the dependent variable name
   depname <- all.vars(Sm@f)[1]
@@ -274,7 +268,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   
   ## Set variables to make code more concise
   S0 <- Sm@S0
-  S0 <- as(S0,"dgCMatrix")   # ensure S0 is classified as sparse
+  S0 <- .as(S0,"dgCMatrix")   # ensure S0 is classified as sparse
   alpha <- Sm@alphahat
   K <- Sm@Khat
   sigma2fs <- Sm@sigma2fshat
@@ -311,7 +305,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
       tC_Ve_C <- t(CZ) %*% solve(Sm@Ve) %*% CZ +       # summary matrix
         0*.symDiagonal(ncol(CZ))              # Ensure zeros on diagonal
       Qx <- t(PI) %*% tC_Ve_C %*% PI + LAMBDAinv       # conditional precision matrix
-      chol_Qx <- cholPermute(as(Qx,"dgCMatrix"))       # permute and do Cholesky
+      chol_Qx <- cholPermute(.as(Qx,"dgCMatrix"))       # permute and do Cholesky
       ybar <- t(PI) %*%t(CZ) %*% solve(Sm@Ve) %*%      # Qx = ybar, see vignette
         (Sm@Z - CZ %*% X %*% alpha)
       x_mean <- cholsolve(Qx,ybar,perm=TRUE,           # solve Qx = ybar using permutations
@@ -417,45 +411,42 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   }
 }
 
-## #'@param CP polygon prediction matrix
-## #'@param predict_BAUs logical indicating whether or not we are predicting over the BAUs
-## #'@param pred_time vector of time indices at which prediction will be carried out. All time points are used if this option is not specified
-## #'@return A list object containing:
-## #'\describe{
-## #'  \item{newdata}{An object of class \code{newdata}, with predictions and prediction uncertainty at each prediction location of the latent \eqn{Y} process, the conditional mean of the data \eqn{\mu}, the probability of success parameter \eqn{\pi} (if applicable), and the response variable \eqn{Z}}
-## #'  \item{MC}{A list with each element being an \code{N * n_MC} matrix of Monte Carlo samples of the quantities specified by \code{type} (some combination of \eqn{Y}, \eqn{\mu}, \eqn{p} (if applicable), and \eqn{Z}) at each prediction location}
-## #'}
-.SRE.predict_TMB <- function(M, newdata, CP, predict_BAUs, pred_time, type, n_MC, 
-                             obs_fs, k, percentiles, kriging) {
+
+.SRE.predict_TMB <- function(object, newdata, CP, predict_BAUs, pred_time, type, nsim, 
+                             obs_fs, k, percentiles, kriging, conditional_fs) {
   
   ## Covariate design matrix at the BAU level
-  X     <- as(.extract_BAU_X_matrix(formula = M@f, BAUs = M@BAUs), "matrix")
-  obsidx <- observed_BAUs(M) # index of observed BAUs
-  p     <- length(M@alphahat)       # number of fixed regression effects
+  X     <- as(.extract_BAU_X_matrix(formula = object@f, BAUs = object@BAUs), "matrix")
+  obsidx <- observed_BAUs(object)        # index of observed BAUs
+  p     <- length(object@alphahat)       # number of fixed regression effects
   mstar <- length(obsidx)           # number of observed BAUs
-  r     <- nbasis(M)                # number of basis-function coefficients
-  ## Total number of random effects (fine-scale only included if include_fs = T)
-  s     <- r + mstar * M@include_fs 
+  r     <- nbasis(object)                # number of basis-function coefficients
   
-  ## Compute the Cholesky factor of the permuted precision matrix.
+  ## Total number of random effects (fine-scale only included if include_fs = T)
+  s     <- r + mstar * object@include_fs 
+  
   ## If we are doing universal kriging, use the full joint precision 
   ## matrix of the fixed and random effects. If we are doing simple kriging, 
   ## use only the random effect block of the precision matrix.
-  if (kriging == "universal") Q_posterior <- M@Q_posterior
-  if (kriging == "simple") {
-    if (M@simple_kriging_fixed) {
-      Q_posterior <- M@Q_posterior
+  if (kriging == "universal") {
+    Q_posterior <- object@Q_posterior
+  } else if (kriging == "simple") {
+    if (object@simple_kriging_fixed) {
+      Q_posterior <- object@Q_posterior
     } else {
-      Q_posterior <- M@Q_posterior[-(1:p), -(1:p)]
+      Q_posterior <- object@Q_posterior[-(1:p), -(1:p)]
     }
   } 
+
+  ## Compute the Cholesky factor of the permuted precision matrix.
   Q_L <- sparseinv::cholPermute(Q = Q_posterior)
   
   ## Generate Monte Carlo samples at all BAUs (or over arbitrary prediction 
   ## regions given in the argument newdata)
-  MC <- .MC_sampler(M = M, X = X, type = type, obs_fs = obs_fs, 
-                    n_MC = n_MC, k = k, Q_L = Q_L, obsidx = obsidx, 
-                    predict_BAUs = predict_BAUs, CP = CP, kriging = kriging)
+  MC <- .simulate(object = object, X = X, type = type, obs_fs = obs_fs, 
+                  nsim = nsim, k = k, Q_L = Q_L,  
+                  predict_BAUs = predict_BAUs, CP = CP, 
+                  kriging = kriging, conditional_fs = conditional_fs)
   
   ## We do not allow aggregation of the Y-process when predicting over arbitrary polygons
   if(!predict_BAUs) MC$Y_samples <- NULL
@@ -472,7 +463,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   
   ## If we are predicting over BAUs, newdata is NULL, so set it to the BAUs.
   ## Note that BAUs must be a Spatial*DataFrame, so coercion isn't really necessary.
-  if (predict_BAUs) newdata <- .Coerce_SpatialDataFrame(M@BAUs)
+  if (predict_BAUs) newdata <- .Coerce_SpatialDataFrame(object@BAUs)
   
   ## Now update newdata with the predictions, RMSPE, and percentiles. 
   ## (See https://datascience.stackexchange.com/a/8924 for a description of what this gsub is doing.)
@@ -497,132 +488,133 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     }
   }
   
-  # ## It is convenient to have the spatial coordinates in the @data slot of the
-  # ## returned newdata object. Only add those coordinates not already in the data.
-  # tmp <- which(!(colnames(coordinates(newdata)) %in% names(newdata@data)))
-  # if (length(tmp))
-  #   newdata@data <- cbind(newdata@data, coordinates(newdata)[, tmp]) 
-  
   ## Return the predictions and uncertainty summary (in newdata) and the MC samples (in MC)
   return(list(newdata = newdata, MC = MC))
 }
 
 
-## #'Monte Carlo sampling of the conditional mean of the data (a function of the
-## #'latent process Y).
-## #'
-## #'Computes a Monte Carlo sample of \eqn{Y}, the conditional mean of the data
-## #'\eqn{\mu = g^-1(Y)} (which is a deterministic function of Y), the response variable \eqn{Z}, and, for response-link
-## #'combinations to which it is applicable, the probability of success parameter
-## #'p. It does so for every BAU location. 
-## #'
-## #'For negative-binomial and binomial data, the \code{BAUs} slot of the \code{SRE} object must contain a field \code{k}, which is the known constant parameter for each BAU.
-## #'For negative-binomial data, the ith element of \code{k} indicates the number of failures until the experiment is stopped at the ith BAU.
-## #'For binomial data, the ith element of \code{k} indicates the number of trials at the ith BAU.
-## #'
-## #'
-## #' @param M An object of class \code{SRE}
-## #' @param X The design matrix of the covariates at the BAU level (often simply an Nx1 column vector of 1's)
-## #' @param type A character string (possibly vector) indicating the quantities which are the focus of inference. Note: unlike in the predict() function, \emph{all} computed quantities are returned. That is, the latent \eqn{Y} process samples are always provided; If \code{"mean"} \emph{OR} \code{"response"} is in \code{type}, then the samples of \eqn{Y}, the conditonal mean \eqn{\mu}, and the probability parameter (if applicable) are provided. If \code{"response"} is in \code{type}, the response variable \eqn{Z} samples, and the samples of all other quantities are provided
-## #' @param n_MC A postive integer indicating the number of MC samples at each location
-## #' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error; indicated by \code{obs_fs = TRUE}) or in the process model (process fine-scale variation; indicated by \code{obs_fs = FALSE}, default). For non-Gaussian data models, and/or non-identity link functions, if \code{obs_fs = TRUE}, then the fine-scale variation is removed from the latent process \eqn{Y}; however, they are re-introduced for computation of the conditonal mean \eqn{\mu} and response variable \eqn{Z}
-## #' @param k vector of size parameters at each BAU (applicable only for binomial and negative-binomial data)
-## #' @param Q_L A list containing the Cholesky factor of the permuted precision matrix (stored as \code{Q$Qpermchol}) and the associated permutationmatrix (stored as \code{Q_L$P})
-## #' @param predict_BAUs logical, indicating whether we are predicting over the BAUs
-## #' @param CP the prediction incidence matrix
-## #' @param kriging whether we wish to perform "simple" or "universal" kriging
-## #' @param obsidx A vector containing the indices of observed BAUs
-## #' @return A list containing Monte Carlo samples of various quantities of interest. The list elements are (N x n_MC) matrices, whereby the ith row of each matrix corresponds to \code{n_MC} samples of the given quantity at the ith BAU. The available quantities are:
-## #' \describe{
-## #'   \item{Y_samples}{Samples of the latent, Gaussian scale Y process}
-## #'   \item{mu_samples}{Samples of the conditional mean of the data}
-## #'   \item{prob_samples}{Samples of the probability of success parameter (only for the relevant response distributions)}
-## #'   \item{Z_samples}{Samples of the response variable}
-## #' }
-.MC_sampler <- function(M, X, type, n_MC, obs_fs, k, Q_L, obsidx, predict_BAUs, CP, kriging){
-  
-  ## Some matrices evaluated at observed BAUs only
-  X_O <- .constructX_O(M) 
-  S_O <- .constructS_O(M) 
-  
-  MC <- list()              
-  N   <- nrow(M@S0)   
-  mstar <- length(obsidx)
-  r   <- nbasis(M)   
-  
-  ## Number of fixed and random effects
-  p <- length(M@alphahat)
-  s <- r + mstar * M@include_fs
+simulate_xi <- function(object, nsim, type) {
   
   ## number of spatial and temporal BAUs
-  if (is(M@basis,"TensorP_Basis")) {
-    ns <- length(M@BAUs@sp)
-    nt <- length(unique(M@BAUs@endTime))
+  if (is(object@basis,"TensorP_Basis")) {
+    ns <- length(object@BAUs@sp)
+    nt <- length(unique(object@BAUs@endTime))
   } else {
-    ns <- length(M@BAUs)
+    ns <- length(object@BAUs)
   }
   
-  # ---- Generate samples from (eta', xi_O')' ----
+  N     <- nrow(object@S0)   
+  mstar <- length(observed_BAUs(object))
   
-  ## Must generate samples jointly, as elements of alpha, eta, and xi_O are correlated.
-  ## First, construct the mean vector containing all fixed effects 
+  if (type == "observed") {
+    f <- observed_BAUs 
+    nsim <- mstar
+  } else {
+    f <- unobserved_BAUs
+    nsim <- N - mstar
+  }
+  
+  
+  if (object@fs_by_spatial_BAU) {
+    idx <- f(object)
+    spatial_BAU_id <- ((idx - 1) %% ns) + 1
+    sigma2fs <- object@sigma2fshat[spatial_BAU_id]
+  } else {
+    sigma2fs <- object@sigma2fshat
+  }
+  
+  xi <- rnorm(nsim * nsim, mean = 0, sd = sqrt(sigma2fs)) %>% 
+    matrix(nrow = nsim, ncol = nsim)
+  
+  return(xi)
+}
+
+
+.simulate <- function(object, X, type, nsim, obs_fs, k, Q_L, predict_BAUs, CP, kriging, conditional_fs){
+  
+  ## Design matrices evaluated at observed BAUs only
+  X_O <- .constructX_O(object) 
+  S_O <- .constructS_O(object) 
+
+  obsidx <- observed_BAUs(object)        # index of observed BAUs
+  
+  MC <- list()              
+  N   <- nrow(object@S0)   
+  mstar <- length(obsidx)
+  r   <- nbasis(object)   
+  
+  ## Number of fixed and random effects
+  p <- length(object@alphahat)
+  s <- r + mstar * object@include_fs
+
+  # ---- Define alpha and generate samples from (eta', xi_O')' ----
+  
+  ## Construct the posterior mean of all random effects (include the regression
+  ## coefficients, alpha, if kriging = "universal").
   ## (if kriging == "universal"), and random effects; the basis function random 
-  ## weights, and the fine-scale variation (if M@include_fs). 
-  mu_posterior <- if (kriging == "universal") as.numeric(M@alphahat) else vector()
-  mu_posterior <- c(mu_posterior, as.numeric(M@mu_eta))
-  if (M@include_fs) mu_posterior <- c(mu_posterior, as.numeric(M@mu_xi))
+  ## weights, and the fine-scale variation (if object@include_fs). 
+  posterior_mean <- if (kriging == "universal") as.numeric(object@alphahat) else vector()
+  posterior_mean <- c(posterior_mean, as.numeric(object@mu_eta))
+  if (object@include_fs) {
+    
+    if (conditional_fs) {
+      # conditioning on fitted random effects: use the posterior mean of fine-scale effects
+      posterior_mean <- c(posterior_mean, as.numeric(object@mu_xi))
+    } else {
+      # zero mean marginally
+      posterior_mean <- c(posterior_mean, rep(0, mstar))
+    }
+   
+  } 
   
-  ## Now make a matrix with n_MC columns, whose columns are the mean vector repeated.
-  mu_posterior_Matrix  <- matrix(rep(mu_posterior, times = n_MC), ncol = n_MC)
-  
-  ## Finally, generate samples from Gau(0, 1) distribution, and transform this 
+  ## Generate samples from Gau(0, 1) distribution, and transform this 
   ## standard normal vector to one that has the desired posterior precision matrix.
-  z <- matrix(rnorm(length(mu_posterior) * n_MC), 
-              nrow = length(mu_posterior), ncol = n_MC)
+  z <- matrix(rnorm(length(posterior_mean) * nsim), 
+              nrow = length(posterior_mean), ncol = nsim)
   U <- Matrix::t(Q_L$Qpermchol) # upper Cholesky factor of permuted joint posterior precision matrix 
-  x <- solve(U, z)        # x ~ Gau(0, A), where A is the permuted precision matrix i.e. A = P'QP
-  y <- Q_L$P %*% x        # y ~ Gau(0, Q^{-1})
-  mu_posterior <- as.matrix(y + mu_posterior_Matrix) # add the mean to y
+  x <- solve(U, z)              # x ~ Gau(0, A), where A is the permuted precision matrix i.e. A = P'QP
+  y <- Q_L$P %*% x              # y ~ Gau(0, Q^-1)
+  y <- as.matrix(y)
+    
+  ## Add the mean vector to the simulated random effects.
+  samples <- y + matrix(rep(posterior_mean, times = nsim), ncol = nsim) 
   
-  ## Separate the MC samples of each quantity
+  ## Separate the MC samples of each quantity 
   if (kriging == "universal") {
-    alpha <- mu_posterior[1:p, , drop = FALSE]
-    eta   <- mu_posterior[(p + 1):(p + r), ]
-    if (M@include_fs)
-      xi_O  <- mu_posterior[(p + r + 1):(p + r + mstar), ]
-  } else if (kriging == "simple") {
-    eta   <- mu_posterior[1:r, ]
-    if (M@include_fs)
-      xi_O  <- mu_posterior[(r + 1):(r + mstar), ]
+    alpha <- samples[1:p, , drop = FALSE]
+    eta   <- samples[(p + 1):(p + r), ]
+  } else {
+    eta <- samples[1:r, ]
+  }
+  
+  ## Observed fine-scale variation:
+  if (object@include_fs) {
+    if (conditional_fs) {
+      if (kriging == "universal") {
+        xi_O  <- samples[(p + r + 1):(p + r + mstar), ]
+      } else {
+        xi_O  <- samples[(r + 1):(r + mstar), ]
+      }
+    } else {
+      xi_O <- simulate_xi(object, nsim = nsim, type = "observed")
+    }
   }
   
   ## We now have several matrices of Monte Carlo samples:
   ## alpha (if kriging = "universal"), eta, and xi_O (if include_fs = TRUE).
-  ## row i of eta corresponds to n_MC MC samples of eta_i,
-  ## row i of xi_O corresponds to n_MC MC samples of the fine-scale variation at the ith observed location.
+  ## row i of eta corresponds to nsim MC samples of eta_i,
+  ## row i of xi_O corresponds to nsim MC samples of the fine-scale variation at the ith observed location.
   
   # ---- Generate samples from xi_U ----
   
   ## This is straightforward as each element of xi_U is independent of
   ## all other random effects in the model.
-  ## All we have to do is make an (N-m) x n_MC matrix of draws from the
+  ## All we have to do is make an (N-m) x nsim matrix of draws from the
   ## Gaussian distribution with mean zero and variance equal to the fine-scale variance.
-  if (M@include_fs) {
-    
-    if (M@fs_by_spatial_BAU) {
-      unobsidx <- unobserved_BAUs(M)
-      spatial_BAU_id <- ((unobsidx - 1) %% ns) + 1
-      sigma2fs_U <- M@sigma2fshat[spatial_BAU_id]
-    } else {
-      sigma2fs_U <- M@sigma2fshat
-    }
-    
-    xi_U <- rnorm((N - mstar) * n_MC, mean = 0, sd = sqrt(sigma2fs_U)) %>% 
-      matrix(nrow = N - mstar, ncol = n_MC)
-    
+  if (object@include_fs) {
+    xi_U <- simulate_xi(object, nsim = nsim, type = "unobserved")
     xi_samples <- rbind(xi_O, xi_U)
   }
-  
 
   # ---- Construct samples from the latent process Y ----
   
@@ -631,28 +623,28 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   
   ## Split the covariate design matrix based on observed and unobserved samples
   X_U <- X[-obsidx, ]    # Unobserved fixed effect 'design' matrix
-  S_U <- M@S0[-obsidx, ] # Unobserved random effect 'design' matrix
+  S_U <- object@S0[-obsidx, ] # Unobserved random effect 'design' matrix
   
   ## Simulate the smooth Y-process (excluding fs variation) over the observed and unobserved BAUs
   if (kriging == "universal") {
     Y_smooth_O <- X_O %*% alpha + S_O %*% eta
     Y_smooth_U <- X_U %*% alpha + S_U %*% eta
   } else {
-    Y_smooth_O <- X_O %*% M@alphahat + S_O %*% eta
-    Y_smooth_U <- X_U %*% M@alphahat + S_U %*% eta
+    Y_smooth_O <- X_O %*% object@alphahat + S_O %*% eta
+    Y_smooth_U <- X_U %*% object@alphahat + S_U %*% eta
   }
   
   ## Combine samples
   Y_smooth_samples  <- rbind(Y_smooth_O, Y_smooth_U)
   
   ## Use permutation matrix to get the correct (original) ordering in terms of the BAUs
-  unobsidx         <- unobserved_BAUs(M)   # Unobserved BAUs indices
+  unobsidx         <- unobserved_BAUs(object)   # Unobserved BAUs indices
   ids              <- c(obsidx, unobsidx)  # All indices (observed and unobserved)
   P                <- Matrix::sparseMatrix(i = 1:N, j = 1:N, x = 1)[ids, ]
   Y_smooth_samples <- Matrix::t(P) %*% Y_smooth_samples
   
   ## Construct the samples from the latent process Y 
-  if (M@include_fs) {
+  if (object@include_fs) {
     xi_samples  <- Matrix::t(P) %*% xi_samples
     Y_samples   <- Y_smooth_samples + xi_samples
   } else {
@@ -684,25 +676,25 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   ## Note that for all cases other than type == "link", we need to compute the conditional mean samples.
   
   ## Create the relevant link functions.
-  if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
-    finv  <- .link_fn("Y_to_prob", link = M@link)
+  if (object@response %in% c("binomial", "negative-binomial") & object@link %in% c("logit", "probit", "cloglog")) {
+    finv  <- .link_fn("Y_to_prob", link = object@link)
   } else {
-    ginv  <- .link_fn("Y_to_mu", link = M@link) 
+    ginv  <- .link_fn("Y_to_mu", link = object@link) 
   }
   
-  if(M@response %in% c("binomial", "negative-binomial")) {
-    hinv  <- .link_fn("prob_to_mu", response = M@response)
-    h     <- .link_fn("mu_to_prob", response = M@response)
+  if(object@response %in% c("binomial", "negative-binomial")) {
+    hinv  <- .link_fn("prob_to_mu", response = object@response)
+    h     <- .link_fn("mu_to_prob", response = object@response)
   }
   
   ## Create the mu samples (and prob parameter if applicable)
-  if (M@response %in% c("binomial", "negative-binomial") & M@link %in% c("logit", "probit", "cloglog")) {
+  if (object@response %in% c("binomial", "negative-binomial") & object@link %in% c("logit", "probit", "cloglog")) {
     prob_samples <- finv(Y = Y_samples)
     mu_samples   <- hinv(p = prob_samples, k = k)
-  } else if (M@response == "negative-binomial" & M@link %in% c("log", "sqrt")) {
+  } else if (object@response == "negative-binomial" & object@link %in% c("log", "sqrt")) {
     mu_samples   <- k * ginv(Y_samples) 
     prob_samples <- h(mu = mu_samples, k = k)
-  } else if (M@response == "gaussian" && M@link == "identity" && obs_fs) {
+  } else if (object@response == "gaussian" && object@link == "identity" && obs_fs) {
     mu_samples <- Y_smooth_samples
   } else {
     mu_samples <- ginv(Y_samples)
@@ -713,7 +705,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   
   if (!predict_BAUs) mu_samples <- as.matrix(CP %*% mu_samples)
   
-  if (!predict_BAUs & M@response %in% c("binomial", "negative-binomial")) {
+  if (!predict_BAUs & object@response %in% c("binomial", "negative-binomial")) {
     k_P <- CP %*% k
     prob_samples <- as.matrix(h(mu_samples, k_P))
   }
@@ -729,40 +721,40 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   
   # ---- Sample the response variable, Z ----
   
-  n <- nrow(CP) * n_MC
+  n <- nrow(CP) * nsim
   
-  if (M@response == "poisson") {
+  if (object@response == "poisson") {
     Z_samples <- rpois(n, lambda = c(t(mu_samples)))
-  } else if (M@response == "gaussian") {
+  } else if (object@response == "gaussian") {
     # measurement error variance
-    if (!.zero_range(diag(M@Ve))) {
-      sigma2e <- mean(diag(M@Ve))
+    if (!.zero_range(diag(object@Ve))) {
+      sigma2e <- mean(diag(object@Ve))
       cat("You have requested inference on the noisy data process. In a Gaussian setting, this requires the measurement error standard deviation; we are assuming it is spatially invariant, and is the average of std field supplied in the data.")
     } else {
-      sigma2e <- M@Ve[1, 1]
+      sigma2e <- object@Ve[1, 1]
     }
     
     ## If obs_fs = TRUE, we need to add the fine-scale variance here, and 
     ## possibly aggregate over prediction regions
-    if(M@link == "identity" && obs_fs) {
+    if(object@link == "identity" && obs_fs) {
       mu_samples <- Y_samples # This is the smooth process Y (equivalent to mu, because link = identity) + fine-scale variation
       if (!predict_BAUs) 
         mu_samples <- as.matrix(CP %*% mu_samples)
     }
     
     Z_samples <- rnorm(n, mean = c(t(mu_samples)), sd = sqrt(sigma2e))
-  } else if (M@response == "gamma") {
+  } else if (object@response == "gamma") {
     theta <- 1 / c(t(mu_samples))    # canonical parameter
-    a <- 1/M@phi                     # shape parameter
+    a <- 1/object@phi                     # shape parameter
     beta  <- theta * a               # rate parameter (1/scale)
     Z_samples <- rgamma(n, shape = a, rate = beta)
-  } else if (M@response == "inverse-gaussian") {
-    Z_samples <- statmod::rinvgauss(n, mean = c(t(mu_samples)), dispersion = M@phi) 
-  } else if (M@response == "negative-binomial") {
-    k_vec <- rep(k, each = n_MC)
+  } else if (object@response == "inverse-gaussian") {
+    Z_samples <- statmod::rinvgauss(n, mean = c(t(mu_samples)), dispersion = object@phi) 
+  } else if (object@response == "negative-binomial") {
+    k_vec <- rep(k, each = nsim)
     Z_samples <- rnbinom(n, size = k_vec, mu = c(t(mu_samples)))
-  } else if (M@response == "binomial") {
-    k_vec <- rep(k, each = n_MC)
+  } else if (object@response == "binomial") {
+    k_vec <- rep(k, each = nsim)
     theta <- log((c(t(mu_samples))/k_vec) / (1 - (c(t(mu_samples))/k_vec)))
     p <- 1 / (1 + exp(-theta))
     ## NAs will occur if k = 0. Fortunately, if k = 0, we know Z will be 0. 
@@ -771,8 +763,8 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     Z_samples <- rbinom(n, size = k_vec, prob = p)
   }
   
-  ## Convert from a long vector to an n_pred_locs x n_MC matrix
-  Z_samples <- matrix(Z_samples, ncol = n_MC, byrow = TRUE)
+  ## Convert from a long vector to an n_pred_locs x nsim matrix
+  Z_samples <- matrix(Z_samples, ncol = nsim, byrow = TRUE)
   
   ## Add Z_samples to list object
   MC$Z_samples <- Z_samples

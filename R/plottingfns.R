@@ -235,6 +235,15 @@ EmptyTheme <- function() {
 
 #' @rdname plot
 #' @export 
+setMethod("plot", signature(x = "SRE", y = "list"), function(x, y, ...) {
+  
+  if(!("newdata" %in% names(y))) stop("y should contain an element named 'newdata'")
+  
+  plot(x, y, ...)
+})
+
+#' @rdname plot
+#' @export 
 setMethod("plot", signature(x = "SRE", y = "STFDF"), function(x, y, ...) .plot_common(x, y, ...))
 
 #' @rdname plot
@@ -336,24 +345,21 @@ setMethod("plot", signature(x = "SRE", y = "SpatialPolygonsDataFrame"), function
       if (length(object@data) == 1) {
         ## Plot the binned data over the BAUs. This is a bit difficult if any 
         ## observations are associated with multiple BAUs; don't do it in this case.
-        Cmat_dgT <- as(object@Cmat, "dgTMatrix")
+        Cmat_dgT <- .as(object@Cmat, "dgTMatrix")
         if (!all(tabulate(Cmat_dgT@i + 1) == 1) || any(tabulate(Cmat_dgT@j + 1) > 1)) {
          cat("The data set stored in object@data is of class STIDF. In this case, 
-                  we normally use the binned data in object@Z to plot over the BAUs. However,
-                  some observations are associated with multiple BAUs, or there 
-                  are some BAUs associated with multiple observations (probably because 
-                  average_in_BAU = FALSE). This makes things a bit tricky, so we will not plot the data.")
+              we normally use the binned data in object@Z to plot over the BAUs. However,
+              some observations are associated with multiple BAUs, or there 
+              are some BAUs associated with multiple observations (probably because 
+              average_in_BAU = FALSE). This complicates matters, so we will not plot the data.")
         } else {
-          obs_BAUs <- Cmat_dgT@j + 1 # BAUs associated with each observation
-          data_idx <- Cmat_dgT@i + 1 # data index
-          binned_data <- rep(NA, length(object@BAUs))
-          binned_data[obs_BAUs] <- object@Z[, 1][data_idx]
+          Z <- binned_data(object) 
           ## If NAs are present (i.e., some of the BAUs are unobserved), 
           ## tell the user. This will illuminate a warning thrown later as well.
-          if (any(is.na(binned_data))) {
+          if (any(is.na(Z))) {
             cat("To plot the STIDF data provided in the SRE object, we use the binned data in object@Z to plot over the BAUs. The unobserved BAUs (i.e., those that are not associated with any elements of object@Z) are given a value of NA.\n")
           }
-          object@BAUs@data[, response_name] <- binned_data
+          object@BAUs@data[, response_name] <- Z
           data_plots <- plot_spatial_or_ST(object@BAUs, response_name, ...)
         }
       } else {
@@ -531,7 +537,7 @@ setMethod("plot_spatial_or_ST", signature(newdata = "SpatialPolygonsDataFrame"),
     ## Inclusion of "-" characters can cause problems; convert to "_"
     column_names <- gsub("-", "_", column_names)
     names(newdata@data) <- gsub("-", "_", names(newdata@data))
-    
+
     ## Classify the kind of spatial data we have, and convert newdata to a data.frame
     tmp <- .classify_sp_and_convert_to_df(newdata)
     df      <- tmp$df
@@ -596,11 +602,11 @@ setMethod("plot_spatial_or_ST", signature(newdata = "SpatialPolygonsDataFrame"),
     gg <- gg %+% aes_string(x = coord_names[1], y = coord_names[2]) + 
         theme_bw() + coord_fixed()
     
-    ## If NAs are present, tell the user that we hard-code the colour/fill for 
-    ## the pixels with NA values to be transparent 
-    if (any(is.na(df[, column_name]))) {
-      cat("NA values detected in the data, which will be transparent in the final plot. If you want them to show up in the plot, take the returned plot object and add a colour/fill scale with na.value equal to whatever colour you want.\n ")
-    }
+    # ## If NAs are present, tell the user that we hard-code the colour/fill for 
+    # ## the pixels with NA values to be transparent 
+    # if (any(is.na(df[, column_name]))) {
+    #   cat("NA values detected in the data, which will be transparent in the final plot. If you want them to show up in the plot, take the returned plot object and add a colour/fill scale with na.value equal to whatever colour you want.\n ")
+    # }
     if (palette == "nasa") {
       colour_fn <- scale_colour_gradientn(colours = nasa_palette, na.value = "transparent")
       fill_fn <- scale_fill_gradientn(colours = nasa_palette, na.value = "transparent")
@@ -642,15 +648,13 @@ setMethod("plot_spatial_or_ST", signature(newdata = "SpatialPolygonsDataFrame"),
   
     
     original_names <- names(newdata@data)
-  
-    ## NB: I don't use is() because is(newdata, "SpatialPointsDataFrame") returns 
-    ## TRUE when class(newdata) == "SpatialPixelsDataFrame"
-    if (is(newdata, "SpatialPointsDataFrame")) {
+    
+    if (is(newdata, "SpatialPixelsDataFrame")) {
+      df <- cbind(newdata@data, coordinates(newdata))
+      sp_type <- "pixels"
+    } else if (is(newdata, "SpatialPointsDataFrame")) { ## NB: is(newdata, "SpatialPointsDataFrame") returns TRUE when class(newdata) == "SpatialPixelsDataFrame"
         df <- cbind(newdata@data, coordinates(newdata))
         sp_type <- "points"
-    } else if (is(newdata, "SpatialPixelsDataFrame")) {
-        df <- cbind(newdata@data, coordinates(newdata))
-        sp_type <- "pixels"
     } else if (is(newdata, "SpatialPolygonsDataFrame")) {
         df <- .SpatialPolygonsDataFrame_to_df(newdata)
         sp_type <- "polygons"

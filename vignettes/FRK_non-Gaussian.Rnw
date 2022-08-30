@@ -1,7 +1,7 @@
 \documentclass{article}
 
 %\VignetteEngine{knitr::knitr}
-%\VignetteIndexEntry{Modelling of spatial and spatio-temporal non-Gaussian data with FRK}
+%\VignetteIndexEntry{Tutorial on modelling spatial and spatio-temporal non-Gaussian data with FRK}
 
 %% Specific this vignette
 \usepackage[margin=1in]{geometry}
@@ -122,7 +122,7 @@
 
 \author{Matthew Sainsbury-Dale, Andrew Zammit-Mangion, and Noel Cressie}
 
-\title{Modelling of spatial and spatio-temporal non-Gaussian data with \pkg{FRK}}
+\title{Tutorial on modelling spatial and spatio-temporal non-Gaussian data with FRK}
 
 \usepackage[authoryear]{natbib}
 
@@ -141,10 +141,7 @@ knitr::opts_chunk$set(dpi=100)
 \maketitle
 
 \begin{abstract}
- Non-Gaussian spatial and spatial-temporal data are becoming increasingly prevalent, arising from studies as diverse as small area demographics (counts) and global remote sensing (radiant energies). 
-  \pkg{FRK} is an \proglang{R} package for spatial/spatio-temporal modelling and prediction with large data sets. 
-In this vignette, we provide examples where we model non-Gaussian data using \pkg{FRK} version 2.x and above. 
- All of the functionality that \pkg{FRK} offers in a Gaussian setting extends to a non-Gaussian setting: See also the vignette ``FRK\_intro'', which describes how the BAUs and basis functions work; inference over different spatial manifolds (such as the sphere); inference in a spatio-temporal setting; and spatial change of support. 
+In this vignette, we provide examples where we model non-Gaussian data using \pkg{FRK} version 2.x and above. All of the functionality that \pkg{FRK} offers in a Gaussian setting extends to a non-Gaussian setting: see the vignette ``Introduction to FRK'', which describes how the BAUs and basis functions work; inference over different spatial manifolds (such as the sphere); inference in a spatio-temporal setting; and spatial change of support. 
 \end{abstract}
 
 
@@ -166,8 +163,7 @@ In Sections \ref{subsection:02-03:Estimation} and \ref{subsection:04-03:Predicti
 
 \subsection{The process layer}\label{subsection:04-01:ProcessLayer}
 
- Denote the latent spatial process as $Y(\cdot) \equiv \{Y(\vec{s}) \colon \vec{s}\in D\}$, where $\vec{s}$ indexes space in the spatial domain of interest $D$. 
- The model for $Y(\cdot)$ is the so-called spatial random effects (SRE) model \citep{Cressie_Johannesson_2008_FRK}, 
+ Denote the latent spatial process as $Y(\cdot) \equiv \{Y(\vec{s}) \colon \vec{s}\in D\}$, where $\vec{s}$ indexes space in the spatial domain of interest $D$. The model for $Y(\cdot)$ is the so-called spatial random effects (SRE) model \citep{Cressie_Johannesson_2008_FRK}, 
 \begin{equation}\label{eqn:04-01:Y(s)}
     Y(\vec{s}) = \vec{t}(\vec{s})^\tp \vec{\alpha} + \vec{\phi}(\vec{s})^\tp \vec{\eta} + \xi(\vec{s}); \quad \vec{s} \in D, 
 \end{equation}

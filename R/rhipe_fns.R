@@ -73,7 +73,7 @@ rhwrapper <- function(Ntot = 20, N = 10,type="data.frame",f_expr,...) {
                 stopifnot(is(fn,"function"))
                 fn(s[idx,,drop=FALSE])
      })
-    Matrix(as(x,"matrix"))
+    Matrix(as(x,"matrix")) 
 })
 
 #' @title SRE.predict using Rhipe

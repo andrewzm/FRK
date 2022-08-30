@@ -1,7 +1,7 @@
 \documentclass{article}
 
 %\VignetteEngine{knitr::knitr}
-%\VignetteIndexEntry{Spatial and spatio-temporal kriging with FRK}
+%\VignetteIndexEntry{Introduction to FRK}
 
 \usepackage{hyperref}
 \usepackage{subfig}
@@ -208,7 +208,7 @@
 
 \bibliographystyle{plainnat}
 
-\title{Fixed Rank Kriging: The \tt{R} package}
+\title{Introduction to Fixed Rank Kriging: The \tt{R} package}
 \author{Andrew Zammit-Mangion and Noel Cressie}
 %\author[1]{Noel Cressie}
 %\affiliation{National Institute for Applied Statistics Research Australia~(NIASRA), School of Mathematics and Applied Statistics, University of Wollongong, New South Wales 2522, Australia}

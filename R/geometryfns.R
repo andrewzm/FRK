@@ -718,7 +718,8 @@ setMethod("auto_BAU",signature(manifold="sphere"),
                   ## When modelling on the sphere, the CRS needs to be CRS("+proj=longlat +ellps=sphere")
                   if(!identical(prj, .quiet_CRS("+proj=longlat +ellps=sphere")))
                       stop("If modelling on the sphere please set the CRS of
-                           the data to CRS('+proj=longlat +ellps=sphere)")
+                           the data to CRS('+proj=longlat +ellps=sphere') by 
+                           running proj4string(data) <- CRS('+proj=longlat +ellps=sphere')")
 
                   ## When modelling on the sphere, the coordnames need to be (lon,lat)
                   if(!"lat" %in% names(coords) & "lon" %in% names(coords))
@@ -1276,7 +1277,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
                   proj4string = .quiet_CRS(proj4string(data_sp)))         # CRS of original data
               
               ## Report time taken to bin data
-              if (!silently) cat("Binned data in",timer[3],"seconds\n")
+              if (!silently & opts_FRK$get("verbose") ) cat("Binned data in",timer[3],"seconds\n")
 
               ## Return new matched data points
               new_sp_pts
