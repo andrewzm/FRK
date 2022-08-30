@@ -799,6 +799,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 
   ## The optimiser should have arguments: start, objective, gradient. 
   ## The remaining arguments can be whatever.
+  gc()
   fit <- optimiser(obj$par, obj$fn, obj$gr, ...)
   
   info_fit$iterations  <- fit$iterations
