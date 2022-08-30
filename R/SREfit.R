@@ -21,7 +21,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
       answer <- user_decision("You have selected method = 'TMB' and K_type = 'block-exponential'. While this combination is allowed, it is significantly more computationally demanding than K_type = 'precision'. Please enter Y if you would like to continue with the block-exponential formulation, or N if you would like to change to the sparse precision matrix formulation.\n")
       if (answer == "N") {
         object@K_type <- "precision"
-        cat("Setting K-type = 'precision'.\n")
+        if(opts_FRK$get("verbose")) cat("Setting K-type = 'precision'.\n")
       }
     }
 
@@ -759,9 +759,9 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   ## Don't want to pass in variance components that are "too small" or "too big". 
   ## This has caused TMB to explode and cause R to crash in the past, with no 
   ## explanation as to why the crash occurred.
-  parameters$logsigma2 <- pmin(pmax(parameters$logsigma2, -4), 8)
-  parameters$logtau <- pmin(pmax(parameters$logtau, -4), 8)
-  parameters$logdelta <- pmin(pmax(parameters$logdelta, -4), 8)
+  parameters$logsigma2   <- pmin(pmax(parameters$logsigma2, -4), 8)
+  parameters$logtau      <- pmin(pmax(parameters$logtau, -4), 8)
+  parameters$logdelta    <- pmin(pmax(parameters$logdelta, -4), 8)
   parameters$logsigma2_t <- pmin(pmax(parameters$logsigma2_t, -4), 8)
   
   ## Checks to catch catastrophic errors. 
@@ -785,7 +785,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     stop("Internal error: K_type is not one of neighbour, block-exponential, or precision-block-exponential. Please contact the package maintainer.")
 
   ## TMB model compilation
-  cat("Making the AD fun for TMB...\n")
+  if(opts_FRK$get("verbose")) cat("Making the automatic differentiation function (AD fun) for TMB...\n")
   obj <- MakeADFun(data = data,
                    parameters = parameters,
                    random = c("random_effects"),
@@ -795,7 +795,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   ## The following means we want to print every parameter passed to obj$fn.
   obj$env$tracepar <- opts_FRK$get("verbose")
 
-  cat("Optimising with TMB...\n")
+  if(opts_FRK$get("verbose")) cat("Optimising with TMB...\n")
 
   ## The optimiser should have arguments: start, objective, gradient. 
   ## The remaining arguments can be whatever.
@@ -806,11 +806,11 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   info_fit$convergence <- fit$convergence
   info_fit$message     <- fit$message
   
-  cat("Optimisation completed.\n")
+  if(opts_FRK$get("verbose")) cat("Optimisation completed.\n")
 
   # ---- Joint precision/covariance matrix of random effects ----
   
-  cat("Extracting estimates of the parameters and the joint precision matrix of the random effects from TMB...\n")
+  if(opts_FRK$get("verbose")) cat("Extracting estimates of the parameters and the joint precision matrix of the random effects from TMB...\n")
   
   ## Extract parameter and random effect estimates
   par <- obj$env$last.par.best
@@ -835,7 +835,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   } else {
     ## if we wish to extract the uncertainty of the parameters and fixed effects
     ## in order to do universal kriging (or, at least give us the OPTION to do 
-    ## it during the prediction stage), We need to use sdreport().
+    ## it during the prediction stage), we need to use sdreport().
     ## This can be computationally demanding, which is why we provide the
     ## argument simple_kriging_fixed.
     Q_posterior <- sdreport(obj, getJointPrecision = TRUE)$jointPrecision
@@ -846,9 +846,10 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     Q_posterior <- Q_posterior[retain_idx, retain_idx]
   }
   
-  cat("Extraction completed.\n")
+  if(opts_FRK$get("verbose")) cat("Extraction completed.\n")
   
-  ## Update the slots of object
+  ##  ---- Update the slots of object ----
+  
   ## Convert to Matrix as these SRE slots require class "Matrix"
   r  <- nbasis(object)
   mstar <- ncol(C_O)
@@ -864,6 +865,10 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   object@Q_posterior <- Q_posterior
   object@phi <- unname(exp(estimates$logphi))
   
+  ## update Khat_inv = Q (used for marginal simulation) 
+  # Note that I haven't implemented this for K_type = "precision_block-exponential", or for spatio-temporal data.
+  # object@Khat_inv <- .sparse_Q_block_diag(object@basis@df, kappa = exp(estimates$logsigma2) , rho = exp(estimates$logtau))$Q
+  
   ## Log-likeihood (negative of the negative-log-likelihood)
   object@log_likelihood <- -obj$fn() # could also use -fit$objective
   
@@ -873,7 +878,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     info_fit$sigma2fshat_equal_0 <- 1
     if(opts_FRK$get("verbose") > 0)
       message("sigma2fs is being estimated to zero.
-      This might because of an incorrect binning procedure or because too much 
+      This might be because of an incorrect binning procedure or because too much 
       measurement error is being assumed (or because the latent field is indeed 
               that smooth, but unlikely).")
   } else {
@@ -888,13 +893,10 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 }
 
 
-# sapply(slotNames(object), function(x) object %>% slot(x) %>%  object.size %>% format(units = "auto"))
-
-
 ## Initialise the fixed effects, random effects, and parameters for method = 'TMB'.
 .TMB_initialise <- function(object, K_type, C_O, X_O, S_O) {   
   
-  cat("Initialising parameters and random effects...\n")
+  if(opts_FRK$get("verbose")) cat("Initialising parameters and random effects...\n")
   
   nres    <- max(object@basis@df$res) 
   r       <- object@basis@n  
@@ -935,14 +937,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     l$tau      <- 1 / l$tau
   } 
   
-  
-  if (K_type == "separable") {
-    ## Separability means we have twice as many spatial basis function variance
-    ## components. So, just replicate the already defined parameters.
-    l$sigma2 <- rep(l$sigma2, 2)
-    l$tau    <- rep(l$tau, 2)
-    l$logdelta <- 1 # Dummy value
-  } else if (K_type == "precision-block-exponential") {
+  if (K_type == "precision-block-exponential") {
     ## Precision exp requires one extra parameter per resolution
     l$logdelta <- rnorm(nres)
   } else {
@@ -954,54 +949,41 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   l$rho_t       <- 0.1
   
   ## iii. Basis function random-effects and fine-scale random effects
+  ## Fine-scale variance parameter
+  l$sigma2fs <- 0.05
   
-  # Because of complications caused by the MAP estimate of the random effects, 
-  # we have hard-code the use of a simple initialisation procedure. 
-  simple_init <- TRUE 
-  if (simple_init) {
-    ## Fine-scale variance parameter
-    l$sigma2fs <- 0.05
-    
-    ## Fine-scale random effects
-    mstar <- length(Y_O) # number of observed BAUs (and hence fine-scale random effects to predict)
-    l$xi_O <- rnorm(mstar, 0, sqrt(l$sigma2fs))
-    
-    ## Now initialise the basis-function coefficients. 
-    ## We will do this by simulating from a mean-zero Gaussian distribution 
-    ## with variance given by the previously computed variance components. 
-    if (K_type != "block-exponential") {
-      ## Recall from above that these are precision parameters: Just take the 
-      ## inverse to get back to variance components. This is all very rough, but
-      ## it doesn't matter because it is only an initialisation. 
-      sigma2 <- 1 / l$sigma2
-    }
-    
-    ## Now need to create a "long" version of sigma2, replicated appropriately. 
-    ## Extract the number of spatial and temporal basis functions at each resolution
-    temporal <- is(object@basis,"TensorP_Basis")
-    if (temporal) {
-      spatial_basis <- object@basis@Basis1
-      temporal_basis <- object@basis@Basis2
-      r_ti  <- as.vector(table(temporal_basis@df$res))
-    }  else {
-      spatial_basis <- object@basis
-      r_ti <- 1
-    }
-    r_si <- as.vector(table(spatial_basis@df$res))
-    
-    sigma2_long <- rep(rep(sigma2, times = r_si), r_ti)
-    ## Toy example for above code: rep(rep(c(6, 7), times = c(1, 2)), 3)
-    
-    ## Simulate initial values for basis-function coefficients
-    l$eta <- rnorm(r, 0, sqrt(sigma2_long))
-    
-    
-  } else {
-    for (iteration_dummy in 1:5) {
-      l <- .TMB_initialise_MAP_estimates(l, object, S_O, r, Y_O, X_O)
-    }
+  ## Fine-scale random effects
+  mstar <- length(Y_O) # number of observed BAUs (and hence fine-scale random effects to predict)
+  l$xi_O <- rnorm(mstar, 0, sqrt(l$sigma2fs))
+  
+  ## Now initialise the basis-function coefficients. 
+  ## We will do this by simulating from a mean-zero Gaussian distribution 
+  ## with variance given by the previously computed variance components. 
+  if (K_type != "block-exponential") {
+    ## Recall from above that these are precision parameters: Just take the 
+    ## inverse to get back to variance components. This is all very rough, but
+    ## it doesn't matter because it is only an initialisation. 
+    sigma2 <- 1 / l$sigma2
   }
-
+  
+  ## Now need to create a "long" version of sigma2, replicated appropriately. 
+  ## Extract the number of spatial and temporal basis functions at each resolution
+  temporal <- is(object@basis,"TensorP_Basis")
+  if (temporal) {
+    spatial_basis <- object@basis@Basis1
+    temporal_basis <- object@basis@Basis2
+    r_ti  <- as.vector(table(temporal_basis@df$res))
+  }  else {
+    spatial_basis <- object@basis
+    r_ti <- 1
+  }
+  r_si <- as.vector(table(spatial_basis@df$res))
+  
+  sigma2_long <- rep(rep(sigma2, times = r_si), r_ti)
+  ## Toy example for above code: rep(rep(c(6, 7), times = c(1, 2)), 3)
+  
+  ## Simulate initial values for basis-function coefficients
+  l$eta <- rnorm(r, 0, sqrt(sigma2_long))
   
   ## Return list of parameter initialisations for TMB
   transform_minus_one_to_one_inverse <- function(x) -0.5 * log(2 / (x + 1) - 1)
@@ -1019,72 +1001,6 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   ))
 }
 
-
-## This function computes MAP estimates of the random effects. However, it does 
-## not have good computational properties, and can cause issues with memory. 
-## Hence, we have opted for a very simple initialisation. 
-
-## For reference, here
-## are some memory and timing for the problematic sections of code, using the 
-## Chicago example in Section 4.4 of the FRK v2 paper.
-# QInit took 16s to construct, and was 667.8 Kb 
-# mat was 72.2 Mb. This is the main problem: mat is a big that we really should 
-# not be inverting!! note that mat is stored as a sparse matrix, and it is still 
-# very large in memory.
-# mat_L and mat_inv (i.e., the Takahashi_Davis() call) each took about a minute. 
-# mat_L was 132.7 Mb and mat_inv was 265 Mb. 
-
-## Previously, we only had this initialisation method, but this was 
-## causing problems in some cases (mainly to do with memory and run-time). 
-## I'll leave this here for now, but it can probably be deleted at some point. 
-.TMB_initialise_MAP_estimates <- function(l, object, S_O, r, Y_O, X_O) {
-  
-  regularising_weight <- if (!is.null(l$sigma2fs)) l$sigma2fs else l$sigma2[1] 
-  
-  ## NB: This doesn't involve an inverse, as we construct the precision matrix directly. 
-  QInit <- .sparse_Q_block_diag(object@basis@df, 
-                                kappa = l$sigma2, 
-                                rho = l$tau)$Q
-
-  
-  # ---- Start of problematic code ---- 
-  
-  ## Matrix we need to invert
-  mat <- Matrix::t(S_O) %*% S_O / regularising_weight + QInit
-
-  ## Invert the matrix
-  mat_inv <- tryCatch(expr = {
-    if (r > 4000) { # Avoid full inverse if we have too many basis functions
-      mat_L <- sparseinv::cholPermute(Q = mat) # Permuted Cholesky factor
-      ## Sparse-inverse-subset (a proxy for the inverse)
-      sparseinv::Takahashi_Davis(Q = mat, cholQp = mat_L$Qpermchol, P = mat_L$P)
-    } else {
-      solve(mat) 
-    }}, 
-    error = function(w){
-      cat("Initialisation phase: could not invert mat, just using diag(r)\n")
-      diag(r)
-    }
-  )
-  
-  # ---- End of problematic code ----
-  
-  if (regularising_weight == 0) { # avoid division by zero
-    warning("In initialisation stage, the regularising_weight is 0; setting it to 1. This is probably not an issue, but feel free to contact the package maintainer.")
-    regularising_weight <- 1
-  }
-  
-  ## MAP estimate of eta
-  l$eta  <- (1 / regularising_weight) * mat_inv %*% Matrix::t(S_O)  %*% (Y_O - X_O %*% l$alpha)
-  
-  ## iv. Observed fine-scale random effects xi_O
-  l$xi_O <- Y_O - X_O %*% l$alpha - S_O %*% l$eta
-  
-  ## v. Fine-scale variance
-  l$sigma2fs <- var(as.vector(l$xi_O)) 
-  
-  return(l)
-}
 
 
 .compute_Y_O <- function(object, C_O) {
@@ -1190,7 +1106,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 
 .TMB_data_prep <- function (object, sigma2fs_hat, K_type, taper, C_O, X_O, S_O) {
   
-  cat("Preparing data for TMB...\n")
+  if(opts_FRK$get("verbose")) cat("Preparing data for TMB...\n")
 
   obsidx <- observed_BAUs(object)       # Indices of observed BAUs
   
@@ -1229,7 +1145,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   if (K_type %in% c("block-exponential", "precision-block-exponential")) {
     tmp         <- .cov_tap(spatial_dist_matrix, taper = taper)
     data$beta   <- tmp$beta 
-    R            <- as(tmp$D_tap, "dgTMatrix")
+    R            <- .as(tmp$D_tap, "dgTMatrix")
     data$nnz         <- tmp$nnz 
     data$row_indices <- R@i
     data$col_indices <- R@j
@@ -1237,35 +1153,28 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     
   } else if (K_type == "neighbour") {
     tmp <- .sparse_Q_block_diag(spatial_basis@df, kappa = 0, rho = 1)
-    R <- as(tmp$Q, "dgTMatrix")
+    R <- .as(tmp$Q, "dgTMatrix")
     data$nnz         <- tmp$nnz
     data$row_indices <- R@i
     data$col_indices <- R@j
     data$x           <- R@x
     
-  } else if (K_type == "separable") {
-    ## Compute number of basis functions in each row (n_r) and each column (n_c)
-    for (i in unique(spatial_basis@df$res)) {
-      tmp <- spatial_basis@df[spatial_basis@df$res == i, ]
-      data$n_r[i] <- length(unique(tmp$loc1))
-      data$n_c[i] <- length(unique(tmp$loc2))
-    }
   } 
-
+  
   ## Create a data entry of sigma2fs_hat (one that will stay constant if we are 
   ## not estimating sigma2fs within TMB)
   data$sigma2fs_hat <- sigma2fs_hat
   ## fix sigma2fs during model fitting if all observations are associated with multiple
   ## BAUs, as TMB will explode if we don't. Otherwise, just estimate it with TMB.
   if (!any(tabulate(object@Cmat@i + 1) == 1)) {
-    cat("There no observations are associated with a single BAU (i.e., all observations are associated with multiple BAUs). This makes the fine-scale variance parameter very difficult to estimate, so we will estimate it offline and fix for the remainder of model fitting; this estimate may be inaccurate.\n")
+    if(opts_FRK$get("verbose")) cat("There no observations are associated with a single BAU (i.e., all observations are associated with multiple BAUs). This makes the fine-scale variance parameter very difficult to estimate, so we will estimate it offline and fix for the remainder of model fitting; this estimate may be inaccurate.\n")
     data$fix_sigma2fs <- as.integer(1)
     if (object@fs_by_spatial_BAU) 
       stop("We do not allow each spatial BAU to have its own fine-scale variance parameter when there no observations associated with a single BAU (i.e., all observations are associated with multiple BAUs).")
   } else {
     data$fix_sigma2fs <- as.integer(0)
     if (!all(tabulate(object@Cmat@i + 1) == 1)) 
-      cat("Some (but not all) observations are associated with multiple BAUs. Estimation of the fine-scale variance parameter will be done using TMB, but there should be a reasonable number of observations associated with a single BAU so that the fine-scale variance parameter can be estimated accurately.\n")
+      if(opts_FRK$get("verbose")) cat("Some (but not all) observations are associated with multiple BAUs. Estimation of the fine-scale variance parameter will be done using TMB, but there should be a reasonable number of observations associated with a single BAU so that the fine-scale variance parameter can be estimated accurately.\n")
   } 
   
   data$include_fs <- as.integer(object@include_fs)

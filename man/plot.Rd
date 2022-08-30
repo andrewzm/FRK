@@ -2,6 +2,7 @@
 % Please edit documentation in R/AllGeneric.R, R/plottingfns.R
 \name{plot}
 \alias{plot}
+\alias{plot,SRE,list-method}
 \alias{plot,SRE,STFDF-method}
 \alias{plot,SRE,SpatialPointsDataFrame-method}
 \alias{plot,SRE,SpatialPixelsDataFrame-method}
@@ -9,6 +10,8 @@
 \title{Plot predictions from FRK analysis}
 \usage{
 plot(x, y, ...)
+
+\S4method{plot}{SRE,list}(x, y, ...)
 
 \S4method{plot}{SRE,STFDF}(x, y, ...)
 

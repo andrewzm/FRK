@@ -41,4 +41,5 @@
 #' @importFrom scales scientific
 #' @importFrom ggpubr ggarrange
 #' @importFrom reshape2 melt
+#' @importFrom scoringRules crps_sample
 NULL

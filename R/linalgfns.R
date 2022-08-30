@@ -35,6 +35,13 @@ logdet <- function (L)
     return(2 * sum(log(diagL)))
 }
 
+## Matrix 1.4-2 deprecated the coercion method as(object, Class). 
+## The following unexported function recreates it.
+.as <- function(from, to) {
+  convert <- Matrix:::.as.via.virtual(class(from), to)
+  eval(convert)
+}
+
 ## quickbinds on columns
 quickcbind <- function(L) {
   quickbind(L,"c")
@@ -51,7 +58,7 @@ quickrbind <- function(L) {
 quickbind <- function(L, rc = "c") {
 
   ## L list a list of sparseMatrices
-  nzCount<-lapply(L, function(x) length(as(x,"dgTMatrix")@x));    # number off non-zeros in each matrix
+  nzCount<-lapply(L, function(x) length(.as(x,"dgTMatrix")@x));    # number off non-zeros in each matrix
   nz<-sum(do.call(rbind,nzCount));                                # total number of non-zeros
   r<-vector(mode="integer",length=nz);                            # row indices
   c<-vector(mode="integer",length=nz);                            # column indices
@@ -60,7 +67,7 @@ quickbind <- function(L, rc = "c") {
   nc  <- 0                                                        # column number
   nr  <- 0                                                        # row number
   for(i in 1:length(L)){                                          # for each matrix
-    tempMat <- as(L[[i]],"dgTMatrix")                             # convert to row-column storage format
+    tempMat <- .as(L[[i]],"dgTMatrix")                             # convert to row-column storage format
     ln<-length(tempMat@x);                                        # number of nonzeros for this matrix
     if(ln>0){                                                     # if there is at least one non-zero
       if(rc == "c") {                                             # if column bind
@@ -90,7 +97,7 @@ quickbind <- function(L, rc = "c") {
 
 ## Given a matrix X returns Y such that Y[idx,idx] = X
 reverse_permute <- function(X,idx) {
-  X <- as(X,"dgTMatrix")
+  X <- .as(X,"dgTMatrix")
   dict <- data.frame(from = 1:length(idx),to = idx)
   i_idx <- data.frame(from = X@i+1) %>% left_join(dict,by="from")
   j_idx <- data.frame(from = X@j+1) %>% left_join(dict,by="from")

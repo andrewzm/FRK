@@ -59,15 +59,16 @@ Automatically generate a set of local basis functions in the domain, and automat
 \details{
 This function automatically places basis functions within the domain of interest. If the domain is a plane or the real line, then the object \code{data} is used to establish the domain boundary.
 
-
-The argument \code{type} can be either ``Gaussian'', in which case
-\deqn{\phi(u) = \exp\left(-\frac{\|u \|^2}{2\sigma^2}\right),}
+Let \eqn{\phi(u)} denote the value of a basis function evaluated at \eqn{u = s - c}, 
+where \eqn{s} is a spatial coordinate and \eqn{c} is the basis-function centroid. 
+The argument \code{type} can be either ``Gaussian'', in which case  
+\ifelse{html}{{\out{<div style="text-align:center"> <i> &phi;(u) = exp(-|u|&sup2;/2&sigma;&sup2;), </i></div>}}}{\deqn{\phi(u) = \exp\left(-\frac{\|u \|^2}{2\sigma^2}\right),}{phi(u) = exp(-|u|^2/2sigma^2),}}
 ``bisquare'', in which case
-\deqn{\phi(u) = \left(1- \left(\frac{\| u \|}{R}\right)^2\right)^2 I(\|u\| < R),}
+\ifelse{html}{{\out{<div style="text-align:center"> <i> &phi;(u) = (1 -(|u|/R)&sup2;)&sup2;, </i></div>}}}{\deqn{\phi(u) = \left(1- \left(\frac{\| u \|}{R}\right)^2\right)^2 I(\|u\| < R),}{\phi(u) = (1- (|u|/R)^2)^2 I(|u| < R),}}
 ``exp'', in which case
-\deqn{\phi(u) = \exp\left(-\frac{\|u\|}{ \tau}\right),}
+\ifelse{html}{{\out{<div style="text-align:center"> <i> &phi;(u) = exp(-|u|/&tau;), </i></div>}}}{\deqn{\phi(u) = \exp\left(-\frac{\|u \|}{\tau}\right),}{phi(u) = exp(-|u|/tau),}}
 or ``Matern32'', in which case
-\deqn{\phi(u) = \left(1 + \frac{\sqrt{3}\|u\|}{\kappa}\right)\exp\left(-\frac{\sqrt{3}\| u \|}{\kappa}\right),}
+\ifelse{html}{{\out{<div style="text-align:center"> <i> &phi;(u) = (1 + &radic;3|u|/&kappa;)exp(-&radic;3|u|/&kappa;), </i></div>}}}{\deqn{\phi(u) = \left(1 + \frac{\sqrt{3}\|u\|}{\kappa}\right)\exp\left(-\frac{\sqrt{3}\| u \|}{\kappa}\right),}{\phi(u) = (1 + \sqrt{3}|u|/\kappa)\exp(-\sqrt{3}|u|/\kappa),}}
 where the parameters \eqn{\sigma, R, \tau} and \eqn{\kappa} are \code{scale} arguments.
 
 If the manifold is the real line, the basis functions are placed regularly inside the domain, and the number of basis functions at the coarsest resolution is dictated by the integer parameter \code{regular} which has to be greater than zero. On the real line, each subsequent resolution has twice as many basis functions. The scale of the basis function is set based on the minimum distance between the centre locations following placement. The scale is equal to the minimum distance if the type of basis function is Gaussian, exponential, or Matern32, and is equal to 1.5 times this value if the function is bisquare.
