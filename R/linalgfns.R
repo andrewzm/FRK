@@ -36,8 +36,9 @@ logdet <- function (L)
 }
 
 ## Matrix 1.4-2 deprecated the coercion method as(object, Class). 
-## The following unexported function recreates it.
+## The following function recreates it following the developers guidelines.
 .as <- function(from, to) {
+  # as(from, to)
   convert <- Matrix:::.as.via.virtual(class(from), to)
   eval(convert)
 }
@@ -58,7 +59,7 @@ quickrbind <- function(L) {
 quickbind <- function(L, rc = "c") {
 
   ## L list a list of sparseMatrices
-  nzCount<-lapply(L, function(x) length(.as(x,"dgTMatrix")@x));    # number off non-zeros in each matrix
+  nzCount<-lapply(L, function(x) length(.as(x,"dgTMatrix")@x));   # number off non-zeros in each matrix
   nz<-sum(do.call(rbind,nzCount));                                # total number of non-zeros
   r<-vector(mode="integer",length=nz);                            # row indices
   c<-vector(mode="integer",length=nz);                            # column indices
@@ -67,7 +68,7 @@ quickbind <- function(L, rc = "c") {
   nc  <- 0                                                        # column number
   nr  <- 0                                                        # row number
   for(i in 1:length(L)){                                          # for each matrix
-    tempMat <- .as(L[[i]],"dgTMatrix")                             # convert to row-column storage format
+    tempMat <- .as(L[[i]],"dgTMatrix")                            # convert to row-column storage format
     ln<-length(tempMat@x);                                        # number of nonzeros for this matrix
     if(ln>0){                                                     # if there is at least one non-zero
       if(rc == "c") {                                             # if column bind

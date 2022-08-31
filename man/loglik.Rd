@@ -3,7 +3,7 @@
 \name{loglik}
 \alias{loglik}
 \alias{loglik,SRE-method}
-\title{Retrieve log-likelihood}
+\title{(Deprecated) Retrieve log-likelihood}
 \usage{
 loglik(object)
 
@@ -13,11 +13,5 @@ loglik(object)
 \item{object}{object of class \code{SRE}}
 }
 \description{
-Takes an object of class \code{SRE} and returns the log-likelihood function.
-}
-\examples{
-# See example in the help file for FRK
-}
-\seealso{
-\code{\link{FRK}} for more information on how to construct and fit an SRE model, and other available methods for an object of class SRE.
+This function is deprecated; please use \code{logLik}
 }

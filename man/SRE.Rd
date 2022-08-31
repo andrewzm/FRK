@@ -169,7 +169,7 @@ simulate(object, newdata = NULL, nsim = 400, conditional_fs = FALSE, ...)
 
 \item{...}{other parameters passed on to \code{auto_basis()} and \code{auto_BAUs()} when calling \code{FRK()}, or the user specified function \code{optimiser()} when calling \code{FRK()} or \code{SRE.fit()}}
 
-\item{object}{object of class \code{SRE} returned from the constructor \code{SRE()} containing all the parameters and information on the SRE model. Note that prior to v2.x, \code{loglik()} and \code{SRE.fit()} took the now-defunct argument \code{SRE_model} instead of \code{object}}
+\item{object}{object of class \code{SRE} returned from the constructor \code{SRE()} containing all the parameters and information on the SRE model}
 
 \item{newdata}{object of class \code{SpatialPoylgons}, \code{SpatialPoints}, or \code{STI}, indicating the regions or points over which prediction will be carried out. The BAUs are used if this option is not specified.}
 
@@ -363,9 +363,6 @@ the change in \ifelse{html}{\out{<i>&sigma;<sup>2</sup><sub>.</sub></i>}}{\eqn{\
  (default \code{nlminb()}).}
 }
 
-\code{info_fit()} extracts information on the fitting (convergence, etc.), 
-\code{coef()} extracts the estimated regression regression coefficients, and 
-\code{loglik()} returns the final log-likelihood. 
 
 \emph{Wrapper for set-up and model fitting}
 
@@ -422,11 +419,8 @@ S <- SRE.fit(S, n_EM = 2, tol = 0.01, print_lik = TRUE)
 
 ## Check fit info, final log-likelihood, and estimated regression coefficients
 info_fit(S)
-loglik(S)
+logLik(S)
 coef(S)
-
-## Compute diagnostics
-diagnostics(S)
 
 ## Predict over BAUs
 pred <- predict(S)
@@ -439,7 +433,7 @@ ggpubr::ggarrange(plotlist = plotlist, nrow = 1, align = "hv", legend = "top")}
 \references{
 Zammit-Mangion, A. and Cressie, N. (2021). FRK: An R package for spatial and spatio-temporal prediction with large datasets. Journal of Statistical Software, 98(4), 1-48. doi:10.18637/jss.v098.i04.
 
-Sainsbury-Dale, M. and Zammit-Mangion, A. and Cressie, N. (2021) Modelling, Fitting, and Prediction with Non-Gaussian Spatial and Spatio-Temporal Data using FRK, arXiv:2110.02507
+Sainsbury-Dale, M. and Zammit-Mangion, A. and Cressie, N. (2021) Modelling with Non-Gaussian Spatial and Spatio-Temporal Data using FRK, arXiv:2110.02507
 }
 \seealso{
 \code{\link{SRE-class}} for details on the SRE object internals, 

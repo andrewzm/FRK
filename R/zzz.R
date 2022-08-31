@@ -16,4 +16,9 @@
 ## Unlooad compiled code when unloading FRK
 .onUnload <- function (libpath) {
   library.dynam.unload("FRK", libpath)
+  
+  # Stop cluster if active
+  if(!is.null(opts_FRK$get("parallel"))) 
+    if(opts_FRK$get("parallel") > 1) 
+      opts_FRK$set("parallel", 1L)
 }

@@ -25,7 +25,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   ## The user can either provide k in object@BAUs$k_BAU, or in the predict call.
   ## This is so that the user can change k without having to call SRE() and SRE.fit() again.
   ## The k supplied in predict() will take precedence over the k stored in object@BAUs$k.
-
+  
   k_BAU <- object@BAUs$k_BAU # size parameter at the BAU level (could be NULL)
   N <- length(object@BAUs)   # number of BAUs
   
@@ -94,14 +94,14 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   }
   
   ## Call internal prediction functions depending on which method is used
-    if (object@method == "EM") {
-      pred_locs <- .SRE.predict_EM(Sm = object,              # Fitted SRE model
+  if (object@method == "EM") {
+    pred_locs <- .SRE.predict_EM(Sm = object,              # Fitted SRE model
                                  obs_fs = obs_fs,             # Case 1 or Case 2?
                                  newdata = newdata,           # Prediction polygons
                                  pred_time = pred_time,       # Prediction time points
                                  covariances = covariances,   # Compute covariances?
                                  CP = CP,                     # Polygon prediction matrix
-                                 predict_BAUs = predict_BAUs,) # Are we predicting at BAUs?                   
+                                 predict_BAUs = predict_BAUs) # Are we predicting at BAUs?                   
     
   } else if (object@method == "TMB") {
     pred_locs <- .SRE.predict_TMB(object = object,               # Fitted SRE model
@@ -437,7 +437,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
       Q_posterior <- object@Q_posterior[-(1:p), -(1:p)]
     }
   } 
-
+  
   ## Compute the Cholesky factor of the permuted precision matrix.
   Q_L <- sparseinv::cholPermute(Q = Q_posterior)
   
@@ -473,7 +473,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   colnames(predictions) <- paste0("p_", QOI)
   colnames(RMSPE) <- paste0("RMSPE_", QOI)
   newdata@data <- cbind(newdata@data, predictions, RMSPE)
-
+  
   ## Percentiles 
   newdata@data <- .concat_percentiles_to_df(newdata@data, MC = MC, percentiles = percentiles)
   
@@ -508,10 +508,10 @@ simulate_xi <- function(object, nsim, type) {
   
   if (type == "observed") {
     f <- observed_BAUs 
-    nsim <- mstar
+    nloc <- mstar
   } else {
     f <- unobserved_BAUs
-    nsim <- N - mstar
+    nloc <- N - mstar
   }
   
   
@@ -523,8 +523,8 @@ simulate_xi <- function(object, nsim, type) {
     sigma2fs <- object@sigma2fshat
   }
   
-  xi <- rnorm(nsim * nsim, mean = 0, sd = sqrt(sigma2fs)) %>% 
-    matrix(nrow = nsim, ncol = nsim)
+  xi <- rnorm(nsim * nloc, mean = 0, sd = sqrt(sigma2fs)) %>% 
+    matrix(nrow = nloc, ncol = nsim)
   
   return(xi)
 }
@@ -535,7 +535,7 @@ simulate_xi <- function(object, nsim, type) {
   ## Design matrices evaluated at observed BAUs only
   X_O <- .constructX_O(object) 
   S_O <- .constructS_O(object) 
-
+  
   obsidx <- observed_BAUs(object)        # index of observed BAUs
   
   MC <- list()              
@@ -546,7 +546,7 @@ simulate_xi <- function(object, nsim, type) {
   ## Number of fixed and random effects
   p <- length(object@alphahat)
   s <- r + mstar * object@include_fs
-
+  
   # ---- Define alpha and generate samples from (eta', xi_O')' ----
   
   ## Construct the posterior mean of all random effects (include the regression
@@ -564,7 +564,7 @@ simulate_xi <- function(object, nsim, type) {
       # zero mean marginally
       posterior_mean <- c(posterior_mean, rep(0, mstar))
     }
-   
+    
   } 
   
   ## Generate samples from Gau(0, 1) distribution, and transform this 
@@ -575,7 +575,7 @@ simulate_xi <- function(object, nsim, type) {
   x <- solve(U, z)              # x ~ Gau(0, A), where A is the permuted precision matrix i.e. A = P'QP
   y <- Q_L$P %*% x              # y ~ Gau(0, Q^-1)
   y <- as.matrix(y)
-    
+  
   ## Add the mean vector to the simulated random effects.
   samples <- y + matrix(rep(posterior_mean, times = nsim), ncol = nsim) 
   
@@ -615,7 +615,7 @@ simulate_xi <- function(object, nsim, type) {
     xi_U <- simulate_xi(object, nsim = nsim, type = "unobserved")
     xi_samples <- rbind(xi_O, xi_U)
   }
-
+  
   # ---- Construct samples from the latent process Y ----
   
   ## We break the latent process down as: Y = Y_smooth + xi, 
@@ -745,7 +745,7 @@ simulate_xi <- function(object, nsim, type) {
     Z_samples <- rnorm(n, mean = c(t(mu_samples)), sd = sqrt(sigma2e))
   } else if (object@response == "gamma") {
     theta <- 1 / c(t(mu_samples))    # canonical parameter
-    a <- 1/object@phi                     # shape parameter
+    a <- 1/object@phi                # shape parameter
     beta  <- theta * a               # rate parameter (1/scale)
     Z_samples <- rgamma(n, shape = a, rate = beta)
   } else if (object@response == "inverse-gaussian") {
@@ -771,124 +771,3 @@ simulate_xi <- function(object, nsim, type) {
   
   return(MC)
 }
-
-# ---- Analytic solution: Not implemented yet ----
-
-## Posterior variance of the latent Y process.
-## Computes the variance of the latent process \eqn{Y} at every BAU. 
-## Note that MSPE(E(Y|Z), Y) is approximated by var(Y|Z).
-## 
-## To compute the prediction uncertainty of Y we require the joint
-## covariance matrix of the random effects \eqn{(\eta', \xi_O')'}. \code{TMB}
-## provides an approximation of the joint \emph{precision} matrix of
-## \eqn{(\eta', \xi_O')'}, which we must invert to obtain the approximate
-## covariance matrix. However, due to the potentially very large number of
-## random effects (the number of observations \eqn{m} is not restricted),
-## in practice we compute the sparse-inverse-subset of the joint precision matrix,
-## \emph{not} the true joint covariance matrix.
-## 
-## Note that as we are using E(\eqn{Y|Z}) to predict \eqn{Y}, 
-## the posterior variance acts as an approximation of the mean-squared 
-## prediction error (see pg. 72 of Honours thesis).
-## 
-## #'@param M An object of class SRE.
-## #'@param Q_L A list containing the Cholesky factor of the permuted precision matrix (stored as \code{Q$Qpermchol}) and the associated permutationmatrix (stored as \code{Q_L$P}).
-## #'@param Q_posterior the posterior precision matrix of the fixed and random effects
-## #'@param obsidx Vector containing the observed locations.
-## #'@param X matrix of covariates
-## #'@param kriging whether we wish to perform "simple" or "universal" kriging
-## #'@return A vector of the posterior variance of Y at every BAU. 
-# .Y_var <- function(M, Q_posterior, Q_L, obsidx, X, kriging){
-#   
-#   r <- nbasis(M)
-#   mstar <- length(obsidx)
-#   
-#   ## Number of fixed and random effects
-#   p <- length(M@alphahat)
-#   s <- r + mstar * M@include_fs
-#   
-#   ## number of spatial and temporal BAUs
-#   if (is(M@basis,"TensorP_Basis")) {
-#     ns <- length(M@BAUs@sp)
-#     nt <- length(unique(M@BAUs@endTime))
-#   } else {
-#     ns <- length(M@BAUs)
-#   }
-#   
-#   
-#   # ---- Inverse of Q  
-#   
-#   ## Use the sparse-inverse-subset (acting as a proxy for the true covariance matrix)
-#   ## if we have too many random effects
-#   if (r + mstar < 4000) {
-#     Sigma <- chol2inv(chol(M@Q_posterior))
-#   } else {
-#     Sigma <- sparseinv::Takahashi_Davis(Q = Q_posterior, cholQp = Q_L$Qpermchol, P = Q_L$P)
-#   }
-#   
-#   if (kriging == "universal") {
-#     Sigma_alpha   <- Sigma[1:p, 1:p, drop = FALSE]
-#     Sigma_random  <- Sigma[-(1:p), -(1:p), drop = FALSE]
-#     Cov_alpha_eta <- Sigma[1:p, (p+1):(p+r), drop = FALSE]
-#     Cov_alpha_xi  <- Sigma[1:p, (p + r +1):(p+r+mstar), drop = FALSE]
-#   } else if (kriging == "simple") {
-#     Sigma_random  <- Sigma
-#   }
-#   
-#   Sigma_eta <- Sigma_random[1:r, 1:r]
-#   if (M@include_fs) {
-#     Sigma_xi    <- Sigma_random[(r + 1):(r + mstar), (r + 1):(r + mstar)]
-#     Cov_eta_xi  <- Sigma_random[1:r, (r + 1):(r + mstar)] # Covariances between xi_O and eta
-#   }
-#   
-#   
-#   # ----- Uncertainty: Posterior variance of Y at each BAU
-#   
-#   ## To extract the variances of eta|Z, we need diag(S0 %*% Sigma_eta %*% t(S0)).
-#   ## Also, to extract the covariance terms, we need: diag(S %*% COV_{eta, xi}).
-#   ## This in very inefficient to do directly, it much better to use the identity:
-#   ##      diag(AB) = (A*B')1
-#   
-#   
-#   ## Add common terms for both observed and unobserved locations:
-#   vY <- as.vector( (M@S0 %*% Sigma_eta * M@S0) %*% rep(1, r) )
-#   
-#   if(kriging == "universal") {
-#     
-#     ## Variance due to alpha
-#     vY <- vY + as.vector( (X %*% Sigma_alpha * X) %*% rep(1, p) )
-#     
-#     ## Covariance terms between alpha and eta
-#     cov_alpha_eta <- as.vector( (X %*% Cov_alpha_eta * M@S0) %*% rep(1, r) )
-#     vY <- vY + 2 * cov_alpha_eta
-#   }
-#   
-#   
-#   if (M@include_fs) {
-#     
-#     ## UNOBSERVED locations
-#     
-#     ## simply add the estimate of sigma2fs to the variance.
-#     ## If we have a unique fine-scale variance at each spatial BAU (spatio-temporal 
-#     ## case only), add the sigma2fs associated with that BAU.
-#     if (M@fs_by_spatial_BAU) {
-#       unobsidx <- unobserved_BAUs(M)
-#       spatial_BAU_id <- ((unobsidx - 1) %% ns) + 1
-#       vY[unobsidx] <- vY[unobsidx] + M@sigma2fshat[spatial_BAU_id]
-#     } else {
-#       vY[-obsidx] <- vY[-obsidx] + M@sigma2fshat
-#     }
-#     
-#     ## OBSERVED locations
-#     
-#     ## add both var(xi_O|Z) and cov(xi_O, eta | Z)
-#     vY[obsidx] <- vY[obsidx] + diag(Sigma_xi) + 2 * (M@S_O * t(Cov_eta_xi)) %*% rep(1, r)
-#     
-#     ## Add covariance between alpha and xi_O if we are using universal kriging
-#     if(kriging == "universal") 
-#       vY[obsidx] <- vY[obsidx] + 2 * (M@X_O * t(Cov_alpha_xi)) %*% rep(1, p)
-#     
-#   }
-#   
-#   return(vY) # Return variance of Y
-# }

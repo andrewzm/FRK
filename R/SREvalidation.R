@@ -9,11 +9,30 @@ simulate <- function(object, newdata = NULL, nsim = 400, conditional_fs = FALSE,
     newdata <- object@data[[1]]
   }
   
+  if ("obs_fs" %in% names(list(...))) stop("obs_fs cannot be set from simulate")
+  
   if (object@method == "EM") {
-    pred <- predict(object, newdata = newdata, ...) # TODO need conditional_fs for EM side. Once implemented, add conditional_fs = conditional_fs to this call to predict()
+    obs_fs = !conditional_fs
+    pred <- predict(object, newdata = newdata, obs_fs = obs_fs, ...) 
     Zhat       <- pred$mu
-    sigma2e    <- object@Ve[1, 1]
-    sdZ        <- sqrt(pred$sd^2 + sigma2e)
+    # TODO Use all of Ve, not just Ve[1, 1]. Not sure how to do this, since Ve 
+    # is of dimension mstar, where mstar is the number of observed BAUs (rather 
+    # than m, the number of observations before binning). Also, we allow the 
+    # argument newdata.
+    sigma2e <- mean(diag(object@Ve))
+    if (obs_fs) {
+      # Add the fine-scale variance. This is complicated since the constant of 
+      # proportionality can depend on object@BAUs$fs, and this complication is 
+      # compounded by the argument newdata. The following lines deals with this 
+      # by constructing the incidence matrix for newdata. 
+      Z <- map_data_to_BAUs(newdata, object@BAUs, average_in_BAU = FALSE)
+      C <- BuildC(Z, object@BAUs)
+      fs <- object@BAUs$fs[C$j_idx]
+      sigma2fs <- object@sigma2fshat * fs
+      sdZ <- sqrt(pred$sd^2 + sigma2fs + sigma2e)
+    } else {
+      sdZ <- sqrt(pred$sd^2 + sigma2e)
+    }
     MC_samples <- t(sapply(seq_along(Zhat), function(i) rnorm(nsim, Zhat[i], sdZ[i]))) 
   } else {
     pred <- predict(object, newdata = newdata, type = "response", percentiles = NULL, 
@@ -25,7 +44,7 @@ simulate <- function(object, newdata = NULL, nsim = 400, conditional_fs = FALSE,
 }
 
 
-# TODO marginal simulation (i.e., unconditionally on the random effects) would 
+# TODO marginal simulation (i.e., unconditionally on all random effects) would 
 # be straightforward too, and we can use predict() to avoid code repetition. 
 # Perhaps the best way to implement it would be by adding an argument, 
 # conditional_basis, which controls if we are to simulate conditionally on the 
@@ -137,7 +156,7 @@ setMethod("AIC", signature="SRE", function(object, k = 2) {
   q <- length(coef(object))
   
   ## The criterion
-  k * (p + q) - 2 * loglik(object)
+  k * (p + q) - 2 * logLik(object)
 })
 
 

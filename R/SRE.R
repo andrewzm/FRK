@@ -32,7 +32,7 @@
 #' @param vgm_model (applicable only if \code{response} = "gaussian") an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm}. This object contains the variogram model that will be fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified, the variogram used is \code{gstat::vgm(1, "Lin", d, 1)}, where \code{d} is approximately one third of the maximum distance between any two data points
 #' @param K_type the parameterisation used for the basis-function covariance matrix, \code{K}. If \code{method} = "EM", \code{K_type} can be "unstructured" or "block-exponential". If \code{method} = "TMB", \code{K_type} can be "precision" or "block-exponential". The default is "block-exponential", however if \code{FRK()} is used and \code{method} = "TMB", for computational reasons \code{K_type} is set to "precision"
 #' @param normalise_basis flag indicating whether to normalise the basis functions so that they reproduce a stochastic process with approximately constant variance spatially
-#' @param object object of class \code{SRE} returned from the constructor \code{SRE()} containing all the parameters and information on the SRE model. Note that prior to v2.x, \code{loglik()} and \code{SRE.fit()} took the now-defunct argument \code{SRE_model} instead of \code{object}
+#' @param object object of class \code{SRE} returned from the constructor \code{SRE()} containing all the parameters and information on the SRE model
 #' @param n_EM (applicable only if \code{method} = "EM") maximum number of iterations for the EM algorithm
 #' @param tol (applicable only if \code{method} = "EM") convergence tolerance for the EM algorithm
 #' @param method parameter estimation method to employ. Currently "EM" and "TMB" are supported
@@ -226,9 +226,6 @@
 #'  (default \code{nlminb()}).}
 #' }
 #' 
-#' \code{info_fit()} extracts information on the fitting (convergence, etc.), 
-#' \code{coef()} extracts the estimated regression regression coefficients, and 
-#' \code{loglik()} returns the final log-likelihood. 
 #' 
 #' \emph{Wrapper for set-up and model fitting}
 #'
@@ -266,7 +263,7 @@
 #' @references
 #' Zammit-Mangion, A. and Cressie, N. (2021). FRK: An R package for spatial and spatio-temporal prediction with large datasets. Journal of Statistical Software, 98(4), 1-48. doi:10.18637/jss.v098.i04.
 #'
-#' Sainsbury-Dale, M. and Zammit-Mangion, A. and Cressie, N. (2021) Modelling, Fitting, and Prediction with Non-Gaussian Spatial and Spatio-Temporal Data using FRK, arXiv:2110.02507
+#' Sainsbury-Dale, M. and Zammit-Mangion, A. and Cressie, N. (2021) Modelling with Non-Gaussian Spatial and Spatio-Temporal Data using FRK, arXiv:2110.02507
 #' @export
 #' @examples
 #' library("FRK")
@@ -292,11 +289,8 @@
 #' 
 #' ## Check fit info, final log-likelihood, and estimated regression coefficients
 #' info_fit(S)
-#' loglik(S)
+#' logLik(S)
 #' coef(S)
-#' 
-#' ## Compute diagnostics
-#' diagnostics(S)
 #' 
 #' ## Predict over BAUs
 #' pred <- predict(S)
