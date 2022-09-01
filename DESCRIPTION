@@ -51,6 +51,6 @@ Additional_repositories: https://andrewzm.github.io/dggrids-repo/,
 License: GPL (>= 2)
 NeedsCompilation: yes
 LazyData: true
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.1
 LinkingTo: Rcpp, TMB, RcppEigen
 Encoding: UTF-8

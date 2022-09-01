@@ -285,8 +285,10 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
       Dchol <- chol(D)           # otherwise they need to be computed in full
       Dinv <- chol2inv(Dchol)
     }
-    sig2_Vfs_pred <- Diagonal(x=sigma2fs*BAUs$fs)   # fine-scale variation including estimated factor
-    Q <- solve(sig2_Vfs_pred)                       # precision of fine-scale variation
+    if(sigma2fs > 0) {
+         sig2_Vfs_pred <- Diagonal(x=sigma2fs*BAUs$fs)   # fine-scale variation including estimated factor
+         Q <- solve(sig2_Vfs_pred)                       # precision of fine-scale variation
+    }
   } else  {
     stop("Prediction for other models not yet implemented")
   }
