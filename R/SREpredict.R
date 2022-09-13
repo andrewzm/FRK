@@ -12,8 +12,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                                                pred_time = NULL, covariances = FALSE, 
                                                nsim = 400, type = "mean", k = NULL, 
                                                percentiles = c(5, 95), 
-                                               kriging = "simple", 
-                                               conditional_fs = TRUE) {
+                                               kriging = "simple") {
   
   ## Note that the following code must be done before .check_args3() because it
   ## alters the input, rather than simpling throwing a warning or error. 
@@ -114,8 +113,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                                   type = type,                 # Whether we are interested in the "link" (Y-scale), "mean", "response"
                                   k = k,                       # Size parameter
                                   percentiles = percentiles,   # Desired percentiles of MC samples
-                                  kriging = kriging, 
-                                  conditional_fs = conditional_fs)          
+                                  kriging = kriging)          
   } 
   
   ## If the user provided irregular points (SpatialPoints* or STI*) to predict over, 
@@ -232,8 +230,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   
   ## If we have to compute too many covariances then stop and give error
   if(covariances & nrow(CP) > 4000)
-    stop("Cannot compute covariances for so many prediction locations. Please reduce
-             to less than 4000")
+    stop("Cannot compute covariances for so many prediction locations. Please reduce to less than 4000")
   
   ## Get the CZ matrix
   CZ <- Sm@Cmat
@@ -415,7 +412,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
 
 
 .SRE.predict_TMB <- function(object, newdata, CP, predict_BAUs, pred_time, type, nsim, 
-                             obs_fs, k, percentiles, kriging, conditional_fs) {
+                             obs_fs, k, percentiles, kriging) {
   
   ## Covariate design matrix at the BAU level
   X     <- as(.extract_BAU_X_matrix(formula = object@f, BAUs = object@BAUs), "matrix")
@@ -448,7 +445,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   MC <- .simulate(object = object, X = X, type = type, obs_fs = obs_fs, 
                   nsim = nsim, k = k, Q_L = Q_L,  
                   predict_BAUs = predict_BAUs, CP = CP, 
-                  kriging = kriging, conditional_fs = conditional_fs)
+                  kriging = kriging)
   
   ## We do not allow aggregation of the Y-process when predicting over arbitrary polygons
   if(!predict_BAUs) MC$Y_samples <- NULL
@@ -532,7 +529,7 @@ simulate_xi <- function(object, nsim, type) {
 }
 
 
-.simulate <- function(object, X, type, nsim, obs_fs, k, Q_L, predict_BAUs, CP, kriging, conditional_fs){
+.simulate <- function(object, X, type, nsim, obs_fs, k, Q_L, predict_BAUs, CP, kriging){
   
   ## Design matrices evaluated at observed BAUs only
   X_O <- .constructX_O(object) 
@@ -557,17 +554,7 @@ simulate_xi <- function(object, nsim, type) {
   ## weights, and the fine-scale variation (if object@include_fs). 
   posterior_mean <- if (kriging == "universal") as.numeric(object@alphahat) else vector()
   posterior_mean <- c(posterior_mean, as.numeric(object@mu_eta))
-  if (object@include_fs) {
-    
-    if (conditional_fs) {
-      # conditioning on fitted random effects: use the posterior mean of fine-scale effects
-      posterior_mean <- c(posterior_mean, as.numeric(object@mu_xi))
-    } else {
-      # zero mean marginally
-      posterior_mean <- c(posterior_mean, rep(0, mstar))
-    }
-    
-  } 
+  if (object@include_fs) posterior_mean <- c(posterior_mean, as.numeric(object@mu_xi))
   
   ## Generate samples from Gau(0, 1) distribution, and transform this 
   ## standard normal vector to one that has the desired posterior precision matrix.
@@ -591,15 +578,13 @@ simulate_xi <- function(object, nsim, type) {
   
   ## Observed fine-scale variation:
   if (object@include_fs) {
-    if (conditional_fs) {
-      if (kriging == "universal") {
-        xi_O  <- samples[(p + r + 1):(p + r + mstar), ]
-      } else {
-        xi_O  <- samples[(r + 1):(r + mstar), ]
-      }
+    
+    if (kriging == "universal") {
+      xi_O  <- samples[(p + r + 1):(p + r + mstar), ]
     } else {
-      xi_O <- simulate_xi(object, nsim = nsim, type = "observed")
+      xi_O  <- samples[(r + 1):(r + mstar), ]
     }
+
   }
   
   ## We now have several matrices of Monte Carlo samples:
@@ -659,14 +644,65 @@ simulate_xi <- function(object, nsim, type) {
   ## Outputted Y value depend on obs_fs
   MC$Y_samples <- if (obs_fs) Y_smooth_samples else Y_samples
   
-  ## If Y is the ONLY quantity of interest, exit the function.
+  ## If Y is the only quantity of interest, exit the function.
   if (!("mean" %in% type) & !("response" %in% type)) return(MC) 
   
   
   # ---- Apply inverse-link function to the samples to obtain conditional mean ----
+
+  ## For all models other than the Gau-Gau model (i.e., Gaussian data with an 
+  ## identity link function), the fine-scale variation process xi(.) is 
+  ## henceforth included in the latent process Y(.).
   
-  ## Past this point we must have xi in the Y process (the model breaks down otherwise).
-  ## In the case of type == "all", we simply export Y_smooth_samples as the samples of Y.
+  if (object@response == "gaussian" && object@link == "identity" && obs_fs) {
+    mu_samples   <- Y_smooth_samples
+  } else {
+    tmp <- .inverselink(Y_samples, object, k = k)
+    mu_samples   <- tmp$mu_samples
+    prob_samples <- tmp$prob_samples
+  }
+  
+  # ---- Predicting over arbitrary polygons ----
+  
+  if (!predict_BAUs) mu_samples <- as.matrix(CP %*% mu_samples)
+  
+  if (!predict_BAUs & object@response %in% c("binomial", "negative-binomial")) {
+    k_P <- CP %*% k
+    prob_samples <- as.matrix(h(mu_samples, k_P))
+  }
+  
+  ## Output the mean samples. If probability parameter was computed, and 
+  ## we are predicting over the BAUs, also output.
+  MC$mu_samples <- mu_samples
+  if (!is.null(prob_samples)) MC$prob_samples <- prob_samples
+  
+  ## If the response is not a quantity of interest, exit the function
+  if (!("response" %in% type)) return(MC)
+  
+  
+  # ---- Sample the response variable, Z ----
+  
+  if (object@response == "gaussian") {
+    sigma2e <- .measurementerrorvariance(object, newdata)
+    if (object@link == "identity" && obs_fs) {
+      
+      ## Add the fine-scale variation to mu(.) and possibly aggregate over 
+      ## the prediction regions. Note that the mu_samples return in the list MC 
+      ## is still the smooth version without fine-scale variation; we just add 
+      ## it here so that it can be implicitly incorporated in the simulations of 
+      ## the response variable. 
+      mu_samples  <- Y_smooth_samples + xi_samples
+      if (!predict_BAUs) mu_samples <- as.matrix(CP %*% mu_samples)
+    }
+  } 
+  
+  MC$Z_samples <- .sampleZ(mu_samples = mu_samples, object = object)
+  
+  return(MC)
+}
+
+
+.inverselink <- function(Y_samples, object, k) {
   
   ## For families with a known constant parameter (binomial, negative-binomial),
   ## finv() maps the Gaussian scale Y process to the probability parameter p.
@@ -696,58 +732,29 @@ simulate_xi <- function(object, nsim, type) {
   } else if (object@response == "negative-binomial" & object@link %in% c("log", "sqrt")) {
     mu_samples   <- k * ginv(Y_samples) 
     prob_samples <- h(mu = mu_samples, k = k)
-  } else if (object@response == "gaussian" && object@link == "identity" && obs_fs) {
-    mu_samples <- Y_smooth_samples
   } else {
-    mu_samples <- ginv(Y_samples)
+    mu_samples   <- ginv(Y_samples)
   }
   
+  if (!exists("prob_samples")) prob_samples <- NULL
   
-  # ---- Predicting over arbitrary polygons ----
+  return(list(mu_samples = mu_samples, prob_samples = prob_samples))
+}
+
+
+
+.sampleZ <- function(mu_samples, object, obs_fs, sigma2e) {
   
-  if (!predict_BAUs) mu_samples <- as.matrix(CP %*% mu_samples)
-  
-  if (!predict_BAUs & object@response %in% c("binomial", "negative-binomial")) {
-    k_P <- CP %*% k
-    prob_samples <- as.matrix(h(mu_samples, k_P))
-  }
-  
-  ## Output the mean samples. If probability parameter was computed, and 
-  ## we are predicting over the BAUs, also output.
-  MC$mu_samples <- mu_samples
-  if (exists("prob_samples")) MC$prob_samples <- prob_samples
-  
-  ## If the response is not a quanitity of interest, exit the function
-  if (!("response" %in% type)) return(MC)
-  
-  
-  # ---- Sample the response variable, Z ----
-  
-  n <- nrow(CP) * nsim
+  n    <- length(mu_samples)
+  nsim <- ncol(mu_samples)
   
   if (object@response == "poisson") {
     Z_samples <- rpois(n, lambda = c(t(mu_samples)))
-  } else if (object@response == "gaussian") {
-    # measurement error variance
-    if (!.zero_range(diag(object@Ve))) {
-      sigma2e <- mean(diag(object@Ve))
-      cat("You have requested inference on the noisy data process. In a Gaussian setting, this requires the measurement error standard deviation; we are assuming it is spatially invariant, and is the average of std field supplied in the data.")
-    } else {
-      sigma2e <- object@Ve[1, 1]
-    }
-    
-    ## If obs_fs = TRUE, we need to add the fine-scale variance here, and 
-    ## possibly aggregate over prediction regions
-    if(object@link == "identity" && obs_fs) {
-      mu_samples <- Y_samples # This is the smooth process Y (equivalent to mu, because link = identity) + fine-scale variation
-      if (!predict_BAUs) 
-        mu_samples <- as.matrix(CP %*% mu_samples)
-    }
-    
+  } else if (object@response == "gaussian") { 
     Z_samples <- rnorm(n, mean = c(t(mu_samples)), sd = sqrt(sigma2e))
   } else if (object@response == "gamma") {
     theta <- 1 / c(t(mu_samples))    # canonical parameter
-    a <- 1/object@phi                # shape parameter
+    a     <- 1/object@phi            # shape parameter
     beta  <- theta * a               # rate parameter (1/scale)
     Z_samples <- rgamma(n, shape = a, rate = beta)
   } else if (object@response == "inverse-gaussian") {
@@ -767,9 +774,26 @@ simulate_xi <- function(object, nsim, type) {
   
   ## Convert from a long vector to an n_pred_locs x nsim matrix
   Z_samples <- matrix(Z_samples, ncol = nsim, byrow = TRUE)
+}
+
+.measurementerrorvariance <- function(object, newdata) {
   
-  ## Add Z_samples to list object
-  MC$Z_samples <- Z_samples
+  if (!is.null(newdata$std)) {
+    sigma2e <- (newdata$std)^2
+  } else {
+    
+    # Ideally we would use all of Ve. However, Ve is of dimension m*, where m* 
+    # is the number of observed BAUs (rather than m, the number of 
+    # observations in newdata pre-binning). For now, just extract a single value 
+    # from Ve. 
+    
+    if (!.zero_range(diag(object@Ve))) {
+      sigma2e <- mean(diag(object@Ve))
+      cat("Prediction of Gaussian-distributed data requires the measurement-error standard deviation; we are assuming that it is spatially invariant, and that it is the average of measurement-error standard deviation used during model fitting (which were supplied with the data in the field 'std', or estimated using variogram techniques).")
+    } else {
+      sigma2e <- object@Ve[1, 1]
+    }
+  }
   
-  return(MC)
+  return(sigma2e)
 }

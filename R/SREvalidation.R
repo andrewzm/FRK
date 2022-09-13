@@ -11,51 +11,88 @@ simulate <- function(object, newdata = NULL, nsim = 400, conditional_fs = FALSE,
   
   if ("obs_fs" %in% names(list(...))) stop("obs_fs cannot be set from simulate")
   
+  obs_fs <- !conditional_fs
+  
+  # fine-scale variance parameters
+  if (obs_fs) {
+    # Compute the fine-scale variance parameter for each location. This is 
+    # complicated since the constant of proportionality can depend on 
+    # object@BAUs$fs, and this complication is compounded by the argument newdata. 
+    # The following lines deal with this  by constructing the incidence matrix 
+    # for newdata, which can then be used to map the fine-scale variance parameters
+    # to the observations. 
+    Z <- map_data_to_BAUs(newdata, object@BAUs, average_in_BAU = FALSE)
+    C <- BuildC(Z, object@BAUs)
+    fs <- object@BAUs$fs[C$j_idx]
+    sigma2fs <- object@sigma2fshat * fs
+  }
+  
+  # measurement-error variance parameters
+  if (object@response == "gaussian") sigma2e <- .measurementerrorvariance(object, newdata)
+  
+  # size parameters 
+  if (object@response %in% c("binomial", "negative-binomial")) {
+    # For simplicity, the user has to provide the size parameters using the 
+    # argument "k" in predict().  
+    l <- list(...)
+    if (is.null(l$k)) {
+      stop("The data model is binomial or negative-binomial; please provide the size parameters (e.g., the number of trials or number of failures) using the argument 'k'")
+    } else {
+      k = l$k
+    }
+  }
+  
+  # simulate the response variable
   if (object@method == "EM") {
-    obs_fs = !conditional_fs
+    
     pred <- predict(object, newdata = newdata, obs_fs = obs_fs, ...) 
-    Zhat       <- pred$mu
-    # TODO Use all of Ve, not just Ve[1, 1]. Not sure how to do this, since Ve 
-    # is of dimension mstar, where mstar is the number of observed BAUs (rather 
-    # than m, the number of observations before binning). Also, we allow the 
-    # argument newdata.
-    sigma2e <- mean(diag(object@Ve))
+    Zhat <- pred$mu
+  
     if (obs_fs) {
-      # Add the fine-scale variance. This is complicated since the constant of 
-      # proportionality can depend on object@BAUs$fs, and this complication is 
-      # compounded by the argument newdata. The following lines deals with this 
-      # by constructing the incidence matrix for newdata. 
-      Z <- map_data_to_BAUs(newdata, object@BAUs, average_in_BAU = FALSE)
-      C <- BuildC(Z, object@BAUs)
-      fs <- object@BAUs$fs[C$j_idx]
-      sigma2fs <- object@sigma2fshat * fs
       sdZ <- sqrt(pred$sd^2 + sigma2fs + sigma2e)
     } else {
       sdZ <- sqrt(pred$sd^2 + sigma2e)
     }
-    MC_samples <- t(sapply(seq_along(Zhat), function(i) rnorm(nsim, Zhat[i], sdZ[i]))) 
+    samples <- t(sapply(seq_along(Zhat), function(i) rnorm(nsim, Zhat[i], sdZ[i]))) 
+    
   } else {
-    pred <- predict(object, newdata = newdata, type = "response", percentiles = NULL, 
-                    conditional_fs = conditional_fs, nsim = nsim, ...)
-    MC_samples <- pred$MC$Z_samples
+    
+    if (conditional_fs) {
+      
+      pred <- predict(object, newdata = newdata, type = "response", 
+                      percentiles = NULL, nsim = nsim, obs_fs = obs_fs, ...)
+      samples <- pred$MC$Z_samples
+      
+    } else {
+      
+      # Obtain samples of the smooth version (i.e., excluding fine-scale variation) 
+      # of the latent process, Y(.)
+      pred <- predict(object, newdata = newdata, type = "link", 
+                      percentiles = NULL, nsim = nsim, obs_fs = obs_fs, ...)
+      Y_samples <- pred$MC$Y_samples
+    
+      # Add marginal fine-scale variation to the samples of Y(.). Let m 
+      # denote the number of locations, where m == nrow(Y_samples) == length(sigma2fs). 
+      # For each location, we have nsim samples of Y(.) stored in the columns of
+      # Y_samples; hence, before sampling the fine-scale variation xi(.), we 
+      # repeat each element of sigm2fs nsim times.  
+      m <- nrow(Y_samples)
+      sigma2fs_long <- rep(sigma2fs, each = nsim)
+      xi_samples <- rnorm(m * nsim, sd = sqrt(sigma2fs_long))
+      xi_samples <- matrix(xi_samples, byrow = TRUE, ncol = nsim)
+      Y_samples  <- Y_samples + xi_samples
+      
+      # compute mu(.) by applying the inverse link function to Y(.), and 
+      # simulate the response, Z
+      mu_samples <- .inverselink(Y_samples, object, k = k)$mu_samples 
+      Z_samples  <- .sampleZ(mu_samples = mu_samples, object = object, sigma2e = sigma2e)
+      
+      samples <- Z_samples
+    }
   }
   
-  return(MC_samples)
+  return(samples)
 }
-
-
-# TODO marginal simulation (i.e., unconditionally on all random effects) would 
-# be straightforward too, and we can use predict() to avoid code repetition. 
-# Perhaps the best way to implement it would be by adding an argument, 
-# conditional_basis, which controls if we are to simulate conditionally on the 
-# fitted basis-function coefficients. If both conditional_fs = FALSE and 
-# conditional_basis = FALSE, then we have marginal simulation.
-#   S <- object@S 
-#   Q <- object@Khat_inv 
-#   L <- t(chol(Q))
-#   r <- nrow(L)
-#   eta <- matrix(rnorm(r * nsim), nrow = r, ncol = nsim)
-
 
 #' @rdname SRE
 #' @export
@@ -164,79 +201,3 @@ setMethod("AIC", signature="SRE", function(object, k = 2) {
 #' @rdname SRE
 #' @export
 setMethod("BIC", signature="SRE", function(object) AIC(object, k = log(nobs(object))))
-
-
-
-
-
-
-# #' @title Compute model diagnostics
-# #' @description Takes an object of class \code{SRE} and computes several diagnostics useful for model assessment. The default diagnostics are the root-mean-squared error (RMSE), the mean-absolute error (MAE), the continuous ranked probability score (CRPS), and the empirical coverage and interval scores resulting from a prediction interval with a nominal coverage of (1-\code{alpha}).
-# #' @param object object of class \code{SRE}.
-# #' @param newdata an object of class \code{Spatial*DataFrame} or \code{STFDF} which contains the response variable and any covariates in the model. If \code{NULL} (default), the diagnostics are computed with respect to the data used for model fitting.
-# #' @param diagnostic_fns a named list of user-specified diagnostic functions (i.e., default diagnostics will also be computed). Each function should take as input a list and return a scalar value. The list that is passed into each function has elements:
-# #'  \itemize{
-# #'  \item{\code{Z}}{The data,}
-# #'  \item{\code{Zhat}}{The predictions,}
-# #'  \item{\code{Zhat_lower}}{The lower bound of the prediction interval,}
-# #'  \item{\code{Zhat_upper}}{The upper bound of the prediction interval,}
-# #'  \item{\code{MC_samples}}{A matrix of Monte Carlo samples, where rows correspond to observations in \code{Z}.}
-# #'  }
-# #' Note that a given function does not need to make use of all of the above elements (e.g., the RMSPE would simply use \code{Z} and \code{Zhat}).
-# #' @param nominal_coverage the nominal coverage of the prediction intervals, which should be strictly between 0 (0% coverage) and 1 (100% coverage).
-# #' @export
-# #' @examples
-# #' # See example in the help file for FRK
-# setGeneric("diagnostics", function(object, newdata = NULL, diagnostic_fns = NULL, nominal_coverage = 0.9)
-#   standardGeneric("diagnostics"))
-
-# diagnostics <- function(simulatedResponse, observedResponse, diagnostic_fns = NULL, nominal_coverage = 0.9) {
-#   
-#   if (nominal_coverage <= 0 | nominal_coverage >= 1) stop("nominal_coverage should be between 0 and 1")
-#   
-#   # Deprecation coercion
-#   Z <- observedResponse
-#   MC_samples <- simulatedResponse
-#   
-#   # Define alpha from the nominal coverage
-#   alpha <- 1 - nominal_coverage
-#   quantiles <- c(alpha/2, 1 - alpha/2)   # symmetric prediction intervals
-#   
-#   Zhat       <- rowMeans(MC_samples)
-#   Zhat_lower <- apply(MC_samples, 1, quantile, alpha/2)
-#   Zhat_upper <- apply(MC_samples, 1, quantile, 1 - alpha/2)
-#   
-#   # Check that the number of predictions match the number of observed data
-#   if (length(Z) != length(Zhat)) {
-#     stop("The number of observations, observedResponse, does not match the number of predictions, rowMeans(simulatedResponse).")
-#   }
-#   
-#   # Compute default diagnostics
-#   df <- data.frame(
-#     RMSE          = sqrt(mean((Zhat - Z)^2)),
-#     MAE           = mean(abs(Zhat - Z)),
-#     CRPS          = mean(crps_sample(y = Z, dat = MC_samples)),
-#     Coverage      = mean(Zhat_lower < Z & Z < Zhat_upper),
-#     intervalScore = mean(.intervalScore(Z = Z, l = Zhat_lower, u = Zhat_upper, a = alpha))
-#   )
-#   
-#   if (!is.null(diagnostic_fns)) {
-#     if (!is.list(diagnostic_fns)) stop("diagnostic_fns should be a named list")
-#     if (is.null(names(diagnostic_fns))) stop("diagnostic_fns should be a named list")
-#     if (!all(sapply(diagnostic_fns, class) == "function")) stop("Each element of diagnostic_fns should be a function")
-#     
-#     l  <- list(Z = Z, Zhat = Zhat, Zhat_lower = Zhat_lower, Zhat_upper = Zhat_upper, MC_samples = MC_samples)
-#     x  <- lapply(diagnostic_fns, function(f) f(l)) %>% as.data.frame
-#     df <- cbind(df, x)
-#   }
-#   
-#   return(df)
-# }
-# 
-# .intervalScore <- function(Z, l, u, a = 0.1) {
-#   (u - l) + (2 / a) * (l - Z) * (Z < l) + (2 / a) * (Z - u) * (Z > u) 
-# }
-
-# diagnostics(simulatedResponse, observedResponse, nominal_coverage = 0.9)
-# diagnostics(simulatedResponse, observedResponse, diagnostic_fns = list(MAD = function(l) mad(l$Zhat - l$Z)), nominal_coverage = 0.9)
-

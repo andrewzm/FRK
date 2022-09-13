@@ -94,8 +94,7 @@ SRE.fit(
   type = "mean",
   k = NULL,
   percentiles = c(5, 95),
-  kriging = "simple",
-  conditional_fs = TRUE
+  kriging = "simple"
 )
 
 \S4method{logLik}{SRE}(object)
