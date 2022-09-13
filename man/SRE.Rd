@@ -8,7 +8,6 @@
 \alias{predict,SRE-method}
 \alias{logLik,SRE-method}
 \alias{nobs,SRE-method}
-\alias{binned_data,SRE-method}
 \alias{coef,SRE-method}
 \alias{simulate}
 \alias{fitted,SRE-method}
@@ -100,8 +99,6 @@ SRE.fit(
 \S4method{logLik}{SRE}(object)
 
 \S4method{nobs}{SRE}(object, ...)
-
-\S4method{binned_data}{SRE}(object)
 
 \S4method{coef}{SRE}(object, ...)
 

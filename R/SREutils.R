@@ -6,6 +6,17 @@ setMethod("loglik", signature="SRE", function(object) {
   
 })
 
+setMethod("binned_data", signature = "SRE", function(object) {
+  # This will contain the binned data for each BAU, and will
+  # feature many missing values in the case of point-referenced data.
+  Cmat_dgT <- .as(object@Cmat, "dgTMatrix")
+  obs_BAUs <- Cmat_dgT@j + 1 # BAUs associated with each observation
+  data_idx <- Cmat_dgT@i + 1 # data index
+  Z <- rep(NA, length(object@BAUs))
+  Z[obs_BAUs] <- object@Z[data_idx] # TODO delete the following if the new method works without errors: Z[obs_BAUs] <- object@Z[, 1][data_idx]
+  return(Z)
+})
+
 #' @rdname SRE
 #' @export
 setMethod("logLik", signature="SRE", function(object) {
@@ -30,18 +41,6 @@ setMethod("observed_BAUs", signature(object = "SRE"), function (object) {
   return(object@obsidx)
 })
 
-#' @rdname SRE
-#' @export
-setMethod("binned_data", signature = "SRE", function(object) {
-  # This will contain the binned data for each BAU, and will
-  # feature many missing values in the case of point-referenced data.
-  Cmat_dgT <- .as(object@Cmat, "dgTMatrix")
-  obs_BAUs <- Cmat_dgT@j + 1 # BAUs associated with each observation
-  data_idx <- Cmat_dgT@i + 1 # data index
-  Z <- rep(NA, length(object@BAUs))
-  Z[obs_BAUs] <- object@Z[data_idx] # TODO delete this if the new method works without errors: Z[obs_BAUs] <- object@Z[, 1][data_idx]
-  return(Z)
-})
 
 ## this function is defined so that we can call it in SRE(), before an object of 
 ## class SRE is defined
