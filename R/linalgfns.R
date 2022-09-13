@@ -38,9 +38,31 @@ logdet <- function (L)
 ## Matrix 1.4-2 deprecated the coercion method as(object, Class). 
 ## The following function recreates it following the developers guidelines.
 .as <- function(from, to) {
-  # as(from, to)
-  convert <- Matrix:::.as.via.virtual(class(from), to)
+  # convert <- Matrix:::.as.via.virtual(class(from), to)
+  convert <- .Matrix.as.via.virtual(class(from), to)
   eval(convert)
+}
+
+.Matrix.as.via.virtual <- function (Class1, Class2, from = quote(from)) {
+  
+  if (!isClassDef(Class1)) Class1 <- getClassDef(Class1)
+  if (!isClassDef(Class2)) Class2 <- getClassDef(Class2)
+  if (!grepl("^[dln](di|ge|tr|sy|tp|sp|[gts][CRT])Matrix$", Class2@className)) stop("invalid 'Class2'")
+  contains1 <- names(Class1@contains)
+  contains2 <- names(Class2@contains)
+  virtual <- list(c("dMatrix", "lMatrix", "nMatrix"), 
+                  c("generalMatrix", "triangularMatrix", "symmetricMatrix"), 
+                  c("CsparseMatrix", "RsparseMatrix", "TsparseMatrix", 
+                    "diagonalMatrix", "unpackedMatrix", "packedMatrix"))
+  to <- from
+  for (v in virtual) {
+    if (any(m <- match(v, contains2, 0L) > 0L)) {
+      v1 <- v[m][1L]
+      if (match(v1, contains1, 0L) == 0L) 
+        to <- call("as", to, v1)
+    }
+  }
+  return(to)
 }
 
 ## quickbinds on columns

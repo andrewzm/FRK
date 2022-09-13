@@ -445,7 +445,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   MC <- .simulate(object = object, X = X, type = type, obs_fs = obs_fs, 
                   nsim = nsim, k = k, Q_L = Q_L,  
                   predict_BAUs = predict_BAUs, CP = CP, 
-                  kriging = kriging)
+                  kriging = kriging, newdata = newdata)
   
   ## We do not allow aggregation of the Y-process when predicting over arbitrary polygons
   if(!predict_BAUs) MC$Y_samples <- NULL
@@ -529,7 +529,7 @@ simulate_xi <- function(object, nsim, type) {
 }
 
 
-.simulate <- function(object, X, type, nsim, obs_fs, k, Q_L, predict_BAUs, CP, kriging){
+.simulate <- function(object, X, type, nsim, obs_fs, k, Q_L, predict_BAUs, CP, kriging, newdata){
   
   ## Design matrices evaluated at observed BAUs only
   X_O <- .constructX_O(object) 
@@ -668,6 +668,7 @@ simulate_xi <- function(object, nsim, type) {
   
   if (!predict_BAUs & object@response %in% c("binomial", "negative-binomial")) {
     k_P <- CP %*% k
+    h   <- .link_fn("mu_to_prob", response = object@response)
     prob_samples <- as.matrix(h(mu_samples, k_P))
   }
   
@@ -696,7 +697,7 @@ simulate_xi <- function(object, nsim, type) {
     }
   } 
   
-  MC$Z_samples <- .sampleZ(mu_samples = mu_samples, object = object)
+  MC$Z_samples <- .sampleZ(mu_samples = mu_samples, object = object, obs_fs = obs_fs, sigma2e = sigma2e, k = k)
   
   return(MC)
 }
@@ -743,7 +744,7 @@ simulate_xi <- function(object, nsim, type) {
 
 
 
-.sampleZ <- function(mu_samples, object, obs_fs, sigma2e) {
+.sampleZ <- function(mu_samples, object, obs_fs, sigma2e, k) {
   
   n    <- length(mu_samples)
   nsim <- ncol(mu_samples)
