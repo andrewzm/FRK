@@ -690,7 +690,8 @@ setMethod("TensorP",signature(Basis1="Basis",Basis2="Basis"),function(Basis1,Bas
     ## Check number of basis functions and throw warning if necessary
     if((nbasis_tot <- nbasis(Basis1) * nbasis(Basis2)) > 5000)
       warning("Tensor product has resulted in more than 5000 functions.
-      Please reduce the number of spatial or temporal basis functions.")
+              If you intend to use the EM algorithm during model fitting (i.e., method = 'EM'), 
+              please reduce the number of spatial or temporal basis functions.")
 
     regular <- Basis1@regular && Basis2@regular
     
