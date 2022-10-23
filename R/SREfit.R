@@ -776,8 +776,8 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
       stop("Something has gone wrong in construction of the precision matrix of the basis-function coefficients: We have negative row-indices, col-indices, or total non-zeros: Please contact the package maintainer. ")
     if (!.zero_range(c(length(data$x), length(data$col_indices), length(data$row_indices), sum(data$nnz))))
       stop("Something has gone wrong in construction of the precision matrix of the basis-function coefficients: The number of row-indices, col-indices, or non-zeros is inconsistent. Please contact the package maintainer. ")
-    if(!.zero_range(c(length(object@Z), length(data$Z), nrow(data$C_O), nrow(data$X_O) , nrow(data$S_O))))
-      stop("Something has gone wrong in the data preparation for TMB: The dimensions of the C, X, or S matrix is inconsistent with the number of observations. Please contact the package maintainer.")
+    if(!.zero_range(c(length(object@Z), length(data$Z), nrow(data$C_O)))) #   , nrow(data$X_O), nrow(data$S_O))))
+      stop("Something has gone wrong in the data preparation for TMB: The dimension of the C matrix is inconsistent with the number of observations. Please contact the package maintainer.")
     spatial_basis <- if (is(object@basis, "TensorP_Basis")) object@basis@Basis1 else object@basis
     if(!.zero_range(c(nbasis(spatial_basis), max(data$row_indices + 1), max(data$col_indices + 1), sum(data$r_si))))
       stop("Something has gone wrong in the data preparation for TMB: The number of basis functions and the matrix indices are inconsistent. Please contact the package maintainer.")
