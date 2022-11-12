@@ -28,7 +28,7 @@ radial_basis(
 
 \item{scale}{vector of length \code{n} containing the scale parameters of the basis functions; see details}
 
-\item{type}{either \code{"bisquare"}, \code{"Gaussian"}, \code{"exp"}, or \code{"Matern32"}}
+\item{type}{either ``bisquare'', ``Gaussian'', ``exp'', or ``Matern32''}
 
 \item{res}{vector of length \code{n} containing the resolutions of the basis functions}
 
@@ -39,13 +39,13 @@ Construct a set of local basis functions based on pre-specified location and sca
 }
 \details{
 This functions lays out local basis functions in a domain of interest based on pre-specified location and scale parameters. If \code{type} is ``bisquare'', then
-\deqn{\phi(u) = \left(1- \left(\frac{\| u \|}{R}\right)^2\right)^2 I(\|u\| < R),}{\phi(u) = (1- (|u|/R)^2)^2 I(|u| < R),}
+\deqn{\phi(u) = \left(1- \left(\frac{\| u \|}{R}\right)^2\right)^2 I(\|u\| < R),}
 and \code{scale} is given by \eqn{R}, the range of support of the bisquare function. If \code{type} is ``Gaussian'', then
-\deqn{\phi(u) = \exp\left(-\frac{\|u \|^2}{2\sigma^2}\right),}{\phi(u) = \exp(-|u|^2/2\sigma^2),}
+\deqn{\phi(u) = \exp\left(-\frac{\|u \|^2}{2\sigma^2}\right),}
 and \code{scale} is given by \eqn{\sigma}, the standard deviation. If \code{type} is ``exp'', then
-\deqn{\phi(u) = \exp\left(-\frac{\|u\|}{ \tau}\right),}{\phi(u) = \exp(-|u|/ \tau),}
+\deqn{\phi(u) = \exp\left(-\frac{\|u\|}{ \tau}\right),}
 and \code{scale} is given by \eqn{\tau}, the e-folding length. If \code{type} is ``Matern32'', then
-\deqn{\phi(u) = \left(1 + \frac{\sqrt{3}\|u\|}{\kappa}\right)\exp\left(-\frac{\sqrt{3}\| u \|}{\kappa}\right),}{\phi(u) = (1 + \sqrt{3}|u|/\kappa)\exp(-\sqrt{3}|u|/\kappa),}
+\deqn{\phi(u) = \left(1 + \frac{\sqrt{3}\|u\|}{\kappa}\right)\exp\left(-\frac{\sqrt{3}\| u \|}{\kappa}\right),}
 and \code{scale} is given by \eqn{\kappa}, the function's scale.
 }
 \examples{

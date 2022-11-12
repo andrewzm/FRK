@@ -25,7 +25,6 @@ FRK(
   average_in_BAU = TRUE,
   sum_variables = NULL,
   normalise_wts = TRUE,
-  normalise_basis = TRUE,
   fs_model = "ind",
   vgm_model = NULL,
   K_type = c("block-exponential", "precision", "unstructured"),
@@ -40,7 +39,6 @@ FRK(
     "inverse-squared"),
   optimiser = nlminb,
   fs_by_spatial_BAU = FALSE,
-  include_fs = TRUE,
   known_sigma2fs = NULL,
   taper = NULL,
   simple_kriging_fixed = TRUE,
@@ -129,8 +127,6 @@ simulate(object, newdata = NULL, nsim = 400, conditional_fs = FALSE, ...)
 
 \item{normalise_wts}{if \code{TRUE}, the rows of the incidence matrices \ifelse{html}{\out{<i><b>C</b><sub>Z</sub></i>}}{\eqn{\boldsymbol{C}_Z}{C_Z}} and \ifelse{html}{\out{<i><b>C</b><sub>P</sub></i>}}{\eqn{\boldsymbol{C}_P}{C_P}} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)}
 
-\item{normalise_basis}{flag indicating whether to normalise the basis functions so that they reproduce a stochastic process with approximately constant variance spatially}
-
 \item{fs_model}{if "ind" then the fine-scale variation is independent at the BAU level. Only the independent model is allowed for now, future implementation will include CAR/ICAR (in development)}
 
 \item{vgm_model}{(applicable only if \code{response} = "gaussian") an object of class \code{variogramModel} from the package \code{gstat} constructed using the function \code{vgm}. This object contains the variogram model that will be fit to the data. The nugget is taken as the measurement error when \code{est_error = TRUE}. If unspecified, the variogram used is \code{gstat::vgm(1, "Lin", d, 1)}, where \code{d} is approximately one third of the maximum distance between any two data points}
@@ -155,8 +151,6 @@ simulate(object, newdata = NULL, nsim = 400, conditional_fs = FALSE, ...)
 
 \item{fs_by_spatial_BAU}{(applicable only in a spatio-temporal setting and if \code{method} = "TMB") if \code{TRUE}, then each spatial BAU is associated with its own fine-scale variance parameter; otherwise, a single fine-scale variance parameter is used}
 
-\item{include_fs}{(applicable only if \code{method} = "TMB") flag indicating whether the fine-scale variation should be included in the model}
-
 \item{known_sigma2fs}{known value of the fine-scale variance parameter. If \code{NULL} (the default), the fine-scale variance parameter is estimated as usual. If \code{known_sigma2fs} is not \code{NULL}, the fine-scale variance is fixed to the supplied value; this may be a scalar, or vector of length equal to the number of spatial BAUs (if \code{fs_by_spatial_BAU = TRUE})}
 
 \item{taper}{positive numeric indicating the strength of the covariance/partial-correlation tapering. Only applicable if \code{K_type} = "block-exponential", or if \code{K_type} = "precision" and the the basis-functions are irregular or the manifold is not the plane. If \code{taper} is \code{NULL} (default) and \code{method} = "EM", no tapering is applied; if \code{method} = "TMB", tapering must be applied (for computational reasons), and we set it to 3 if it is unspecified}
@@ -164,6 +158,10 @@ simulate(object, newdata = NULL, nsim = 400, conditional_fs = FALSE, ...)
 \item{simple_kriging_fixed}{commit to simple kriging at the fitting stage? If \code{TRUE}, model fitting is faster, but the option to conduct universal kriging at the prediction stage is removed}
 
 \item{...}{other parameters passed on to \code{auto_basis()} and \code{auto_BAUs()} when calling \code{FRK()}, or the user specified function \code{optimiser()} when calling \code{FRK()} or \code{SRE.fit()}}
+
+\item{normalise_basis}{flag indicating whether to normalise the basis functions so that they reproduce a stochastic process with approximately constant variance spatially}
+
+\item{include_fs}{(applicable only if \code{method} = "TMB") flag indicating whether the fine-scale variation should be included in the model}
 
 \item{object}{object of class \code{SRE} returned from the constructor \code{SRE()} containing all the parameters and information on the SRE model}
 

@@ -405,11 +405,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   }
 
   ## Find the distance matrix associated with the basis-function centroids
-  if(!(K_type == "precision")) {
-      D_basis <- BuildD(basis)
-  } else {
-      D_basis <- list(as(0, "Matrix"))
-  }
+  D_basis <- BuildD(basis)
   
   ## For each data object
   for(i in 1:ndata) {

@@ -92,11 +92,11 @@
     
     ## Check that either the BAU-level size parameter, k_BAU, or the 
     ## observation-support size parameters, k_Z, are provided:
-    k_BAU_present <- "k_BAU" %in% names(BAUs@data)
-    k_Z_present   <- all(sapply(data, function(l) "k_Z" %in% names(l@data)))
-
+    k_BAU_present <- "k_BAU" %in% names(BAUs)
+    k_Z_present <- all(sapply(data, function(l) "k_Z" %in% names(l)))
+    
     if (!k_BAU_present && !k_Z_present) {
-      stop("For binomial or negative-binomial data, the known constant size parameters (e.g., the number of trials or the target number of 'successes') must be provided with either the observations (as a field called 'k_Z') or the BAUs (as a field called 'k_BAU'). See Section 2.5 of the FRK v2 paper for details on the treatment of these size parameters.")
+      stop("For binomial or negative-binomial data, the known constant size parameters (e.g., the number of trials or the target number of 'successes') must be provided with either the observations or the BAUs (see Section 2.5 of the FRK v2 paper for details).")
     } else if (k_BAU_present && k_Z_present) {
       cat("You have provided the size parameter with both the observations and the BAUs: Only one set of size parameters will be used in the model fitting stage (see Section 2.5 of the FRK v2 paper for details).\n")
     }
@@ -154,7 +154,7 @@
 ## Checks arguments for the SRE.fit() function. Code is self-explanatory
 .check_args2 <- function(n_EM, tol, lambda, method, print_lik, optimiser, 
                          response, K_type, link, fs_by_spatial_BAU, known_sigma2fs, 
-                         BAUs, taper, simple_kriging_fixed, include_fs, ...) {
+                         BAUs, taper, simple_kriging_fixed, ...) {
   
   if(!is.numeric(n_EM)) stop("n_EM needs to be an integer")
   if(!(n_EM <- round(n_EM)) > 0) stop("n_EM needs to be greater than 0")
@@ -174,7 +174,7 @@
   if(method != "TMB" & fs_by_spatial_BAU) stop("fs_by_spatial_BAU can only be TRUE if method = 'TMB'. Please set method = 'TMB', or fs_by_spatial_BAU = FALSE.")
   
   if(print_lik && method == "TMB")
-    cat("The likelihood at each iteration cannot be accessed because you have selected TMB for model fitting: print_lik will be ignored.\n")
+    cat("The likelihood at each iteration cannot be accessed because you have selected TMB for model fitting: print_lik will be ignored.")
   
   ## Check known_sigma2fs 
   ns <- dim(BAUs)[1]

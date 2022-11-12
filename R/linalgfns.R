@@ -38,7 +38,6 @@ logdet <- function (L)
 ## Matrix 1.4-2 deprecated the coercion method as(object, Class). 
 ## The following function recreates it following the developers guidelines.
 .as <- function(from, to) {
-  # convert <- Matrix:::.as.via.virtual(class(from), to)
   convert <- .Matrix.as.via.virtual(class(from), to)
   eval(convert)
 }
