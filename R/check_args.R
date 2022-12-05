@@ -93,7 +93,13 @@
     ## Check that either the BAU-level size parameter, k_BAU, or the 
     ## observation-support size parameters, k_Z, are provided:
     k_BAU_present <- "k_BAU" %in% names(BAUs)
-    k_Z_present <- all(sapply(data, function(l) "k_Z" %in% names(l)))
+    k_Z_present <- all(sapply(data, function(l) {
+      if (is(l, "ST")) {
+        "k_Z" %in% names(l@data)
+      } else {
+        "k_Z" %in% names(l)
+      }
+    }))
     
     if (!k_BAU_present && !k_Z_present) {
       stop("For binomial or negative-binomial data, the known constant size parameters (e.g., the number of trials or the target number of 'successes') must be provided with either the observations or the BAUs (see Section 2.5 of the FRK v2 paper for details).")
