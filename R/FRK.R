@@ -42,3 +42,9 @@
 #' @importFrom ggpubr ggarrange
 #' @importFrom reshape2 melt
 NULL
+
+# With data frames, returns last column whereas `dplyr::last()`
+# returns last row
+last2 <- function(x) {
+  x[[length(x)]]
+}
