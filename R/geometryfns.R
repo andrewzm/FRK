@@ -1257,7 +1257,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
                 
                 ## Sum specified columns; if(is.null(sum_variables)), 
                 ## then tmp1 will just be the BAU_name column (which will be dropped once we merge afterwards). 
-                tmp2 <- select(data_over_sp, c(sum_variables, BAU_name)) %>% # Need BAU_name in order to summarise by group; BAU_name is a string, so safe.sum() will just return the first element
+                tmp2 <- select(data_over_sp, all_of(sum_variables), BAU_name) %>% # Need BAU_name in order to summarise by group; BAU_name is a string, so safe.sum() will just return the first element
                   group_by(BAU_name) %>%                       # group by BAU
                   summarise_all(.safe_sum) %>%                 # apply safe mean to each column BAU
                   as.data.frame()                              # convert to data frame 
