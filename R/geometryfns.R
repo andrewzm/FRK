@@ -704,6 +704,12 @@ setMethod("auto_BAU",signature(manifold="plane"),
   suppressWarnings(CRS(...))
 }
 
+## Extract directly from slot because of PROJ6 changes
+## This is a temporary solution
+.rawproj4string <- function(obj) {
+  slot(obj, "proj4string")@projargs
+}
+
 ## Constructing BAUs on the surface of the sphere
 setMethod("auto_BAU",signature(manifold="sphere"),
           function(manifold,type="grid",cellsize = c(1,1),resl=2,d=NULL,xlims=NULL,ylims=NULL, ...) {

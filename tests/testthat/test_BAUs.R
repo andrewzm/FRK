@@ -89,7 +89,7 @@ test_that("sphere_BAUs",{
     expect_is(isea3h_1,"SpatialPolygonsDataFrame")
     expect_equal(nrow(isea3h_1@data),39)
     expect_equal(names(isea3h_1@data),c("id","lon","lat"))
-    expect_true(grepl("+proj=longlat",proj4string(isea3h_1)))
+    expect_true(grepl("+proj=longlat",.rawproj4string(isea3h_1)))
 
     sphere_grid <- auto_BAUs(manifold=sphere(),
                              type="grid",
@@ -98,7 +98,7 @@ test_that("sphere_BAUs",{
     expect_is(sphere_grid,"SpatialPolygonsDataFrame")
     expect_equal(nrow(sphere_grid@data),324)
     expect_equal(names(sphere_grid@data),c("lon","lat"))
-    expect_true(grepl("+proj=longlat",proj4string(sphere_grid)))
+    expect_true(grepl("+proj=longlat",.rawproj4string(sphere_grid)))
 
     sphere_grid_limited <- auto_BAUs(manifold=sphere(),
                              type="grid",
@@ -109,7 +109,7 @@ test_that("sphere_BAUs",{
     expect_is(sphere_grid_limited,"SpatialPolygonsDataFrame")
     expect_equal(nrow(sphere_grid_limited@data),165)
     expect_equal(names(sphere_grid_limited@data),c("lon","lat"))
-    expect_true(grepl("+proj=longlat",proj4string(sphere_grid_limited)))
+    expect_true(grepl("+proj=longlat",.rawproj4string(sphere_grid_limited)))
     expect_equal(min(sphere_grid_limited@data[,1]),-90)
     expect_equal(max(sphere_grid_limited@data[,1]),110)
     expect_equal(min(sphere_grid_limited@data[,2]),-75)
