@@ -697,13 +697,6 @@ setMethod("auto_BAU",signature(manifold="plane"),
 
           })
 
-## This function allows us to call CRS() without getting all of the warnings
-## that have arison as a result from going to PROJ6. This is only a temporary
-## solution.
-.quiet_CRS <- function(...) {
-  suppressWarnings(CRS(...))
-}
-
 ## Extract directly from slot because of PROJ6 changes
 ## This is a temporary solution
 .rawproj4string <- function(obj) {
