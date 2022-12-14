@@ -1257,7 +1257,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
 
                 ## Sum specified columns; if(is.null(sum_variables)),
                 ## then tmp1 will just be the BAU_name column (which will be dropped once we merge afterwards).
-                tmp2 <- select(data_over_sp, c(sum_variables, BAU_name)) %>% # Need BAU_name in order to summarise by group; BAU_name is a string, so safe.sum() will just return the first element
+                tmp2 <- select(data_over_sp, all_of(sum_variables), BAU_name) %>% # Need BAU_name in order to summarise by group; BAU_name is a string, so safe.sum() will just return the first element
                   group_by(BAU_name) %>%                       # group by BAU
                   summarise_all(.safe_sum) %>%                 # apply safe mean to each column BAU
                   as.data.frame()                              # convert to data frame
@@ -1419,7 +1419,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="ST"),
                                   t1 <- time(sp_pols)[i]
 
                                   ## If this is not the last (initial) time point
-                                  if(i < last(sp_pols@time)) {
+                                  if(i < last(as.vector(sp_pols@time))) {
                                     ## Then mark the beginning of the next time interval as the end of this one
                                     t2 <- time(sp_pols)[i+1]
 
