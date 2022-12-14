@@ -904,7 +904,7 @@ setMethod("auto_BAU",signature(manifold = c("STmanifold")),
               if(is.null(cellsize)) {
                 cellsize_temp <- 1
               } else {
-                cellsize_temp <- last(cellsize)
+                cellsize_temp <- dplyr::last(cellsize)
               }
             } else if(is.null(cellsize) & !is.null(space_part)) {
               cellsize_spat <-  .choose_BAU_cellsize_from_data(space_part)
@@ -1425,14 +1425,14 @@ setMethod("map_data_to_BAUs",signature(data_sp="ST"),
                                   t1 <- time(sp_pols)[i]
 
                                   ## If this is not the last (initial) time point
-                                  if(i < last(as.vector(sp_pols@time))) {
+                                  if(i < dplyr::last(as.vector(sp_pols@time))) {
                                     ## Then mark the beginning of the next time interval as the end of this one
                                     t2 <- time(sp_pols)[i+1]
 
                                   } else {
 
                                     ## If we are the last time interval then lump all data into this interval
-                                    t2 <- last(data_sp@endTime) + 1
+                                    t2 <- dplyr::last(data_sp@endTime) + 1
                                   }
 
                                   ## Now we know which data to bin in space, those appearing between t1 and t2
