@@ -103,7 +103,7 @@ setGeneric("distance", function(d,x1,x2=NULL) standardGeneric("distance"))
 #'                 lat = runif(n=500,min = -90, max = 90),
 #'                 z = rnorm(500))
 #' coordinates(d) <- ~lon + lat
-#' proj4string(d)=CRS("+proj=longlat")
+#' slot(d, "proj4string") = CRS("+proj=longlat")
 #'
 #' ### Now create basis functions on sphere
 #' G <- auto_basis(manifold = sphere(),data=d,
@@ -134,7 +134,7 @@ setGeneric("eval_basis", function(basis,s) standardGeneric("eval_basis"))
 #' time <- as.POSIXct("2003-05-01",tz="") + 3600*24*(sim_data$t-1)
 #' space <- sim_data[,c("lon","lat")]
 #' coordinates(space) = ~lon+lat # change into an sp object
-#' proj4string(space)=CRS("+proj=longlat +ellps=sphere")
+#' slot(space, "proj4string") = CRS("+proj=longlat +ellps=sphere")
 #' STobj <- STIDF(space,time,data=sim_data)
 #' G_spatial <- auto_basis(manifold = sphere(),
 #'                         data=as(STobj,"Spatial"),
@@ -157,7 +157,7 @@ setGeneric("TensorP", function(Basis1,Basis2) standardGeneric("TensorP"))
 #'                 lat = runif(n=500,min = -90, max = 90),
 #'                 z = rnorm(500))
 #' coordinates(d) <- ~lon + lat
-#' proj4string(d)=CRS("+proj=longlat")
+#' slot(d, "proj4string") = CRS("+proj=longlat")
 #'
 #' ### Now create basis functions on sphere
 #' G <- auto_basis(manifold = sphere(),data=d,

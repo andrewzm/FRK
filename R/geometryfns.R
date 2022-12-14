@@ -444,7 +444,7 @@ setMethod("auto_BAU",signature(manifold="real_line"),
             if(is.null(d))
               stop("Data must be supplied when generating BAUs on a plane")
 
-            crs <- .quiet_CRS(proj4string(d))     # CRS of data
+            crs <- CRS(.rawproj4string(d)) # CRS of data
             coords <- coordinates(d)       # coordinates of data
 
             if(is.null(xlims))               # if x limits are not specified
@@ -564,7 +564,7 @@ setMethod("auto_BAU",signature(manifold="plane"),
             if(is.null(d))
               stop("Data must be supplied when generating BAUs on a plane")
 
-            crs <- .quiet_CRS(proj4string(d))   # CRS of data
+            crs <- CRS(.rawproj4string(d))   # CRS of data
 
             X1 <- X2 <- NULL             # Suppress bindings warning
 
@@ -707,7 +707,11 @@ setMethod("auto_BAU",signature(manifold="plane"),
 ## Extract directly from slot because of PROJ6 changes
 ## This is a temporary solution
 .rawproj4string <- function(obj) {
-  slot(obj, "proj4string")@projargs
+    if(is(obj, "ST")) {
+        slot(obj@sp, "proj4string")@projargs
+    } else {
+        slot(obj, "proj4string")@projargs
+    }
 }
 
 ## Constructing BAUs on the surface of the sphere
@@ -716,13 +720,13 @@ setMethod("auto_BAU",signature(manifold="sphere"),
 
             ## For this function d (the data) may be NULL in which case the whole sphere is covered with BAUs
             if(is.null(d))                                  # set CRS if data not provided
-              prj <- .quiet_CRS("+proj=longlat +ellps=sphere")
+              prj <- CRS("+proj=longlat +ellps=sphere")
             else {
-              prj <- .quiet_CRS(proj4string(d))         # extract CRS # FIXME: Warning comes from here
+              prj <- CRS(.rawproj4string(d))         # extract CRS # FIXME: Warning comes from here
               coords <- data.frame(coordinates(d))      # extract coordinates
 
               ## When modelling on the sphere, the CRS needs to be CRS("+proj=longlat +ellps=sphere")
-              if(!identical(prj, .quiet_CRS("+proj=longlat +ellps=sphere")))
+              if(!identical(prj, CRS("+proj=longlat +ellps=sphere")))
                 stop("If modelling on the sphere please set the CRS of
                            the data to CRS('+proj=longlat +ellps=sphere') by
                            running proj4string(data) <- CRS('+proj=longlat +ellps=sphere')")
@@ -1145,7 +1149,7 @@ setMethod("BAUs_from_points",signature(obj = "SpatialPoints"),
 
             ## Now create polygons from the above paths, and keep same projection
             sp_obj_pols <- df_to_SpatialPolygons(sp_obj_pols,coords=cnames,keys="id",
-                                                 proj = .quiet_CRS(proj4string(obj)))
+                                                 proj = CRS(.rawproj4string(obj)))
 
             ## We assign the centroid of the BAU to the data object
             df_data <- as.data.frame(coords)
@@ -1232,7 +1236,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
               ## are typically the BAUs object, and have not been altered
               ## significantly to this point (while data_sp has, and so
               ## its CRS is often NA).
-              proj4string(data_sp) <- proj4string(sp_pols)
+              slot(data_sp, "proj4string") <- slot(sp_pols, "proj4string")
               data_over_sp <- .parallel_over(data_sp, sp_pols)
 
               ## We now cbind the original data with data_over_sp
@@ -1280,7 +1284,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPoints"),
             new_sp_pts <- SpatialPointsDataFrame(
               coords=Data_in_BAU[coordnames(data_sp)],         # coordinates of summarised data
               data=Data_in_BAU,                                # data frame
-              proj4string = .quiet_CRS(proj4string(data_sp)))         # CRS of original data
+              proj4string = CRS(.rawproj4string(data_sp)))     # CRS of original data
 
             ## Report time taken to bin data
             if (!silently & opts_FRK$get("verbose") ) cat("Binned data in",timer[3],"seconds\n")
@@ -1316,7 +1320,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
             } else if (is(sp_pols, "SpatialPixels")) {
               BAU_as_points <- SpatialPointsDataFrame(coordinates(sp_pols),
                                                       sp_pols@data,
-                                                      proj4string = .quiet_CRS(proj4string(sp_pols)))
+                                                      proj4string = CRS(.rawproj4string(sp_pols)))
             }
 
             ## Now see which centroids fall into the BAUs
@@ -1361,7 +1365,7 @@ setMethod("map_data_to_BAUs",signature(data_sp="SpatialPolygons"),
   }
   BAU_as_points <- SpatialPointsDataFrame(BAU_as_points,
                                           sp_pols@data,
-                                          proj4string = .quiet_CRS(proj4string(sp_pols)))
+                                          proj4string = CRS(.rawproj4string(sp_pols)))
   return(BAU_as_points)
 }
 
@@ -1562,7 +1566,7 @@ setMethod("BuildC",signature(data="SpatialPolygons"),
               ## If data does not overlap any BAU centroid, then the area
               ## is very small -- simply find which polygon this data point falls in
               if(length(overlap) == 0) {
-                crs <- .quiet_CRS(proj4string(BAUs))
+                crs <- CRS(.rawproj4string(BAUs))
                 datum_as_point <- SpatialPoints(this_poly, proj4string = crs)
                 overlap <- over(datum_as_point, BAUs)$n
               }
@@ -1789,8 +1793,9 @@ process_isea3h <- function(isea3h,resl) {
   new_polys <- NULL
   for(i in 1:length(prob_polys2_sp)) {
     # Just ignore if cannot find intersection, might create some small gaps in sphere (?)
-    lpi <- tryCatch(rgeos::gIntersection(prob_polys2_sp[i,], line),
-                    error=function(e) {TRUE})
+    # Suppressing warnings from rgeos when error is caught and treated later
+    lpi <- suppressWarnings(tryCatch(rgeos::gIntersection(prob_polys2_sp[i,], line),
+                    error=function(e) {TRUE}))
 
     if(!is(lpi,"logical")) {
       blpi <- rgeos::gBuffer(lpi, width = 0.000001)        # create a very thin polygon
@@ -1863,14 +1868,14 @@ process_isea3h <- function(isea3h,resl) {
     stop("data needs to be Spatial or ST")
 
   if(is(data, "Spatial")) {             # if data is spatial
-    p4 <- proj4string(data)           # extract proj4string
+    p4 <- .rawproj4string(data)           # extract proj4string
     manifold = plane()                # default to the plane
     if(!is.na(p4))                    # if there is a non-NA CRS
       if(grepl("longlat",p4))       # if longlat is in CRS
         manifold = sphere()       # then we're on the sphere
 
   } else {                              # if data is ST
-    p4 <- proj4string(data@sp)        # extract proj4string
+    p4 <- .rawproj4string(data@sp)        # extract proj4string
     manifold = STplane()              # default to the STplane
     if(!is.na(p4))                    # if there is a non-NA CRS
       if(grepl("longlat",p4))       # if longlat is in CRS

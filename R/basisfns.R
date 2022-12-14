@@ -202,7 +202,7 @@ local_basis <- function(manifold = sphere(),          # default manifold is sphe
 #'                 lat = runif(n=1000,min = -90, max = 90),
 #'                 z = rnorm(5000))
 #' coordinates(d) <- ~lon + lat
-#' proj4string(d)=CRS("+proj=longlat +ellps=sphere")
+#' slot(d, "proj4string") = CRS("+proj=longlat +ellps=sphere")
 #'
 #' ## Now create basis functions over sphere
 #' G <- auto_basis(manifold = sphere(),data=d,
@@ -302,7 +302,7 @@ auto_basis <- function(manifold = plane(),
   if(!is.numeric(prune) | prune < 0)
     stop("prune needs to be greater than zero")
   if(prune > 0)
-    warning("it's not considered best practice to use prune anymore and is being deprecated. Please set to 0 as it will be removed in future versions")
+    cat("NOTE: It's not considered best practice to use prune anymore and is being deprecated. Please set to 0 as it will be removed in future versions\n")
   if(!is.numeric(subsamp) | subsamp < 0)
     stop("subsamp needs to be greater than zero")
   if((is(manifold,"sphere")  | is(manifold,"real_line")) & regular == 0)

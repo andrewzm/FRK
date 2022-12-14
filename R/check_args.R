@@ -35,7 +35,7 @@
     stop("Please don't have overlapping variable names in data and BAUs. All covariates need to be in the BAUs")
   if(!all(sapply(data,function(x) all.vars(f)[1] %in% names(x@data))))
     stop("All data list elements to have values for the dependent variable")
-  if(!all(sapply(data,function(x) identical(proj4string(x), proj4string(BAUs)))))
+  if(!all(sapply(data,function(x) identical(.rawproj4string(x), .rawproj4string(BAUs)))))
     stop("Please ensure all data items and BAUs have the same coordinate reference system")
   if(!(is(basis,"Basis") | is(basis,"TensorP_Basis")))
     stop("basis needs to be of class Basis  or TensorP_Basis (package FRK)")
