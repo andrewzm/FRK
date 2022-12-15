@@ -248,7 +248,7 @@ FRK <- function(f,                     # formula (compulsory)
     if(!(is.null(BAUs))) {
         if(!(is(BAUs,"SpatialPolygonsDataFrame") | is(BAUs,"SpatialPixelsDataFrame") | is(BAUs,"STFDF")))
             stop("BAUs should be a SpatialPolygonsDataFrame, SpatialPixelsDataFrame, or a STFDF object")
-        if(!all(sapply(data,function(x) identical(proj4string(x), proj4string(BAUs)))))
+        if(!all(sapply(data,function(x) identical(.rawproj4string(x), .rawproj4string(BAUs)))))
             stop("Please ensure all data items and BAUs have the same coordinate reference system")
         if(!(all(BAUs$fs >= 0)))
             stop("fine-scale variation basis function needs to be nonnegative everywhere")

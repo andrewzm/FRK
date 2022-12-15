@@ -129,7 +129,7 @@ test_that("SRE sphere works",{
     sim_data <- sample_n(sim_process,100) %>%
         mutate(z = proc + 0.1*rnorm(length(lon)), std = 0.1)
     coordinates(sim_data) = ~lon + lat# change into an sp object
-    proj4string(sim_data)=CRS("+proj=longlat +ellps=sphere")
+    slot(sim_data, "proj4string")=CRS("+proj=longlat +ellps=sphere")
     grid_BAUs <- auto_BAUs(manifold=sphere(),
                            type="hex",
                            data=sim_data,
