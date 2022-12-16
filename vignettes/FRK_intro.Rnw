@@ -535,7 +535,7 @@ AIRS_05_2003 <-
     dplyr::mutate(std=co2std) %>%                   # change std to have suitable name
     dplyr::select(lon,lat,co2avgret,std)            # select columns we actually need
 coordinates(AIRS_05_2003) = ~lon+lat                # change into an sp object
-proj4string(AIRS_05_2003) =
+slot(AIRS_05_2003, "proj4string") =
             CRS("+proj=longlat +ellps=sphere")      # unprojected coordinates on sphere
 @
 

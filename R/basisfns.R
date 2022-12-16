@@ -302,7 +302,7 @@ auto_basis <- function(manifold = plane(),
   if(!is.numeric(prune) | prune < 0)
     stop("prune needs to be greater than zero")
   if(prune > 0)
-    cat("NOTE: It's not considered best practice to use prune anymore and is being deprecated. Please set to 0 as it will be removed in future versions\n")
+    cat("NOTE: Zero process variability is implicitly enforced in regions where basis functions are pruned. Please use the option prune carefully: regions of data paucity are generally not reflective of regions of low process variability. Please set prune = 0 if unsure what to do.\n")
   if(!is.numeric(subsamp) | subsamp < 0)
     stop("subsamp needs to be greater than zero")
   if((is(manifold,"sphere")  | is(manifold,"real_line")) & regular == 0)
