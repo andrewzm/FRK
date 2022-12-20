@@ -845,7 +845,17 @@ setMethod("auto_BAU",signature(manifold="sphere"),
                                                1,NA)
 
               ## Otherwise filter by convex hull
-              else  sphere_BAUs$in_chull <- over(sphere_BAUs,conv_hull)
+              else  {
+                ## We need sf to prune by convex hull on sphere
+                  if(!requireNamespace("sf"))
+                      stop("sf is required for processing hexagons on the sphere.
+                      Please install using install.packages().")
+                  sphere_BAUs$in_chull <- as.integer(sf::st_intersects(as(sphere_BAUs, "sf"),
+                                                                   as(conv_hull, "sf")))
+              }
+
+              ## Old rgeos code
+              ## else  sphere_BAUs$in_chull <- over(sphere_BAUs,conv_hull)
 
               ## Remove those BAUs
               sphere_BAUs <- subset(sphere_BAUs,!is.na(in_chull))
@@ -1756,7 +1766,7 @@ process_isea3h <- function(isea3h,resl) {
   ## suppress bindings warning
   res <- lon <- probpoly <- centroid <- lat <- NULL
 
-  ## We need rgeos to process these polygons
+  ## We need sf to process these polygons
   if(!requireNamespace("sf"))
     stop("sf is required for processing hexagons on the sphere.
              Please install using install.packages().")
