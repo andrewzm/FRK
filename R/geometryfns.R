@@ -1756,6 +1756,11 @@ process_isea3h <- function(isea3h,resl) {
   ## suppress bindings warning
   res <- lon <- probpoly <- centroid <- lat <- NULL
 
+  ## We need rgeos to process these polygons
+  if(!requireNamespace("sf"))
+    stop("sf is required for processing hexagons on the sphere.
+             Please install using install.packages().")
+
   isea3h_res <- filter(isea3h,res == resl) %>%
     arrange(id) %>%
     group_by(id) %>%
