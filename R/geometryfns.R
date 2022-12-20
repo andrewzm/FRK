@@ -1807,7 +1807,7 @@ process_isea3h <- function(isea3h,resl) {
 
 
       dpi_sf <- sf::st_difference(prob_polys2_sf[i,], blpi) # split polygons
-      dpi <- as_Spatial(dpi_sf)
+      dpi <- sf::as_Spatial(dpi_sf)
 
       ## Old rgeos version:
       ## dpi <- rgeos::gDifference(prob_polys2_sp[i,], blpi)
