@@ -850,8 +850,13 @@ setMethod("auto_BAU",signature(manifold="sphere"),
                   if(!requireNamespace("sf"))
                       stop("sf is required for processing hexagons on the sphere.
                       Please install using install.packages().")
-                  sphere_BAUs$in_chull <- as.integer(sf::st_intersects(as(sphere_BAUs, "sf"),
-                                                                   as(conv_hull, "sf")))
+
+                  ## First find BAUs at edges of hull then interior, then combine
+                  ## Note: for some reason sf polygon is exterior of chull not interior in sf
+                  edges_BAUs <- !is.na(as.integer(sf::st_overlaps(as(sphere_BAUs, "sf"), as(conv_hull, "sf"))))
+                  interior_BAUs <- is.na(as.integer(sf::st_intersects(as(sphere_BAUs, "sf"),
+                                                                     as(conv_hull, "sf"))))
+                  sphere_BAUs$in_chull <- ifelse((edges_BAUs + interior_BAUs) > 0, 1, NA)
               }
 
               ## Old rgeos code
@@ -1875,7 +1880,6 @@ process_isea3h <- function(isea3h,resl) {
 
   # ## Consolidate edges
   # isea3h_res2 <- isea3h_res2 %>%
-
   isea3h_res2
 
 }
