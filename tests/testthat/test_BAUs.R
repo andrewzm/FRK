@@ -133,8 +133,8 @@ test_that("sphere_BAUs_subset_BAUs",{
     sf::sf_use_s2(FALSE)
     data_in_BAUs <- sf::st_contains(as(isea3h_1, "sf"), as(df, "sf"))
     expect_equal(all(colSums(as.matrix(data_in_BAUs)) == 1), TRUE)
-    plot(isea3h_1, col = "red")
-    plot(df, add = TRUE)
+    #plot(isea3h_1, col = "red")
+    #plot(df, add = TRUE)
 })
 
 test_that("SpaceTime_BAUs",{
