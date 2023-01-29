@@ -711,6 +711,7 @@ setMethod("auto_BAU",signature(manifold="plane"),
 setMethod("auto_BAU",signature(manifold="sphere"),
           function(manifold,type="grid",cellsize = c(1,1),resl=2,d=NULL,xlims=NULL,ylims=NULL, ...) {
 
+
             ## For this function d (the data) may be NULL in which case the whole sphere is covered with BAUs
             if(is.null(d))                                  # set CRS if data not provided
               prj <- CRS("+proj=longlat +ellps=sphere")
@@ -722,7 +723,7 @@ setMethod("auto_BAU",signature(manifold="sphere"),
               if(!identical(prj, CRS("+proj=longlat +ellps=sphere")))
                 stop("If modelling on the sphere please set the CRS of
                            the data to CRS('+proj=longlat +ellps=sphere') by
-                           running proj4string(data) <- CRS('+proj=longlat +ellps=sphere')")
+                           running slot(data, 'proj4string') <- CRS('+proj=longlat +ellps=sphere')")
 
               ## When modelling on the sphere, the coordnames need to be (lon,lat)
               if(!"lat" %in% names(coords) & "lon" %in% names(coords))
@@ -827,9 +828,12 @@ setMethod("auto_BAU",signature(manifold="sphere"),
                                       convex=-0.01)             # buffer of 1%
               conv_hull <- data.frame(conv_hull)                # .find_hull returns a matrix without column names
               names(conv_hull) <- coordnames(d)                 # add columns names
+              conv_hull$lat <- pmin(conv_hull$lat, 90) # Restrict latitude from north
+              conv_hull$lat <- pmax(conv_hull$lat, -90) # Restrict latitude from north
               conv_hull$id <- 1               # just one polygon; set id = 1
               row.names(conv_hull) <- NULL    # remove row names
               conv_hull_coords <- conv_hull   # save the coordinates; conv_hull will be a sp object next
+
 
               ## Now make SpatialPolygons object from hull
               conv_hull <- df_to_SpatialPolygons(conv_hull,                  # data frame
@@ -851,19 +855,34 @@ setMethod("auto_BAU",signature(manifold="sphere"),
                       stop("sf is required for processing hexagons on the sphere.
                       Please install using install.packages().")
 
+                  sf::sf_use_s2(use_s2 = FALSE)
+
                   ## First find BAUs at edges of hull then interior, then combine
-                  ## Note: for some reason sf polygon is exterior of chull not interior in sf
+                  ## Note: for some reason sf polygon is exterior of chull not interior in sf, hence the
+                  ## complement when constructing in_chull
+                  ## Also, interior_BAUs can give an error at extreme latitudes, hence the tryCatch
                   edges_BAUs <- !is.na(as.integer(sf::st_overlaps(as(sphere_BAUs, "sf"), as(conv_hull, "sf"))))
-                  interior_BAUs <- is.na(as.integer(sf::st_intersects(as(sphere_BAUs, "sf"),
-                                                                     as(conv_hull, "sf"))))
-                  sphere_BAUs$in_chull <- ifelse((edges_BAUs + interior_BAUs) > 0, 1, NA)
+                  interior_BAUs <- tryCatch(is.na(as.integer(sf::st_intersects(as(sphere_BAUs, "sf"),
+                                                                                                as(conv_hull, "sf")))),
+                                            error=function(e) {rep(TRUE, nrow(sphere_BAUs))})
+                  sphere_BAUs$in_chull <- ifelse((edges_BAUs + !interior_BAUs) > 0, 1, NA)
               }
 
               ## Old rgeos code
               ## else  sphere_BAUs$in_chull <- over(sphere_BAUs,conv_hull)
 
+              ### TEST: START COMPARE TO RGEOS
+              # print("TESTING MODE FOR BAUS ON SPHERE")
+              # sphere_BAUs$in_chull2 <- over(sphere_BAUs,conv_hull)
+              # print(all(sphere_BAUs$in_chull == sphere_BAUs$in_chull2, na.rm = TRUE))
+              # print(all(is.na(sphere_BAUs$in_chull) == is.na(sphere_BAUs$in_chull2)))
+              # plot(sphere_BAUs[!is.na(sphere_BAUs$in_chull),], col = "red")
+              # plot(conv_hull, add = TRUE)
+              ### TEST: STOP
+
               ## Remove those BAUs
               sphere_BAUs <- subset(sphere_BAUs,!is.na(in_chull))
+
 
               ## Remove chull info
               sphere_BAUs$in_chull <- NULL
