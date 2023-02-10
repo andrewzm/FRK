@@ -75,7 +75,7 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 
 \item{\code{phi}}{the estimated dispersion parameter (assumed constant throughout the spatial domain)}
 
-\item{\code{k_Z}}{vector of known size parameters at the data support (only applicable to binomial and negative-binomial response distributions)}
+\item{\code{k_Z}}{vector of known size parameters at the observation support level (only applicable to binomial and negative-binomial response distributions)}
 
 \item{\code{k_BAU}}{vector of known size parameters at the observed BAUs (only applicable to binomial and negative-binomial response distributions)}
 

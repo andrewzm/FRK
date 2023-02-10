@@ -297,6 +297,15 @@ setGeneric("plot_spatial_or_ST", function(newdata, column_names,  map_layer=NULL
     standardGeneric("plot_spatial_or_ST"))
 
 
+#' @title Uncertainty quantification of the fixed effects
+#' @description Compute confidence intervals for the fixed effects (upper  
+#' and lower bound specifed by percentiles; default 90\% confidence central interval)
+#' @inheritParams SRE
+#' @export
+setGeneric("coef_uncertainty", function(object, percentiles = c(5, 95),  nsim = 400)
+  standardGeneric("coef_uncertainty"))
+
+
 ## INHERITED GENERICS
 
 #' @export

@@ -30,7 +30,7 @@ d <- data.frame(lon = runif(n=500,min = -179, max = 179),
                 lat = runif(n=500,min = -90, max = 90),
                 z = rnorm(500))
 coordinates(d) <- ~lon + lat
-proj4string(d)=CRS("+proj=longlat")
+slot(d, "proj4string") = CRS("+proj=longlat")
 
 ### Now create basis functions on sphere
 G <- auto_basis(manifold = sphere(),data=d,

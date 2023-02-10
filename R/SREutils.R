@@ -115,6 +115,7 @@ setMethod("summary",signature(object="SRE"),summary.SRE)
 setMethod("info_fit", signature(object = "SRE"),
           function(object) {object@info_fit})
 
+
 # Retrieve coefficients of SRE model
 #' @rdname SRE
 #' @export 
@@ -122,11 +123,43 @@ setMethod("coef",signature(object = "SRE"),function(object,...) {
   coeff <- as.numeric(object@alphahat)
   varnames <- all.vars(object@f)[-1]
   nms <- "Intercept"
-  if(length(varnames) > 0) {
-    nms <- c(nms, varnames)
-  }
+  if(length(varnames) > 0) nms <- c(nms, varnames)
   names(coeff) <- nms
   return(coeff)
+})
+
+
+# Retrieve uncertainty quantification on the coefficients of SRE model
+#' @rdname SRE
+#' @export
+setMethod("coef_uncertainty",signature(object = "SRE"),function(object, percentiles = c(5, 95),  nsim = 400) {
+  
+  if(object@simple_kriging_fixed) stop("Uncertainty quantification on the fixed effects is only possible if simple_kriging_fixed is set to FALSE in SRE.fit()")
+  
+  ## Compute the Cholesky factor of the permuted precision matrix.
+  Q_L <- sparseinv::cholPermute(Q = object@Q_posterior)
+  
+  ## Generate sample of regression coefficients (most of these arguments can be 
+  ## NULL because the function exits before they are used)
+  alpha <- .simulate(
+    object = object, nsim = nsim, X = NULL,  Q_L = Q_L, fixed_effects_only = TRUE, kriging = "universal", 
+    type = NULL, obs_fs = NULL, k = NULL,predict_BAUs = NULL, CP = NULL, newdata = NULL
+  )
+  
+  x <- apply(alpha, 1, quantile, percentiles / 100)
+  
+  ## Add names to the percentiles
+  varnames <- all.vars(object@f)[-1]
+  nms <- "Intercept"
+  if (length(varnames) > 0) nms <- c(nms, varnames)
+  
+  if (is.matrix(x)) {
+    colnames(x) <- nms
+  } else {
+    names(x) <- nms
+  }
+  
+  return(x)
 })
 
 ## Print summary of SRE

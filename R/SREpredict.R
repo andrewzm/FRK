@@ -14,6 +14,9 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                                                percentiles = c(5, 95), 
                                                kriging = "simple") {
   
+  ## Store the original newdata for comparison at the end of the function
+  # newdata_original <- newdata
+  
   ## Note that the following code must be done before .check_args3() because it
   ## alters the input, rather than simpling throwing a warning or error. 
   
@@ -32,7 +35,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     if (is.null(k)) {
       if(is.null(k_BAU)) {
         k <- rep(1, N)
-        cat("Assuming the size parameter, k, is equal to 1 for all prediction locations: If you want to change this, use the argument 'k' in predict().\n")
+        cat("Assuming that the size parameter, k, is equal to 1 for all prediction locations: If you want to change this, use the argument 'k' in predict().\n")
       } else {
         if (any(is.na(k_BAU))) {
           
@@ -44,7 +47,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
             k <- rep(unique(k_BAU_NA_removed), N)
           } else {
             k <- rep(1, N)
-            cat("Assuming the size parameter, k, is equal to 1 for all prediction locations: If you want to change this, use the argument 'k' in predict.\n")
+            cat("Assuming that the size parameter, k, is equal to 1 for all prediction locations: If you want to change this, use the argument 'k' in predict.\n")
           }
         } else {
           k <- k_BAU
@@ -166,9 +169,53 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     }
   }
   
+  # ## if newdata contains points that do not overlap the BAUs, they are removed
+  # ## from the prediction object: add them back in, but with NAs for the predictions.
+  # if (object@method == "TMB") {
+  #   if (!is.null(newdata_original) && length(newdata_original) != length(pred_locs$newdata)) {
+  #     pred_locs$newdata <- left_join_FRK(newdata_original, pred_locs$newdata)
+  #   }
+  # } else {
+  #   if (!is.null(newdata_original) && length(newdata_original) != length(pred_locs)) {
+  #     pred_locs <- left_join_FRK(newdata_original, pred_locs)
+  #   }
+  # }
+  
   ## Return predictions
   return(pred_locs)
 })
+
+
+# left_join_FRK <- function(x, y) {
+#   
+#   # The join works (i.e., it returns an object with the correct length), but 
+#   # all of the prediction columns are NA. This is due to the following;
+#   # any(coordinates(y)[,1] %in% coordinates(x)[,1])
+#   # any(coordinates(y)[,2] %in% coordinates(x)[,2])
+#   # any(time(y) %in% time(x))
+#   
+#   x@data$xxx <- coordinates(x)[,1]
+#   x@data$yyy <- coordinates(x)[,2]
+#   
+#   y@data$xxx <- coordinates(y)[,1]
+#   y@data$yyy <- coordinates(y)[,2]
+#   
+#   if(is(x, "ST")) {
+#     x@data$ttt <- time(x)
+#     y@data$ttt <- time(y)
+#   }
+#   
+#   x@data <- left_join(x@data, y@data)
+#   
+#   x@data$xxx <- NULL
+#   x@data$yyy <- NULL
+#   
+#   if(is(x, "ST")) {
+#     x@data$ttt <- NULL
+#   }
+#   
+#   x
+# }
 
 
 ## If newdata is a SpatialPoints, SpatialPolygons, or SPatialPixels object, 
@@ -418,7 +465,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   X     <- as(.extract_BAU_X_matrix(formula = object@f, BAUs = object@BAUs), "matrix")
   obsidx <- observed_BAUs(object)        # index of observed BAUs
   p     <- length(object@alphahat)       # number of fixed regression effects
-  mstar <- length(obsidx)           # number of observed BAUs
+  mstar <- length(obsidx)                # number of observed BAUs
   r     <- nbasis(object)                # number of basis-function coefficients
   
   ## Total number of random effects (fine-scale only included if include_fs = T)
@@ -529,7 +576,7 @@ simulate_xi <- function(object, nsim, type) {
 }
 
 
-.simulate <- function(object, X, type, nsim, obs_fs, k, Q_L, predict_BAUs, CP, kriging, newdata){
+.simulate <- function(object, X, type, nsim, obs_fs, k, Q_L, predict_BAUs, CP, kriging, newdata, fixed_effects_only = FALSE){
   
   ## Design matrices evaluated at observed BAUs only
   X_O <- .constructX_O(object) 
@@ -575,6 +622,9 @@ simulate_xi <- function(object, nsim, type) {
   } else {
     eta <- samples[1:r, ]
   }
+  
+  # Return the MC samples of the fixed effects if that's all we care about
+  if (fixed_effects_only) return(alpha)
   
   ## Observed fine-scale variation:
   if (object@include_fs) {
