@@ -115,7 +115,7 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot log_likelihood the log likelihood of the fitted model
 #' @slot method the fitting procedure used to fit the SRE model
 #' @slot phi the estimated dispersion parameter (assumed constant throughout the spatial domain)
-#' @slot k_Z vector of known size parameters at the data support (only applicable to binomial and negative-binomial response distributions) 
+#' @slot k_Z vector of known size parameters at the observation support level (only applicable to binomial and negative-binomial response distributions) 
 #' @slot k_BAU vector of known size parameters at the observed BAUs (only applicable to binomial and negative-binomial response distributions) 
 #' @slot include_fs flag indicating whether the fine-scale variation should be included in the model
 #' @slot normalise_wts if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)

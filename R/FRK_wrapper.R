@@ -38,7 +38,7 @@ FRK <- function(f,                     # formula (compulsory)
                 fs_by_spatial_BAU = FALSE,
                 known_sigma2fs = NULL, 
                 taper = NULL, 
-                simple_kriging_fixed = TRUE,
+                simple_kriging_fixed = FALSE,
                 ...)                   # other arguments for BAUs/basis-function construction, or 
 {
 

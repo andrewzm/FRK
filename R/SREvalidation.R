@@ -9,16 +9,29 @@ simulate <- function(object, newdata = NULL, nsim = 400, conditional_fs = FALSE,
     newdata <- object@data[[1]]
   }
   
-  if ("obs_fs" %in% names(list(...))) stop("obs_fs cannot be set from simulate")
+  if ("obs_fs" %in% names(list(...))) stop("obs_fs should not be provided when calling simulate")
   
-  obs_fs <- !conditional_fs
+  if (object@response %in% c("binomial", "negative-binomial")) {
+    
+    # the user must provide k_Z with newdata (only extract it later after the predict step):
+    if(is.null(newdata@data$k_Z)) stop("The data model is binomial or negative-binomial; please provide the observation-level size parameters in newdata@data$k_Z") 
+    
+    # Fix the size parameter over the BAUs to 1 (we will use k_Z)
+    k <- 1
+    k <- rep(k, length(M@BAUs)) # repeat k to prevent message from predict()
+    if (!is.null(list(...)$k)) stop("k should not be provided when calling simulate")
+  }
+  
+  # measurement-error variance parameters
+  if (object@response == "gaussian") sigma2e <- .measurementerrorvariance(object, newdata)
   
   # fine-scale variance parameters
+  obs_fs <- !conditional_fs
   if (obs_fs) {
     # Compute the fine-scale variance parameter for each location. This is 
     # complicated since the constant of proportionality can depend on 
     # object@BAUs$fs, and this complication is compounded by the argument newdata. 
-    # The following lines deal with this  by constructing the incidence matrix 
+    # The following lines deal with this by constructing the incidence matrix 
     # for newdata, which can then be used to map the fine-scale variance parameters
     # to the observations. 
     Z <- map_data_to_BAUs(newdata, object@BAUs, average_in_BAU = FALSE)
@@ -27,25 +40,11 @@ simulate <- function(object, newdata = NULL, nsim = 400, conditional_fs = FALSE,
     sigma2fs <- object@sigma2fshat * fs
   }
   
-  # measurement-error variance parameters
-  if (object@response == "gaussian") sigma2e <- .measurementerrorvariance(object, newdata)
-  
-  # size parameters 
-  if (object@response %in% c("binomial", "negative-binomial")) {
-    # For simplicity, the user has to provide the size parameters using the 
-    # argument "k" in predict().  
-    l <- list(...)
-    if (is.null(l$k)) {
-      stop("The data model is binomial or negative-binomial; please provide the size parameters (e.g., the number of trials or number of failures) using the argument 'k'")
-    } else {
-      k = l$k
-    }
-  }
-  
-  # simulate the response variable
+  ## Simulate the data
   if (object@method == "EM") {
     
-    pred <- predict(object, newdata = newdata, obs_fs = obs_fs, ...) 
+    # Simulate the response variable
+    pred <- predict(object, newdata = newdata, obs_fs = obs_fs, ...)
     Zhat <- pred$mu
   
     if (obs_fs) {
@@ -57,38 +56,46 @@ simulate <- function(object, newdata = NULL, nsim = 400, conditional_fs = FALSE,
     
   } else {
     
+    ## Simulate the latent process Y()
     if (conditional_fs) {
       
-      pred <- predict(object, newdata = newdata, type = "response", 
-                      percentiles = NULL, nsim = nsim, obs_fs = obs_fs, ...)
-      samples <- pred$MC$Z_samples
+      pred <- predict(object, newdata = newdata, type = "link", percentiles = NULL, nsim = nsim, obs_fs = obs_fs, k = k, ...)
+      Y_samples <- pred$MC$Y_samples
       
     } else {
       
       # Obtain samples of the smooth version (i.e., excluding fine-scale variation) 
       # of the latent process, Y(.)
-      pred <- predict(object, newdata = newdata, type = "link", 
-                      percentiles = NULL, nsim = nsim, obs_fs = obs_fs, ...)
-      Y_samples <- pred$MC$Y_samples
+      pred <- predict(object, newdata = newdata, type = "link", percentiles = NULL, nsim = nsim, obs_fs = obs_fs, k = k, ...)
+      smooth_Y_samples <- pred$MC$Y_samples
     
       # Add marginal fine-scale variation to the samples of Y(.). Let m 
       # denote the number of locations, where m == nrow(Y_samples) == length(sigma2fs). 
       # For each location, we have nsim samples of Y(.) stored in the columns of
       # Y_samples; hence, before sampling the fine-scale variation xi(.), we 
       # repeat each element of sigm2fs nsim times.  
-      m <- nrow(Y_samples)
+      m <- nrow(smooth_Y_samples)
       sigma2fs_long <- rep(sigma2fs, each = nsim)
       xi_samples <- rnorm(m * nsim, sd = sqrt(sigma2fs_long))
       xi_samples <- matrix(xi_samples, byrow = TRUE, ncol = nsim)
-      Y_samples  <- Y_samples + xi_samples
-      
-      # compute mu(.) by applying the inverse link function to Y(.), and 
-      # simulate the response, Z
-      mu_samples <- .inverselink(Y_samples, object, k = k)$mu_samples 
-      Z_samples  <- .sampleZ(mu_samples = mu_samples, object = object, sigma2e = sigma2e)
-      
-      samples <- Z_samples
+      Y_samples  <- smooth_Y_samples + xi_samples
     }
+    
+    # compute mu(.) by applying the inverse link function to Y(.), and 
+    # simulate the response, Z
+    if (object@response %in% c("binomial", "negative-binomial")) {
+      # The user must provide k_Z with newdata (note that this is checked
+      # upon function entry). We need to extract k_Z to account for the case 
+      # that not all locations in newdata overlap BAUs (in which case pred$newdata
+      # will be of a different length to the original newdata object)
+      k_Z <- pred$newdata@data$k_Z 
+    } else {
+      k_Z <- NULL
+    }
+    mu_samples <- .inverselink(Y_samples, object, k = k_Z)$mu_samples 
+    Z_samples  <- .sampleZ(mu_samples = mu_samples, object = object, sigma2e = sigma2e, k = k_Z)
+    
+    samples <- Z_samples
   }
   
   return(samples)

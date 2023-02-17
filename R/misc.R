@@ -605,4 +605,3 @@ user_decision <- function(prompt) {
   
   return(answer)
 }
-

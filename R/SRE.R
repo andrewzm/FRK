@@ -503,7 +503,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
 
   ## Indices of observed BAUs
   obsidx <- .observed_BAUs_from_Cmat(Cmat)
-
+  
   # Size parameter
   if(response %in% c("binomial", "negative-binomial")) {
 
@@ -662,11 +662,11 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
       obsidx = obsidx)
 }
 
-## Initalise the fixed effects and parameters for method = 'EM'
+## Initialise the fixed effects and parameters for method = 'EM'
 .EM_initialise <- function(basis, Z, X, Ve, mstar) {
 
-  l <- list() # list of initial values
-  nres <- max(basis@df$res)   # Number of resolutions
+  l    <- list()              # list of initial values
+  nres <- max(basis@df$res)   # number of basis function resolutions
 
   ## Initialise the expectations and covariances from E-step to reasonable values
   l$mu_eta_init <- Matrix(0,nbasis(basis),1)
