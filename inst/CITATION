@@ -1,14 +1,13 @@
-citHeader("To cite FRK in publications use:")
-
-citEntry(
-  entry    = "article",
+bibentry(
+  bibtype  = "Article",
   title    = "FRK: an R package for spatial and spatio-temporal prediction with large datasets",
-  author   = personList(as.person("Andrew Zammit-Mangion"), as.person("Noel Cressie")),
+  author   = c(person("Andrew Zammit-Mangion"), person("Noel Cressie")),
   journal  = "Journal of Statistical Software",
   year     = "2021",
   volume   = "98",
   number   = "4",
   pages    = "1--48",
+  header   = "To cite FRK version 1 (with EM algorithm) in publications use:",
   textVersion  = paste(
         "Zammit-Mangion A, Cressie N (2021).",
         "FRK: an R package for spatial and spatio-temporal prediction with large datasets.", 
@@ -17,15 +16,15 @@ citEntry(
 )
 
 
-citEntry(
-  entry    = "article",
-  title    = "Modelling, fitting, and prediction with non-Gaussian spatial and spatio-temporal data using FRK",
-  author   = personList(as.person("Matthew Sainsbury-Dale"), as.person("Andrew Zammit-Mangion"), as.person("Noel Cressie")),
+bibentry(
+  bibtype  = "Article",
+  title    = "Modelling big, heterogeneous, non-Gaussian spatial and spatio-temporal data using FRK",
+  author   = c(person("Matthew Sainsbury-Dale"), person("Andrew Zammit-Mangion"), person("Noel Cressie")),
   journal  = "arXiv:2110.02507",
-  year     = "2021",
-  textVersion  = paste(
-        "Sainsbury-Dale M, Zammit-Mangion A, Cressie N (2021).",
-        "Modelling, fitting, and prediction with non-Gaussian spatial and spatio-temporal data using FRK.", 
+  year     = "2022",
+  header   = "To cite FRK version 2 (non-Gaussian data) in publications use:",  textVersion  = paste(
+        "Sainsbury-Dale M, Zammit-Mangion A, Cressie N (2022).",
+        "Modelling big, heterogeneous, non-Gaussian spatial and spatio-temporal data using FRK", 
         "arXiv:2110.02507"
         )
 )
