@@ -503,7 +503,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
 
   ## Indices of observed BAUs
   obsidx <- .observed_BAUs_from_Cmat(Cmat)
-  
+
   # Size parameter
   if(response %in% c("binomial", "negative-binomial")) {
 
@@ -678,6 +678,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   l$K_init = Diagonal(n=nbasis(basis),x = 1/(1/var(Z[,1])))
   l$K_inv_init = solve(l$K_init)
 
+    
   if(!is.finite(determinant(t(X) %*% X)$modulus))
     stop("Matrix of covariates has columns that are linearly dependent. Please change formula or covariates.")
 

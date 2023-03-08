@@ -18,6 +18,7 @@ Suggests:
     gstat,
     INLA,
     knitr,
+    lme4,
     mapproj,
     parallel,
     rgdal,
