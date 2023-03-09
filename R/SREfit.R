@@ -30,15 +30,18 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   ## (Note that we cannot pass the SRE model, because it complicates things 
   ## for the FRK() wrapper)
   .check_args2(n_EM = n_EM, tol = tol, lambda = lambda,
-               method = method, print_lik = print_lik, 
-               fs_by_spatial_BAU = object@fs_by_spatial_BAU, 
-               response = object@response, K_type = object@K_type, link = object@link, 
+               method = method, print_lik = print_lik,
+               fs_by_spatial_BAU = object@fs_by_spatial_BAU,
+               response = object@response,
+               K_type = object@K_type,
+               link = object@link,
                known_sigma2fs = known_sigma2fs,
                BAUs = object@BAUs,
-               optimiser = optimiser, taper = taper, 
-               simple_kriging_fixed = simple_kriging_fixed, 
-               ...) # control parameters to optimiser() 
-  
+               optimiser = optimiser, taper = taper,
+               simple_kriging_fixed = simple_kriging_fixed,
+               random_eff = .reff_in_f(object@f),
+               ...) # control parameters to optimiser()
+
   object@simple_kriging_fixed <- simple_kriging_fixed
   
   

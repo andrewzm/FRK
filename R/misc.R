@@ -302,6 +302,11 @@ nasa_palette <- c("#03006d","#02008f","#0000b6","#0001ef","#0000f6","#0428f6","#
   return(list("beta" = beta, "nnz" = nnz, "D_tap" = D_tap))
 }
 
+## Check if formula has random effects
+.reff_in_f <- function(f) {
+    any(c("|", "||") %in% all.names(terms(f)))
+}
+
 .tapered_dist_matrices_nonzeroes_untouched <- function(D_matrices, beta) {
   
   D_tap <- lapply(1:length(D_matrices), function(i, D, beta) {

@@ -85,7 +85,8 @@ FRK <- function(f,                     # formula (compulsory)
                  response = response, link = link, K_type = K_type, lambda = lambda,
                  optimiser = optimiser, fs_by_spatial_BAU = fs_by_spatial_BAU, 
                  known_sigma2fs = known_sigma2fs, BAUs = BAUs, taper = taper, 
-                 simple_kriging_fixed = simple_kriging_fixed, ...)                      
+                 simple_kriging_fixed = simple_kriging_fixed,
+                 random_eff = .reff_in_f(f), ...)                      
 
     ## if there is a measurement error declared in all datasets then
     ## don't estimate it

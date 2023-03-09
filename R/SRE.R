@@ -383,7 +383,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   ndata <- length(data)
 
   ## Initialise list of matrices (We construct one for every data object then concatenate)
-  S <- Ve <- Vfs <- X <- Z <- Cmat <- k_Z <- list()
+  S <- Ve <- Vfs <- X <- G <- Z <- Cmat <- k_Z <- list()
 
   ## Number of spatial BAUs and basis functions
   ns <- dim(BAUs)[1]
@@ -445,8 +445,9 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                  If not, are you sure all your data are covered by BAUs?")
 
     ## Extract information from the data using the .extract.from.formula internal function
-    L <- .extract.from.formula(f,data=data_proc)
-    X[[i]] <- as(L$X,"Matrix")                # covariate information
+    L <- .extract.from.formula(f, data = data_proc)
+    X[[i]] <- as(L$X,"Matrix")                # fixed effect design matrix
+    G[[i]] <- L$G                             # random effect design matrix
     Z[[i]] <- Matrix(L$y)                     # data values
     Ve[[i]] <- Diagonal(x=data_proc$std^2)    # measurement-error variance
 
@@ -500,6 +501,22 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   Z    <- do.call("rbind",Z)
   Ve   <- do.call("bdiag",Ve)
   Vfs  <- do.call("bdiag",Vfs)
+
+  ## Concatenate random effects
+  if(length(G[[1]]) > 0) {
+      n_reff_grps <- length(G[[1]])
+      GG <- list()
+      for(i in 1:n_reff_grps) {
+          GG[[i]] <- list()
+          for(j in 1:ndata) {
+              GG[[i]][[j]] <- G[[j]][[i]]
+          }
+          GG[[i]] <- do.call("rbind", GG[[i]])
+      }
+      G <- GG
+  } else {
+      G <- list()
+  }
 
   ## Indices of observed BAUs
   obsidx <- .observed_BAUs_from_Cmat(Cmat)
@@ -638,6 +655,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
       Vfs = Vfs,
       Vfs_BAUs = Vfs_BAUs,
       Qfs_BAUs = Qfs_BAUs,
+      G = G,
       Z = Z,
       Cmat = Cmat,
       X = X,
@@ -678,7 +696,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   l$K_init = Diagonal(n=nbasis(basis),x = 1/(1/var(Z[,1])))
   l$K_inv_init = solve(l$K_init)
 
-    
+
   if(!is.finite(determinant(t(X) %*% X)$modulus))
     stop("Matrix of covariates has columns that are linearly dependent. Please change formula or covariates.")
 

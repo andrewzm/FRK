@@ -97,7 +97,8 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot Qfs_BAUs fine-scale precision matrix at the BAU centroids (typically diagonal and of class \code{Matrix}) up to a constant of proportionality estimated using the EM algorithm
 #' @slot Z vector of observations (of class \code{Matrix})
 #' @slot Cmat incidence matrix mapping the observations to the BAUs
-#' @slot X matrix of covariates at all the data locations
+#' @slot X design matrix of covariates at all the data locations
+#' @slot G list of objects of class Matrix containing the design matrices for random effects at all the data locations
 #' @slot K_type type of prior covariance matrix of random effects. Can be "block-exponential" (correlation between effects decays as a function of distance between the basis-function centroids), "unstructured" (all elements in \code{K} are unknown and need to be estimated), or "neighbour" (a sparse precision matrix is used, whereby only neighbouring basis functions have non-zero precision matrix elements).
 #' @slot mu_eta updated expectation of the basis function random effects (estimated)
 #' @slot S_eta updated covariance matrix of random effects (estimated)
@@ -139,6 +140,7 @@ setClass("SRE",representation(data="list",
                               Z = "Matrix",
                               Cmat = "Matrix",
                               X = "Matrix",
+                              G = "list",
                               mu_eta = "Matrix",
                               S_eta = "Matrix",
                               Q_eta = "Matrix",
