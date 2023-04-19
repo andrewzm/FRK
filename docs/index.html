@@ -61,9 +61,6 @@
 <div class="section level1">
 <div class="page-header"><h1 id="fixed-rank-kriging-">Fixed Rank Kriging <img align="right" width="100" src="https://github.com/andrewzm/FRK/blob/2023_04_pkgdown/man/figures/FRK_logo2.png?raw=true"><a class="anchor" aria-label="anchor" href="#fixed-rank-kriging-"></a>
 </h1></div>
-<!--![](https://github.com/andrewzm/FRK/blob/2023_04_pkgdown/man/figures/FRK_logo2.png?raw=true)--><div class="section level2">
-<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
-</h2>
 <p>The package <code>FRK</code> is available on CRAN! To install, please type</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"FRK"</span><span class="op">)</span></span></code></pre></div>
@@ -76,7 +73,6 @@
 <span><span class="fu"><a href="https://rdrr.io/r/utils/vignette.html" class="external-link">vignette</a></span><span class="op">(</span><span class="st">"FRK_intro"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/vignette.html" class="external-link">vignette</a></span><span class="op">(</span><span class="st">"FRK_non-Gaussian"</span><span class="op">)</span></span></code></pre></div>
 <p>A paper with more details is available <a href="https://www.jstatsoft.org/article/view/v098i04" class="external-link">here</a>, and a draft paper detailing the approach in a non-Gaussian setting is available <a href="https://arxiv.org/abs/2110.02507" class="external-link">here</a>. If you use <code>FRK</code> in your work, please cite it using the information provided by <code>citation("FRK")</code>.</p>
-</div>
 <div class="section level2">
 <h2 id="description">Description<a class="anchor" aria-label="anchor" href="#description"></a>
 </h2>
@@ -89,8 +85,9 @@
 <p>Maintainer: Andrew Zammit-Mangion <a href="mailto:andrewzm@gmail.com" class="email">andrewzm@gmail.com</a></p>
 <p>Description: A tool for spatial/spatio-temporal modelling and prediction with large datasets. The approach models the field, and hence the covariance function, using a set of basis functions. This fixed-rank basis-function representation facilitates the modelling of big data, and the method naturally allows for non-stationary, anisotropic covariance functions. Discretisation of the spatial domain into so-called basic areal units (BAUs) facilitates the use of observations with varying support (i.e., both point-referenced and areal supports, potentially simultaneously), and prediction over arbitrary user-specified regions. <code>FRK</code> also supports inference over various manifolds, including the 2D plane and 3D sphere, and it provides helper functions to model, fit, predict, and plot with relative ease. Version 2.0.0 and above also supports the modelling of non-Gaussian data (e.g., Poisson, binomial, negative-binomial, gamma, and inverse-Gaussian) by employing a generalised linear mixed model (GLMM) framework. Zammit-Mangion and Cressie <a href="doi:10.18637/jss.v098.i04" class="uri">doi:10.18637/jss.v098.i04</a> describe <code>FRK</code> in a Gaussian setting, and detail its use of basis functions and BAUs, while Sainsbury-Dale et al. &lt;arXiv:2110.02507&gt; describe <code>FRK</code> in a non-Gaussian setting; two vignettes are available that summarise these papers and provide additional examples.</p>
 <ul>
-<li>Cressie, N., &amp; Johannesson, G. (2008). Fixed rank kriging for very large spatial data sets. Journal of the Royal Statistical Society: Series B, 70, 209–226.</li>
-<li>Zammit-Mangion A, Cressie N (2021). “FRK: an R package for spatial and spatio-temporal prediction with large datasets.” Journal of Statistical Software, In press.</li>
+<li>Cressie, N. &amp; Johannesson, G. (2008). Fixed rank kriging for very large spatial data sets. Journal of the Royal Statistical Society: Series B, 70, 209–226.</li>
+<li>Zammit-Mangion, A. &amp; Cressie N. (2021). “FRK: an R package for spatial and spatio-temporal prediction with large datasets.” Journal of Statistical Software, 98, 1-48.</li>
+<li>Sainsbury-Dale, M., Zammit-Mangion, A. &amp; Cressie, N. (2023). “Modelling Big, Heterogeneous, Non-Gaussian Spatial and Spatio-Temporal Data using FRK” Journal of Statistical Software, accepted for publication, <a href="https://arxiv.org/abs/2110.02507" class="external-link uri">https://arxiv.org/abs/2110.02507</a>.</li>
 </ul>
 <p>License: GPL (&gt;= 2)</p>
 </div>
