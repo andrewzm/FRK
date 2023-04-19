@@ -514,6 +514,7 @@ or <code>spplot</code> from the package <code>sp</code>.</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">## Fit with 2 EM iterations so to take as little time as possible</span></span></span>
 <span class="r-in"><span><span class="va">S</span> <span class="op">&lt;-</span> <span class="fu">SRE.fit</span><span class="op">(</span><span class="va">S</span>, n_EM <span class="op">=</span> <span class="fl">2</span>, tol <span class="op">=</span> <span class="fl">0.01</span>, print_lik <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>simple_kriging_fixed is ignored if method = 'EM', since universal kriging is not implemented for method = 'EM'</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   |                                                                              |                                                                      |   0%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================================================| 100%</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Maximum EM iterations reached</span>
 <span class="r-plt img"><img src="SRE-1.png" alt="" width="700" height="433"></span>
@@ -527,7 +528,7 @@ or <code>spplot</code> from the package <code>sp</code>.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $sigma2fshat_equal_0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $converged</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0</span>
@@ -537,7 +538,7 @@ or <code>spplot</code> from the package <code>sp</code>.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1 2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $plot_lik$llk</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] -376.2599 -366.5720</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] -336.1339 -334.1086</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $plot_lik$ylab</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "log likelihood"</span>
@@ -548,13 +549,13 @@ or <code>spplot</code> from the package <code>sp</code>.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $time</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    user  system elapsed </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   6.048   7.760   0.897 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   5.806   7.494   0.862 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/logLik.html" class="external-link">logLik</a></span><span class="op">(</span><span class="va">S</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] -366.0032</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] -333.3521</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">S</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Intercept </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  3.233033 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   3.15632 </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">## Predict over BAUs</span></span></span>
 <span class="r-in"><span><span class="va">pred</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">S</span><span class="op">)</span></span></span>
