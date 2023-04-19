@@ -4,7 +4,7 @@
 Fixed Rank Kriging 
 ================
 
-# pkgdown <img src="man/figures/FRK_logo.svg" alt="" width="100"/>
+<img src="man/figures/FRK_logo.svg" alt="" width="100">
 
 Installation 
 ------------
