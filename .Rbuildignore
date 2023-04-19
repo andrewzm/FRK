@@ -30,3 +30,6 @@ rhipe_fns.R$
 ^doc$
 ^Meta$
 ^man/figures
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
