@@ -4,6 +4,8 @@
 Fixed Rank Kriging 
 ================
 
+![(Left) Gaussian data. (Centre) Predictions. (Right) Standard errors.](man/figures/FRK_logo.svg?raw=true)
+
 <img src="man/figures/FRK_logo.svg" alt="" width="100">
 
 Installation 
