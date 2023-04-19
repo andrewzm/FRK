@@ -98,7 +98,7 @@ ggsave(
 )
 --->
 
-![(Left) Gaussian data. (Centre) Predictions. (Right) Standard errors.](/man/figures/Gaussian_data.png?raw=true)
+![(Left) Gaussian data. (Centre) Predictions. (Right) Standard errors.](https://github.com/andrewzm/FRK/blob/master/man/figures/Gaussian_data.png?raw=true)
 
 ### Non-Gaussian data
 
@@ -128,7 +128,7 @@ ggsave(
 )
 --->
 
-![(Left) Poisson data. (Centre) Prediction of the mean response. (Right) Prediction interval width of the mean response.](/man/figures/Poisson_data.png?raw=true)
+![(Left) Poisson data. (Centre) Prediction of the mean response. (Right) Prediction interval width of the mean response.](https://github.com/andrewzm/FRK/blob/master/man/figures/Poisson_data.png?raw=true)
 
 
 ### Spatio-temporal data
@@ -177,7 +177,7 @@ ggsave(
 )
 --->
 
-![(Left) Prediction of spatio-temporal process. (Right) Prediction interval width.](/man/figures/ST_data.png?raw=true)
+![(Left) Prediction of spatio-temporal process. (Right) Prediction interval width.](https://github.com/andrewzm/FRK/blob/master/man/figures/ST_data.png?raw=true)
 
 
 [//]: # (Currently `FRK` is not installing on OSX with `build_vignettes=TRUE` as it fails to find `texi2dvi`. Set `build_vignettes=FALSE` to ensure installation. Then download the `.Rnw` file in the `vignettes` folder and compile the pdf file separately in `RStudio` with `knitr`. )
