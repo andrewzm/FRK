@@ -1,9 +1,14 @@
 <!-- [![Build Status](https://travis-ci.org/andrewzm/FRK.svg)](https://travis-ci.org/andrewzm/FRK)
 [![codecov.io](https://codecov.io/github/andrewzm/FRK/coverage.svg?branch=master)](https://codecov.io/github/andrewzm/FRK?branch=master) -->
 
-# Fixed Rank Kriging 
+<a href="https://cran.r-project.org/package=FRK"
+class="FRK-release"><img
+src="https://www.r-pkg.org/badges/version/FRK"
+alt="CRAN Status" /></a>
 
-<!-- ![](man/figures/FRK_logo2.png?raw=true)-->
+Fixed Rank Kriging 
+==================
+
 ![](https://github.com/andrewzm/FRK/blob/2023_04_pkgdown/man/figures/FRK_logo2.png?raw=true)
 
 Installation 
