@@ -4,8 +4,7 @@
 Fixed Rank Kriging 
 ================
 
-<img src="./man/figures/FRK_logo.svg" width=100>
-
+<img src="https://raw.githubusercontent.com/andrewzm/FRK/master/man/figures/FRK_logo.svg" width=100>
 
 
 Installation 
