@@ -1,10 +1,9 @@
 [![Build Status](https://travis-ci.org/andrewzm/FRK.svg)](https://travis-ci.org/andrewzm/FRK)
 [![codecov.io](https://codecov.io/github/andrewzm/FRK/coverage.svg?branch=master)](https://codecov.io/github/andrewzm/FRK?branch=master)
 
-# Fixed Rank Kriging ![](man/figures/FRK_logo2.png?raw=true)
+# Fixed Rank Kriging 
 
-
-
+![](man/figures/FRK_logo2.png?raw=true)
 
 
 Installation 
