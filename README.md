@@ -6,10 +6,10 @@ class="FRK-release"><img
 src="https://www.r-pkg.org/badges/version/FRK"
 alt="CRAN Status" /></a>
 
-Fixed Rank Kriging 
-==================
+# Fixed Rank Kriging <img align="right" width="100" src="https://github.com/andrewzm/FRK/blob/2023_04_pkgdown/man/figures/FRK_logo2.png?raw=true">
 
-![](https://github.com/andrewzm/FRK/blob/2023_04_pkgdown/man/figures/FRK_logo2.png?raw=true)
+<!--![](https://github.com/andrewzm/FRK/blob/2023_04_pkgdown/man/figures/FRK_logo2.png?raw=true)-->
+
 
 Installation 
 ------------
