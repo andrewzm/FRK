@@ -3,8 +3,8 @@
 
 # Fixed Rank Kriging 
 
-![](man/figures/FRK_logo2.png?raw=true)
-
+<!-- ![](man/figures/FRK_logo2.png?raw=true)-->
+![](https://github.com/andrewzm/FRK/blob/2023_04_pkgdown/man/figures/FRK_logo2.png?raw=true)
 
 Installation 
 ------------
