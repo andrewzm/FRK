@@ -21,15 +21,12 @@ To install the most recent (development) version, first please install `INLA` fr
 install_github("andrewzm/FRK", dependencies = TRUE, build_vignettes = TRUE)
 ```
 
-A document containing a description, details on the underlying maths and computations for the EM algorithm (only applicable for Gaussian data), as well as several examples, is available as a vignette titled "FRK_intro". Another vignette, "FRK_non-Gaussian", summarises the maths in a non-Gaussian setting, and contains a couple of examples using non-Gaussian data and the newly available plotting methods. To load these vignettes please type
+A document containing a description, details on the underlying maths and computations for the EM algorithm (only applicable for Gaussian data), as well as several examples, is available as a vignette titled "FRK_intro". Another vignette, "FRK_non-Gaussian", summarises the maths in a non-Gaussian setting, and contains a couple of examples using non-Gaussian data and the newly available plotting methods. To access the vignettes, please click on the following links:
 
-```r
-library("FRK")
-vignette("FRK_intro")
-vignette("FRK_non-Gaussian")
-```
+[Introduction to FRK](https://cran.r-project.org/web/packages/FRK/vignettes/FRK_intro.pdf)
+[Tutorial on modelling spatial and spatio-temporal non-Gaussian data with FRK](https://cran.r-project.org/web/packages/FRK/vignettes/FRK_non-Gaussian.pdf)
 
-A paper with more details is available [here](https://www.jstatsoft.org/article/view/v098i04), and a draft paper detailing the approach in a non-Gaussian setting is available [here](https://arxiv.org/abs/2110.02507). If you use `FRK` in your work, please cite it using the information provided by `citation("FRK")`. 
+A paper with more details is available [here](https://www.jstatsoft.org/article/view/v098i04), and a draft paper detailing the approach in a non-Gaussian setting is available [here](https://arxiv.org/abs/2110.02507). A `pkgdown` page is available [here](https://andrewzm.github.io/FRK/). If you use `FRK` in your work, please cite it using the information provided by `citation("FRK")`. 
 
 
 Description
@@ -137,6 +134,8 @@ We now analyse spatio-temporal data, using the NOAA dataset.
 
 ```r
 ## Setup
+library("spacetime")
+
 data("NOAA_df_1990")
 Tmax <- subset(NOAA_df_1990, month %in% 7 & year == 1993)
 Tmax <- within(Tmax, {time = as.Date(paste(year,month,day,sep="-"))})

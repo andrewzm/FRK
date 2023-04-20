@@ -67,12 +67,9 @@
 <p>To install the most recent (development) version, first please install <code>INLA</code> from <code>https://www.r-inla.org/download</code>, then please load <code>devtools</code> and type</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">install_github</span><span class="op">(</span><span class="st">"andrewzm/FRK"</span>, dependencies <span class="op">=</span> <span class="cn">TRUE</span>, build_vignettes <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p>A document containing a description, details on the underlying maths and computations for the EM algorithm (only applicable for Gaussian data), as well as several examples, is available as a vignette titled “FRK_intro”. Another vignette, “FRK_non-Gaussian”, summarises the maths in a non-Gaussian setting, and contains a couple of examples using non-Gaussian data and the newly available plotting methods. To load these vignettes please type</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="st"><a href="https://andrewzm.github.io/FRK/" class="external-link">"FRK"</a></span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/vignette.html" class="external-link">vignette</a></span><span class="op">(</span><span class="st">"FRK_intro"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/vignette.html" class="external-link">vignette</a></span><span class="op">(</span><span class="st">"FRK_non-Gaussian"</span><span class="op">)</span></span></code></pre></div>
-<p>A paper with more details is available <a href="https://www.jstatsoft.org/article/view/v098i04" class="external-link">here</a>, and a draft paper detailing the approach in a non-Gaussian setting is available <a href="https://arxiv.org/abs/2110.02507" class="external-link">here</a>. If you use <code>FRK</code> in your work, please cite it using the information provided by <code>citation("FRK")</code>.</p>
+<p>A document containing a description, details on the underlying maths and computations for the EM algorithm (only applicable for Gaussian data), as well as several examples, is available as a vignette titled “FRK_intro”. Another vignette, “FRK_non-Gaussian”, summarises the maths in a non-Gaussian setting, and contains a couple of examples using non-Gaussian data and the newly available plotting methods. To access the vignettes, please click on the following links:</p>
+<p><a href="https://cran.r-project.org/web/packages/FRK/vignettes/FRK_intro.pdf" class="external-link">Introduction to FRK</a> <a href="https://cran.r-project.org/web/packages/FRK/vignettes/FRK_non-Gaussian.pdf" class="external-link">Tutorial on modelling spatial and spatio-temporal non-Gaussian data with FRK</a></p>
+<p>A paper with more details is available <a href="https://www.jstatsoft.org/article/view/v098i04" class="external-link">here</a>, and a draft paper detailing the approach in a non-Gaussian setting is available <a href="https://arxiv.org/abs/2110.02507" class="external-link">here</a>. A <code>pkgdown</code> page is available <a href="https://andrewzm.github.io/FRK/" class="external-link">here</a>. If you use <code>FRK</code> in your work, please cite it using the information provided by <code>citation("FRK")</code>.</p>
 <div class="section level2">
 <h2 id="description">Description<a class="anchor" aria-label="anchor" href="#description"></a>
 </h2>
@@ -97,7 +94,7 @@
 <div class="section level3">
 <h3 id="gaussian-data">Gaussian data<a class="anchor" aria-label="anchor" href="#gaussian-data"></a>
 </h3>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="st"><a href="https://andrewzm.github.io/FRK/" class="external-link">"FRK"</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="st"><a href="https://github.com/edzer/sp/" class="external-link">"sp"</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="st"><a href="https://ggplot2.tidyverse.org" class="external-link">"ggplot2"</a></span><span class="op">)</span></span>
@@ -133,7 +130,7 @@ ggsave(
 <h3 id="non-gaussian-data">Non-Gaussian data<a class="anchor" aria-label="anchor" href="#non-gaussian-data"></a>
 </h3>
 <p>Here we analyse simulated Poisson data. We signify a Poisson data model with a mean response that is modelled using the square-root link function by setting <code>response = "poisson"</code> and <code>link = "sqrt"</code> in <code><a href="reference/SRE.html">FRK()</a></code>. Other non-Gaussian response distributions available in <code>FRK</code> are the binomial, negative-binomial, gamma, and inverse-Gaussian distributions.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">## Simulate Poisson data using the previous example's data to construct a mean </span></span>
 <span><span class="va">zdf</span><span class="op">$</span><span class="va">z</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Poisson.html" class="external-link">rpois</a></span><span class="op">(</span><span class="va">m</span>, lambda <span class="op">=</span> <span class="va">zdf</span><span class="op">$</span><span class="va">z</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span></span>
 <span></span>
@@ -162,12 +159,14 @@ ggsave(
 <h3 id="spatio-temporal-data">Spatio-temporal data<a class="anchor" aria-label="anchor" href="#spatio-temporal-data"></a>
 </h3>
 <p>We now analyse spatio-temporal data, using the NOAA dataset.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">## Setup</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="st"><a href="https://github.com/edzer/spacetime" class="external-link">"spacetime"</a></span><span class="op">)</span></span>
+<span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="st">"NOAA_df_1990"</span><span class="op">)</span></span>
 <span><span class="va">Tmax</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">NOAA_df_1990</span>, <span class="va">month</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fl">7</span> <span class="op">&amp;</span> <span class="va">year</span> <span class="op">==</span> <span class="fl">1993</span><span class="op">)</span></span>
 <span><span class="va">Tmax</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/with.html" class="external-link">within</a></span><span class="op">(</span><span class="va">Tmax</span>, <span class="op">{</span><span class="va">time</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">year</span>,<span class="va">month</span>,<span class="va">day</span>,sep<span class="op">=</span><span class="st">"-"</span><span class="op">)</span><span class="op">)</span><span class="op">}</span><span class="op">)</span></span>
-<span><span class="va">STObj</span> <span class="op">&lt;-</span> <span class="fu">stConstruct</span><span class="op">(</span>x <span class="op">=</span> <span class="va">Tmax</span>, space <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lon"</span>,<span class="st">"lat"</span><span class="op">)</span>, time <span class="op">=</span> <span class="st">"time"</span>, interval <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">STObj</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/spacetime/man/stconstruct.html" class="external-link">stConstruct</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Tmax</span>, space <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lon"</span>,<span class="st">"lat"</span><span class="op">)</span>, time <span class="op">=</span> <span class="st">"time"</span>, interval <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co">## BAUs: spatial BAUs are 1x1 pixels, temporal BAUs are 1 day intervals</span></span>
 <span><span class="va">BAUs</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/auto_BAUs.html">auto_BAUs</a></span><span class="op">(</span>manifold <span class="op">=</span> <span class="fu"><a href="reference/STplane.html">STplane</a></span><span class="op">(</span><span class="op">)</span>, </span>
