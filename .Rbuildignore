@@ -33,3 +33,4 @@ rhipe_fns.R$
 ^_pkgdown\.yml$
 ^docs$
 ^pkgdown$
+^\.github$

@@ -21,8 +21,6 @@ To install the most recent development version, first please install `INLA` from
 install_github("andrewzm/FRK", dependencies = TRUE, build_vignettes = TRUE)
 ```
 
-
-
 A paper introducing the package is available [here](https://www.jstatsoft.org/article/view/v098i04). A paper detailing the approach in a non-Gaussian setting is available [here](https://arxiv.org/abs/2110.02507) (a six-page summary of this paper is available [here](https://github.com/andrewzm/FRK/raw/master/FRKv2_6page.pdf)). If you use `FRK` in your work, please cite it using the information provided by `citation("FRK")`.
 
 The vignette "FRK_intro" summarises the package, gives details on the EM algorithm that may be employed in a Gaussian setting, and provides several examples. Another vignette, "FRK_non-Gaussian", summarises inference in a non-Gaussian setting (where a Laplace approximation is used), and contains examples using non-Gaussian data and the newly available plotting methods. To access the vignettes, please click on the following links:
