@@ -418,20 +418,21 @@ setMethod("plot", signature(x = "SRE", y = "SpatialPolygonsDataFrame"), function
       process <-  bquote(bold(.(unicode))[P])
     }
     
-    expectation <- bquote(paste("E(", .(process), " | ", bold(Z), ", ", bold("\U03B8"), ")    "))
+    expectation <- bquote(paste("E(", .(process), " | ", bold(Z), ", ", bold("\U03B8"), ")"))
     
     ## Construct the labels
-    ## NB: Add a couple of spaces to ensure no overlap between label and the 
-    ## fill box when arranged with legend at top
+    ## NB: Added white space to ensure no overlap between label and the fill box 
     label <- if (type == "p") {
-      # expectation
-      # bquote(paste("Prediction\n", .(expectation)))
-      bquote(atop("Prediction    ", .(expectation)))
+      # bquote(atop("Prediction    ", .(expectation))) # TODO add the following whitespace to expectation "    "
+      top    <- "Prediction    "
+      bottom <- bquote(paste(.(expectation) * "    "))
+      bquote(atop(.(top), .(bottom))) 
     } else if (type == "RMSPE") {
-        bquote(paste("RMSPE(", .(expectation), ", ", .(process),")  "))
+        bquote(paste("RMSPE(" * .(expectation) * ", " * .(process),")        "))
     } else if (type == "interval90") {
-        # bquote(paste("90% prediction-\ninterval width for " * .(process), "  "))
-        bquote(atop("90% prediction-", "interval width for " * .(process), "  "))
+        top    <- "90% prediction-    "
+        bottom <- bquote(paste("interval width for " * .(process), "  "))
+        bquote(atop(.(top), .(bottom)))
     }
     
     return(labs(fill = label))

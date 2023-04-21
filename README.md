@@ -15,19 +15,21 @@ The package `FRK` is available on CRAN! To install, please type
 install.packages("FRK")
 ```
 
-To install the most recent (development) version, first please install `INLA` from `https://www.r-inla.org/download`, then please load `devtools` and type
+To install the most recent development version, first please install `INLA` from `https://www.r-inla.org/download`, then please load `devtools` and type
 
 ```r
 install_github("andrewzm/FRK", dependencies = TRUE, build_vignettes = TRUE)
 ```
 
-A document containing a description, details on the underlying maths and computations for the EM algorithm (only applicable for Gaussian data), as well as several examples, is available as a vignette titled "FRK_intro". Another vignette, "FRK_non-Gaussian", summarises the maths in a non-Gaussian setting, and contains a couple of examples using non-Gaussian data and the newly available plotting methods. To access the vignettes, please click on the following links:
+A paper introducing the package is available [here](https://www.jstatsoft.org/article/view/v098i04), and a paper detailing the approach in a non-Gaussian setting is available [here](https://arxiv.org/abs/2110.02507). If you use `FRK` in your work, please cite it using the information provided by `citation("FRK")`.
+
+The vignette "FRK_intro" summarises the package, gives details on the EM algorithm that may be employed in a Gaussian setting, and provides several examples. Another vignette, "FRK_non-Gaussian", summarises inference in a non-Gaussian setting (where a Laplace approximation is used), and contains examples using non-Gaussian data and the newly available plotting methods. To access the vignettes, please click the following links:
 
 [Introduction to FRK](https://cran.r-project.org/web/packages/FRK/vignettes/FRK_intro.pdf)
 
 [Tutorial on modelling spatial and spatio-temporal non-Gaussian data with FRK](https://cran.r-project.org/web/packages/FRK/vignettes/FRK_non-Gaussian.pdf)
 
-A paper with more details is available [here](https://www.jstatsoft.org/article/view/v098i04), and a draft paper detailing the approach in a non-Gaussian setting is available [here](https://arxiv.org/abs/2110.02507). A `pkgdown` page is available [here](https://andrewzm.github.io/FRK/). If you use `FRK` in your work, please cite it using the information provided by `citation("FRK")`. 
+ A `pkgdown` page is also available [here](https://andrewzm.github.io/FRK/). 
 
 
 Description
@@ -49,7 +51,6 @@ Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
 
 Description: A tool for spatial/spatio-temporal modelling and prediction with large datasets. The approach models the field, and hence the covariance function, using a set of basis functions. This fixed-rank basis-function representation facilitates the modelling of big data, and the method naturally allows for non-stationary, anisotropic covariance functions. Discretisation of the spatial domain into so-called basic areal units (BAUs) facilitates the use of observations with varying support (i.e., both point-referenced and areal supports, potentially simultaneously), and prediction over arbitrary user-specified regions. `FRK` also supports inference over various manifolds, including the 2D plane and 3D sphere, and it provides helper functions to model, fit, predict, and plot with relative ease. Version 2.0.0 and above also supports the modelling of non-Gaussian data (e.g., Poisson, binomial, negative-binomial, gamma, and inverse-Gaussian) by employing a generalised linear mixed model (GLMM) framework.  Zammit-Mangion and Cressie <doi:10.18637/jss.v098.i04> describe `FRK` in a Gaussian setting, and detail its use of basis functions and BAUs, while Sainsbury-Dale et al. <arXiv:2110.02507> describe `FRK` in a non-Gaussian setting; two vignettes are available that summarise these papers and provide additional examples.
 
-* Cressie, N. & Johannesson, G. (2008). Fixed rank kriging for very large spatial data sets. Journal of the Royal Statistical Society: Series B, 70, 209–226.
 * Zammit-Mangion, A. & Cressie N. (2021). “FRK: an R package for spatial and spatio-temporal prediction with large datasets.” Journal of Statistical Software, 98, 1-48.
 * Sainsbury-Dale, M., Zammit-Mangion, A. & Cressie, N. (2023). “Modelling Big, Heterogeneous, Non-Gaussian Spatial and Spatio-Temporal Data using FRK” Journal of Statistical Software, accepted for publication, https://arxiv.org/abs/2110.02507.
 
@@ -83,16 +84,16 @@ S <- FRK(f = z ~ 1,                         # Formula to FRK
 pred <- predict(S)                          # Prediction stage
 
 ## Plotting
-plot_list <- plot(S, pred)
-ggarrange(plotlist = plot_list, nrow = 1, legend = "top")
+plotlist <- plot(S, pred)
+ggarrange(plotlist = plotlist, nrow = 1, legend = "top")
 
 ```
 
 <!---
 ggsave( 
-  filename = "Gaussian_data_tmp.png", device = "png", 
+  filename = "Gaussian_data.png", device = "png", 
   width = 10, height = 4,
-  path = "~/Dropbox/FRK/man/figures/"
+  path = "man/figures/"
 )
 --->
 
@@ -113,8 +114,8 @@ S <- FRK(f = z ~ 1, list(zdf),
 pred <- predict(S)                            
 
 ## Plotting
-plot_list <- plot(S, pred$newdata)
-ggarrange(plot_list$z, plot_list$p_mu, plot_list$interval90_mu, 
+plotlist <- plot(S, pred$newdata)
+ggarrange(plotlist$z, plotlist$p_mu, plotlist$interval90_mu, 
           nrow = 1, legend = "top")
              
 ```    
@@ -122,7 +123,7 @@ ggarrange(plot_list$z, plot_list$p_mu, plot_list$interval90_mu,
 ggsave( 
   filename = "Poisson_data.png", device = "png", 
   width = 10, height = 4,
-  path = "~/Dropbox/FRK/man/figures/"
+  path = "man/figures/"
 )
 --->
 
@@ -158,22 +159,21 @@ S <- FRK(f = z ~ 1 + lat, data = list(STObj),
 pred <- predict(S, percentiles = NULL)
 
 ## Plotting: include only some times via the argument subset_time
-plot_list <- plot(S, pred$newdata, subset_time = c(1, 7, 13, 19, 25, 31)) 
-ggarrange(plotlist = plot_list, nrow = 1, legend = "top") 
+plotlist <- plot(S, pred$newdata, subset_time = c(1, 7, 13, 19, 25, 31)) 
+ggarrange(plotlist = plotlist, nrow = 1, legend = "top") 
 ```
 
 <!---
 ## Apply a labeller so the facet shows day x rather than just x
 facet_names <- paste0("day ", unique(pred$newdata$t))
 names(facet_names) <- unique(pred$newdata$t)
-plot_list <- lapply(
-  plot_list, 
-  function(gg) gg + facet_wrap(~t, labeller = as_labeller(facet_names)))
+plotlist <- lapply(plotlist, function(gg) gg + facet_wrap(~t, labeller = as_labeller(facet_names)))
   
 ggsave( 
+  ggarrange(plotlist = plotlist, nrow = 1, legend = "top"),
   filename = "ST_data.png", device = "png", 
   width = 12.5, height = 3.8,
-  path = "~/Dropbox/FRK/man/figures/"
+  path = "man/figures/"
 )
 --->
 

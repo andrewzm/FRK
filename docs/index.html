@@ -64,13 +64,14 @@
 <p>The package <code>FRK</code> is available on CRAN! To install, please type</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"FRK"</span><span class="op">)</span></span></code></pre></div>
-<p>To install the most recent (development) version, first please install <code>INLA</code> from <code>https://www.r-inla.org/download</code>, then please load <code>devtools</code> and type</p>
+<p>To install the most recent development version, first please install <code>INLA</code> from <code>https://www.r-inla.org/download</code>, then please load <code>devtools</code> and type</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">install_github</span><span class="op">(</span><span class="st">"andrewzm/FRK"</span>, dependencies <span class="op">=</span> <span class="cn">TRUE</span>, build_vignettes <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p>A document containing a description, details on the underlying maths and computations for the EM algorithm (only applicable for Gaussian data), as well as several examples, is available as a vignette titled “FRK_intro”. Another vignette, “FRK_non-Gaussian”, summarises the maths in a non-Gaussian setting, and contains a couple of examples using non-Gaussian data and the newly available plotting methods. To access the vignettes, please click on the following links:</p>
+<p>A paper introducing the package is available <a href="https://www.jstatsoft.org/article/view/v098i04" class="external-link">here</a>, and a paper detailing the approach in a non-Gaussian setting is available <a href="https://arxiv.org/abs/2110.02507" class="external-link">here</a>. If you use <code>FRK</code> in your work, please cite it using the information provided by <code>citation("FRK")</code>.</p>
+<p>The vignette “FRK_intro” summarises the package, gives details on the EM algorithm that may be employed in a Gaussian setting, and provides several examples. Another vignette, “FRK_non-Gaussian”, summarises inference in a non-Gaussian setting (where a Laplace approximation is used), and contains examples using non-Gaussian data and the newly available plotting methods. To access the vignettes, please click the following links:</p>
 <p><a href="https://cran.r-project.org/web/packages/FRK/vignettes/FRK_intro.pdf" class="external-link">Introduction to FRK</a></p>
 <p><a href="https://cran.r-project.org/web/packages/FRK/vignettes/FRK_non-Gaussian.pdf" class="external-link">Tutorial on modelling spatial and spatio-temporal non-Gaussian data with FRK</a></p>
-<p>A paper with more details is available <a href="https://www.jstatsoft.org/article/view/v098i04" class="external-link">here</a>, and a draft paper detailing the approach in a non-Gaussian setting is available <a href="https://arxiv.org/abs/2110.02507" class="external-link">here</a>. A <code>pkgdown</code> page is available <a href="https://andrewzm.github.io/FRK/" class="external-link">here</a>. If you use <code>FRK</code> in your work, please cite it using the information provided by <code>citation("FRK")</code>.</p>
+<p>A <code>pkgdown</code> page is also available <a href="https://andrewzm.github.io/FRK/" class="external-link">here</a>.</p>
 <div class="section level2">
 <h2 id="description">Description<a class="anchor" aria-label="anchor" href="#description"></a>
 </h2>
@@ -83,7 +84,6 @@
 <p>Maintainer: Andrew Zammit-Mangion <a href="mailto:andrewzm@gmail.com" class="email">andrewzm@gmail.com</a></p>
 <p>Description: A tool for spatial/spatio-temporal modelling and prediction with large datasets. The approach models the field, and hence the covariance function, using a set of basis functions. This fixed-rank basis-function representation facilitates the modelling of big data, and the method naturally allows for non-stationary, anisotropic covariance functions. Discretisation of the spatial domain into so-called basic areal units (BAUs) facilitates the use of observations with varying support (i.e., both point-referenced and areal supports, potentially simultaneously), and prediction over arbitrary user-specified regions. <code>FRK</code> also supports inference over various manifolds, including the 2D plane and 3D sphere, and it provides helper functions to model, fit, predict, and plot with relative ease. Version 2.0.0 and above also supports the modelling of non-Gaussian data (e.g., Poisson, binomial, negative-binomial, gamma, and inverse-Gaussian) by employing a generalised linear mixed model (GLMM) framework. Zammit-Mangion and Cressie <a href="doi:10.18637/jss.v098.i04" class="uri">doi:10.18637/jss.v098.i04</a> describe <code>FRK</code> in a Gaussian setting, and detail its use of basis functions and BAUs, while Sainsbury-Dale et al. &lt;arXiv:2110.02507&gt; describe <code>FRK</code> in a non-Gaussian setting; two vignettes are available that summarise these papers and provide additional examples.</p>
 <ul>
-<li>Cressie, N. &amp; Johannesson, G. (2008). Fixed rank kriging for very large spatial data sets. Journal of the Royal Statistical Society: Series B, 70, 209–226.</li>
 <li>Zammit-Mangion, A. &amp; Cressie N. (2021). “FRK: an R package for spatial and spatio-temporal prediction with large datasets.” Journal of Statistical Software, 98, 1-48.</li>
 <li>Sainsbury-Dale, M., Zammit-Mangion, A. &amp; Cressie, N. (2023). “Modelling Big, Heterogeneous, Non-Gaussian Spatial and Spatio-Temporal Data using FRK” Journal of Statistical Software, accepted for publication, <a href="https://arxiv.org/abs/2110.02507" class="external-link uri">https://arxiv.org/abs/2110.02507</a>.</li>
 </ul>
@@ -115,16 +115,17 @@
 <span><span class="va">pred</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">S</span><span class="op">)</span>                          <span class="co"># Prediction stage</span></span>
 <span></span>
 <span><span class="co">## Plotting</span></span>
-<span><span class="va">plot_list</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/plot.html">plot</a></span><span class="op">(</span><span class="va">S</span>, <span class="va">pred</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rpkgs.datanovia.com/ggpubr/reference/ggarrange.html" class="external-link">ggarrange</a></span><span class="op">(</span>plotlist <span class="op">=</span> <span class="va">plot_list</span>, nrow <span class="op">=</span> <span class="fl">1</span>, legend <span class="op">=</span> <span class="st">"top"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">plotlist</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/plot.html">plot</a></span><span class="op">(</span><span class="va">S</span>, <span class="va">pred</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rpkgs.datanovia.com/ggpubr/reference/ggarrange.html" class="external-link">ggarrange</a></span><span class="op">(</span>plotlist <span class="op">=</span> <span class="va">plotlist</span>, nrow <span class="op">=</span> <span class="fl">1</span>, legend <span class="op">=</span> <span class="st">"top"</span><span class="op">)</span></span></code></pre></div>
 <!---
 ggsave( 
-  filename = "Gaussian_data_tmp.png", device = "png", 
+  filename = "Gaussian_data.png", device = "png", 
   width = 10, height = 4,
-  path = "~/Dropbox/FRK/man/figures/"
+  path = "man/figures/"
 )
----><div class="figure">
-<img src="https://github.com/andrewzm/FRK/blob/master/man/figures/Gaussian_data.png?raw=true" alt="(Left) Gaussian data. (Centre) Predictions. (Right) Standard errors."><p class="caption">(Left) Gaussian data. (Centre) Predictions. (Right) Standard errors.</p>
+--->
+<div class="figure">
+<img src="https://github.com/andrewzm/FRK/blob/master/man/figures/Gaussian_data.png?raw=true" alt=""><p class="caption">(Left) Gaussian data. (Centre) Predictions. (Right) Standard errors.</p>
 </div>
 </div>
 <div class="section level3">
@@ -142,18 +143,19 @@ ggsave(
 <span><span class="va">pred</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">S</span><span class="op">)</span>                            </span>
 <span></span>
 <span><span class="co">## Plotting</span></span>
-<span><span class="va">plot_list</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/plot.html">plot</a></span><span class="op">(</span><span class="va">S</span>, <span class="va">pred</span><span class="op">$</span><span class="va">newdata</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rpkgs.datanovia.com/ggpubr/reference/ggarrange.html" class="external-link">ggarrange</a></span><span class="op">(</span><span class="va">plot_list</span><span class="op">$</span><span class="va">z</span>, <span class="va">plot_list</span><span class="op">$</span><span class="va">p_mu</span>, <span class="va">plot_list</span><span class="op">$</span><span class="va">interval90_mu</span>, </span>
+<span><span class="va">plotlist</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/plot.html">plot</a></span><span class="op">(</span><span class="va">S</span>, <span class="va">pred</span><span class="op">$</span><span class="va">newdata</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rpkgs.datanovia.com/ggpubr/reference/ggarrange.html" class="external-link">ggarrange</a></span><span class="op">(</span><span class="va">plotlist</span><span class="op">$</span><span class="va">z</span>, <span class="va">plotlist</span><span class="op">$</span><span class="va">p_mu</span>, <span class="va">plotlist</span><span class="op">$</span><span class="va">interval90_mu</span>, </span>
 <span>          nrow <span class="op">=</span> <span class="fl">1</span>, legend <span class="op">=</span> <span class="st">"top"</span><span class="op">)</span></span>
 <span>             </span></code></pre></div>
 <!---
 ggsave( 
   filename = "Poisson_data.png", device = "png", 
   width = 10, height = 4,
-  path = "~/Dropbox/FRK/man/figures/"
+  path = "man/figures/"
 )
----><div class="figure">
-<img src="https://github.com/andrewzm/FRK/blob/master/man/figures/Poisson_data.png?raw=true" alt="(Left) Poisson data. (Centre) Prediction of the mean response. (Right) Prediction interval width of the mean response."><p class="caption">(Left) Poisson data. (Centre) Prediction of the mean response. (Right) Prediction interval width of the mean response.</p>
+--->
+<div class="figure">
+<img src="https://github.com/andrewzm/FRK/blob/master/man/figures/Poisson_data.png?raw=true" alt=""><p class="caption">(Left) Poisson data. (Centre) Prediction of the mean response. (Right) Prediction interval width of the mean response.</p>
 </div>
 </div>
 <div class="section level3">
@@ -185,23 +187,23 @@ ggsave(
 <span><span class="va">pred</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">S</span>, percentiles <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co">## Plotting: include only some times via the argument subset_time</span></span>
-<span><span class="va">plot_list</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/plot.html">plot</a></span><span class="op">(</span><span class="va">S</span>, <span class="va">pred</span><span class="op">$</span><span class="va">newdata</span>, subset_time <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">7</span>, <span class="fl">13</span>, <span class="fl">19</span>, <span class="fl">25</span>, <span class="fl">31</span><span class="op">)</span><span class="op">)</span> </span>
-<span><span class="fu"><a href="https://rpkgs.datanovia.com/ggpubr/reference/ggarrange.html" class="external-link">ggarrange</a></span><span class="op">(</span>plotlist <span class="op">=</span> <span class="va">plot_list</span>, nrow <span class="op">=</span> <span class="fl">1</span>, legend <span class="op">=</span> <span class="st">"top"</span><span class="op">)</span> </span></code></pre></div>
+<span><span class="va">plotlist</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/plot.html">plot</a></span><span class="op">(</span><span class="va">S</span>, <span class="va">pred</span><span class="op">$</span><span class="va">newdata</span>, subset_time <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">7</span>, <span class="fl">13</span>, <span class="fl">19</span>, <span class="fl">25</span>, <span class="fl">31</span><span class="op">)</span><span class="op">)</span> </span>
+<span><span class="fu"><a href="https://rpkgs.datanovia.com/ggpubr/reference/ggarrange.html" class="external-link">ggarrange</a></span><span class="op">(</span>plotlist <span class="op">=</span> <span class="va">plotlist</span>, nrow <span class="op">=</span> <span class="fl">1</span>, legend <span class="op">=</span> <span class="st">"top"</span><span class="op">)</span> </span></code></pre></div>
 <!---
 ## Apply a labeller so the facet shows day x rather than just x
 facet_names <- paste0("day ", unique(pred$newdata$t))
 names(facet_names) <- unique(pred$newdata$t)
-plot_list <- lapply(
-  plot_list, 
-  function(gg) gg + facet_wrap(~t, labeller = as_labeller(facet_names)))
+plotlist <- lapply(plotlist, function(gg) gg + facet_wrap(~t, labeller = as_labeller(facet_names)))
   
 ggsave( 
+  ggarrange(plotlist = plotlist, nrow = 1, legend = "top"),
   filename = "ST_data.png", device = "png", 
   width = 12.5, height = 3.8,
-  path = "~/Dropbox/FRK/man/figures/"
+  path = "man/figures/"
 )
----><div class="figure">
-<img src="https://github.com/andrewzm/FRK/blob/master/man/figures/ST_data.png?raw=true" alt="(Left) Prediction of spatio-temporal process. (Right) Prediction interval width."><p class="caption">(Left) Prediction of spatio-temporal process. (Right) Prediction interval width.</p>
+--->
+<div class="figure">
+<img src="https://github.com/andrewzm/FRK/blob/master/man/figures/ST_data.png?raw=true" alt=""><p class="caption">(Left) Prediction of spatio-temporal process. (Right) Prediction interval width.</p>
 </div>
 </div>
 </div>
