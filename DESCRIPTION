@@ -15,9 +15,7 @@ Depends:
     R (>= 3.5.0)
 Suggests:
     covr,
-    dggrids,
     gstat,
-    INLA,
     knitr,
     mapproj,
     parallel,
