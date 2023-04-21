@@ -1,7 +1,7 @@
 <!-- [![Build Status](https://travis-ci.org/andrewzm/FRK.svg)](https://travis-ci.org/andrewzm/FRK)
 [![codecov.io](https://codecov.io/github/andrewzm/FRK/coverage.svg?branch=master)](https://codecov.io/github/andrewzm/FRK?branch=master) -->
 <!-- badges: start -->
-[![R-CMD-check](https://github.com/andrewzm/FRK/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/andrewzm/FRK/actions/workflows/R-CMD-check.yaml)
+<!-- [![R-CMD-check](https://github.com/andrewzm/FRK/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/andrewzm/FRK/actions/workflows/R-CMD-check.yaml) -->
 <!-- badges: end -->
 
 <a href="https://cran.r-project.org/package=FRK"
