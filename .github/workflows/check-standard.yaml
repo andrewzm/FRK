@@ -41,6 +41,10 @@ jobs:
           extra-packages: any::rcmdcheck
           needs: check
 
+      - name: Install dggrids and INLA
+        run: Rscript -e 'devtools::install_github("andrewzm/dggrids")'
+	run: Rscript -e 'devtools::install_github("andrewzm/inla")'
+
       - uses: r-lib/actions/setup-tinytex@v2
         env:
           TINYTEX_INSTALLER: TinyTeX
