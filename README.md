@@ -7,7 +7,6 @@
 class="FRK-release"><img
 src="https://www.r-pkg.org/badges/version/FRK"
 alt="CRAN Status" /></a>
-
 [![https://github.com/andrewzm/FRK/actions/workflows/check-standard.yaml/badge.svg?branch=master](https://github.com/andrewzm/FRK/actions/workflows/check-standard.yaml/badge.svg?branch=master)](https://github.com/andrewzm/FRK?branch=master)
 
 <!-- badges: end -->
