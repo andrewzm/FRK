@@ -42,9 +42,7 @@ jobs:
           needs: check
 
       - name: Install dggrids and INLA
-        run: |
-	  Rscript -e 'devtools::install_github("andrewzm/dggrids")'
-	  Rscript -e 'devtools::install_github("andrewzm/inla")'
+        run: Rscript -e 'devtools::install_github("andrewzm/dggrids")'
 
       - uses: r-lib/actions/setup-tinytex@v2
         env:
