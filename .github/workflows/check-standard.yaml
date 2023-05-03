@@ -37,7 +37,9 @@ jobs:
           use-public-rspm: true
 
       - name: Install dggrids and INLA
-        run: Rscript -e 'devtools::install_github("andrewzm/dggrids")'
+        run: |
+          Rscript -e 'install.packages("devtools")'
+          Rscript -e 'devtools::install_github("andrewzm/dggrids")'
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
