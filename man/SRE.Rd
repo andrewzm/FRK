@@ -204,7 +204,7 @@ linear mixed model (GLMM), which may be summarised as
 \ifelse{html}{\out{<div style="text-align:center"> <i> Z<sub>j</sub> | <b>&mu;</b><sub>Z</sub>, &psi; ~ EF(&mu;<sub>Z<sub>j</sub></sub> , &psi;); &nbsp; &nbsp; &nbsp; j = 1, ..., m, </i></div>}}{\deqn{Z_j \mid \boldsymbol{\mu}_{Z}, \psi \sim EF(\mu_{Z_j}, \psi); \quad j = 1, \dots, m,}{Z_j | \mu_{Z}, \psi ~ EF(\mu_{Z_j}, \psi);  j = 1, \dots, m,}}
 \ifelse{html}{\out{<div style="text-align:center"> <i> <b>&mu;</b><sub>Z</sub> = <b>C</b><sub>Z</sub> <b>&mu;</b>, </i></div>}}{\deqn{\boldsymbol{\mu}_Z = \boldsymbol{C}_Z\boldsymbol{\mu}}{\mu_Z = C_Z \mu}}
 \ifelse{html}{\out{<div style="text-align:center"> <i> g(<b>&mu;</b>) = <b>Y</b>, </i></div>}}{\deqn{g(\boldsymbol{\mu}) = \boldsymbol{Y}}{g(\mu) = Y}}
-\ifelse{html}{\out{<div style="text-align:center"> <i> <b>Y</b> = <b>T&alpha;</b> + <b>G&gamma;</b>  + <b>S&eta;</b> + <b>&xi;</b>, </i></div>}}{\deqn{\boldsymbol{Y} = \boldsymbol{T}\boldsymbol{\alpha} + \boldsymbol{\gamma}\boldsymbol{G} + \boldsymbol{S}\boldsymbol{\eta} + \boldsymbol{\xi}}{Y = T\alpha + S\eta + \xi}}
+\ifelse{html}{\out{<div style="text-align:center"> <i> <b>Y</b> = <b>T&alpha;</b> + <b>G&gamma;</b>  + <b>S&eta;</b> + <b>&xi;</b>, </i></div>}}{\deqn{\boldsymbol{Y} = \boldsymbol{T}\boldsymbol{\alpha} + \boldsymbol{\gamma}\boldsymbol{G} + \boldsymbol{S}\boldsymbol{\eta} + \boldsymbol{\xi}}{Y = T\alpha + G\gamma + S\eta + \xi}}
 \ifelse{html}{\out{<div style="text-align:center"> <i> <b>&eta;</b> ~ N(<b>0</b>, <b>K</b>),</i></div>}}{\deqn{\boldsymbol{\eta} \sim N(\boldsymbol{0}, \boldsymbol{K})}{\eta ~ N(0, K)}}
 \ifelse{html}{\out{<div style="text-align:center"> <i> <b>&xi;</b> ~ N(<b>0</b>, <b>&Sigma;</b><sub>&xi;</sub> ),</i></div>}}{\deqn{\boldsymbol{\xi} \sim N(\boldsymbol{0}, \boldsymbol{\Sigma}_\xi),}{\xi ~ N(0, \Sigma_\xi),}}
 \ifelse{html}{\out{<div style="text-align:center"> <i> <b>&gamma;</b> ~ N(<b>0</b>, <b>&Sigma;</b><sub>&gamma;</sub> ),</i></div><br>}}{\deqn{\boldsymbol{\gamma} \sim N(\boldsymbol{0}, \boldsymbol{\Sigma}_\gamma),}{\gamma ~ N(0, \Sigma_\gamma),}}
@@ -365,7 +365,7 @@ or \ifelse{html}{\out{<i>&sigma;<sup>2</sup><sub>&xi;</sub></i>}}{\eqn{\sigma^2_
 the change in \ifelse{html}{\out{<i>&sigma;<sup>2</sup><sub>.</sub></i>}}{\eqn{\sigma^2_{\cdot}}} is no more than 0.1\%.}
  \item{MLE via \code{TMB}. }{This method is implemented for
  all available data models and link functions offered by \pkg{FRK}. Furthermore,
- this method faciliates the inclusion of many more basis function than possible
+ this method facilitates the inclusion of many more basis function than possible
  with the EM algorithm (in excess of 10,000). \code{TMB} applies
  the Laplace approximation to integrate out the latent random effects from the
  complete-data likelihood. The resulting approximation of the marginal
