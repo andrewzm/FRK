@@ -9,6 +9,24 @@ on:
 name: R-CMD-check
 
 jobs:
+  tinytex:
+    runs-on: ${{ matrix.config.os }}
+    name: ${{ matrix.config.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - { os: macos-latest   }
+          - { os: windows-latest }
+          - { os: ubuntu-latest  }
+
+    steps:
+      - uses: r-lib/actions/setup-tinytex@v2
+        env:
+          TINYTEX_INSTALLER: TinyTeX
+      - run: tlmgr --version
+
   R-CMD-check:
     runs-on: ${{ matrix.config.os }}
 
