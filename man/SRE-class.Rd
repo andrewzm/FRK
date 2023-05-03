@@ -39,11 +39,17 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 
 \item{\code{Cmat}}{incidence matrix mapping the observations to the BAUs}
 
-\item{\code{X}}{matrix of covariates at all the data locations}
+\item{\code{X}}{design matrix of covariates at all the data locations}
+
+\item{\code{G}}{list of objects of class Matrix containing the design matrices for random effects at all the data locations}
+
+\item{\code{G0}}{list of objects of class Matrix containing the design matrices for random effects at all BAUs}
 
 \item{\code{K_type}}{type of prior covariance matrix of random effects. Can be "block-exponential" (correlation between effects decays as a function of distance between the basis-function centroids), "unstructured" (all elements in \code{K} are unknown and need to be estimated), or "neighbour" (a sparse precision matrix is used, whereby only neighbouring basis functions have non-zero precision matrix elements).}
 
-\item{\code{mu_eta}}{updated expectation of the basis function random effects (estimated)}
+\item{\code{mu_eta}}{updated expectation of the basis-function random effects (estimated)}
+
+\item{\code{mu_gamma}}{updated expectation of the random effects (estimated)}
 
 \item{\code{S_eta}}{updated covariance matrix of random effects (estimated)}
 
@@ -56,6 +62,8 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 \item{\code{alphahat}}{fixed-effect regression coefficients (estimated)}
 
 \item{\code{sigma2fshat}}{fine-scale variation scaling (estimated)}
+
+\item{\code{sigma2gamma}}{random-effect variance parameters (estimated)}
 
 \item{\code{fs_model}}{type of fine-scale variation (independent or CAR-based). Currently only "ind" is permitted}
 
@@ -80,6 +88,8 @@ The spatial random effects (SRE) model is the model employed in Fixed Rank Krigi
 \item{\code{k_BAU}}{vector of known size parameters at the observed BAUs (only applicable to binomial and negative-binomial response distributions)}
 
 \item{\code{include_fs}}{flag indicating whether the fine-scale variation should be included in the model}
+
+\item{\code{include_gamma}}{flag indicating whether there are gamma random effects in the model}
 
 \item{\code{normalise_wts}}{if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)}
 

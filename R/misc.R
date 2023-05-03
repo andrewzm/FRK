@@ -117,7 +117,25 @@ nasa_palette <- c("#03006d","#02008f","#0000b6","#0001ef","#0000f6","#0428f6","#
   return(X_BAU[obsidx, , drop = FALSE])
 }
 
+# OBSERVED BAU-level random effect design matrix 
+.constructG_O <- function(object) {
+  G0 <- .constructG0(object@f, object@BAUs)
+  obsidx <- observed_BAUs(object)
+  G_O <- lapply(G0, function(g) g[obsidx, ])
+  return(G_O)
+}
 
+## BAU-level random effect design matrix 
+.constructG0 <- function(formula, BAUs) {
+  
+  ## Set the dependent variable in BAUs to something just so that 
+  ## .extract.from.formula() doesn't throw an error.. 
+  depname <- all.vars(formula)[1]
+  BAUs[[depname]] <- 0.1
+  L <- .extract.from.formula(formula, data=BAUs)
+  
+  return(L$G)
+}
 
 
 ## Determine if the basis functions are in a regular rectangular grid

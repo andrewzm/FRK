@@ -1768,8 +1768,7 @@ load_dggrids <- function (res = 3L){
 }
 
 ## Extracts important information from the data based on the formula
-.extract.from.formula <- function (formula, data)
-{
+.extract.from.formula <- function (formula, data){
 
   formula_terms <- terms(formula)
   if(.reff_in_f(formula)) {
@@ -1811,7 +1810,7 @@ load_dggrids <- function (res = 3L){
       G = list()                                 # no random eff design matrices
   }
   list(y = Y, X = X, G = G)                  # Return Y (data) and X (fixed effect design matrix)
-                                             # and Z (list of random effect design matrices)
+                                             # and G (list of random effect design matrices)
 }
 
 

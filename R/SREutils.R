@@ -142,7 +142,7 @@ setMethod("coef_uncertainty",signature(object = "SRE"),function(object, percenti
   ## Generate sample of regression coefficients (most of these arguments can be 
   ## NULL because the function exits before they are used)
   alpha <- .simulate(
-    object = object, nsim = nsim, X = NULL,  Q_L = Q_L, fixed_effects_only = TRUE, kriging = "universal", 
+    object = object, nsim = nsim, X = NULL, G=NULL, Q_L = Q_L, fixed_effects_only = TRUE, kriging = "universal", 
     type = NULL, obs_fs = NULL, k = NULL,predict_BAUs = NULL, CP = NULL, newdata = NULL
   )
   

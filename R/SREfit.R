@@ -696,6 +696,8 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 
 # ---- TMB fitting functions ----
 
+.dropzerocolumns <- function(matrix_list) lapply(matrix_list, function(matrix) matrix[,unique(summary(matrix)$j)])
+
 
 ## Fitting stage of non-Gaussian FRK (more generally, for method  = 'TMB').
 .TMB_fit <- function(object, optimiser, known_sigma2fs, taper, ...) {
@@ -704,7 +706,8 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   C_O <- .constructC_O(object) 
   X_O <- .constructX_O(object) 
   S_O <- .constructS_O(object) 
-  
+  G_O <- .constructG_O(object)
+  G_O <- .dropzerocolumns(G_O) # Drop empty columns from G_O (some levels may be unobserved)
   
   info_fit <- list()      
   info_fit$time <- system.time({
@@ -739,10 +742,8 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     }
     
     ## Parameter and data preparation for TMB
-    parameters <- .TMB_initialise(object, K_type = K_type, C_O = C_O, X_O = X_O, S_O = S_O)
-    data <- .TMB_data_prep(object, sigma2fs_hat = exp(parameters$logsigma2fs), 
-                           K_type = K_type, taper = taper, 
-                           C_O = C_O, X_O = X_O, S_O = S_O)
+    parameters <- .TMB_initialise(object, K_type = K_type, C_O = C_O, X_O = X_O, S_O = S_O, G_O = G_O)
+    data <- .TMB_data_prep(object, K_type = K_type, taper = taper, C_O = C_O, X_O = X_O, S_O = S_O, G_O = G_O, sigma2fs_hat = exp(parameters$logsigma2fs))
     
     ## If we are estimating a unique fine-scale variance at each spatial BAU, 
     ## simply replicate sigma2fs ns times. 
@@ -766,6 +767,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     parameters$logtau      <- pmin(pmax(parameters$logtau, -4), 8)
     parameters$logdelta    <- pmin(pmax(parameters$logdelta, -4), 8)
     parameters$logsigma2_t <- pmin(pmax(parameters$logsigma2_t, -4), 8)
+    parameters$logsigma2gamma <- pmin(pmax(parameters$logsigma2gamma, -4), 8)
     
     ## Checks to catch catastrophic errors. 
     ## If we allow nonsensical values into TMB, R may crash without providing
@@ -858,13 +860,18 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     mstar <- ncol(C_O)
     object@alphahat <- as(estimates$alpha, "Matrix")
     object@mu_eta   <- as(estimates$random_effects[1:r], "Matrix")
+    if (object@include_gamma) {
+      g <- sum(sapply(G_O, ncol))
+      object@mu_gamma  <- as(estimates$random_effects[(r + 1):(r + g)], "Matrix")
+    } 
     if (object@include_fs) {
-      object@mu_xi  <- as(estimates$random_effects[(r+1):(r + mstar)], "Matrix")
+      object@mu_xi  <- as(estimates$random_effects[(s - mstar + 1):s], "Matrix")
     } else {
       object@mu_xi  <- as(rep(0, mstar), "Matrix")
     }
     
     object@sigma2fshat <- unname(exp(estimates$logsigma2fs))
+    object@sigma2gamma <- unname(exp(estimates$logsigma2gamma))
     object@Q_posterior <- Q_posterior
     object@phi <- unname(exp(estimates$logphi))
     
@@ -897,7 +904,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
 
 
 ## Initialise the fixed effects, random effects, and parameters for method = 'TMB'.
-.TMB_initialise <- function(object, K_type, C_O, X_O, S_O) {   
+.TMB_initialise <- function(object, K_type, C_O, X_O, S_O, G_O) {   
   
   if(opts_FRK$get("verbose")) cat("Initialising parameters and random effects...\n")
   
@@ -988,19 +995,30 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   ## Simulate initial values for basis-function coefficients
   l$eta <- rnorm(r, 0, sqrt(sigma2_long))
   
+  ## Random effects
+  if (object@include_gamma) {
+    num_levels  <- sapply(G_O, ncol)
+    l$sigma2gamma <- rep(0.1, length(num_levels))
+    g <- sum(num_levels)
+    l$gamma  <- rep(1, g)
+  } else {
+    l$sigma2gamma <- 1
+  }
+  
+  
   ## Return list of parameter initialisations for TMB
   transform_minus_one_to_one_inverse <- function(x) -0.5 * log(2 / (x + 1) - 1)
-  
   return(list(
     alpha = as.vector(l$alpha),
     logphi = log(l$phi),
+    logsigma2gamma = log(l$sigma2gamma),
     logsigma2 = log(l$sigma2),
     logtau = log(l$tau),
-    logdelta = l$logdelta,
     logsigma2_t = log(l$sigma2_t),  
     frho_t = transform_minus_one_to_one_inverse(l$rho_t),
+    logdelta = l$logdelta,
     logsigma2fs = log(l$sigma2fs),
-    random_effects = c(as.vector(l$eta), if(object@include_fs) as.vector(l$xi_O))
+    random_effects = c(as.vector(l$eta),  if(object@include_gamma) as.vector(l$gamma), if(object@include_fs) as.vector(l$xi_O))
   ))
 }
 
@@ -1040,7 +1058,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   
   # ---- Estimate mu_Z, mu_O, and Y_O ----
   
-  ## First, we estime mu_Z with the (adjusted) data
+  ## First, we estimate mu_Z with the (adjusted) data
   mu_Z <- Z0
   
   ## Use mu_Z to construct mu_O
@@ -1107,7 +1125,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
   return(mu_O)
 }
 
-.TMB_data_prep <- function (object, sigma2fs_hat, K_type, taper, C_O, X_O, S_O) {
+.TMB_data_prep <- function (object, sigma2fs_hat, K_type, taper, C_O, X_O, S_O, G_O) {
   
   if(opts_FRK$get("verbose")) cat("Preparing data for TMB...\n")
   
@@ -1179,8 +1197,19 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     if (!all(tabulate(object@Cmat@i + 1) == 1)) 
       if(opts_FRK$get("verbose")) cat("Some (but not all) observations are associated with multiple BAUs. Estimation of the fine-scale variance parameter will be done using TMB, but there should be a reasonable number of observations associated with a single BAU so that the fine-scale variance parameter can be estimated accurately.\n")
   } 
-  
   data$include_fs <- as.integer(object@include_fs)
+  
+  ## Random effects
+  if (object@include_gamma) {
+    num_levels  <- sapply(G_O, ncol)
+    data$gamma_id <- rep(1:length(num_levels), times = num_levels) - 1
+    data$G_O        <- do.call(cbind, G_O)
+  } else {
+    # dummy values 
+    data$gamma_id <- c(0, 1)
+    data$G_O        <- as(matrix(c(0, 0)), "sparseMatrix")
+  }
+  data$include_gamma <- as.integer(object@include_gamma)
   
   return(data)
 }
