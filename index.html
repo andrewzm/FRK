@@ -58,16 +58,16 @@
 </nav><div class="container template-home">
 <div class="row">
   <main id="main" class="col-md-9">
-<div class="sourceCode" id="cb1"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>[<span class="sc">!</span>[R<span class="sc">-</span>CMD<span class="sc">-</span>check](https<span class="sc">:</span><span class="er">//</span>github.com<span class="sc">/</span>andrewzm<span class="sc">/</span>FRK<span class="sc">/</span>actions<span class="sc">/</span>workflows<span class="sc">/</span>check<span class="sc">-</span>standard.yaml<span class="sc">/</span>badge.svg)](https<span class="sc">:</span><span class="er">//</span>github.com<span class="sc">/</span>andrewzm<span class="sc">/</span>FRK<span class="sc">/</span>actions<span class="sc">/</span>workflows<span class="sc">/</span>check<span class="sc">-</span>standard.yaml)</span></code></pre></div>
+<p><a href="https://github.com/andrewzm/FRK?branch=master" class="external-link"><img src="https://github.com/andrewzm/FRK/actions/workflows/check-standard.yaml/badge.svg?branch=master" alt="https://github.com/andrewzm/FRK/actions/workflows/check-standard.yaml/badge.svg?branch=master"></a></p>
 <!-- badges: end -->
 <div class="section level1">
 <div class="page-header"><h1 id="fixed-rank-kriging-">Fixed Rank Kriging <img align="right" width="100" src="https://github.com/andrewzm/FRK/blob/master/man/figures/FRK_logo2.png?raw=true"><a class="anchor" aria-label="anchor" href="#fixed-rank-kriging-"></a>
 </h1></div>
 <p>The package <code>FRK</code> is available on CRAN! To install, please type</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"FRK"</span><span class="op">)</span></span></code></pre></div>
 <p>To install the most recent development version, first please install <code>INLA</code> from <code>https://www.r-inla.org/download</code>, then please load <code>devtools</code> and type</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">install_github</span><span class="op">(</span><span class="st">"andrewzm/FRK"</span>, dependencies <span class="op">=</span> <span class="cn">TRUE</span>, build_vignettes <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p>A paper introducing the package is available <a href="https://www.jstatsoft.org/article/view/v098i04" class="external-link">here</a>. A paper detailing the approach in a non-Gaussian setting is available <a href="https://arxiv.org/abs/2110.02507" class="external-link">here</a> (a six-page summary of this paper is available <a href="https://github.com/andrewzm/FRK/raw/master/FRKv2_6page.pdf" class="external-link">here</a>). If you use <code>FRK</code> in your work, please cite it using the information provided by <code>citation("FRK")</code>.</p>
 <p>The vignette “FRK_intro” summarises the package, gives details on the EM algorithm that may be employed in a Gaussian setting, and provides several examples. Another vignette, “FRK_non-Gaussian”, summarises inference in a non-Gaussian setting (where a Laplace approximation is used), and contains examples using non-Gaussian data and the newly available plotting methods. To access the vignettes, please click on the following links:</p>
@@ -97,7 +97,7 @@
 <div class="section level3">
 <h3 id="gaussian-data">Gaussian data<a class="anchor" aria-label="anchor" href="#gaussian-data"></a>
 </h3>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="st"><a href="https://andrewzm.github.io/FRK/" class="external-link">"FRK"</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="st"><a href="https://github.com/edzer/sp/" class="external-link">"sp"</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="st"><a href="https://ggplot2.tidyverse.org" class="external-link">"ggplot2"</a></span><span class="op">)</span></span>
@@ -134,7 +134,7 @@ ggsave(
 <h3 id="non-gaussian-data">Non-Gaussian data<a class="anchor" aria-label="anchor" href="#non-gaussian-data"></a>
 </h3>
 <p>Here we analyse simulated Poisson data. We signify a Poisson data model with a mean response that is modelled using the square-root link function by setting <code>response = "poisson"</code> and <code>link = "sqrt"</code> in <code><a href="reference/SRE.html">FRK()</a></code>. Other non-Gaussian response distributions available in <code>FRK</code> are the binomial, negative-binomial, gamma, and inverse-Gaussian distributions.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">## Simulate Poisson data using the previous example's data to construct a mean </span></span>
 <span><span class="va">zdf</span><span class="op">$</span><span class="va">z</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Poisson.html" class="external-link">rpois</a></span><span class="op">(</span><span class="va">m</span>, lambda <span class="op">=</span> <span class="va">zdf</span><span class="op">$</span><span class="va">z</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span></span>
 <span></span>
@@ -164,7 +164,7 @@ ggsave(
 <h3 id="spatio-temporal-data">Spatio-temporal data<a class="anchor" aria-label="anchor" href="#spatio-temporal-data"></a>
 </h3>
 <p>We now analyse spatio-temporal data, using the NOAA dataset.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">## Setup</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="st"><a href="https://github.com/edzer/spacetime" class="external-link">"spacetime"</a></span><span class="op">)</span></span>
 <span></span>
