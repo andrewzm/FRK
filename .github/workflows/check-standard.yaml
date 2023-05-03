@@ -49,3 +49,4 @@ jobs:
           upload-snapshots: true
           args: 'c("--no-vignettes", "--no-manual")'
           build_args: 'c("--no-build-vignettes", "--no-manual")'
+          error-on: 'c("error")'
