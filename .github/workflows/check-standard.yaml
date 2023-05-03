@@ -38,8 +38,9 @@ jobs:
 
       - name: Install dggrids and INLA
         run: |
-          Rscript -e 'install.packages("dggrids", repos=c(getOption("repos"), dggrids="https://andrewzm.github.io/dggrids-repo/"), dep=TRUE)'
-          Rscript -e 'install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)'
+          Rscript -e "install.packages('INLA', repos=c(getOption('repos'), INLA='https://inla.r-inla-download.org/R/stable'), dep=TRUE)"
+#          Rscript -e 'install.packages("dggrids", repos=c(getOption("repos"), dggrids="https://andrewzm.github.io/dggrids-repo/"), dep=TRUE)'
+#          Rscript -e 'install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)'
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
