@@ -8,7 +8,7 @@ class="FRK-release"><img
 src="https://www.r-pkg.org/badges/version/FRK"
 alt="CRAN Status" /></a>
 
-[![R-CMD-check](https://github.com/andrewzm/FRK/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/andrewzm/FRK/actions/workflows/R-CMD-check.yaml)
+<!-- [![R-CMD-check](https://github.com/andrewzm/FRK/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/andrewzm/FRK/actions/workflows/R-CMD-check.yaml) -->
 
 <!-- badges: end -->
 
