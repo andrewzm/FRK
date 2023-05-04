@@ -575,7 +575,7 @@ simulate_xi <- function(object, nsim, type) {
 
 
 
-.simulate <- function(object, X, type, nsim, obs_fs, k, Q_L, predict_BAUs, CP, kriging, newdata, fixed_effects_only = FALSE){
+.simulate <- function(object, X, type, nsim, obs_fs, k, Q_L, predict_BAUs, CP, kriging, newdata, fixed_effects_only = FALSE, fixed_effects_and_gamma = FALSE){
   
   ## Design matrices evaluated at observed BAUs only
   X_O <- .constructX_O(object) 
@@ -623,7 +623,7 @@ simulate_xi <- function(object, nsim, type) {
     alpha <- samples[1:p, , drop = FALSE]
     eta   <- samples[(p + 1):(p + r), ]
     if (object@include_gamma) {
-      gamma <- samples[(p + r + 1):(p + r + g_O), ]
+      gamma_O <- samples[(p + r + 1):(p + r + g_O), ]
     }
   } else {
     eta <- samples[1:r, ]
@@ -709,6 +709,7 @@ simulate_xi <- function(object, nsim, type) {
   }
   
   # sanity check: apply(gamma, 1, var)
+  if (fixed_effects_and_gamma) return(list(alpha = alpha, gamma = gamma))
   
   ## Split the design matrices based on observed and unobserved BAUs
   X_U <- X[-obsidx, ]         # Unobserved fixed effect 'design' matrix
@@ -740,8 +741,6 @@ simulate_xi <- function(object, nsim, type) {
   ids              <- c(obsidx, unobsidx)       # All indices (observed and unobserved)
   P                <- Matrix::sparseMatrix(i = 1:N, j = 1:N, x = 1)[ids, ]
   Y_smooth_samples <- Matrix::t(P) %*% Y_smooth_samples
-  
-  browser
   
   ## Add the random effects 
   if (object@include_gamma) {
