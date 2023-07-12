@@ -27,7 +27,7 @@ To install the most recent development version, first please install `INLA` from
 install_github("andrewzm/FRK", dependencies = TRUE, build_vignettes = TRUE)
 ```
 
-A paper introducing the package is available [here](https://www.jstatsoft.org/article/view/v098i04). A paper detailing the approach in a non-Gaussian setting is available [here](https://arxiv.org/abs/2110.02507) (a six-page summary of this paper is available [here](https://github.com/andrewzm/FRK/raw/master/FRKv2_6page.pdf)). If you use `FRK` in your work, please cite it using the information provided by `citation("FRK")`.
+A paper introducing the package is available [here](https://www.jstatsoft.org/article/view/v098i04). A paper detailing the approach in a non-Gaussian setting is available [here](https://arxiv.org/abs/2110.02507) (a six-page summary of this paper is available [here](https://github.com/andrewzm/FRK/raw/master/FRKv2_6page.pdf)).
 
 The vignette "FRK_intro" summarises the package, gives details on the EM algorithm that may be employed in a Gaussian setting, and provides several examples. Another vignette, "FRK_non-Gaussian", summarises inference in a non-Gaussian setting (where a Laplace approximation is used), and contains examples using non-Gaussian data and the newly available plotting methods. To access the vignettes, please click on the following links:
 
@@ -35,7 +35,12 @@ The vignette "FRK_intro" summarises the package, gives details on the EM algorit
 
 [Tutorial on modelling spatial and spatio-temporal non-Gaussian data with FRK](https://cran.r-project.org/web/packages/FRK/vignettes/FRK_non-Gaussian.pdf)
 
- A `pkgdown` page is also available [here](https://andrewzm.github.io/FRK/). 
+ A `pkgdown` page is also available [here](https://andrewzm.github.io/FRK/).
+
+
+## Supporting and citing
+
+If you use `FRK` in your work, research, or other activities, please cite it using the information provided by `citation("FRK")`. 
 
 
 Description
@@ -96,8 +101,8 @@ ggarrange(plotlist = plotlist, nrow = 1, legend = "top")
 ```
 
 <!---
-ggsave( 
-  filename = "Gaussian_data.png", device = "png", 
+ggsave(
+  filename = "Gaussian_data.png", device = "png",
   width = 10, height = 4,
   path = "man/figures/"
 )
@@ -107,10 +112,10 @@ ggsave(
 
 ### Non-Gaussian data
 
-Here we analyse simulated Poisson data. We signify a Poisson data model with a mean response that is modelled using the square-root link function by setting `response = "poisson"` and `link = "sqrt"` in `FRK()`. Other non-Gaussian response distributions available in `FRK` are the binomial, negative-binomial, gamma, and inverse-Gaussian distributions. 
+Here we analyse simulated Poisson data. We signify a Poisson data model with a mean response that is modelled using the square-root link function by setting `response = "poisson"` and `link = "sqrt"` in `FRK()`. Other non-Gaussian response distributions available in `FRK` are the binomial, negative-binomial, gamma, and inverse-Gaussian distributions.
 
 ```r
-## Simulate Poisson data using the previous example's data to construct a mean 
+## Simulate Poisson data using the previous example's data to construct a mean
 zdf$z <- rpois(m, lambda = zdf$z^2)
 
 ## Run FRK
@@ -121,13 +126,13 @@ pred <- predict(S)
 
 ## Plotting
 plotlist <- plot(S, pred$newdata)
-ggarrange(plotlist$z, plotlist$p_mu, plotlist$interval90_mu, 
+ggarrange(plotlist$z, plotlist$p_mu, plotlist$interval90_mu,
           nrow = 1, legend = "top")
-             
+
 ```    
 <!---
-ggsave( 
-  filename = "Poisson_data.png", device = "png", 
+ggsave(
+  filename = "Poisson_data.png", device = "png",
   width = 10, height = 4,
   path = "man/figures/"
 )
@@ -150,7 +155,7 @@ Tmax <- within(Tmax, {time = as.Date(paste(year,month,day,sep="-"))})
 STObj <- stConstruct(x = Tmax, space = c("lon","lat"), time = "time", interval = TRUE)
 
 ## BAUs: spatial BAUs are 1x1 pixels, temporal BAUs are 1 day intervals
-BAUs <- auto_BAUs(manifold = STplane(), 
+BAUs <- auto_BAUs(manifold = STplane(),
                        cellsize = c(1, 1, 1),    
                        data=STObj, tunit = "days")
 BAUs$fs <- 1 # scalar fine-scale variance matrix, implicit in previous examples
@@ -160,13 +165,13 @@ G <- auto_basis(manifold = STplane(), data = STObj, nres = 2, tunit = "days")
 
 ## Run FRK
 STObj$std <- 2 # fix the measurement error variance
-S <- FRK(f = z ~ 1 + lat, data = list(STObj), 
+S <- FRK(f = z ~ 1 + lat, data = list(STObj),
          basis = G, BAUs = BAUs, est_error = FALSE, method = "TMB")
 pred <- predict(S, percentiles = NULL)
 
 ## Plotting: include only some times via the argument subset_time
-plotlist <- plot(S, pred$newdata, subset_time = c(1, 7, 13, 19, 25, 31)) 
-ggarrange(plotlist = plotlist, nrow = 1, legend = "top") 
+plotlist <- plot(S, pred$newdata, subset_time = c(1, 7, 13, 19, 25, 31))
+ggarrange(plotlist = plotlist, nrow = 1, legend = "top")
 ```
 
 <!---
@@ -174,10 +179,10 @@ ggarrange(plotlist = plotlist, nrow = 1, legend = "top")
 facet_names <- paste0("day ", unique(pred$newdata$t))
 names(facet_names) <- unique(pred$newdata$t)
 plotlist <- lapply(plotlist, function(gg) gg + facet_wrap(~t, labeller = as_labeller(facet_names)))
-  
-ggsave( 
+
+ggsave(
   ggarrange(plotlist = plotlist, nrow = 1, legend = "top"),
-  filename = "ST_data.png", device = "png", 
+  filename = "ST_data.png", device = "png",
   width = 12.5, height = 3.8,
   path = "man/figures/"
 )
