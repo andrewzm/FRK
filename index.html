@@ -68,11 +68,16 @@
 <p>To install the most recent development version, first please install <code>INLA</code> from <code>https://www.r-inla.org/download</code>, then please load <code>devtools</code> and type</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">install_github</span><span class="op">(</span><span class="st">"andrewzm/FRK"</span>, dependencies <span class="op">=</span> <span class="cn">TRUE</span>, build_vignettes <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p>A paper introducing the package is available <a href="https://www.jstatsoft.org/article/view/v098i04" class="external-link">here</a>. A paper detailing the approach in a non-Gaussian setting is available <a href="https://arxiv.org/abs/2110.02507" class="external-link">here</a> (a six-page summary of this paper is available <a href="https://github.com/andrewzm/FRK/raw/master/FRKv2_6page.pdf" class="external-link">here</a>). If you use <code>FRK</code> in your work, please cite it using the information provided by <code>citation("FRK")</code>.</p>
+<p>A paper introducing the package is available <a href="https://www.jstatsoft.org/article/view/v098i04" class="external-link">here</a>. A paper detailing the approach in a non-Gaussian setting is available <a href="https://arxiv.org/abs/2110.02507" class="external-link">here</a> (a six-page summary of this paper is available <a href="https://github.com/andrewzm/FRK/raw/master/FRKv2_6page.pdf" class="external-link">here</a>).</p>
 <p>The vignette “FRK_intro” summarises the package, gives details on the EM algorithm that may be employed in a Gaussian setting, and provides several examples. Another vignette, “FRK_non-Gaussian”, summarises inference in a non-Gaussian setting (where a Laplace approximation is used), and contains examples using non-Gaussian data and the newly available plotting methods. To access the vignettes, please click on the following links:</p>
 <p><a href="https://cran.r-project.org/web/packages/FRK/vignettes/FRK_intro.pdf" class="external-link">Introduction to FRK</a></p>
 <p><a href="https://cran.r-project.org/web/packages/FRK/vignettes/FRK_non-Gaussian.pdf" class="external-link">Tutorial on modelling spatial and spatio-temporal non-Gaussian data with FRK</a></p>
 <p>A <code>pkgdown</code> page is also available <a href="https://andrewzm.github.io/FRK/" class="external-link">here</a>.</p>
+<div class="section level2">
+<h2 id="supporting-and-citing">Supporting and citing<a class="anchor" aria-label="anchor" href="#supporting-and-citing"></a>
+</h2>
+<p>If you use <code>FRK</code> in your work, research, or other activities, please cite it using the information provided by <code>citation("FRK")</code>.</p>
+</div>
 <div class="section level2">
 <h2 id="description">Description<a class="anchor" aria-label="anchor" href="#description"></a>
 </h2>
@@ -119,8 +124,8 @@
 <span><span class="va">plotlist</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/plot.html">plot</a></span><span class="op">(</span><span class="va">S</span>, <span class="va">pred</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rpkgs.datanovia.com/ggpubr/reference/ggarrange.html" class="external-link">ggarrange</a></span><span class="op">(</span>plotlist <span class="op">=</span> <span class="va">plotlist</span>, nrow <span class="op">=</span> <span class="fl">1</span>, legend <span class="op">=</span> <span class="st">"top"</span><span class="op">)</span></span></code></pre></div>
 <!---
-ggsave( 
-  filename = "Gaussian_data.png", device = "png", 
+ggsave(
+  filename = "Gaussian_data.png", device = "png",
   width = 10, height = 4,
   path = "man/figures/"
 )
@@ -134,7 +139,7 @@ ggsave(
 </h3>
 <p>Here we analyse simulated Poisson data. We signify a Poisson data model with a mean response that is modelled using the square-root link function by setting <code>response = "poisson"</code> and <code>link = "sqrt"</code> in <code><a href="reference/SRE.html">FRK()</a></code>. Other non-Gaussian response distributions available in <code>FRK</code> are the binomial, negative-binomial, gamma, and inverse-Gaussian distributions.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co">## Simulate Poisson data using the previous example's data to construct a mean </span></span>
+<code class="sourceCode R"><span><span class="co">## Simulate Poisson data using the previous example's data to construct a mean</span></span>
 <span><span class="va">zdf</span><span class="op">$</span><span class="va">z</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Poisson.html" class="external-link">rpois</a></span><span class="op">(</span><span class="va">m</span>, lambda <span class="op">=</span> <span class="va">zdf</span><span class="op">$</span><span class="va">z</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co">## Run FRK</span></span>
@@ -145,12 +150,11 @@ ggsave(
 <span></span>
 <span><span class="co">## Plotting</span></span>
 <span><span class="va">plotlist</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/plot.html">plot</a></span><span class="op">(</span><span class="va">S</span>, <span class="va">pred</span><span class="op">$</span><span class="va">newdata</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rpkgs.datanovia.com/ggpubr/reference/ggarrange.html" class="external-link">ggarrange</a></span><span class="op">(</span><span class="va">plotlist</span><span class="op">$</span><span class="va">z</span>, <span class="va">plotlist</span><span class="op">$</span><span class="va">p_mu</span>, <span class="va">plotlist</span><span class="op">$</span><span class="va">interval90_mu</span>, </span>
-<span>          nrow <span class="op">=</span> <span class="fl">1</span>, legend <span class="op">=</span> <span class="st">"top"</span><span class="op">)</span></span>
-<span>             </span></code></pre></div>
+<span><span class="fu"><a href="https://rpkgs.datanovia.com/ggpubr/reference/ggarrange.html" class="external-link">ggarrange</a></span><span class="op">(</span><span class="va">plotlist</span><span class="op">$</span><span class="va">z</span>, <span class="va">plotlist</span><span class="op">$</span><span class="va">p_mu</span>, <span class="va">plotlist</span><span class="op">$</span><span class="va">interval90_mu</span>,</span>
+<span>          nrow <span class="op">=</span> <span class="fl">1</span>, legend <span class="op">=</span> <span class="st">"top"</span><span class="op">)</span></span></code></pre></div>
 <!---
-ggsave( 
-  filename = "Poisson_data.png", device = "png", 
+ggsave(
+  filename = "Poisson_data.png", device = "png",
   width = 10, height = 4,
   path = "man/figures/"
 )
@@ -173,7 +177,7 @@ ggsave(
 <span><span class="va">STObj</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/spacetime/man/stconstruct.html" class="external-link">stConstruct</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Tmax</span>, space <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lon"</span>,<span class="st">"lat"</span><span class="op">)</span>, time <span class="op">=</span> <span class="st">"time"</span>, interval <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co">## BAUs: spatial BAUs are 1x1 pixels, temporal BAUs are 1 day intervals</span></span>
-<span><span class="va">BAUs</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/auto_BAUs.html">auto_BAUs</a></span><span class="op">(</span>manifold <span class="op">=</span> <span class="fu"><a href="reference/STplane.html">STplane</a></span><span class="op">(</span><span class="op">)</span>, </span>
+<span><span class="va">BAUs</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/auto_BAUs.html">auto_BAUs</a></span><span class="op">(</span>manifold <span class="op">=</span> <span class="fu"><a href="reference/STplane.html">STplane</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>                       cellsize <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span>,    </span>
 <span>                       data<span class="op">=</span><span class="va">STObj</span>, tunit <span class="op">=</span> <span class="st">"days"</span><span class="op">)</span></span>
 <span><span class="va">BAUs</span><span class="op">$</span><span class="va">fs</span> <span class="op">&lt;-</span> <span class="fl">1</span> <span class="co"># scalar fine-scale variance matrix, implicit in previous examples</span></span>
@@ -183,22 +187,22 @@ ggsave(
 <span></span>
 <span><span class="co">## Run FRK</span></span>
 <span><span class="va">STObj</span><span class="op">$</span><span class="va">std</span> <span class="op">&lt;-</span> <span class="fl">2</span> <span class="co"># fix the measurement error variance</span></span>
-<span><span class="va">S</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/SRE.html">FRK</a></span><span class="op">(</span>f <span class="op">=</span> <span class="va">z</span> <span class="op">~</span> <span class="fl">1</span> <span class="op">+</span> <span class="va">lat</span>, data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">STObj</span><span class="op">)</span>, </span>
+<span><span class="va">S</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/SRE.html">FRK</a></span><span class="op">(</span>f <span class="op">=</span> <span class="va">z</span> <span class="op">~</span> <span class="fl">1</span> <span class="op">+</span> <span class="va">lat</span>, data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">STObj</span><span class="op">)</span>,</span>
 <span>         basis <span class="op">=</span> <span class="va">G</span>, BAUs <span class="op">=</span> <span class="va">BAUs</span>, est_error <span class="op">=</span> <span class="cn">FALSE</span>, method <span class="op">=</span> <span class="st">"TMB"</span><span class="op">)</span></span>
 <span><span class="va">pred</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">S</span>, percentiles <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co">## Plotting: include only some times via the argument subset_time</span></span>
-<span><span class="va">plotlist</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/plot.html">plot</a></span><span class="op">(</span><span class="va">S</span>, <span class="va">pred</span><span class="op">$</span><span class="va">newdata</span>, subset_time <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">7</span>, <span class="fl">13</span>, <span class="fl">19</span>, <span class="fl">25</span>, <span class="fl">31</span><span class="op">)</span><span class="op">)</span> </span>
-<span><span class="fu"><a href="https://rpkgs.datanovia.com/ggpubr/reference/ggarrange.html" class="external-link">ggarrange</a></span><span class="op">(</span>plotlist <span class="op">=</span> <span class="va">plotlist</span>, nrow <span class="op">=</span> <span class="fl">1</span>, legend <span class="op">=</span> <span class="st">"top"</span><span class="op">)</span> </span></code></pre></div>
+<span><span class="va">plotlist</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/plot.html">plot</a></span><span class="op">(</span><span class="va">S</span>, <span class="va">pred</span><span class="op">$</span><span class="va">newdata</span>, subset_time <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">7</span>, <span class="fl">13</span>, <span class="fl">19</span>, <span class="fl">25</span>, <span class="fl">31</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rpkgs.datanovia.com/ggpubr/reference/ggarrange.html" class="external-link">ggarrange</a></span><span class="op">(</span>plotlist <span class="op">=</span> <span class="va">plotlist</span>, nrow <span class="op">=</span> <span class="fl">1</span>, legend <span class="op">=</span> <span class="st">"top"</span><span class="op">)</span></span></code></pre></div>
 <!---
 ## Apply a labeller so the facet shows day x rather than just x
 facet_names <- paste0("day ", unique(pred$newdata$t))
 names(facet_names) <- unique(pred$newdata$t)
 plotlist <- lapply(plotlist, function(gg) gg + facet_wrap(~t, labeller = as_labeller(facet_names)))
-  
-ggsave( 
+
+ggsave(
   ggarrange(plotlist = plotlist, nrow = 1, legend = "top"),
-  filename = "ST_data.png", device = "png", 
+  filename = "ST_data.png", device = "png",
   width = 12.5, height = 3.8,
   path = "man/figures/"
 )
