@@ -197,7 +197,7 @@
 #' or Case 2 is chosen; see the vignette "FRK_intro") and the regression parameters \ifelse{html}{\out{<i> <b>&alpha;</b> </i>}}{\eqn{\boldsymbol{\alpha}}{\alpha}}.
 #' There are two methods of model fitting currently implemented, both of which
 #' implement maximum likelihood estimation (MLE).
-#' \itemize{
+#' \describe{
 #'  \item{MLE via the expectation maximisation
 #'  (EM) algorithm. }{This method is implemented only
 #'  for Gaussian data and an identity link function.
