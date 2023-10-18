@@ -18,7 +18,7 @@ simulate <- function(object, newdata = NULL, nsim = 400, conditional_fs = FALSE,
     
     # Fix the size parameter over the BAUs to 1 (we will use k_Z)
     k <- 1
-    k <- rep(k, length(M@BAUs)) # repeat k to prevent message from predict()
+    k <- rep(k, length(object@BAUs)) # repeat k to prevent message from predict()
     if (!is.null(list(...)$k)) stop("k should not be provided when calling simulate")
   }
   

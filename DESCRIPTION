@@ -1,8 +1,8 @@
 Package: FRK
 Type: Package
 Title: Fixed Rank Kriging
-Version: 2.1.5
-Date: 2023-01-30
+Version: 2.2.0
+Date: 2023-10-18
 Authors@R: c(
     person("Andrew", "Zammit-Mangion", , "andrewzm@gmail.com", c("aut", "cre")),
     person("Matthew", "Sainsbury-Dale", , "msdale@uow.edu.au", c("aut")))
@@ -21,7 +21,6 @@ Suggests:
     knitr,
     mapproj,
     parallel,
-    rgdal,
     sf,
     spdep,
     splancs,

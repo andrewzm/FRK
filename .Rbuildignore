@@ -34,3 +34,5 @@ rhipe_fns.R$
 ^docs$
 ^pkgdown$
 ^\.github$
+^FRKv2_6page.pdf$
+^examples$
