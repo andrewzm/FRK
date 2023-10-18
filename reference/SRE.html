@@ -423,8 +423,9 @@ parameters, namely the covariance matrix <i><b>K</b></i>, the fine scale varianc
 (<i>σ<sup>2</sup><sub>ξ</sub></i> or <i>σ<sup>2</sup><sub>δ</sub></i>, depending on whether Case 1
 or Case 2 is chosen; see the vignette "FRK_intro") and the regression parameters <i> <b>α</b> </i>.
 There are two methods of model fitting currently implemented, both of which
-implement maximum likelihood estimation (MLE).</p><ul><li><p>MLE via the expectation maximisation
- (EM) algorithm. This method is implemented only
+implement maximum likelihood estimation (MLE).</p><dl><dt>MLE via the expectation maximisation
+ (EM) algorithm. </dt>
+<dd><p>This method is implemented only
  for Gaussian data and an identity link function.
  The log-likelihood (given in Section 2.2 of the vignette) is evaluated at each
 iteration at the current parameter estimate. Optimation continues until
@@ -442,8 +443,10 @@ measurement random errors are homoscedastic, then a closed-form solution is
 available for the update of <i>σ<sup>2</sup><sub>ξ</sub></i> or <i>σ<sup>2</sup><sub>δ</sub></i>.
 Irrespectively, since the updates of <i> <b>α</b> </i>, and <i>σ<sup>2</sup><sub>δ</sub></i>
 or <i>σ<sup>2</sup><sub>ξ</sub></i>, are dependent, these two updates are iterated until
-the change in <i>σ<sup>2</sup><sub>.</sub></i> is no more than 0.1%.</p></li>
-<li><p>MLE via <code>TMB</code>. This method is implemented for
+the change in <i>σ<sup>2</sup><sub>.</sub></i> is no more than 0.1%.</p></dd>
+
+ <dt>MLE via <code>TMB</code>. </dt>
+<dd><p>This method is implemented for
  all available data models and link functions offered by <span class="pkg">FRK</span>. Furthermore,
  this method faciliates the inclusion of many more basis function than possible
  with the EM algorithm (in excess of 10,000). <code>TMB</code> applies
@@ -451,8 +454,10 @@ the change in <i>σ<sup>2</sup><sub>.</sub></i> is no more than 0.1%.</p></li>
  complete-data likelihood. The resulting approximation of the marginal
  log-likelihood, and its derivatives with respect to the parameters, are then
  called from within <code>R</code> using the optimising function <code>optimiser</code>
- (default <code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">nlminb()</a></code>).</p></li>
-</ul><p><em>Wrapper for set-up and model fitting</em></p>
+ (default <code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">nlminb()</a></code>).</p></dd>
+
+
+</dl><p><em>Wrapper for set-up and model fitting</em></p>
 <p>The function <code>FRK()</code> acts as a wrapper for the functions <code>SRE()</code> and
 <code>SRE.fit()</code>. An added advantage of using <code>FRK()</code> directly is that it
 automatically generates BAUs and basis functions based on the data. Hence
@@ -528,7 +533,7 @@ or <code>spplot</code> from the package <code>sp</code>.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $sigma2fshat_equal_0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $converged</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0</span>
@@ -538,7 +543,7 @@ or <code>spplot</code> from the package <code>sp</code>.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1 2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $plot_lik$llk</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] -337.7511 -335.0080</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] -348.6563 -345.5131</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $plot_lik$ylab</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "log likelihood"</span>
@@ -549,13 +554,13 @@ or <code>spplot</code> from the package <code>sp</code>.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $time</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    user  system elapsed </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   0.344   0.125   0.319 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   0.330   0.084   0.267 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/logLik.html" class="external-link">logLik</a></span><span class="op">(</span><span class="va">S</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] -334.5795</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] -344.9459</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">S</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Intercept </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  3.028407 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  3.015137 </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">## Predict over BAUs</span></span></span>
 <span class="r-in"><span><span class="va">pred</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">S</span><span class="op">)</span></span></span>

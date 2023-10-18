@@ -53,15 +53,27 @@
 
     <div class="section level2">
     <h2 id="format">Format<a class="anchor" aria-label="anchor" href="#format"></a></h2>
-    <p>List of 2</p><ul><li><p><code>$</code>  <code>set:function(opt,value)</code></p></li>
-<li><p><code>$</code>  <code>get:function(opt)</code></p></li>
-</ul></div>
+    <p>List of 2</p><dl><dt><code>$</code>  </dt>
+<dd><p><code>set:function(opt,value)</code></p></dd>
+
+  <dt><code>$</code>  </dt>
+<dd><p><code>get:function(opt)</code></p></dd>
+
+
+</dl></div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p><code>opts_FRK</code> is a list containing two functions, <code>set</code> and <code>get</code>, which can be used to set options and retrieve options, respectively. Currently <code>FRK</code> uses three options:</p><ul><li><p>"progress": a flag indicating whether progress bars should be displayed or not</p></li>
-<li><p>"verbose": a flag indicating whether certain progress messages should be shown or not. Currently this is the only option applicable to <code>method</code> = "TMB"</p></li>
-<li><p>"parallel": an integer indicating the number of cores to use. A number 0 or 1 indicates no parallelism</p></li>
-</ul></div>
+    <p><code>opts_FRK</code> is a list containing two functions, <code>set</code> and <code>get</code>, which can be used to set options and retrieve options, respectively. Currently <code>FRK</code> uses three options:</p><dl><dt>"progress":</dt>
+<dd><p>a flag indicating whether progress bars should be displayed or not</p></dd>
+
+ <dt>"verbose":</dt>
+<dd><p>a flag indicating whether certain progress messages should be shown or not. Currently this is the only option applicable to <code>method</code> = "TMB"</p></dd>
+
+ <dt>"parallel":</dt>
+<dd><p>an integer indicating the number of cores to use. A number 0 or 1 indicates no parallelism</p></dd>
+
+
+</dl></div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
