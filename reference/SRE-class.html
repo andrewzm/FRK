@@ -108,7 +108,15 @@
 
 
 <dt><code>X</code></dt>
-<dd><p>matrix of covariates at all the data locations</p></dd>
+<dd><p>design matrix of covariates at all the data locations</p></dd>
+
+
+<dt><code>G</code></dt>
+<dd><p>list of objects of class Matrix containing the design matrices for random effects at all the data locations</p></dd>
+
+
+<dt><code>G0</code></dt>
+<dd><p>list of objects of class Matrix containing the design matrices for random effects at all BAUs</p></dd>
 
 
 <dt><code>K_type</code></dt>
@@ -116,7 +124,11 @@
 
 
 <dt><code>mu_eta</code></dt>
-<dd><p>updated expectation of the basis function random effects (estimated)</p></dd>
+<dd><p>updated expectation of the basis-function random effects (estimated)</p></dd>
+
+
+<dt><code>mu_gamma</code></dt>
+<dd><p>updated expectation of the random effects (estimated)</p></dd>
 
 
 <dt><code>S_eta</code></dt>
@@ -141,6 +153,10 @@
 
 <dt><code>sigma2fshat</code></dt>
 <dd><p>fine-scale variation scaling (estimated)</p></dd>
+
+
+<dt><code>sigma2gamma</code></dt>
+<dd><p>random-effect variance parameters (estimated)</p></dd>
 
 
 <dt><code>fs_model</code></dt>
@@ -189,6 +205,10 @@
 
 <dt><code>include_fs</code></dt>
 <dd><p>flag indicating whether the fine-scale variation should be included in the model</p></dd>
+
+
+<dt><code>include_gamma</code></dt>
+<dd><p>flag indicating whether there are gamma random effects in the model</p></dd>
 
 
 <dt><code>normalise_wts</code></dt>

@@ -269,7 +269,7 @@
 
 
 <dt>obs_fs</dt>
-<dd><p>flag indicating whether the fine-scale variation sits in the observation model (systematic error; indicated by <code>obs_fs = TRUE</code>) or in the process model (process fine-scale variation; indicated by <code>obs_fs = FALSE</code>, default). For non-Gaussian data models, and/or non-identity link functions, if <code>obs_fs = TRUE</code>, then the fine-scale variation is removed from the latent process \(Y\); however, they are re-introduced for prediction of the conditonal mean <i> <b> μ </b> </i> and simulated data <i> <b>Z</b><sup>*</sup></i></p></dd>
+<dd><p>flag indicating whether the fine-scale variation sits in the observation model (systematic error; indicated by <code>obs_fs = TRUE</code>) or in the process model (process fine-scale variation; indicated by <code>obs_fs = FALSE</code>, default). For non-Gaussian data models, and/or non-identity link functions, if <code>obs_fs = TRUE</code>, then the fine-scale variation is removed from the latent process \(Y\); however, they are re-introduced for prediction of the conditonal mean <i> <b> μ </b></i> and simulated data <i> <b>Z</b><sup>*</sup></i></p></dd>
 
 
 <dt>pred_time</dt>
@@ -308,41 +308,40 @@
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>The following details provide a summary of the model and basic workflow
 used in <span class="pkg">FRK</span>. See Zammit-Mangion and Cressie
-(2021) and Sainsbury-Dale, Zammit-Mangion and Cressie (2021) for further details.</p>
+(2021) and Sainsbury-Dale, Zammit-Mangion and Cressie (2023) for further details.</p>
 <p><strong>Model description</strong></p>
 <p>The hierarchical model implemented in <span class="pkg">FRK</span> is a spatial generalised
 linear mixed model (GLMM), which may be summarised as</p>
 <p></p><div style="text-align:center"> <i> Z<sub>j</sub> | <b>μ</b><sub>Z</sub>, ψ ~ EF(μ<sub>Z<sub>j</sub></sub> , ψ);       j = 1, ..., m, </i></div>
 <div style="text-align:center"> <i> <b>μ</b><sub>Z</sub> = <b>C</b><sub>Z</sub><b>μ</b>, </i></div>
 <div style="text-align:center"> <i> g(<b>μ</b>) = <b>Y</b>, </i></div>
-<div style="text-align:center"> <i> <b>Y</b> = <b>Tα</b> + <b>Sη</b> + <b>ξ</b>, </i></div>
-<div style="text-align:center"> <i> <b>η</b> | <b>&amp;vartheta;</b> ~ N(<b>0</b>, <b>K</b>),</i></div>
-<div style="text-align:center"> <i> <b>ξ</b> ~ N(<b>0</b>, <b>Σ</b><sub>ξ</sub>),</i></div><br><p>where <i>Z<sub>j</sub></i> denotes a datum, \(EF\)  corresponds to a probability
+<div style="text-align:center"> <i> <b>Y</b> = <b>Tα</b> + <b>Gγ</b>  + <b>Sη</b> + <b>ξ</b>, </i></div>
+<div style="text-align:center"> <i> <b>η</b> ~ N(<b>0</b>, <b>K</b>),</i></div>
+<div style="text-align:center"> <i> <b>ξ</b> ~ N(<b>0</b>, <b>Σ</b><sub>ξ</sub> ),</i></div>
+<div style="text-align:center"> <i> <b>γ</b> ~ N(<b>0</b>, <b>Σ</b><sub>γ</sub> ),</i></div><br><p>where <i>Z<sub>j</sub></i> denotes a datum, \(EF\)  corresponds to a probability
 distribution in the exponential family with dispersion parameter \(\psi\),
 <i> <b>μ</b><sub>Z</sub></i> is the vector containing the conditional expectations of each datum,
 <i> <b>C</b><sub>Z</sub></i> is a matrix which aggregates the BAU-level mean process over the observation supports,
-<i> <b>μ</b> </i> is the mean process evaluated over the BAUs, \(g\) is a link function,
-<i> <b>Y</b> </i> is a latent Gaussian process evaluated over the BAUs,
-the matrix <i> <b>T</b> </i> contains regression covariates at the BAU level associated with the fixed effects
-<i> <b>α</b> </i>,
-the matrix <i> <b>S</b> </i> contains basis function evaluations over the BAUs,
-<i> <b>η</b> </i> are the random coefficients associated with the basis functions, and <i> <b>ξ</b> </i> is a vector containing fine-scale variation at the BAU level.</p>
-<p>The prior distribution of the basis-function coefficients, <i> <b>η</b> </i>, are formulated
-using either a covariance matrix <i> <b>K</b> </i> or precision matrix <i> <b>Q</b> </i>, depending on the argument
-<code>K_type</code>; the parameters of these matrices, <i> <b>&amp;vartheta;</b> </i>, are estimated during model
-fitting.
-The covariance matrix of <i> <b>ξ</b> </i>,
-<i> <b>Σ</b><sub>ξ</sub></i>,
-is diagonal.
-By default, <i> <b>Σ</b><sub>ξ</sub> = σ<sup>2</sup><sub>ξ</sub><b>V</b> </i>, where <i> <b>V</b> </i> is a
+<i> <b>μ</b></i> is the mean process evaluated over the BAUs, \(g\) is a link function,
+<i> <b>Y</b></i> is a latent Gaussian process evaluated over the BAUs,
+the matrix <i> <b>T</b></i> contains regression covariates at the BAU level associated with the fixed effects <i> <b>α</b></i>,
+the matrix <i> <b>G</b></i> is a design matrix at the BAU level associated with random effects <i> <b>γ</b></i>,
+the matrix <i> <b>S</b></i> contains basis-function evaluations over the BAUs associated with basis-function random effects <i> <b>η</b></i>, and <i> <b>ξ</b></i> is a vector containing fine-scale variation at the BAU level.</p>
+<p>The prior distribution of the random effects, <i> <b>γ</b></i>, is a mean-zero multivariate Gaussian with diagonal covariance matrix, with each group of random effects associated with its own variance parameter. These variance parameters are estimated during model fitting.</p>
+<p>The prior distribution of the basis-function coefficients, <i><b>η</b></i>, is formulated
+using either a covariance matrix <i> <b>K</b></i> or precision matrix <i> <b>Q</b></i>, depending on the argument
+<code>K_type</code>. The parameters of these matrices are estimated during model fitting.</p>
+<p>The prior distribution of the fine-scale random effects, <i> <b>ξ</b></i>, is a mean-zero multivariate Gaussian with diagonal covariance matrix,
+<i> <b>Σ</b><sub>ξ</sub></i>.
+By default, <i> <b>Σ</b><sub>ξ</sub> = σ<sup>2</sup><sub>ξ</sub><b>V</b></i>, where <i> <b>V</b></i> is a
 known, positive-definite diagonal matrix whose elements are provided in the
-field `fs' in the BAUs; in the absence of problem
-specific fine-scale information, `fs' can simply be set to 1, so that
-<i> <b>V</b> = <b>I</b> </i>.
+field <code>fs</code> in the BAUs. In the absence of problem
+specific fine-scale information, <code>fs</code> can simply be set to 1, so that
+<i> <b>V</b> = <b>I</b></i>.
 In a spatio-temporal setting, another model for <i> <b>Σ</b><sub>ξ</sub></i>
 can be used by setting <code>fs_by_spatial_BAU = TRUE</code>, in which case each
-spatial BAU is associated with its own fine-scale variance parameter (see
-Section 2.6 of Sainsbury-Dale, Zammit-Mangion and Cressie (2021) for details).
+spatial BAU is associated with its own fine-scale variance parameter 
+(see Sainsbury-Dale et al., 2023, Sec. 2.6).
 In either case, the fine-scale variance parameter(s) are either estimated during model fitting, or provided by
 the user via the argument <code>known_sigma2fs</code>.</p>
 <p><em>Gaussian data model with an identity link function</em></p>
@@ -364,7 +363,7 @@ Given the vector of size parameters associated with the data,
 <i>k<sub>Z<sub>j</sub></sub></i> trials (binomial data model) or that it represents the number of failures before
 <i>k<sub>Z<sub>j</sub></sub></i> successes (negative-binomial data model).</p>
 <p>When model fitting, the BAU-level size parameters
-<i> <b> k </b> </i> are needed.
+<i> <b> k </b></i> are needed.
 The user must supply these size parameters either through the data or though
 the BAUs. How this is done depends on whether the data are areal or
 point-referenced, and whether they overlap common BAUs or not.
@@ -372,13 +371,13 @@ The simplest case is when each observation is associated with a single BAU
 only and each BAU is associated with at most one observation support; then,
 it is straightforward to assign elements from
 <i> <b>k</b><sub>Z</sub></i> to elements of
-<i> <b> k </b> </i> and vice-versa, and so the user may provide either
-<i> <b> k </b> </i> or
+<i> <b> k </b></i> and vice-versa, and so the user may provide either
+<i> <b> k </b></i> or
 <i> <b>k</b><sub>Z</sub></i>.
 If each observation is associated with
 exactly one BAU, but some BAUs are associated with multiple observations,
 the user must provide <i> <b>k</b><sub>Z</sub></i>, which is used to infer
-<i> <b> k </b> </i>; in
+<i> <b> k </b></i>; in
 particular,
 <i>k<sub>i</sub> = Σ<sub>j∈a<sub>i</sub></sub> k<sub>Z<sub>j</sub></sub></i> ,
 \(i = 1, \dots, N\), where
@@ -386,7 +385,7 @@ particular,
 denotes the indices of the observations associated with BAU
 <i>A<sub>i</sub></i>.
 If one or more observations encompass multiple BAUs,
-<i> <b> k </b> </i>
+<i> <b> k </b></i>
 must be provided with the BAUs, as we cannot meaningfully
 distribute
 <i>k<sub>Z<sub>j</sub></sub></i>
@@ -401,27 +400,36 @@ denotes the indices of the BAUs associated with observation
 <i>Z<sub>j</sub></i>.</p>
 
 <p><strong>Set-up</strong></p>
-<p><code>SRE()</code>
-constructs a spatial random effects model from the user-defined formula, data object (a list
+<p><code>SRE()</code> constructs a spatial random effects model from the user-defined formula, data object (a list
 of spatially-referenced data), basis functions and a set of Basic Areal Units (BAUs).
 It first takes each object in the list <code>data</code> and maps it to the BAUs -- this
 entails binning point-referenced data into the BAUs (and averaging within the
 BAU if <code>average_in_BAU = TRUE</code>), and finding which BAUs are associated
 with observations. Following this, the incidence matrix, <i> <b>C</b><sub>Z</sub></i>, is
 constructed.
-All required matrices (<i><b>S</b></i>, <i> <b>T</b> </i>, <i> <b>C</b><sub>Z</sub></i>, etc.)
+All required matrices (<i><b>S</b></i>, <i> <b>T</b></i>, <i> <b>C</b><sub>Z</sub></i>, etc.)
 are constructed within <code>SRE()</code> and returned as part of the <code>SRE</code> object.
 <code>SRE()</code> also intitialises the parameters and random effects using
 sensible defaults. Please see
 <code><a href="SRE-class.html">SRE-class</a></code> for more details.
 The functions <code><a href="observed_BAUs.html">observed_BAUs()</a></code> and <code><a href="observed_BAUs.html">unobserved_BAUs()</a></code> return the
 indices of the observed and unobserved BAUs, respectively.</p>
-
+<p>To include random effects in <span class="pkg">FRK</span> please follow the notation as used in <span class="pkg">lme4</span>. 
+For example, to add a random effect according to a variable <code>fct</code>, simply add 
+`<code>(1 | fct)</code>' to the formula used when calling <code>FRK()</code> or <code>SRE()</code>. 
+Note that <span class="pkg">FRK</span> only supports simple, uncorrelated random effects and 
+that a formula term such as '<code>(1 + x | fct)</code>' will throw an error 
+(since in <span class="pkg">lme4</span> parlance this implies that the random effect corresponding to 
+the intercept and the slope are correlated). If one wishes to model a an intercept and linear trend 
+for each level in <code>fct</code>, 
+then one can force the intercept and slope terms to be uncorrelated  by using 
+the notation "<code>(x || fct)</code>", which is shorthand for 
+"<code>(1 | fct) + (x - 1 | x2)</code>".</p>
 <p><strong>Model fitting</strong></p>
 <p><code>SRE.fit()</code> takes an object of class <code>SRE</code> and estimates all unknown
 parameters, namely the covariance matrix <i><b>K</b></i>, the fine scale variance
 (<i>σ<sup>2</sup><sub>ξ</sub></i> or <i>σ<sup>2</sup><sub>δ</sub></i>, depending on whether Case 1
-or Case 2 is chosen; see the vignette "FRK_intro") and the regression parameters <i> <b>α</b> </i>.
+or Case 2 is chosen; see the vignette "FRK_intro") and the regression parameters <i> <b>α</b></i>.
 There are two methods of model fitting currently implemented, both of which
 implement maximum likelihood estimation (MLE).</p><dl><dt>MLE via the expectation maximisation
  (EM) algorithm. </dt>
@@ -435,20 +443,20 @@ The actual computations for the E-step and M-step are relatively straightforward
 The E-step contains an inverse of an \(r \times r\) matrix, where \(r\)
 is the number of basis functions which should not exceed 2000. The M-step
 first updates the matrix <i><b>K</b></i>, which only depends on the sufficient
-statistics of the basis-function coefficients <i> <b>η</b> </i>. Then, the regression
-parameters <i> <b>α</b> </i> are updated and a simple optimisation routine
+statistics of the basis-function coefficients <i> <b>η</b></i>. Then, the regression
+parameters <i> <b>α</b></i> are updated and a simple optimisation routine
 (a line search) is used to update the fine-scale variance
 <i>σ<sup>2</sup><sub>δ</sub></i> or <i>σ<sup>2</sup><sub>ξ</sub></i>. If the fine-scale errors and
 measurement random errors are homoscedastic, then a closed-form solution is
 available for the update of <i>σ<sup>2</sup><sub>ξ</sub></i> or <i>σ<sup>2</sup><sub>δ</sub></i>.
-Irrespectively, since the updates of <i> <b>α</b> </i>, and <i>σ<sup>2</sup><sub>δ</sub></i>
+Irrespectively, since the updates of <i> <b>α</b></i>, and <i>σ<sup>2</sup><sub>δ</sub></i>
 or <i>σ<sup>2</sup><sub>ξ</sub></i>, are dependent, these two updates are iterated until
 the change in <i>σ<sup>2</sup><sub>.</sub></i> is no more than 0.1%.</p></dd>
 
  <dt>MLE via <code>TMB</code>. </dt>
 <dd><p>This method is implemented for
  all available data models and link functions offered by <span class="pkg">FRK</span>. Furthermore,
- this method faciliates the inclusion of many more basis function than possible
+ this method facilitates the inclusion of many more basis function than possible
  with the EM algorithm (in excess of 10,000). <code>TMB</code> applies
  the Laplace approximation to integrate out the latent random effects from the
  complete-data likelihood. The resulting approximation of the marginal
@@ -469,11 +477,11 @@ covariates when BAUs are not explicitly supplied with the covariate data.</p>
 <p>Once the parameters are estimated, the <code>SRE</code> object is passed onto the
 function <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> in order to carry out optimal predictions over the
 same BAUs used to construct the SRE model with <code>SRE()</code>. The first part
-of the prediction process is to construct the matrix <i> <b>S</b> </i> over the
+of the prediction process is to construct the matrix <i> <b>S</b></i> over the
 prediction polygons. This is made computationally efficient by treating the
 prediction over polygons as that of the prediction over a combination of BAUs.
 This will yield valid results only if the BAUs are relatively small. Once the
-matrix <i> <b>S</b> </i> is found, a standard Gaussian inversion (through conditioning)
+matrix <i> <b>S</b></i> is found, a standard Gaussian inversion (through conditioning)
 using the estimated parameters is used for prediction.</p>
 <p><code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> returns the BAUs (or an object specified in <code>newdata</code>),
 which are of class <code>SpatialPixelsDataFrame</code>, <code>SpatialPolygonsDataFrame</code>,
@@ -487,7 +495,7 @@ or <code>spplot</code> from the package <code>sp</code>.</p>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
     <p>Zammit-Mangion, A. and Cressie, N. (2021). FRK: An R package for spatial and spatio-temporal prediction with large datasets. Journal of Statistical Software, 98(4), 1-48. doi:10.18637/jss.v098.i04.</p>
-<p>Sainsbury-Dale, M. and Zammit-Mangion, A. and Cressie, N. (2021) Modelling with Non-Gaussian Spatial and Spatio-Temporal Data using FRK, arXiv:2110.02507</p>
+<p>Sainsbury-Dale, M. and Zammit-Mangion, A. and Cressie, N. (2023) Modelling Big, Heterogeneous, Non-Gaussian Spatial and Spatio-Temporal Data using FRK, arXiv:2110.02507</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -519,7 +527,10 @@ or <code>spplot</code> from the package <code>sp</code>.</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">## Fit with 2 EM iterations so to take as little time as possible</span></span></span>
 <span class="r-in"><span><span class="va">S</span> <span class="op">&lt;-</span> <span class="fu">SRE.fit</span><span class="op">(</span><span class="va">S</span>, n_EM <span class="op">=</span> <span class="fl">2</span>, tol <span class="op">=</span> <span class="fl">0.01</span>, print_lik <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>simple_kriging_fixed is ignored if method = 'EM', since universal kriging is not implemented for method = 'EM'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> NOTE: In FRK &gt;2.0 simple_kriging_fixed = FALSE by default, and hence</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       universal kriging is done by default. However this is only the case when</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       method = 'TMB'. When method = 'EM', simple kriging is done, irrespective of</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       what the argument simple_kriging_fixed is set to.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   |                                                                              |                                                                      |   0%  |                                                                              |===================================                                   |  50%  |                                                                              |======================================================================| 100%</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Maximum EM iterations reached</span>
 <span class="r-plt img"><img src="SRE-1.png" alt="" width="700" height="433"></span>
@@ -543,7 +554,7 @@ or <code>spplot</code> from the package <code>sp</code>.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1 2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $plot_lik$llk</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] -351.6352 -349.9869</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] -302.0058 -300.7741</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $plot_lik$ylab</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "log likelihood"</span>
@@ -554,13 +565,13 @@ or <code>spplot</code> from the package <code>sp</code>.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $time</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    user  system elapsed </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   0.299   0.442   0.247 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   0.309   0.344   0.215 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/logLik.html" class="external-link">logLik</a></span><span class="op">(</span><span class="va">S</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] -349.4934</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] -300.3081</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">S</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Intercept </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  3.092543 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2.986631 </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">## Predict over BAUs</span></span></span>
 <span class="r-in"><span><span class="va">pred</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">S</span><span class="op">)</span></span></span>
