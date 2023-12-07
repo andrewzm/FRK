@@ -874,7 +874,7 @@ SRE.fit <- function(object, n_EM = 100L, tol = 0.01, method = c("EM", "TMB"),
     
     ## If zero fine-scale variation detected just make sure user knows.
     ## This can be symptomatic of poor fitting
-    if(object@sigma2fshat == 0) {
+    if(any(object@sigma2fshat == 0)) {
       info_fit$sigma2fshat_equal_0 <- 1
       if(opts_FRK$get("verbose") > 0)
         message("sigma2fs is being estimated to zero.
