@@ -38,9 +38,9 @@
 #' @param method parameter estimation method to employ. Currently "EM" and "TMB" are supported
 #' @param lambda (applicable only if \code{K_type} = "unstructured") ridge-regression regularisation parameter (0 by default). Can be a single number, or a vector (one parameter for each resolution)
 #' @param print_lik (applicable only if \code{method} = "EM") flag indicating whether to plot log-likelihood vs. iteration after convergence of the EM estimation algorithm
-# #' @param use_centroid flag indicating whether the basis functions are averaged over the BAU, or whether the basis functions are evaluated at the BAUs centroid in order to construct the matrix \ifelse{html}{\out{<i> <b>S</b> </i>}}{\eqn{\boldsymbol{S}}{S}{S}}. The flag can safely be set when the basis functions are approximately constant over the BAUs in order to reduce computational time
+# #' @param use_centroid flag indicating whether the basis functions are averaged over the BAU, or whether the basis functions are evaluated at the BAUs centroid in order to construct the matrix \ifelse{html}{\out{<i> <b>S</b></i>}}{\eqn{\boldsymbol{S}}{S}{S}}. The flag can safely be set when the basis functions are approximately constant over the BAUs in order to reduce computational time
 #' @param newdata object of class \code{SpatialPoylgons}, \code{SpatialPoints}, or \code{STI}, indicating the regions or points over which prediction will be carried out. The BAUs are used if this option is not specified.
-#' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error; indicated by \code{obs_fs = TRUE}) or in the process model (process fine-scale variation; indicated by \code{obs_fs = FALSE}, default). For non-Gaussian data models, and/or non-identity link functions, if \code{obs_fs = TRUE}, then the fine-scale variation is removed from the latent process \eqn{Y}; however, they are re-introduced for prediction of the conditonal mean \ifelse{html}{\out{<i> <b> &mu; </b> </i>}}{\eqn{\boldsymbol{\mu}}{mu}} and simulated data \ifelse{html}{\out{<i> <b>Z</b><sup>*</sup> </i>}}{\eqn{\boldsymbol{Z}^*}{Z*}}
+#' @param obs_fs flag indicating whether the fine-scale variation sits in the observation model (systematic error; indicated by \code{obs_fs = TRUE}) or in the process model (process fine-scale variation; indicated by \code{obs_fs = FALSE}, default). For non-Gaussian data models, and/or non-identity link functions, if \code{obs_fs = TRUE}, then the fine-scale variation is removed from the latent process \eqn{Y}; however, they are re-introduced for prediction of the conditonal mean \ifelse{html}{\out{<i> <b> &mu; </b></i>}}{\eqn{\boldsymbol{\mu}}{mu}} and simulated data \ifelse{html}{\out{<i> <b>Z</b><sup>*</sup> </i>}}{\eqn{\boldsymbol{Z}^*}{Z*}}
 #' @param pred_time vector of time indices at which prediction will be carried out. All time points are used if this option is not specified
 #' @param covariances (applicable only for \code{method} = "EM") logical variable indicating whether prediction covariances should be returned or not. If set to \code{TRUE}, a maximum of 4000 prediction locations or polygons are allowed
 #' @param response string indicating the assumed distribution of the response variable. It can be "gaussian", "poisson", "negative-binomial", "binomial", "gamma", or "inverse-gaussian". If \code{method} = "EM", only "gaussian" can be used. Two distributions considered in this framework, namely the binomial distribution and the negative-binomial distribution, have an assumed-known ‘size’ parameter and a ‘probability of success’ parameter; see the details below for the exact parameterisations used, and how to provide these ‘size’ parameters
@@ -60,7 +60,7 @@
 #'
 #' The following details provide a summary of the model and basic workflow
 #' used in \pkg{FRK}. See Zammit-Mangion and Cressie
-#' (2021) and Sainsbury-Dale, Zammit-Mangion and Cressie (2021) for further details.
+#' (2021) and Sainsbury-Dale, Zammit-Mangion and Cressie (2023) for further details.
 #'
 #' \strong{Model description}
 #'
@@ -70,37 +70,38 @@
 #' \ifelse{html}{\out{<div style="text-align:center"> <i> Z<sub>j</sub> | <b>&mu;</b><sub>Z</sub>, &psi; ~ EF(&mu;<sub>Z<sub>j</sub></sub> , &psi;); &nbsp; &nbsp; &nbsp; j = 1, ..., m, </i></div>}}{\deqn{Z_j \mid \boldsymbol{\mu}_{Z}, \psi \sim EF(\mu_{Z_j}, \psi); \quad j = 1, \dots, m,}{Z_j | \mu_{Z}, \psi ~ EF(\mu_{Z_j}, \psi);  j = 1, \dots, m,}}
 #' \ifelse{html}{\out{<div style="text-align:center"> <i> <b>&mu;</b><sub>Z</sub> = <b>C</b><sub>Z</sub> <b>&mu;</b>, </i></div>}}{\deqn{\boldsymbol{\mu}_Z = \boldsymbol{C}_Z\boldsymbol{\mu}}{\mu_Z = C_Z \mu}}
 #' \ifelse{html}{\out{<div style="text-align:center"> <i> g(<b>&mu;</b>) = <b>Y</b>, </i></div>}}{\deqn{g(\boldsymbol{\mu}) = \boldsymbol{Y}}{g(\mu) = Y}}
-#' \ifelse{html}{\out{<div style="text-align:center"> <i> <b>Y</b> = <b>T&alpha;</b> + <b>S&eta;</b> + <b>&xi;</b>, </i></div>}}{\deqn{\boldsymbol{Y} = \boldsymbol{T}\boldsymbol{\alpha} + \boldsymbol{S}\boldsymbol{\eta} + \boldsymbol{\xi}}{Y = T\alpha + S\eta + \xi}}
-#' \ifelse{html}{\out{<div style="text-align:center"> <i> <b>&eta;</b> | <b>&vartheta;</b> ~ N(<b>0</b>, <b>K</b>),</i></div>}}{\deqn{\boldsymbol{\eta} \mid \boldsymbol{\vartheta} \sim N(\boldsymbol{0}, \boldsymbol{K})}{\eta | \vartheta ~ N(0, K)}}
-#' \ifelse{html}{\out{<div style="text-align:center"> <i> <b>&xi;</b> ~ N(<b>0</b>, <b>&Sigma;</b><sub>&xi;</sub>),</i></div><br>}}{\deqn{\boldsymbol{\xi} \mid \sigma^2_\xi \sim N(\boldsymbol{0}, \boldsymbol{\Sigma}_\xi),}{\xi | \sigma^2_\xi ~ N(0, \Sigma_\xi),}}
+#' \ifelse{html}{\out{<div style="text-align:center"> <i> <b>Y</b> = <b>T&alpha;</b> + <b>G&gamma;</b>  + <b>S&eta;</b> + <b>&xi;</b>, </i></div>}}{\deqn{\boldsymbol{Y} = \boldsymbol{T}\boldsymbol{\alpha} + \boldsymbol{\gamma}\boldsymbol{G} + \boldsymbol{S}\boldsymbol{\eta} + \boldsymbol{\xi}}{Y = T\alpha + G\gamma + S\eta + \xi}}
+#' \ifelse{html}{\out{<div style="text-align:center"> <i> <b>&eta;</b> ~ N(<b>0</b>, <b>K</b>),</i></div>}}{\deqn{\boldsymbol{\eta} \sim N(\boldsymbol{0}, \boldsymbol{K})}{\eta ~ N(0, K)}}
+#' \ifelse{html}{\out{<div style="text-align:center"> <i> <b>&xi;</b> ~ N(<b>0</b>, <b>&Sigma;</b><sub>&xi;</sub> ),</i></div>}}{\deqn{\boldsymbol{\xi} \sim N(\boldsymbol{0}, \boldsymbol{\Sigma}_\xi),}{\xi ~ N(0, \Sigma_\xi),}}
+#' \ifelse{html}{\out{<div style="text-align:center"> <i> <b>&gamma;</b> ~ N(<b>0</b>, <b>&Sigma;</b><sub>&gamma;</sub> ),</i></div><br>}}{\deqn{\boldsymbol{\gamma} \sim N(\boldsymbol{0}, \boldsymbol{\Sigma}_\gamma),}{\gamma ~ N(0, \Sigma_\gamma),}}
 #'
 #' where \ifelse{html}{\out{<i>Z<sub>j</sub></i>}}{\eqn{Z_j}} denotes a datum, \eqn{EF}  corresponds to a probability
 #' distribution in the exponential family with dispersion parameter \eqn{\psi},
-#' \ifelse{html}{\out{<i> <b>&mu;</b><sub>Z</sub> </i>}}{\eqn{\boldsymbol{\mu}_Z}{\mu_Z}} is the vector containing the conditional expectations of each datum,
-#' \ifelse{html}{\out{<i> <b>C</b><sub>Z</sub> </i>}}{\eqn{\boldsymbol{C}_Z}{C_Z}} is a matrix which aggregates the BAU-level mean process over the observation supports,
-#' \ifelse{html}{\out{<i> <b>&mu;</b> </i>}}{\eqn{\boldsymbol{\mu}}{\mu}} is the mean process evaluated over the BAUs, \eqn{g} is a link function,
-#' \ifelse{html}{\out{<i> <b>Y</b> </i>}}{\eqn{\boldsymbol{Y}}{Y}} is a latent Gaussian process evaluated over the BAUs,
-#' the matrix \ifelse{html}{\out{<i> <b>T</b> </i>}}{\eqn{\boldsymbol{T}}{T}} contains regression covariates at the BAU level associated with the fixed effects
-#' \ifelse{html}{\out{<i> <b>&alpha;</b> </i>}}{\eqn{\boldsymbol{\alpha}}{\alpha}},
-#' the matrix \ifelse{html}{\out{<i> <b>S</b> </i>}}{\eqn{\boldsymbol{S}}{S}} contains basis function evaluations over the BAUs,
-#' \ifelse{html}{\out{<i> <b>&eta;</b> </i>}}{\eqn{\boldsymbol{\eta}}{\eta}} are the random coefficients associated with the basis functions, and \ifelse{html}{\out{<i> <b>&xi;</b> </i>}}{\eqn{\boldsymbol{\xi}}{\xi}} is a vector containing fine-scale variation at the BAU level.
+#' \ifelse{html}{\out{<i> <b>&mu;</b><sub>Z</sub></i>}}{\eqn{\boldsymbol{\mu}_Z}{\mu_Z}} is the vector containing the conditional expectations of each datum,
+#' \ifelse{html}{\out{<i> <b>C</b><sub>Z</sub></i>}}{\eqn{\boldsymbol{C}_Z}{C_Z}} is a matrix which aggregates the BAU-level mean process over the observation supports,
+#' \ifelse{html}{\out{<i> <b>&mu;</b></i>}}{\eqn{\boldsymbol{\mu}}{\mu}} is the mean process evaluated over the BAUs, \eqn{g} is a link function,
+#' \ifelse{html}{\out{<i> <b>Y</b></i>}}{\eqn{\boldsymbol{Y}}{Y}} is a latent Gaussian process evaluated over the BAUs,
+#' the matrix \ifelse{html}{\out{<i> <b>T</b></i>}}{\eqn{\boldsymbol{T}}{T}} contains regression covariates at the BAU level associated with the fixed effects \ifelse{html}{\out{<i> <b>&alpha;</b></i>}}{\eqn{\boldsymbol{\alpha}}{\alpha}},
+#' the matrix \ifelse{html}{\out{<i> <b>G</b></i>}}{\eqn{\boldsymbol{G}}{G}} is a design matrix at the BAU level associated with random effects \ifelse{html}{\out{<i> <b>&gamma;</b></i>}}{\eqn{\boldsymbol{\gamma}}{\gamma}},
+#' the matrix \ifelse{html}{\out{<i> <b>S</b></i>}}{\eqn{\boldsymbol{S}}{S}} contains basis-function evaluations over the BAUs associated with basis-function random effects \ifelse{html}{\out{<i> <b>&eta;</b></i>}}{\eqn{\boldsymbol{\eta}}{\eta}}, and \ifelse{html}{\out{<i> <b>&xi;</b></i>}}{\eqn{\boldsymbol{\xi}}{\xi}} is a vector containing fine-scale variation at the BAU level.
 #'
-#' The prior distribution of the basis-function coefficients, \ifelse{html}{\out{<i> <b>&eta;</b> </i>}}{\eqn{\boldsymbol{\eta}}{\eta}}, are formulated
-#' using either a covariance matrix \ifelse{html}{\out{<i> <b>K</b> </i>}}{\eqn{\boldsymbol{K}}{K}} or precision matrix \ifelse{html}{\out{<i> <b>Q</b> </i>}}{\eqn{\boldsymbol{Q}}{Q}}, depending on the argument
-#' \code{K_type}; the parameters of these matrices, \ifelse{html}{\out{<i> <b>&vartheta;</b> </i>}}{\eqn{\boldsymbol{\vartheta}}{\vartheta}}, are estimated during model
-#' fitting.
-#' The covariance matrix of \ifelse{html}{\out{<i> <b>&xi;</b> </i>}}{\eqn{\boldsymbol{\xi}}{\xi}},
-#' \ifelse{html}{\out{<i> <b>&Sigma;</b><sub>&xi;</sub> </i>}}{\eqn{\boldsymbol{\Sigma}_\xi}{\Sigma_\xi}},
-#' is diagonal.
-#' By default, \ifelse{html}{\out{<i> <b>&Sigma;</b><sub>&xi;</sub> = &sigma;<sup>2</sup><sub>&xi;</sub><b>V</b> </i>}}{\eqn{\boldsymbol{\Sigma}_\xi = \sigma^2_\xi \boldsymbol{V}}{\Sigma_\xi = \sigma^2_\xi V}}, where \ifelse{html}{\out{<i> <b>V</b> </i>}}{\eqn{\boldsymbol{V}}{V}} is a
+#' The prior distribution of the random effects, \ifelse{html}{\out{<i> <b>&gamma;</b></i>}}{\eqn{\boldsymbol{\gamma}}{\gamma}}, is a mean-zero multivariate Gaussian with diagonal covariance matrix, with each group of random effects associated with its own variance parameter. These variance parameters are estimated during model fitting. 
+#' 
+#' The prior distribution of the basis-function coefficients, \ifelse{html}{\out{<i><b>&eta;</b></i>}}{\eqn{\boldsymbol{\eta}}{\eta}}, is formulated
+#' using either a covariance matrix \ifelse{html}{\out{<i> <b>K</b></i>}}{\eqn{\boldsymbol{K}}{K}} or precision matrix \ifelse{html}{\out{<i> <b>Q</b></i>}}{\eqn{\boldsymbol{Q}}{Q}}, depending on the argument
+#' \code{K_type}. The parameters of these matrices are estimated during model fitting.
+#' 
+#' The prior distribution of the fine-scale random effects, \ifelse{html}{\out{<i> <b>&xi;</b></i>}}{\eqn{\boldsymbol{\xi}}{\xi}}, is a mean-zero multivariate Gaussian with diagonal covariance matrix,
+#' \ifelse{html}{\out{<i> <b>&Sigma;</b><sub>&xi;</sub></i>}}{\eqn{\boldsymbol{\Sigma}_\xi}{\Sigma_\xi}}.
+#' By default, \ifelse{html}{\out{<i> <b>&Sigma;</b><sub>&xi;</sub> = &sigma;<sup>2</sup><sub>&xi;</sub><b>V</b></i>}}{\eqn{\boldsymbol{\Sigma}_\xi = \sigma^2_\xi \boldsymbol{V}}{\Sigma_\xi = \sigma^2_\xi V}}, where \ifelse{html}{\out{<i> <b>V</b></i>}}{\eqn{\boldsymbol{V}}{V}} is a
 #' known, positive-definite diagonal matrix whose elements are provided in the
-#' field `fs' in the BAUs; in the absence of problem
-#' specific fine-scale information, `fs' can simply be set to 1, so that
-#' \ifelse{html}{\out{<i> <b>V</b> = <b>I</b> </i>}}{\eqn{\boldsymbol{V} = \boldsymbol{I}}{V = I}}.
-#' In a spatio-temporal setting, another model for \ifelse{html}{\out{<i> <b>&Sigma;</b><sub>&xi;</sub> </i>}}{\eqn{\boldsymbol{\Sigma}_\xi}{\Sigma_\xi}}
+#' field \code{fs} in the BAUs. In the absence of problem
+#' specific fine-scale information, \code{fs} can simply be set to 1, so that
+#' \ifelse{html}{\out{<i> <b>V</b> = <b>I</b></i>}}{\eqn{\boldsymbol{V} = \boldsymbol{I}}{V = I}}.
+#' In a spatio-temporal setting, another model for \ifelse{html}{\out{<i> <b>&Sigma;</b><sub>&xi;</sub></i>}}{\eqn{\boldsymbol{\Sigma}_\xi}{\Sigma_\xi}}
 #' can be used by setting \code{fs_by_spatial_BAU = TRUE}, in which case each
-#' spatial BAU is associated with its own fine-scale variance parameter (see
-#' Section 2.6 of Sainsbury-Dale, Zammit-Mangion and Cressie (2021) for details).
+#' spatial BAU is associated with its own fine-scale variance parameter 
+#' (see Sainsbury-Dale et al., 2023, Sec. 2.6).
 #' In either case, the fine-scale variance parameter(s) are either estimated during model fitting, or provided by
 #' the user via the argument \code{known_sigma2fs}.
 #'
@@ -127,43 +128,43 @@
 #' distribution and the negative-binomial distribution, have an assumed-known
 #' ‘size’ parameter and a ‘probability of success’ parameter.
 #' Given the vector of size parameters associated with the data,
-#' \ifelse{html}{\out{<i> <b>k</b><sub>Z</sub> </i>}}{\eqn{\boldsymbol{k}_Z}{k_Z}}, the parameterisation used in \pkg{FRK} assumes that
+#' \ifelse{html}{\out{<i> <b>k</b><sub>Z</sub></i>}}{\eqn{\boldsymbol{k}_Z}{k_Z}}, the parameterisation used in \pkg{FRK} assumes that
 #' \ifelse{html}{\out{<i>Z<sub>j</sub></i>}}{\eqn{Z_j}} represents either the number of `successes' from
 #' \ifelse{html}{\out{<i>k<sub>Z<sub>j</sub></sub></i>}}{\eqn{k_{Z_j}}} trials (binomial data model) or that it represents the number of failures before
 #' \ifelse{html}{\out{<i>k<sub>Z<sub>j</sub></sub></i>}}{\eqn{k_{Z_j}}} successes (negative-binomial data model).
 #'
 #' When model fitting, the BAU-level size parameters
-#' \ifelse{html}{\out{<i> <b> k </b> </i>}}{\eqn{\boldsymbol{k}}{k}} are needed.
+#' \ifelse{html}{\out{<i> <b> k </b></i>}}{\eqn{\boldsymbol{k}}{k}} are needed.
 #' The user must supply these size parameters either through the data or though
 #' the BAUs. How this is done depends on whether the data are areal or
 #' point-referenced, and whether they overlap common BAUs or not.
 #' The simplest case is when each observation is associated with a single BAU
 #' only and each BAU is associated with at most one observation support; then,
 #' it is straightforward to assign elements from
-#' \ifelse{html}{\out{<i> <b>k</b><sub>Z</sub> </i>}}{\eqn{\boldsymbol{k}_Z}{k_Z}} to elements of
-#' \ifelse{html}{\out{<i> <b> k </b> </i>}}{\eqn{\boldsymbol{k}}{k}} and vice-versa, and so the user may provide either
-#' \ifelse{html}{\out{<i> <b> k </b> </i>}}{\eqn{\boldsymbol{k}}{k}} or
-#' \ifelse{html}{\out{<i> <b>k</b><sub>Z</sub> </i>}}{\eqn{\boldsymbol{k}_Z}{k_Z}}.
+#' \ifelse{html}{\out{<i> <b>k</b><sub>Z</sub></i>}}{\eqn{\boldsymbol{k}_Z}{k_Z}} to elements of
+#' \ifelse{html}{\out{<i> <b> k </b></i>}}{\eqn{\boldsymbol{k}}{k}} and vice-versa, and so the user may provide either
+#' \ifelse{html}{\out{<i> <b> k </b></i>}}{\eqn{\boldsymbol{k}}{k}} or
+#' \ifelse{html}{\out{<i> <b>k</b><sub>Z</sub></i>}}{\eqn{\boldsymbol{k}_Z}{k_Z}}.
 #' If each observation is associated with
 #' exactly one BAU, but some BAUs are associated with multiple observations,
-#' the user must provide \ifelse{html}{\out{<i> <b>k</b><sub>Z</sub> </i>}}{\eqn{\boldsymbol{k}_Z}{k_Z}}, which is used to infer
-#' \ifelse{html}{\out{<i> <b> k </b> </i>}}{\eqn{\boldsymbol{k}}{k}}; in
+#' the user must provide \ifelse{html}{\out{<i> <b>k</b><sub>Z</sub></i>}}{\eqn{\boldsymbol{k}_Z}{k_Z}}, which is used to infer
+#' \ifelse{html}{\out{<i> <b> k </b></i>}}{\eqn{\boldsymbol{k}}{k}}; in
 #' particular,
-#' \ifelse{html}{\out{<i>k<sub>i</sub> = &Sigma;<sub>j&isin;a<sub>i</sub></sub> k<sub>Z<sub>j</sub></sub> </i> }}{\eqn{k_i = \sum_{j \in a_i} k_{Z_j}}},
+#' \ifelse{html}{\out{<i>k<sub>i</sub> = &Sigma;<sub>j&isin;a<sub>i</sub></sub> k<sub>Z<sub>j</sub></sub></i> }}{\eqn{k_i = \sum_{j \in a_i} k_{Z_j}}},
 #' \eqn{i = 1, \dots, N}, where
 #' \ifelse{html}{\out{<i>a<sub>i</sub></i>}}{\eqn{a_i}}
 #' denotes the indices of the observations associated with BAU
 #' \ifelse{html}{\out{<i>A<sub>i</sub></i>}}{\eqn{A_i}}.
 #' If one or more observations encompass multiple BAUs,
-#' \ifelse{html}{\out{<i> <b> k </b> </i>}}{\eqn{\boldsymbol{k}}{k}}
+#' \ifelse{html}{\out{<i> <b> k </b></i>}}{\eqn{\boldsymbol{k}}{k}}
 #' must be provided with the BAUs, as we cannot meaningfully
 #' distribute
 #' \ifelse{html}{\out{<i>k<sub>Z<sub>j</sub></sub></i>}}{\eqn{k_{Z_j}}}
 #' over multiple BAUs associated with datum
 #' \ifelse{html}{\out{<i>Z<sub>j</sub></i>}}{\eqn{Z_j}}.
 #' In this case, we infer
-#' \ifelse{html}{\out{<i> <b>k</b><sub>Z</sub> </i>}}{\eqn{\boldsymbol{k}_Z}{k_Z}} using
-#' \ifelse{html}{\out{<i>k<sub>Z<sub>j</sub></sub> = &Sigma;<sub>i&isin;c<sub>j</sub></sub> k<sub>i</sub> </i> }}{\eqn{k_{Z_j} = \sum_{i \in c_j} k_i}},
+#' \ifelse{html}{\out{<i> <b>k</b><sub>Z</sub></i>}}{\eqn{\boldsymbol{k}_Z}{k_Z}} using
+#' \ifelse{html}{\out{<i>k<sub>Z<sub>j</sub></sub> = &Sigma;<sub>i&isin;c<sub>j</sub></sub> k<sub>i</sub></i> }}{\eqn{k_{Z_j} = \sum_{i \in c_j} k_i}},
 #' \eqn{j = 1, \dots, m}, where
 #' \ifelse{html}{\out{<i>c<sub>j</sub></i>}}{\eqn{c_j}}
 #' denotes the indices of the BAUs associated with observation
@@ -172,29 +173,39 @@
 #'
 #' \strong{Set-up}
 #'
-#' \code{SRE()}
-#' constructs a spatial random effects model from the user-defined formula, data object (a list
+#' \code{SRE()} constructs a spatial random effects model from the user-defined formula, data object (a list
 #' of spatially-referenced data), basis functions and a set of Basic Areal Units (BAUs).
 #' It first takes each object in the list \code{data} and maps it to the BAUs -- this
 #' entails binning point-referenced data into the BAUs (and averaging within the
 #' BAU if \code{average_in_BAU = TRUE}), and finding which BAUs are associated
-#' with observations. Following this, the incidence matrix, \ifelse{html}{\out{<i> <b>C</b><sub>Z</sub> </i>}}{\eqn{\boldsymbol{C}_Z}{C_Z}}, is
+#' with observations. Following this, the incidence matrix, \ifelse{html}{\out{<i> <b>C</b><sub>Z</sub></i>}}{\eqn{\boldsymbol{C}_Z}{C_Z}}, is
 #' constructed.
-#' All required matrices (\ifelse{html}{\out{<i><b>S</b></i>}}{\eqn{\boldsymbol{S}}{S}}, \ifelse{html}{\out{<i> <b>T</b> </i>}}{\eqn{\boldsymbol{T}}{T}}, \ifelse{html}{\out{<i> <b>C</b><sub>Z</sub> </i>}}{\eqn{\boldsymbol{C}_Z}{C_Z}}, etc.)
+#' All required matrices (\ifelse{html}{\out{<i><b>S</b></i>}}{\eqn{\boldsymbol{S}}{S}}, \ifelse{html}{\out{<i> <b>T</b></i>}}{\eqn{\boldsymbol{T}}{T}}, \ifelse{html}{\out{<i> <b>C</b><sub>Z</sub></i>}}{\eqn{\boldsymbol{C}_Z}{C_Z}}, etc.)
 #' are constructed within \code{SRE()} and returned as part of the \code{SRE} object.
 #' \code{SRE()} also intitialises the parameters and random effects using
 #' sensible defaults. Please see
 #' \code{\link{SRE-class}} for more details.
 #' The functions \code{observed_BAUs()} and \code{unobserved_BAUs()} return the
 #' indices of the observed and unobserved BAUs, respectively.
-#'
+#' 
+#' To include random effects in \pkg{FRK} please follow the notation as used in \pkg{lme4}. 
+#' For example, to add a random effect according to a variable \code{fct}, simply add 
+#' `\code{(1 | fct)}' to the formula used when calling \code{FRK()} or \code{SRE()}. 
+#' Note that \pkg{FRK} only supports simple, uncorrelated random effects and 
+#' that a formula term such as '\code{(1 + x | fct)}' will throw an error 
+#' (since in \pkg{lme4} parlance this implies that the random effect corresponding to 
+#' the intercept and the slope are correlated). If one wishes to model a an intercept and linear trend 
+#' for each level in \code{fct}, 
+#' then one can force the intercept and slope terms to be uncorrelated  by using 
+#' the notation "\code{(x || fct)}", which is shorthand for 
+#' "\code{(1 | fct) + (x - 1 | x2)}".
 #'
 #' \strong{Model fitting}
 #'
 #' \code{SRE.fit()} takes an object of class \code{SRE} and estimates all unknown
 #' parameters, namely the covariance matrix \ifelse{html}{\out{<i><b>K</b></i>}}{\eqn{\boldsymbol{K}}{K}}, the fine scale variance
 #' (\ifelse{html}{\out{<i>&sigma;<sup>2</sup><sub>&xi;</sub></i>}}{\eqn{\sigma^2_{\xi}}} or \ifelse{html}{\out{<i>&sigma;<sup>2</sup><sub>&delta;</sub></i>}}{\eqn{\sigma^2_{\delta}}}, depending on whether Case 1
-#' or Case 2 is chosen; see the vignette "FRK_intro") and the regression parameters \ifelse{html}{\out{<i> <b>&alpha;</b> </i>}}{\eqn{\boldsymbol{\alpha}}{\alpha}}.
+#' or Case 2 is chosen; see the vignette "FRK_intro") and the regression parameters \ifelse{html}{\out{<i> <b>&alpha;</b></i>}}{\eqn{\boldsymbol{\alpha}}{\alpha}}.
 #' There are two methods of model fitting currently implemented, both of which
 #' implement maximum likelihood estimation (MLE).
 #' \describe{
@@ -209,18 +220,18 @@
 #' The E-step contains an inverse of an \eqn{r \times r}{r x r} matrix, where \eqn{r}
 #' is the number of basis functions which should not exceed 2000. The M-step
 #' first updates the matrix \ifelse{html}{\out{<i><b>K</b></i>}}{\eqn{\boldsymbol{K}}{K}}, which only depends on the sufficient
-#' statistics of the basis-function coefficients \ifelse{html}{\out{<i> <b>&eta;</b> </i>}}{\eqn{\boldsymbol{\eta}}{\eta}}. Then, the regression
-#' parameters \ifelse{html}{\out{<i> <b>&alpha;</b> </i>}}{\eqn{\boldsymbol{\alpha}}{\alpha}} are updated and a simple optimisation routine
+#' statistics of the basis-function coefficients \ifelse{html}{\out{<i> <b>&eta;</b></i>}}{\eqn{\boldsymbol{\eta}}{\eta}}. Then, the regression
+#' parameters \ifelse{html}{\out{<i> <b>&alpha;</b></i>}}{\eqn{\boldsymbol{\alpha}}{\alpha}} are updated and a simple optimisation routine
 #' (a line search) is used to update the fine-scale variance
 #' \ifelse{html}{\out{<i>&sigma;<sup>2</sup><sub>&delta;</sub></i>}}{\eqn{\sigma^2_{\delta}}} or \ifelse{html}{\out{<i>&sigma;<sup>2</sup><sub>&xi;</sub></i>}}{\eqn{\sigma^2_{\xi}}}. If the fine-scale errors and
 #' measurement random errors are homoscedastic, then a closed-form solution is
 #' available for the update of \ifelse{html}{\out{<i>&sigma;<sup>2</sup><sub>&xi;</sub></i>}}{\eqn{\sigma^2_{\xi}}} or \ifelse{html}{\out{<i>&sigma;<sup>2</sup><sub>&delta;</sub></i>}}{\eqn{\sigma^2_{\delta}}}.
-#' Irrespectively, since the updates of \ifelse{html}{\out{<i> <b>&alpha;</b> </i>}}{\eqn{\boldsymbol{\alpha}}{\alpha}}, and \ifelse{html}{\out{<i>&sigma;<sup>2</sup><sub>&delta;</sub></i>}}{\eqn{\sigma^2_{\delta}}}
+#' Irrespectively, since the updates of \ifelse{html}{\out{<i> <b>&alpha;</b></i>}}{\eqn{\boldsymbol{\alpha}}{\alpha}}, and \ifelse{html}{\out{<i>&sigma;<sup>2</sup><sub>&delta;</sub></i>}}{\eqn{\sigma^2_{\delta}}}
 #' or \ifelse{html}{\out{<i>&sigma;<sup>2</sup><sub>&xi;</sub></i>}}{\eqn{\sigma^2_{\xi}}}, are dependent, these two updates are iterated until
 #' the change in \ifelse{html}{\out{<i>&sigma;<sup>2</sup><sub>.</sub></i>}}{\eqn{\sigma^2_{\cdot}}} is no more than 0.1\%.}
 #'  \item{MLE via \code{TMB}. }{This method is implemented for
 #'  all available data models and link functions offered by \pkg{FRK}. Furthermore,
-#'  this method faciliates the inclusion of many more basis function than possible
+#'  this method facilitates the inclusion of many more basis function than possible
 #'  with the EM algorithm (in excess of 10,000). \code{TMB} applies
 #'  the Laplace approximation to integrate out the latent random effects from the
 #'  complete-data likelihood. The resulting approximation of the marginal
@@ -245,11 +256,11 @@
 #' Once the parameters are estimated, the \code{SRE} object is passed onto the
 #' function \code{predict()} in order to carry out optimal predictions over the
 #' same BAUs used to construct the SRE model with \code{SRE()}. The first part
-#' of the prediction process is to construct the matrix \ifelse{html}{\out{<i> <b>S</b> </i>}}{\eqn{\boldsymbol{S}}{S}} over the
+#' of the prediction process is to construct the matrix \ifelse{html}{\out{<i> <b>S</b></i>}}{\eqn{\boldsymbol{S}}{S}} over the
 #' prediction polygons. This is made computationally efficient by treating the
 #' prediction over polygons as that of the prediction over a combination of BAUs.
 #' This will yield valid results only if the BAUs are relatively small. Once the
-#' matrix \ifelse{html}{\out{<i> <b>S</b> </i>}}{\eqn{\boldsymbol{S}}{S}} is found, a standard Gaussian inversion (through conditioning)
+#' matrix \ifelse{html}{\out{<i> <b>S</b></i>}}{\eqn{\boldsymbol{S}}{S}} is found, a standard Gaussian inversion (through conditioning)
 #' using the estimated parameters is used for prediction.
 #'
 #' \code{predict()} returns the BAUs (or an object specified in \code{newdata}),
@@ -266,7 +277,7 @@
 #' @references
 #' Zammit-Mangion, A. and Cressie, N. (2021). FRK: An R package for spatial and spatio-temporal prediction with large datasets. Journal of Statistical Software, 98(4), 1-48. doi:10.18637/jss.v098.i04.
 #'
-#' Sainsbury-Dale, M. and Zammit-Mangion, A. and Cressie, N. (2021) Modelling with Non-Gaussian Spatial and Spatio-Temporal Data using FRK, arXiv:2110.02507
+#' Sainsbury-Dale, M. and Zammit-Mangion, A. and Cressie, N. (2023) Modelling Big, Heterogeneous, Non-Gaussian Spatial and Spatio-Temporal Data using FRK, arXiv:2110.02507
 #' @export
 #' @examples
 #' library("FRK")
@@ -383,12 +394,15 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   ndata <- length(data)
 
   ## Initialise list of matrices (We construct one for every data object then concatenate)
-  S <- Ve <- Vfs <- X <- Z <- Cmat <- k_Z <- list()
+  S <- Ve <- Vfs <- X <- G <- Z <- Cmat <- k_Z <- list()
 
   ## Number of spatial BAUs and basis functions
   ns <- dim(BAUs)[1]
   n_basis_spatial <- if(is(basis,"TensorP_Basis")) nbasis(basis@Basis1) else nbasis(basis)
-
+  
+  ## BAU-level design matrix
+  G0 <- .constructG0(f, BAUs)
+    
   ## Evaluate the basis functions over the BAUs. If we have fewer spatial BAUs
   ## than basis functions, then we average the basis functions over the BAUs
   ## using Monte Carlo integration with 1000 samples per BAU.
@@ -445,8 +459,9 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
                  If not, are you sure all your data are covered by BAUs?")
 
     ## Extract information from the data using the .extract.from.formula internal function
-    L <- .extract.from.formula(f,data=data_proc)
-    X[[i]] <- as(L$X,"Matrix")                # covariate information
+    L <- .extract.from.formula(f, data = data_proc)
+    X[[i]] <- as(L$X,"Matrix")                # fixed effect design matrix
+    G[[i]] <- L$G                             # random effect design matrix
     Z[[i]] <- Matrix(L$y)                     # data values
     Ve[[i]] <- Diagonal(x=data_proc$std^2)    # measurement-error variance
 
@@ -501,9 +516,25 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   Ve   <- do.call("bdiag",Ve)
   Vfs  <- do.call("bdiag",Vfs)
 
+  ## Concatenate random effects 
+  if(length(G[[1]]) > 0) {
+      n_reff_grps <- length(G[[1]])
+      GG <- list()
+      for(i in 1:n_reff_grps) {
+          GG[[i]] <- list()
+          for(j in 1:ndata) {
+              GG[[i]][[j]] <- G[[j]][[i]]
+          }
+          GG[[i]] <- do.call("rbind", GG[[i]])
+      }
+      G <- GG
+  } else {
+      G <- list()
+  }
+
   ## Indices of observed BAUs
   obsidx <- .observed_BAUs_from_Cmat(Cmat)
-  
+
   # Size parameter
   if(response %in% c("binomial", "negative-binomial")) {
 
@@ -638,10 +669,13 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
       Vfs = Vfs,
       Vfs_BAUs = Vfs_BAUs,
       Qfs_BAUs = Qfs_BAUs,
+      G = G,
+      G0 = G0,
       Z = Z,
       Cmat = Cmat,
       X = X,
       mu_eta = l$mu_eta_init,
+      mu_gamma = Matrix(),
       S_eta = l$S_eta_init,
       Q_eta = l$Q_eta_init,
       K_type = K_type,
@@ -649,6 +683,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
       Khat_inv = l$K_inv_init,
       alphahat = l$alphahat_init,
       sigma2fshat = l$sigma2fshat_init,
+      sigma2gamma = 1,
       fs_model = fs_model,
       info_fit = info_fit,
       response = response,
@@ -657,6 +692,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
       k_Z = as.numeric(k_Z),
       k_BAU_O = as.numeric(k_BAU_O),
       include_fs = include_fs,
+      include_gamma = length(G) > 0,
       normalise_wts = normalise_wts,
       fs_by_spatial_BAU = fs_by_spatial_BAU,
       obsidx = obsidx)
@@ -677,6 +713,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
   ## Start with reasonable parameter estimates (that will be updated in M-step)
   l$K_init = Diagonal(n=nbasis(basis),x = 1/(1/var(Z[,1])))
   l$K_inv_init = solve(l$K_init)
+
 
   if(!is.finite(determinant(t(X) %*% X)$modulus))
     stop("Matrix of covariates has columns that are linearly dependent. Please change formula or covariates.")

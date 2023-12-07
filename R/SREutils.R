@@ -120,11 +120,35 @@ setMethod("info_fit", signature(object = "SRE"),
 #' @rdname SRE
 #' @export 
 setMethod("coef",signature(object = "SRE"),function(object,...) {
+  l <- list(...)
+  random_effects <- !is.null(l$random_effects) && l$random_effects == TRUE
+  
+  ## Variable names
+  f   <- object@f
+  tms <- labels(terms(f))
+  varnames  <- all.vars(f)[-1]
+  
+  ## Fixed-effects 
+  gamma_idx <- grepl("\\|", tms) # | is special character treated as logical "OR": the back strokes escape this sequence. 
+  alpha_idx <- !gamma_idx
+  alpha_nms <- varnames[alpha_idx]
+  ## Determine if there is an intercept (this doesn't get included in the variable names above)
+  if (attr(terms(f), "intercept")) alpha_nms <- c("Intercept", alpha_nms)
   coeff <- as.numeric(object@alphahat)
-  varnames <- all.vars(object@f)[-1]
-  nms <- "Intercept"
-  if(length(varnames) > 0) nms <- c(nms, varnames)
-  names(coeff) <- nms
+  names(coeff) <- alpha_nms
+  
+  if (random_effects) {
+    # NB we only return estimates of the observed random effects: the unobserved random effects follow a mean-zero Gaussian distribution, so their "estimate" is zero
+    # gamma_group_nms <- varnames[gamma_idx] # TODO use the random-effect group names to provide more informative names (e.g., fct:A, fct:B)
+    gamma_nms <- lapply(object@G, colnames)
+    gamma_nms <- do.call(c, gamma_nms)
+    gamma <- as.numeric(object@mu_gamma)
+    names(gamma) <- gamma_nms 
+    
+    ## Combine fixed and random effects
+    coeff <- c(coeff, gamma)
+  } 
+
   return(coeff)
 })
 
@@ -132,34 +156,66 @@ setMethod("coef",signature(object = "SRE"),function(object,...) {
 # Retrieve uncertainty quantification on the coefficients of SRE model
 #' @rdname SRE
 #' @export
-setMethod("coef_uncertainty",signature(object = "SRE"),function(object, percentiles = c(5, 95),  nsim = 400) {
+setMethod("coef_uncertainty",signature(object = "SRE"),function(object, percentiles = c(5, 95),  nsim = 400, random_effects = FALSE) {
   
   if(object@simple_kriging_fixed) stop("Uncertainty quantification on the fixed effects is only possible if simple_kriging_fixed is set to FALSE in SRE.fit()")
+  
+  fixed_effects_only <- !random_effects
   
   ## Compute the Cholesky factor of the permuted precision matrix.
   Q_L <- sparseinv::cholPermute(Q = object@Q_posterior)
   
   ## Generate sample of regression coefficients (most of these arguments can be 
-  ## NULL because the function exits before they are used)
-  alpha <- .simulate(
-    object = object, nsim = nsim, X = NULL,  Q_L = Q_L, fixed_effects_only = TRUE, kriging = "universal", 
+  ## NULL because the function exits before they are used). 
+  x <- .simulate(
+    fixed_effects_only = fixed_effects_only, 
+    fixed_effects_and_gamma = random_effects, 
+    object = object, nsim = nsim, X = NULL, Q_L = Q_L, kriging = "universal", 
     type = NULL, obs_fs = NULL, k = NULL,predict_BAUs = NULL, CP = NULL, newdata = NULL
   )
   
-  x <- apply(alpha, 1, quantile, percentiles / 100)
   
-  ## Add names to the percentiles
-  varnames <- all.vars(object@f)[-1]
-  nms <- "Intercept"
-  if (length(varnames) > 0) nms <- c(nms, varnames)
-  
-  if (is.matrix(x)) {
-    colnames(x) <- nms
+  ## If random_effects = FALSE, x is just the matrix of samples of the fixed effects alpha.
+  ## Otherwise, x is a list containing alpha and the matrix of samples of the random effects gamma. 
+  if (random_effects) {
+    alpha <- x[[1]]
+    gamma <- x[[2]]
   } else {
-    names(x) <- nms
+    alpha <- x 
   }
   
-  return(x)
+  ## Variable names
+  f   <- object@f
+  tms <- labels(terms(f))
+  varnames  <- all.vars(f)[-1]
+  
+  ## Fixed-effects 
+  gamma_idx <- grepl("\\|", tms) # | is special character treated as logical "OR": the back strokes escape this sequence. 
+  alpha_idx <- !gamma_idx
+  alpha_nms <- varnames[alpha_idx]
+  ## Determine if there is an intercept (this doesn't get included in the variable names above)
+  if (attr(terms(f), "intercept")) alpha_nms <- c("Intercept", alpha_nms)
+  
+  alpha <- apply(alpha, 1, quantile, percentiles / 100)
+  if (is.matrix(alpha)) {
+    colnames(alpha) <- alpha_nms  
+  } else {
+    names(alpha) <- alpha_nms
+  }
+  
+  ## Random-effects
+  if (random_effects) {
+    # gamma_group_nms <- varnames[gamma_idx] # TODO use the random-effect group names to provide more informative names (e.g., fct:A, fct:B)
+    gamma_nms <- lapply(object@G0, colnames)
+    gamma_nms <- do.call(c, gamma_nms)
+    gamma <- apply(gamma, 1, quantile, percentiles / 100)
+    colnames(gamma) <- gamma_nms 
+    
+    ## Combine fixed and random effects
+    alpha <- cbind(alpha, gamma)
+  }
+
+  return(alpha)
 })
 
 ## Print summary of SRE

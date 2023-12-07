@@ -302,7 +302,7 @@ setGeneric("plot_spatial_or_ST", function(newdata, column_names,  map_layer=NULL
 #' and lower bound specifed by percentiles; default 90\% confidence central interval)
 #' @inheritParams SRE
 #' @export
-setGeneric("coef_uncertainty", function(object, percentiles = c(5, 95),  nsim = 400)
+setGeneric("coef_uncertainty", function(object, percentiles = c(5, 95),  nsim = 400, random_effects = FALSE)
   standardGeneric("coef_uncertainty"))
 
 

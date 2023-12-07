@@ -5,10 +5,19 @@
                          K_type, response, link, fs_by_spatial_BAU, normalise_wts,
                          sum_variables, average_in_BAU) {
 
-
+  formula_terms <- terms(f)
   if(!is(f,"formula")) stop("f needs to be a formula.")
   if(length(all.vars(f)[-1]) == 0 && !attr(terms(f), "intercept"))
     stop("We must have at least one covariate (possibly just an intercept) in the formula f. In particular, f = Z ~ -1 is not permitted.")
+  if(any(c("|", "||") %in% all.names(formula_terms))) {
+        if(!requireNamespace("lme4", quietly = TRUE)) {
+            stop("You need to install lme4 to use random effects with FRK")
+        }
+
+        if("/" %in% all.names(formula_terms)) {
+            stop("FRK currently does not handle nested random effects")
+        }
+  }
   if(!is(data,"list"))
     stop("Please supply a *list* of Spatial or Spatio-temporal objects.")
   if(!all(sapply(data,function(x) is(x,"Spatial") | is(x,"ST"))))
@@ -160,7 +169,7 @@
 ## Checks arguments for the SRE.fit() function. Code is self-explanatory
 .check_args2 <- function(n_EM, tol, lambda, method, print_lik, optimiser,
                          response, K_type, link, fs_by_spatial_BAU, known_sigma2fs,
-                         BAUs, taper, simple_kriging_fixed, ...) {
+                         BAUs, taper, simple_kriging_fixed, random_eff, ...) {
 
   if(!is.numeric(n_EM)) stop("n_EM needs to be an integer")
   if(!(n_EM <- round(n_EM)) > 0) stop("n_EM needs to be greater than 0")
@@ -241,7 +250,13 @@
   #   cat("simple_kriging_fixed = TRUE is faster but precludes universal kriging in the prediction stage: Proceed if you are happy to commit to simple kriging (if you are unfamiliar with simple vs. universal kriging, ignore this message and proceed).\n")
 
   if (!simple_kriging_fixed && method == "EM")
-    warning("simple_kriging_fixed is ignored if method = 'EM', since universal kriging is not implemented for method = 'EM'")
+      cat("NOTE: In FRK >2.0 simple_kriging_fixed = FALSE by default, and hence
+      universal kriging is done by default. However this is only the case when
+      method = 'TMB'. When method = 'EM', simple kriging is done, irrespective of
+      what the argument simple_kriging_fixed is set to.\n")
+
+    if(method == "EM" & random_eff)
+        stop("Can only do mixed effects with TMB")
 
 }
 

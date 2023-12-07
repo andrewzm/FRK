@@ -97,15 +97,19 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot Qfs_BAUs fine-scale precision matrix at the BAU centroids (typically diagonal and of class \code{Matrix}) up to a constant of proportionality estimated using the EM algorithm
 #' @slot Z vector of observations (of class \code{Matrix})
 #' @slot Cmat incidence matrix mapping the observations to the BAUs
-#' @slot X matrix of covariates at all the data locations
+#' @slot X design matrix of covariates at all the data locations
+#' @slot G list of objects of class Matrix containing the design matrices for random effects at all the data locations
+#' @slot G0 list of objects of class Matrix containing the design matrices for random effects at all BAUs
 #' @slot K_type type of prior covariance matrix of random effects. Can be "block-exponential" (correlation between effects decays as a function of distance between the basis-function centroids), "unstructured" (all elements in \code{K} are unknown and need to be estimated), or "neighbour" (a sparse precision matrix is used, whereby only neighbouring basis functions have non-zero precision matrix elements).
-#' @slot mu_eta updated expectation of the basis function random effects (estimated)
+#' @slot mu_eta updated expectation of the basis-function random effects (estimated)
+#' @slot mu_gamma updated expectation of the random effects (estimated)
 #' @slot S_eta updated covariance matrix of random effects (estimated)
 #' @slot Q_eta updated precision matrix of random effects (estimated)
 #' @slot Khat prior covariance matrix of random effects (estimated)
 #' @slot Khat_inv prior precision matrix of random effects (estimated)
 #' @slot alphahat fixed-effect regression coefficients (estimated)
 #' @slot sigma2fshat fine-scale variation scaling (estimated)
+#' @slot sigma2gamma random-effect variance parameters (estimated)
 #' @slot fs_model type of fine-scale variation (independent or CAR-based). Currently only "ind" is permitted
 #' @slot info_fit information on fitting (convergence etc.)
 #' @slot response A character string indicating the assumed distribution of the response variable
@@ -118,6 +122,7 @@ setClass("TensorP_Basis", contains="Basis_obj", representation(Basis1="Basis",Ba
 #' @slot k_Z vector of known size parameters at the observation support level (only applicable to binomial and negative-binomial response distributions) 
 #' @slot k_BAU vector of known size parameters at the observed BAUs (only applicable to binomial and negative-binomial response distributions) 
 #' @slot include_fs flag indicating whether the fine-scale variation should be included in the model
+#' @slot include_gamma flag indicating whether there are gamma random effects in the model 
 #' @slot normalise_wts if \code{TRUE}, the rows of the incidence matrices \eqn{C_Z} and \eqn{C_P} are normalised to sum to 1, so that the mapping represents a weighted average; if false, no normalisation of the weights occurs (i.e., the mapping corresponds to a weighted sum)
 #' @slot fs_by_spatial_BAU if \code{TRUE}, then each BAU is associated with its own fine-scale variance parameter
 #' @slot obsidx indices of observed BAUs
@@ -139,7 +144,10 @@ setClass("SRE",representation(data="list",
                               Z = "Matrix",
                               Cmat = "Matrix",
                               X = "Matrix",
+                              G = "list",
+                              G0 = "list",
                               mu_eta = "Matrix",
+                              mu_gamma = "Matrix",
                               S_eta = "Matrix",
                               Q_eta = "Matrix",
                               K_type = "character",
@@ -147,6 +155,7 @@ setClass("SRE",representation(data="list",
                               Khat_inv = "Matrix",
                               alphahat = "Matrix",
                               sigma2fshat = "numeric",
+                              sigma2gamma = "numeric",
                               fs_model = "character",
                               info_fit = "list", 
                               response = "character", 
@@ -159,6 +168,7 @@ setClass("SRE",representation(data="list",
                               k_Z = "numeric", 
                               k_BAU_O = "numeric", 
                               include_fs = "logical", 
+                              include_gamma = "logical", 
                               normalise_wts = "logical", 
                               fs_by_spatial_BAU = "logical", 
                               obsidx = "numeric", 

@@ -461,15 +461,13 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
 .SRE.predict_TMB <- function(object, newdata, CP, predict_BAUs, pred_time, type, nsim, 
                              obs_fs, k, percentiles, kriging) {
   
-  ## Covariate design matrix at the BAU level
-  X     <- as(.extract_BAU_X_matrix(formula = object@f, BAUs = object@BAUs), "matrix")
   obsidx <- observed_BAUs(object)        # index of observed BAUs
-  p     <- length(object@alphahat)       # number of fixed regression effects
-  mstar <- length(obsidx)                # number of observed BAUs
-  r     <- nbasis(object)                # number of basis-function coefficients
+  p      <- length(object@alphahat)       # number of fixed regression effects
+  mstar  <- length(obsidx)                # number of observed BAUs
+  r      <- nbasis(object)                # number of basis-function coefficients
   
-  ## Total number of random effects (fine-scale only included if include_fs = T)
-  s     <- r + mstar * object@include_fs 
+  ## Covariate design matrix at the BAU level
+  X <- as(.extract_BAU_X_matrix(object@f, object@BAUs), "matrix") 
   
   ## If we are doing universal kriging, use the full joint precision 
   ## matrix of the fixed and random effects. If we are doing simple kriging, 
@@ -540,7 +538,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
 
 
 simulate_xi <- function(object, nsim, type) {
-  
+
   ## number of spatial and temporal BAUs
   if (is(object@basis,"TensorP_Basis")) {
     ns <- length(object@BAUs@sp)
@@ -548,19 +546,19 @@ simulate_xi <- function(object, nsim, type) {
   } else {
     ns <- length(object@BAUs)
   }
-  
-  N     <- nrow(object@S0)   
+
+  N     <- nrow(object@S0)
   mstar <- length(observed_BAUs(object))
-  
+
   if (type == "observed") {
-    f <- observed_BAUs 
+    f <- observed_BAUs
     nloc <- mstar
   } else {
     f <- unobserved_BAUs
     nloc <- N - mstar
   }
-  
-  
+
+
   if (object@fs_by_spatial_BAU) {
     idx <- f(object)
     spatial_BAU_id <- ((idx - 1) %% ns) + 1
@@ -568,19 +566,25 @@ simulate_xi <- function(object, nsim, type) {
   } else {
     sigma2fs <- object@sigma2fshat
   }
-  
-  xi <- rnorm(nsim * nloc, mean = 0, sd = sqrt(sigma2fs)) %>% 
+
+  xi <- rnorm(nsim * nloc, mean = 0, sd = sqrt(sigma2fs)) %>%
     matrix(nrow = nloc, ncol = nsim)
-  
+
   return(xi)
 }
 
 
-.simulate <- function(object, X, type, nsim, obs_fs, k, Q_L, predict_BAUs, CP, kriging, newdata, fixed_effects_only = FALSE){
+
+.simulate <- function(object, X, type, nsim, obs_fs, k, Q_L, predict_BAUs, CP, kriging, newdata, fixed_effects_only = FALSE, fixed_effects_and_gamma = FALSE){
   
   ## Design matrices evaluated at observed BAUs only
   X_O <- .constructX_O(object) 
   S_O <- .constructS_O(object) 
+  if (object@include_gamma) {
+    G_O <- .constructG_O(object)
+    G_O <- .dropzerocolumns(G_O) # Drop empty columns from G_O (some levels may be unobserved) 
+    g_O <- sum(sapply(G_O, ncol))  # number of observed random effects
+  }
   
   obsidx <- observed_BAUs(object)        # index of observed BAUs
   
@@ -591,16 +595,15 @@ simulate_xi <- function(object, nsim, type) {
   
   ## Number of fixed and random effects
   p <- length(object@alphahat)
-  s <- r + mstar * object@include_fs
   
   # ---- Define alpha and generate samples from (eta', xi_O')' ----
   
-  ## Construct the posterior mean of all random effects (include the regression
-  ## coefficients, alpha, if kriging = "universal").
-  ## (if kriging == "universal"), and random effects; the basis function random 
-  ## weights, and the fine-scale variation (if object@include_fs). 
+  ## Construct the posterior mean of the regression (if kriging = "universal"),
+  ## the basis-function random weights, the random effects gamma 
+  ## (if object@include_gamma) and the fine-scale variation (if object@include_fs). 
   posterior_mean <- if (kriging == "universal") as.numeric(object@alphahat) else vector()
   posterior_mean <- c(posterior_mean, as.numeric(object@mu_eta))
+  if (object@include_gamma) posterior_mean <- c(posterior_mean, as.numeric(object@mu_gamma))
   if (object@include_fs) posterior_mean <- c(posterior_mean, as.numeric(object@mu_xi))
   
   ## Generate samples from Gau(0, 1) distribution, and transform this 
@@ -619,26 +622,33 @@ simulate_xi <- function(object, nsim, type) {
   if (kriging == "universal") {
     alpha <- samples[1:p, , drop = FALSE]
     eta   <- samples[(p + 1):(p + r), ]
+    if (object@include_gamma) {
+      gamma_O <- samples[(p + r + 1):(p + r + g_O), ]
+    }
   } else {
     eta <- samples[1:r, ]
+    if (object@include_gamma) {
+      gamma_O <- samples[(r + 1):(r + g_O), ]
+    }
   }
   
   # Return the MC samples of the fixed effects if that's all we care about
   if (fixed_effects_only) return(alpha)
   
-  ## Observed fine-scale variation:
+  ## Observed fine-scale variation
   if (object@include_fs) {
-    
     if (kriging == "universal") {
       xi_O  <- samples[(p + r + 1):(p + r + mstar), ]
     } else {
       xi_O  <- samples[(r + 1):(r + mstar), ]
     }
-
   }
   
   ## We now have several matrices of Monte Carlo samples:
-  ## alpha (if kriging = "universal"), eta, and xi_O (if include_fs = TRUE).
+  ## alpha (if kriging = "universal"), 
+  ## eta, 
+  ## gamma_O,
+  ## and xi_O (if include_fs = TRUE).
   ## row i of eta corresponds to nsim MC samples of eta_i,
   ## row i of xi_O corresponds to nsim MC samples of the fine-scale variation at the ith observed location.
   
@@ -653,12 +663,64 @@ simulate_xi <- function(object, nsim, type) {
     xi_samples <- rbind(xi_O, xi_U)
   }
   
+  # ---- Generate samples from gamma_U ----
+  
+  ## Now sample the unobserved random effects. This is easy as we simply need to 
+  ## sample from a mean-zero Gaussian distribution with variance object@sigma2gamma
+  
+  if (object@include_gamma) {
+    G0   <- object@G0
+    B    <- length(G0)         # number of random-effect groups
+    lb   <- sapply(G0, ncol)   # total number of levels for each random-effect group
+    lb_O <- sapply(G_O, ncol)  # number of observed levels for each random-effect group
+    lb_U <- lb - lb_O          # number of unobserved levels for each random-effect group
+    
+    gamma <- lapply(1:B, function(b) {
+      ## Extract rows of gamma_O that correspond to random-effect group b
+      cs  <- cumsum(lb_O) 
+      idx <- (cs[b] - lb_O[b] + 1):cs[b] 
+      gamma_O <- gamma_O[idx, ]
+      
+      ## Simulate unobserved rndom effects for group b  
+      gamma_U <- matrix(rnorm(lb_U * nsim, sd = sqrt(object@sigma2gamma[b])), nrow = lb_U, ncol = nsim)
+      
+      ## Merge gamma_U and gamma_O. The ordering is very important, and needs to 
+      ## reflect the way that G_O during model fitting was constructed. 
+      G0 <- G0[[b]]
+      G0 <- G0[obsidx, ]
+      idx_U <- which(apply(G0, 2, sum) == 0)
+      gamma <- matrix(NA, nrow = lb[b], ncol = nsim)
+      # Now fill the rows of gamma, filling it with the rows of gamma_O or gamma_U
+      counter_O = 1
+      counter_U = 1
+      for (i in 1:lb[b]) {
+        if (i %in% idx_U) {
+          gamma[i, ] <- gamma_U[counter_U, ]
+          counter_U <- counter_U + 1
+        } else {
+          gamma[i, ] <- gamma_O[counter_O, ]
+          counter_O <- counter_O + 1
+        }
+      }
+      
+      return(gamma)
+    })
+    gamma <- do.call(rbind, gamma)
+  }
+  
+  # sanity check: apply(gamma, 1, var)
+  if (fixed_effects_and_gamma) return(list(alpha = alpha, gamma = gamma))
+  
+  ## Split the design matrices based on observed and unobserved BAUs
+  X_U <- X[-obsidx, ]         # Unobserved fixed effect 'design' matrix
+  S_U <- object@S0[-obsidx, ] # Unobserved random effect 'design' matrix
+
   # ---- Construct samples from the latent process Y ----
   
   ## We break the latent process down as: Y = Y_smooth + xi, 
   ## so that we may separate the fine-scale variation. 
   
-  ## Split the covariate design matrix based on observed and unobserved samples
+  ## Split the design matrices based on observed and unobserved BAUs
   X_U <- X[-obsidx, ]    # Unobserved fixed effect 'design' matrix
   S_U <- object@S0[-obsidx, ] # Unobserved random effect 'design' matrix
   
@@ -676,9 +738,15 @@ simulate_xi <- function(object, nsim, type) {
   
   ## Use permutation matrix to get the correct (original) ordering in terms of the BAUs
   unobsidx         <- unobserved_BAUs(object)   # Unobserved BAUs indices
-  ids              <- c(obsidx, unobsidx)  # All indices (observed and unobserved)
+  ids              <- c(obsidx, unobsidx)       # All indices (observed and unobserved)
   P                <- Matrix::sparseMatrix(i = 1:N, j = 1:N, x = 1)[ids, ]
   Y_smooth_samples <- Matrix::t(P) %*% Y_smooth_samples
+  
+  ## Add the random effects 
+  if (object@include_gamma) {
+    G <- do.call(cbind, G0)
+    Y_smooth_samples = Y_smooth_samples + G %*% gamma
+  }
   
   ## Construct the samples from the latent process Y 
   if (object@include_fs) {
@@ -687,7 +755,6 @@ simulate_xi <- function(object, nsim, type) {
   } else {
     Y_samples <- Y_smooth_samples
   }
-  
   Y_samples        <- as.matrix(Y_samples)
   Y_smooth_samples <- as.matrix(Y_smooth_samples)
   

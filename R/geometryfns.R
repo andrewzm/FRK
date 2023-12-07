@@ -1768,17 +1768,49 @@ load_dggrids <- function (res = 3L){
 }
 
 ## Extracts important information from the data based on the formula
-.extract.from.formula <- function (formula, data)
-{
-  m = model.frame(terms(formula),            # create data frame based on terms
-                  as(data, "data.frame"),    # after coercing data to data frame
-                  na.action = na.fail)       # and do not accept NAs
-  Y = model.extract(m, "response")           # Y is the response
-  if (length(Y) == 0)                        # throw an error if there is no response variable in data
-    stop("no response variable present in formula")
-  Terms = attr(m, "terms")                   # extract the terms
-  X = model.matrix(Terms, m)                 # and form the covariate matrix from these
-  list(y = Y, X = X)                         # Return Y (data) and X (covariates)
+.extract.from.formula <- function (formula, data){
+
+  formula_terms <- terms(formula)
+  if(.reff_in_f(formula)) {
+      ## We have random effects
+      requireNamespace("lme4")
+      lme_f <- lme4::lFormula(eval(formula), as(data, "data.frame"))
+
+      ## Do check for modelled correlated effects, which is not allowed
+      if(any(sapply(lme_f$reTrms$cnms, length) > 1))
+          stop("FRK assumes that the random effects associated with different
+               quantities (e.g., slope and intercept) are uncorrelated. Please use
+               the double bar notation || when using compound effects in formula.
+               Note that (x1 | x2) is a compound effect since this is shorthand
+               for (1 + x1 | x2).")
+
+      Ztlist <- lme_f$reTrms$Ztlist
+      nameslist <- lme_f$reTrms$cnms
+      nmat <- length(Ztlist)
+      G <- list()
+      for(i in 1:nmat) {
+          G[[i]] <- t(Ztlist[[i]])
+          colnames(G[[i]]) <- paste0(nameslist[[i]],":", colnames(G[[i]]))
+      }
+      X <- lme_f$X
+      Y <- as(data, "data.frame")[[all.vars(formula)[attr(formula_terms, "response")]]]
+      names(Y) <- as.character(1:length(Y))
+
+  } else {
+      ## We only have fixed effects -- use old code
+
+      m = model.frame(formula_terms,             # create data frame based on terms
+                      as(data, "data.frame"),    # after coercing data to data frame
+                      na.action = na.fail)       # and do not accept NAs
+      Y = model.extract(m, "response")           # Y is the response
+      if (length(Y) == 0)                        # throw an error if there is no response variable in data
+        stop("no response variable present in formula")
+      Terms = attr(m, "terms")                   # extract the terms
+      X = model.matrix(Terms, m)                 # and form the fixed eff design matrix from these
+      G = list()                                 # no random eff design matrices
+  }
+  list(y = Y, X = X, G = G)                  # Return Y (data) and X (fixed effect design matrix)
+                                             # and G (list of random effect design matrices)
 }
 
 
