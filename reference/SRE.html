@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">FRK</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.2.1</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -137,7 +137,12 @@
 <span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">object</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S4 method for SRE</span></span>
-<span><span class="fu"><a href="coef_uncertainty.html">coef_uncertainty</a></span><span class="op">(</span><span class="va">object</span>, percentiles <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">95</span><span class="op">)</span>, nsim <span class="op">=</span> <span class="fl">400</span><span class="op">)</span></span>
+<span><span class="fu"><a href="coef_uncertainty.html">coef_uncertainty</a></span><span class="op">(</span></span>
+<span>  <span class="va">object</span>,</span>
+<span>  percentiles <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">95</span><span class="op">)</span>,</span>
+<span>  nsim <span class="op">=</span> <span class="fl">400</span>,</span>
+<span>  random_effects <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">simulate</span><span class="op">(</span><span class="va">object</span>, newdata <span class="op">=</span> <span class="cn">NULL</span>, nsim <span class="op">=</span> <span class="fl">400</span>, conditional_fs <span class="op">=</span> <span class="cn">FALSE</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
@@ -298,6 +303,10 @@
 
 <dt>kriging</dt>
 <dd><p>(applicable only if <code>method</code> = "TMB") string indicating the kind of kriging: "simple" ignores uncertainty due to estimation of the fixed effects, while "universal" accounts for this source of uncertainty</p></dd>
+
+
+<dt>random_effects</dt>
+<dd><p>logical; if set to true, confidence intervals will also be provided for the random effects random effects <i> <b>γ</b></i> (see `?SRE` for details on these random effects)</p></dd>
 
 
 <dt>conditional_fs</dt>
@@ -554,7 +563,7 @@ or <code>spplot</code> from the package <code>sp</code>.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1 2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $plot_lik$llk</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] -302.0058 -300.7741</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] -348.9058 -347.5849</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $plot_lik$ylab</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "log likelihood"</span>
@@ -565,13 +574,13 @@ or <code>spplot</code> from the package <code>sp</code>.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $time</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    user  system elapsed </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   0.309   0.344   0.215 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   0.274   0.352   0.206 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/logLik.html" class="external-link">logLik</a></span><span class="op">(</span><span class="va">S</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] -300.3081</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] -347.0785</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">S</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Intercept </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  2.986631 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  3.172559 </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">## Predict over BAUs</span></span></span>
 <span class="r-in"><span><span class="va">pred</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">S</span><span class="op">)</span></span></span>

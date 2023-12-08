@@ -12,7 +12,7 @@ and lower bound specifed by percentiles; default 90% confidence central interval
     
     <a class="navbar-brand me-2" href="../index.html">FRK</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.2.1</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -51,7 +51,12 @@ and lower bound specifed by percentiles; default 90% confidence central interval
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">coef_uncertainty</span><span class="op">(</span><span class="va">object</span>, percentiles <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">95</span><span class="op">)</span>, nsim <span class="op">=</span> <span class="fl">400</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">coef_uncertainty</span><span class="op">(</span></span>
+<span>  <span class="va">object</span>,</span>
+<span>  percentiles <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">95</span><span class="op">)</span>,</span>
+<span>  nsim <span class="op">=</span> <span class="fl">400</span>,</span>
+<span>  random_effects <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -65,7 +70,11 @@ and lower bound specifed by percentiles; default 90% confidence central interval
 
 
 <dt>nsim</dt>
-<dd><p>number of i) MC samples at each location when using <code>predict</code> or ii) response vectors when using <code>simulate</code></p></dd>
+<dd><p>number of Monte Carlo samples used to compute the confidence intervals</p></dd>
+
+
+<dt>random_effects</dt>
+<dd><p>logical; if set to true, confidence intervals will also be provided for the random effects random effects <i> <b>γ</b></i> (see `?SRE` for details on these random effects)</p></dd>
 
 </dl></div>
 
