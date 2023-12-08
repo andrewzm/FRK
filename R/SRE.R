@@ -55,6 +55,7 @@
 #' @param percentiles (applicable only if \code{method} = "TMB") a vector of scalars in (0, 100) specifying the desired percentiles of the posterior predictive distribution; if \code{NULL}, no percentiles are computed
 #' @param simple_kriging_fixed commit to simple kriging at the fitting stage? If \code{TRUE}, model fitting is faster, but the option to conduct universal kriging at the prediction stage is removed
 #' @param conditional_fs condition on the fitted fine-scale random effects?
+#' @param random_effects logical; if set to true, confidence intervals will also be provided for the random effects random effects \ifelse{html}{\out{<i> <b>&gamma;</b></i>}}{\eqn{\boldsymbol{\gamma}}{\gamma}} (see `?SRE` for details on these random effects)
 #' @param ... other parameters passed on to \code{auto_basis()} and \code{auto_BAUs()} when calling \code{FRK()}, or the user specified function \code{optimiser()} when calling \code{FRK()} or \code{SRE.fit()}
 #' @details
 #'

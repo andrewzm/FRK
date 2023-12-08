@@ -101,7 +101,12 @@ SRE.fit(
 
 \S4method{coef}{SRE}(object, ...)
 
-\S4method{coef_uncertainty}{SRE}(object, percentiles = c(5, 95), nsim = 400)
+\S4method{coef_uncertainty}{SRE}(
+  object,
+  percentiles = c(5, 95),
+  nsim = 400,
+  random_effects = FALSE
+)
 
 simulate(object, newdata = NULL, nsim = 400, conditional_fs = FALSE, ...)
 
@@ -185,6 +190,8 @@ simulate(object, newdata = NULL, nsim = 400, conditional_fs = FALSE, ...)
 \item{percentiles}{(applicable only if \code{method} = "TMB") a vector of scalars in (0, 100) specifying the desired percentiles of the posterior predictive distribution; if \code{NULL}, no percentiles are computed}
 
 \item{kriging}{(applicable only if \code{method} = "TMB") string indicating the kind of kriging: "simple" ignores uncertainty due to estimation of the fixed effects, while "universal" accounts for this source of uncertainty}
+
+\item{random_effects}{logical; if set to true, confidence intervals will also be provided for the random effects random effects \ifelse{html}{\out{<i> <b>&gamma;</b></i>}}{\eqn{\boldsymbol{\gamma}}{\gamma}} (see `?SRE` for details on these random effects)}
 
 \item{conditional_fs}{condition on the fitted fine-scale random effects?}
 }

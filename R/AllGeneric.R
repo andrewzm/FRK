@@ -301,6 +301,8 @@ setGeneric("plot_spatial_or_ST", function(newdata, column_names,  map_layer=NULL
 #' @description Compute confidence intervals for the fixed effects (upper  
 #' and lower bound specifed by percentiles; default 90\% confidence central interval)
 #' @inheritParams SRE
+#' @param nsim number of Monte Carlo samples used to compute the confidence intervals
+#' @param random_effects logical; if set to true, confidence intervals will also be provided for the random effects random effects \ifelse{html}{\out{<i> <b>&gamma;</b></i>}}{\eqn{\boldsymbol{\gamma}}{\gamma}} (see `?SRE` for details on these random effects)
 #' @export
 setGeneric("coef_uncertainty", function(object, percentiles = c(5, 95),  nsim = 400, random_effects = FALSE)
   standardGeneric("coef_uncertainty"))
