@@ -87,7 +87,7 @@
 
 
 <dt>nonconvex_hull</dt>
-<dd><p>flag indicating whether to use <code>INLA</code> to generate a non-convex hull. Otherwise a convex hull is used</p></dd>
+<dd><p>flag indicating whether to use <code>fmesher</code> to generate a non-convex hull. Otherwise a convex hull is used</p></dd>
 
 
 <dt>convex</dt>
@@ -118,7 +118,7 @@
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p><code>auto_BAUs</code> constructs a set of Basic Areal Units (BAUs) used both for data pre-processing and for prediction. As such, the BAUs need to be of sufficienly fine resolution so that inferences are not affected due to binning.</p>
 <p>Two types of BAUs are supported by <code>FRK</code>: ``hex'' (hexagonal) and ``grid'' (rectangular). In order to have a ``grid'' set of BAUs, the user should specify a cellsize of length one, or of length equal to the dimensions of the manifold, that is, of length 1 for <code>real_line</code> and of length 2 for the surface of a <code>sphere</code> and <code>plane</code>. When a ``hex'' set of BAUs is desired, the first element of <code>cellsize</code> is used to determine the side length by dividing this value by approximately 2. The argument <code>type</code> is ignored with <code>real_line</code> and ``hex'' is not available for this manifold.</p>
-<p>If the object <code>data</code> is provided, then automatic domain selection may be carried out by employing the <code>INLA</code> function <code>inla.nonconvex.hull</code>, which finds a (non-convex) hull surrounding the data points (or centroids of the data polygons). This domain is extended and smoothed using the parameter <code>convex</code>. The parameter <code>convex</code> should be negative, and a larger absolute value for <code>convex</code> results in a larger domain with smoother boundaries (note that <code>INLA</code> was not available on CRAN at the time of writing).</p>
+<p>If the object <code>data</code> is provided, then automatic domain selection may be carried out by employing the <code>fmesher</code> function <code>fm_nonconvex_hull_inla</code>, which finds a (non-convex) hull surrounding the data points (or centroids of the data polygons). This domain is extended and smoothed using the parameter <code>convex</code>. The parameter <code>convex</code> should be negative, and a larger absolute value for <code>convex</code> results in a larger domain with smoother boundaries.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
