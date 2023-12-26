@@ -186,7 +186,7 @@ local_basis <- function(manifold = sphere(),          # default manifold is sphe
 #'
 #' If the manifold is the real line, the basis functions are placed regularly inside the domain, and the number of basis functions at the coarsest resolution is dictated by the integer parameter \code{regular} which has to be greater than zero. On the real line, each subsequent resolution has twice as many basis functions. The scale of the basis function is set based on the minimum distance between the centre locations following placement. The scale is equal to the minimum distance if the type of basis function is Gaussian, exponential, or Matern32, and is equal to 1.5 times this value if the function is bisquare.
 #'
-#' If the manifold is a plane, and \code{regular > 0}, then basis functions are placed regularly within the bounding box of \code{data}, with the smallest number of basis functions in each row or column equal to the value of \code{regular} in the coarsest resolution (note, this is just the smallest number of basis functions). Subsequent resolutions have twice the number of basis functions in each row or column. If \code{regular = 0}, then the function \code{INLA::inla.nonconvex.hull} is used to construct a (non-convex) hull around the data. The buffer and smoothness of the hull is determined by the parameter \code{convex}. Once the domain boundary is found,  \code{INLA::inla.mesh.2d} is used to construct a triangular mesh such that the node vertices coincide with data locations, subject to some minimum and maximum triangular-side-length constraints. The result is a mesh that is dense in regions of high data density and not dense in regions of sparse data. Even basis functions are irregularly placed, the scale is taken to be a function of the minimum distance between basis function centres, as detailed above. This may be changed in a future revision of the package.
+#' If the manifold is a plane, and \code{regular > 0}, then basis functions are placed regularly within the bounding box of \code{data}, with the smallest number of basis functions in each row or column equal to the value of \code{regular} in the coarsest resolution (note, this is just the smallest number of basis functions). Subsequent resolutions have twice the number of basis functions in each row or column. If \code{regular = 0}, then the function \code{fmesher::fm_nonconvex_hull_inla()} is used to construct a (non-convex) hull around the data. The buffer and smoothness of the hull is determined by the parameter \code{convex}. Once the domain boundary is found,  \code{fmesher::fm_mesh_2d_inla()} is used to construct a triangular mesh such that the node vertices coincide with data locations, subject to some minimum and maximum triangular-side-length constraints. The result is a mesh that is dense in regions of high data density and not dense in regions of sparse data. Even basis functions are irregularly placed, the scale is taken to be a function of the minimum distance between basis function centres, as detailed above. This may be changed in a future revision of the package.
 #'
 #' If the manifold is the surface of a sphere, then basis functions are placed on the centroids of the discrete global grid (DGG), with the first basis resolution corresponding to the third resolution of the DGG (ISEA3H resolution 2, which yields 92 basis functions globally).  It is not recommended to go above \code{nres == 3} (ISEA3H resolutions 2--4) for the whole sphere; \code{nres=3} yields a total of 1176 basis functions. Up to ISEA3H resolution 6 is available with \code{FRK}; for finer resolutions; please install \code{dggrids} from \code{https://github.com/andrewzm/dggrids} using \code{devtools}.
 #'
@@ -374,13 +374,12 @@ auto_basis <- function(manifold = plane(),
   isea3h <- centroid <- res <- NULL  # (suppress warnings, these are loaded from data)
   coords <- coordinates(data)        # data coordinates or centroids
   
-  ## Irregular basis function placement can only proceed with INLA. Throw an error
-  ## if INLA is not installed
+  ## Irregular basis function placement can only proceed with fmesher. Throw an error
+  ## if fmesher is not installed
   if(is(m,"plane") & !regular & is.null(bndary)) {
-    if(!requireNamespace("INLA"))
-      stop("For irregularly-placed basis-function generation INLA needs to be installed
-                 for constructing basis function centres. Please install it
-                 using install.packages(\"INLA\", repos=\"https://www.math.ntnu.no/inla/R/stable\")")
+    if(!requireNamespace("fmesher"))
+      stop("For irregularly-placed basis-function generation fmesher needs to be installed
+                 for constructing basis function centres.")
   }
   
   ## Subsamp can be used to make the placement/pruning process more efficient with big data.
@@ -393,16 +392,16 @@ auto_basis <- function(manifold = plane(),
   xrange <- range(coords[,1])
   yrange <- range(coords[,2])
   
-  ## If we are on the plane and want an irregular function placement, then call INLA
+  ## If we are on the plane and want an irregular function placement, then call fmesher
   ## and find a nonconvex hull in which the basis functions can be enclosed. If
-  ## a boundary is supplied as a matrix, convert it an inla.mesh.segment object.
+  ## a boundary is supplied as a matrix, convert it a segment object.
   if(is(m,"plane") & !regular) {
     if(is.null(bndary)) {
-      bndary_seg = INLA::inla.nonconvex.hull(coords,concave = 0)
+      bndary_seg = fmesher::fm_nonconvex_hull_inla(coords,concave = 0)
     } else {
       if(!is(bndary,"matrix"))
         stop("bndary needs to be a matrix of points")
-      bndary_seg <- INLA::inla.mesh.segment(bndary)
+      bndary_seg <- fmesher::fm_segm(bndary)
     }
   }
   
@@ -443,16 +442,16 @@ auto_basis <- function(manifold = plane(),
     
     ## If we are on the plane and we do not want a regular set
     if(is(m,"plane") & !regular) {
-      ## Generate mesh using INLA and use the triangle vertices as notes
+      ## Generate mesh using fmesher and use the triangle vertices as notes
       ## The maximum and minimum triangle edges are a function of i
       ## The exact constants were found to be suitable by trial and error
-      this_res_locs <- INLA::inla.mesh.2d(
+      this_res_locs <- fmesher::fm_mesh_2d_inla(
         loc = matrix(apply(coords,2,mean),nrow=1),   # data locations
         boundary = list(bndary_seg),                 # boundary
         max.edge = max(diff(xrange),diff(yrange))/(2*2.5^(i-1)),
         cutoff = max(diff(xrange),diff(yrange))/(3*2.5^(i-1)))$loc[,1:2]
       
-      ## Sometimes INLA returns overlapping points, therefore find the unique set of locations
+      ## Sometimes fmesher returns overlapping points, therefore find the unique set of locations
       this_res_locs <- unique(this_res_locs)
       
       ## If we want a regular set of basis functions

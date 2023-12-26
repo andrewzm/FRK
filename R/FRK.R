@@ -29,6 +29,7 @@
 #' @import parallel
 #' @import dplyr
 #' @import sparseinv
+#' @importFrom fmesher fm_nonconvex_hull_inla fm_mesh_2d_inla fm_segm
 #' @importFrom Hmisc roundPOSIXt truncPOSIXt ceil
 #' @importFrom plyr ddply dlply rbind.fill
 #' @importFrom digest digest

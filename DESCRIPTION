@@ -16,8 +16,8 @@ Depends:
 Suggests:
     covr,
     dggrids,
+    fmesher,
     gstat,
-    INLA,
     knitr,
     lme4,
     mapproj,
@@ -47,8 +47,7 @@ Imports:
     ggpubr, 
     reshape2, 
     scales
-Additional_repositories: https://andrewzm.github.io/dggrids-repo/, 
-                         https://inla.r-inla-download.org/R/stable/
+Additional_repositories: https://andrewzm.github.io/dggrids-repo/
 License: GPL (>= 2)
 NeedsCompilation: yes
 LazyData: true

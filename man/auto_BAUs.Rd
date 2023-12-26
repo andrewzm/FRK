@@ -30,7 +30,7 @@ auto_BAUs(
 
 \item{data}{object of class \code{SpatialPointsDataFrame}, \code{SpatialPolygonsDataFrame},  \code{STIDF}, or \code{STFDF}. Provision of \code{data} implies that the domain is bounded, and is thus necessary when the manifold is a \code{real_line, plane}, or \code{STplane}, but is not necessary when the manifold is the surface of a \code{sphere}}
 
-\item{nonconvex_hull}{flag indicating whether to use \code{INLA} to generate a non-convex hull. Otherwise a convex hull is used}
+\item{nonconvex_hull}{flag indicating whether to use \code{fmesher} to generate a non-convex hull. Otherwise a convex hull is used}
 
 \item{convex}{convex parameter used for smoothing an extended boundary when working on a bounded domain (that is, when the object \code{data} is supplied); see details}
 
@@ -52,7 +52,7 @@ This function calls the generic function \code{auto_BAU} (not exported) after a 
 
 Two types of BAUs are supported by \code{FRK}: ``hex'' (hexagonal) and ``grid'' (rectangular). In order to have a ``grid'' set of BAUs, the user should specify a cellsize of length one, or of length equal to the dimensions of the manifold, that is, of length 1 for \code{real_line} and of length 2 for the surface of a \code{sphere} and \code{plane}. When a ``hex'' set of BAUs is desired, the first element of \code{cellsize} is used to determine the side length by dividing this value by approximately 2. The argument \code{type} is ignored with \code{real_line} and ``hex'' is not available for this manifold.
 
-  If the object \code{data} is provided, then automatic domain selection may be carried out by employing the \code{INLA} function \code{inla.nonconvex.hull}, which finds a (non-convex) hull surrounding the data points (or centroids of the data polygons). This domain is extended and smoothed using the parameter \code{convex}. The parameter \code{convex} should be negative, and a larger absolute value for \code{convex} results in a larger domain with smoother boundaries (note that \code{INLA} was not available on CRAN at the time of writing).
+  If the object \code{data} is provided, then automatic domain selection may be carried out by employing the \code{fmesher} function \code{fm_nonconvex_hull_inla}, which finds a (non-convex) hull surrounding the data points (or centroids of the data polygons). This domain is extended and smoothed using the parameter \code{convex}. The parameter \code{convex} should be negative, and a larger absolute value for \code{convex} results in a larger domain with smoother boundaries.
 }
 \examples{
 ## First a 1D example

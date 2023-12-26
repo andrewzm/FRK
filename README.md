@@ -21,7 +21,7 @@ The package `FRK` is available on CRAN! To install, please type
 install.packages("FRK")
 ```
 
-To install the most recent development version, first please install `INLA` from `https://www.r-inla.org/download`, then please load `devtools` and type
+To install the most recent development version, please load `devtools` and type
 
 ```r
 install_github("andrewzm/FRK", dependencies = TRUE, build_vignettes = TRUE)

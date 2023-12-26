@@ -293,7 +293,7 @@ setMethod("coordnames",signature(x="STIDF"),function(x) {
 #' @param cellsize denotes size of gridcell when \code{type} = ``grid''. Needs to be of length 1 (square-grid case) or a vector of length \code{dimensions(manifold)} (rectangular-grid case)
 #' @param isea3h_res resolution number of the isea3h DGGRID cells for when type is ``hex'' and manifold is the surface of a \code{sphere}
 #' @param data object of class \code{SpatialPointsDataFrame}, \code{SpatialPolygonsDataFrame},  \code{STIDF}, or \code{STFDF}. Provision of \code{data} implies that the domain is bounded, and is thus necessary when the manifold is a \code{real_line, plane}, or \code{STplane}, but is not necessary when the manifold is the surface of a \code{sphere}
-#' @param nonconvex_hull flag indicating whether to use \code{INLA} to generate a non-convex hull. Otherwise a convex hull is used
+#' @param nonconvex_hull flag indicating whether to use \code{fmesher} to generate a non-convex hull. Otherwise a convex hull is used
 #' @param convex convex parameter used for smoothing an extended boundary when working on a bounded domain (that is, when the object \code{data} is supplied); see details
 #' @param tunit temporal unit when requiring space-time BAUs. Can be "secs", "mins", "hours", etc.
 #' @param xlims limits of the horizontal axis (overrides automatic selection)
@@ -304,7 +304,7 @@ setMethod("coordnames",signature(x="STIDF"),function(x) {
 #'
 #' Two types of BAUs are supported by \code{FRK}: ``hex'' (hexagonal) and ``grid'' (rectangular). In order to have a ``grid'' set of BAUs, the user should specify a cellsize of length one, or of length equal to the dimensions of the manifold, that is, of length 1 for \code{real_line} and of length 2 for the surface of a \code{sphere} and \code{plane}. When a ``hex'' set of BAUs is desired, the first element of \code{cellsize} is used to determine the side length by dividing this value by approximately 2. The argument \code{type} is ignored with \code{real_line} and ``hex'' is not available for this manifold.
 #'
-#'   If the object \code{data} is provided, then automatic domain selection may be carried out by employing the \code{INLA} function \code{inla.nonconvex.hull}, which finds a (non-convex) hull surrounding the data points (or centroids of the data polygons). This domain is extended and smoothed using the parameter \code{convex}. The parameter \code{convex} should be negative, and a larger absolute value for \code{convex} results in a larger domain with smoother boundaries (note that \code{INLA} was not available on CRAN at the time of writing).
+#'   If the object \code{data} is provided, then automatic domain selection may be carried out by employing the \code{fmesher} function \code{fm_nonconvex_hull_inla}, which finds a (non-convex) hull surrounding the data points (or centroids of the data polygons). This domain is extended and smoothed using the parameter \code{convex}. The parameter \code{convex} should be negative, and a larger absolute value for \code{convex} results in a larger domain with smoother boundaries.
 #' @seealso \code{\link{auto_basis}} for automatically constructing basis functions.
 #' @examples
 #' ## First a 1D example
@@ -554,11 +554,10 @@ setMethod("auto_BAU",signature(manifold="plane"),
           function(manifold,type="grid",cellsize = c(1,1),resl=resl,d=NULL,
                    nonconvex_hull=TRUE,convex=-0.05,xlims=NULL,ylims=NULL,...) {
 
-            ## To arrange BAUs in a nonconvex hull we need INLA to find the domain boundary
+            ## To arrange BAUs in a nonconvex hull we need fmesher to find the domain boundary
             if(nonconvex_hull)
-              if(!requireNamespace("INLA"))
-                stop("For creating a non-convex hull INLA needs to be installed. Please install it using
-                           install.packages(\"INLA\", repos=\"https://www.math.ntnu.no/inla/R/stable\"). Alternatively
+              if(!requireNamespace("fmesher"))
+                stop("For creating a non-convex hull fmesher needs to be installed. Alternatively
                            please set nonconvex_hull=FALSE to use a simple convex hull.")
 
             if(is.null(d))
@@ -589,7 +588,7 @@ setMethod("auto_BAU",signature(manifold="plane"),
 
             ## Increase convex until domain is contiguous and smooth
             ## (i.e., the distance betweeen successive points is small)
-            ## This procedure helps avoid holes in the domain when using INLA
+            ## This procedure helps avoid holes in the domain when using fmesher
             OK <- 0                 # initialise
             while(!OK) {
               ## Find the hull (convex or non-convex)
@@ -2024,9 +2023,9 @@ process_isea3h <- function(isea3h,resl) {
 ## Find a hull (convex or nonconvex) around a set of points
 .find_hull <- function(coords,nonconvex_hull=TRUE,convex = -0.05) {
 
-  ## If we want a nonconvex hull we need to call INLA
+  ## If we want a nonconvex hull we need to call fmesher
   if(nonconvex_hull) {
-    bndary_seg = INLA::inla.nonconvex.hull(coords,convex=convex)$loc
+    bndary_seg = fmesher::fm_nonconvex_hull_inla(coords,convex=convex)$loc
 
   } else {
     ## Otherwise we just find a convex hull
@@ -2044,7 +2043,7 @@ process_isea3h <- function(isea3h,resl) {
     bndary_seg[,1] <- conv_hull[,1] + sign(conv_hull[,1] - centroid[1])*delta*(-convex)
     bndary_seg[,2] <- conv_hull[,2] + sign(conv_hull[,2] - centroid[2])*delta*(-convex)
 
-    ## We don't need any column names for this (to match what INLA gives)
+    ## We don't need any column names for this (to match what fmesher gives)
     colnames(bndary_seg) <- NULL
   }
 

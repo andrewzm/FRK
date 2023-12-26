@@ -374,8 +374,8 @@ setGeneric("plot", function(x, y, ...)
 #' @param cellsize denotes the length of the sides of the gridcell when \code{type} == ``grid''
 #' @param resl resolution number of isea3h DGGRID cells for when \code{type} is ``hex'' and \code{manifold} is \code{sphere}
 #' @param d data, that is, an object of class SpatialPointsDataFrame or SpatialPolygonsDataFrame. Provision of data implies that the domain is bounded (necessary with \code{real_line} and \code{plane} but not necessary with \code{sphere})
-#' @param nonconvex_hull flag indicating whether \code{INLA} should be used to create a non-convex domain boundary
-#' @param convex convex parameter for the \code{INLA} function \code{inla.nonconvex.hull} used for smoothing an extended boundary when working on a finite domain (that is, when the object \code{d} is supplied), see details
+#' @param nonconvex_hull flag indicating whether \code{fmesher} should be used to create a non-convex domain boundary
+#' @param convex convex parameter for the \code{fmesher} function \code{fm_nonconvex_hull_inla} used for smoothing an extended boundary when working on a finite domain (that is, when the object \code{d} is supplied), see details
 #' @param xlims limits of the horizontal axis (overrides automatic selection).
 #' @param ylims limits of the vertical axis (overrides automatic selection).
 #' @param ... currently unused
