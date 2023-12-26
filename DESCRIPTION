@@ -16,7 +16,6 @@ Depends:
 Suggests:
     covr,
     dggrids,
-    fmesher,
     gstat,
     knitr,
     lme4,
@@ -30,6 +29,7 @@ Suggests:
 Imports:
     digest,
     dplyr,
+    fmesher,
     ggplot2,
     grDevices,
     Hmisc (>= 4.1),
