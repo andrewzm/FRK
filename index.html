@@ -26,7 +26,7 @@
     
     <a class="navbar-brand me-2" href="index.html">FRK</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.2.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.2.2</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -65,7 +65,7 @@
 <p>The package <code>FRK</code> is available on CRAN! To install, please type</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"FRK"</span><span class="op">)</span></span></code></pre></div>
-<p>To install the most recent development version, please load <code>devtools</code> and type</p>
+<p>To install the most recent development version, first please install <code>INLA</code> from <code>https://www.r-inla.org/download</code>, then please load <code>devtools</code> and type</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">install_github</span><span class="op">(</span><span class="st">"andrewzm/FRK"</span>, dependencies <span class="op">=</span> <span class="cn">TRUE</span>, build_vignettes <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p>A paper introducing the package is available <a href="https://www.jstatsoft.org/article/view/v098i04" class="external-link">here</a>. A paper detailing the approach in a non-Gaussian setting is available <a href="https://arxiv.org/abs/2110.02507" class="external-link">here</a> (a six-page summary of this paper is available <a href="https://github.com/andrewzm/FRK/raw/master/FRKv2_6page.pdf" class="external-link">here</a>).</p>
@@ -130,8 +130,8 @@ ggsave(
   path = "man/figures/"
 )
 --->
-<div class="figure">
-<img src="https://github.com/andrewzm/FRK/blob/master/man/figures/Gaussian_data.png?raw=true" alt=""><p class="caption">(Left) Gaussian data. (Centre) Predictions. (Right) Standard errors.</p>
+<div class="float">
+<img src="https://github.com/andrewzm/FRK/blob/master/man/figures/Gaussian_data.png?raw=true" alt="(Left) Gaussian data. (Centre) Predictions. (Right) Standard errors."><div class="figcaption">(Left) Gaussian data. (Centre) Predictions. (Right) Standard errors.</div>
 </div>
 </div>
 <div class="section level3">
@@ -159,8 +159,8 @@ ggsave(
   path = "man/figures/"
 )
 --->
-<div class="figure">
-<img src="https://github.com/andrewzm/FRK/blob/master/man/figures/Poisson_data.png?raw=true" alt=""><p class="caption">(Left) Poisson data. (Centre) Prediction of the mean response. (Right) Prediction interval width of the mean response.</p>
+<div class="float">
+<img src="https://github.com/andrewzm/FRK/blob/master/man/figures/Poisson_data.png?raw=true" alt="(Left) Poisson data. (Centre) Prediction of the mean response. (Right) Prediction interval width of the mean response."><div class="figcaption">(Left) Poisson data. (Centre) Prediction of the mean response. (Right) Prediction interval width of the mean response.</div>
 </div>
 </div>
 <div class="section level3">
@@ -207,8 +207,8 @@ ggsave(
   path = "man/figures/"
 )
 --->
-<div class="figure">
-<img src="https://github.com/andrewzm/FRK/blob/master/man/figures/ST_data.png?raw=true" alt=""><p class="caption">(Left) Prediction of spatio-temporal process. (Right) Prediction interval width.</p>
+<div class="float">
+<img src="https://github.com/andrewzm/FRK/blob/master/man/figures/ST_data.png?raw=true" alt="(Left) Prediction of spatio-temporal process. (Right) Prediction interval width."><div class="figcaption">(Left) Prediction of spatio-temporal process. (Right) Prediction interval width.</div>
 </div>
 </div>
 </div>
