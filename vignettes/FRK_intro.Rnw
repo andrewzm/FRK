@@ -613,45 +613,64 @@ mumax <- quantile(X$mu,0.99)
 @
 
 <<echo=FALSE,fig.width=7,fig.height=3.5,out.width="\\linewidth",fig.pos="t!",fig.cap="CO$_2$ mole-fraction readings in ppm from the \\tt{AIRS}.\\label{fig:AIRSresults1}",fig.align="centre",dev = 'png',dpi=70>>=
-g1 <- (EmptyTheme() +
-           geom_point(data=data.frame(AIRS_05_2003),
-                      aes(lon,lat,
-                          colour=pmin(pmax(
-                              co2avgret,mumin),
+df_to_plot <- data.frame(
+        lon = as.numeric(AIRS_05_2003$lon),
+        lat = as.numeric(AIRS_05_2003$lat),
+        co2avgret = as.numeric(AIRS_05_2003$co2avgret)
+)
+g1 <- (ggplot(df_to_plot) +   geom_point(data = df_to_plot,
+                      aes(lon, lat,
+                          colour = pmin(pmax(
+                              co2avgret, mumin),
                               mumax)),
-                      pch=46) +
-           scale_colour_distiller(palette="Spectral",
-                                  guide_legend(title="co2 (ppm)")
-           ) +
-           coord_map("mollweide")) %>%
-    draw_world(inc_border=TRUE) +
-          xlab("lon (deg)") +
-          ylab("lat (deg)")
+                      pch = 46) +
+        scale_colour_distiller(palette = "Spectral",
+                               name = "co2 (ppm)") +
+        coord_map("mollweide")) %>%
+        draw_world(inc_border=TRUE) +
+           xlab("lon (deg)") +
+           ylab("lat (deg)") +
+     theme_minimal() +
+     theme(axis.text.x=element_blank(),
+       axis.ticks.x=element_blank(),
+       axis.text.y=element_blank(),
+       axis.ticks.y=element_blank())
+
 print(g1)
 @
 
 <<echo=FALSE,fig.width=7,fig.height=3.5,out.width="\\linewidth",fig.pos="t!",fig.cap="Prediction of $\\Yvec_P$ in ppm following FRK on the \\tt{AIRS} data.\\label{fig:AIRSresults2}",fig.align="centre",dev = 'png',dpi=70>>=
-g2 <- (EmptyTheme() +
+g2 <- (ggplot() +
            geom_polygon(data=X,
                         aes(lon,lat,fill=pmin(pmax(mu,mumin),mumax),group=id))+
            scale_fill_distiller(palette="Spectral",name="pred. (ppm)",limits=c(mumin,mumax)) +
            coord_map("mollweide")) %>%
     draw_world(inc_border=TRUE)+
           xlab("lon (deg)") +
-          ylab("lat (deg)")
+          ylab("lat (deg)") +
+    theme_minimal() +
+    theme(axis.text.x=element_blank(),
+      axis.ticks.x=element_blank(),
+      axis.text.y=element_blank(),
+      axis.ticks.y=element_blank())
 print(g2)
 @
 
 <<echo=FALSE,fig.keep=TRUE,fig.width=7,fig.height=3.5,out.width="\\linewidth",fig.pos="t!",fig.cap="Prediction standard error of $\\Yvec_P$ in ppm following FRK on the \\tt{AIRS} data.\\label{fig:AIRSresults3}",fig.align="centre",dev = 'png',dpi=70>>=
 X$se <- pmax(sqrt(X$var),0.32)
-g3 <- (EmptyTheme() +
+g3 <- (ggplot() +
            geom_polygon(data=X,
                         aes(lon,lat,fill=se,group=id))+
            scale_fill_distiller(palette="BrBG",name="s.e. (ppm)") +
            coord_map("mollweide")) %>%
     draw_world(inc_border=TRUE)+
           xlab("lon (deg)") +
-          ylab("lat (deg)")
+          ylab("lat (deg)") +
+    theme_minimal() +
+    theme(axis.text.x=element_blank(),
+      axis.ticks.x=element_blank(),
+      axis.text.y=element_blank(),
+      axis.ticks.y=element_blank())
 
 print(g3)
 @
@@ -996,7 +1015,7 @@ mumax <- max(X$mu)
 
 
 <<echo=FALSE, fig.keep=TRUE,fig.cap="CO$_2$ readings taken from the \\tt{AIRS} on the 04, 08 and 12 May 2003 in ppm. \\label{fig:FRK_AIRS_ST1}",fig.align="center",out.width="\\linewidth",fig.height=3,fig.width=16,fig.pos="t!",dev = 'png',dpi=70>>=
-g1 <- (EmptyTheme() +
+g1 <- (ggplot() +
            geom_point(data=dplyr::filter(AIRS_05_2003,day %in% c(4,8,12)),
                       aes(lon,lat,
                           colour=pmin(pmax(
@@ -1005,24 +1024,34 @@ g1 <- (EmptyTheme() +
                       size=0.5) +
            facet_grid(~day)+
            scale_colour_distiller(palette="Spectral",
-                                  guide_legend(title="co2 (ppm)")) +
+                                  name="co2 (ppm)") +
            coord_map("mollweide") +
             xlab("lon (deg)") +
-            ylab("lat (deg)")) %>%
+            ylab("lat (deg)") +
+           theme_minimal() +
+    theme(axis.text.x=element_blank(),
+      axis.ticks.x=element_blank(),
+      axis.text.y=element_blank(),
+      axis.ticks.y=element_blank()) ) %>%
     draw_world(inc_border=TRUE)
 print(g1)
 @
 
 <<echo=FALSE, fig.keep=TRUE,fig.cap="Prediction of $\\Yvec_P$ in ppm on 04, 08, and 12 May 2003 obtained with \\pkg{FRK} on the \\tt{AIRS} data. \\label{fig:FRK_AIRS_ST2}",fig.align="center",out.width="\\linewidth",fig.height=3,fig.width=16,fig.pos="t!",dev = 'png',dpi=70>>=
 
-g2 <-  (EmptyTheme() +
+g2 <-  (ggplot() +
             geom_polygon(data=filter(X,(t %in% c(4,8,12)) & abs(lon) < 175),
                          aes(lon,lat,fill=mu,group=id))+
            scale_fill_distiller(palette="Spectral",name="pred. (ppm)") +
            coord_map("mollweide") +
            facet_grid(~t) +
             xlab("lon (deg)") +
-            ylab("lat (deg)")) %>%
+            ylab("lat (deg)") +
+            theme_minimal() +
+    theme(axis.text.x=element_blank(),
+      axis.ticks.x=element_blank(),
+      axis.text.y=element_blank(),
+      axis.ticks.y=element_blank())) %>%
     draw_world(inc_border=FALSE)
 
 print(g2)
@@ -1031,14 +1060,19 @@ print(g2)
 <<echo=FALSE, fig.keep=TRUE,fig.cap="Prediction standard error of $\\Yvec_P$ in ppm on 04, 08 and 12 May 2003 obtained with \\pkg{FRK} on the \\tt{AIRS} data. \\label{fig:FRK_AIRS_ST3}",fig.align="center",out.width="\\linewidth",fig.height=3,fig.width=16,fig.pos="t!",dev = 'png',dpi=70>>=
 
 X$se <- sqrt(X$var)
-g3 <-  (EmptyTheme() +
+g3 <-  (ggplot() +
             geom_polygon(data=filter(X,(t %in% c(4,8,12)) & abs(lon) < 175),
                          aes(lon,lat,fill=se,group=id))+
            scale_fill_distiller(palette="BrBG",name="s.e. (ppm)") +
            coord_map("mollweide") +
            facet_grid(~t) +
             xlab("lon (deg)") +
-            ylab("lat (deg)")) %>%
+            ylab("lat (deg)") +
+            theme_minimal() +
+    theme(axis.text.x=element_blank(),
+      axis.ticks.x=element_blank(),
+      axis.text.y=element_blank(),
+      axis.ticks.y=element_blank()) ) %>%
     draw_world(inc_border=FALSE)
 
 print(g3)

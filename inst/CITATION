@@ -1,30 +1,32 @@
-bibentry(
-  bibtype  = "Article",
-  title    = "FRK: an R package for spatial and spatio-temporal prediction with large datasets",
-  author   = c(person("Andrew Zammit-Mangion"), person("Noel Cressie")),
-  journal  = "Journal of Statistical Software",
-  year     = "2021",
-  volume   = "98",
-  number   = "4",
-  pages    = "1--48",
-  header   = "To cite FRK version 1 (with EM algorithm) in publications use:",
-  textVersion  = paste(
-        "Zammit-Mangion A, Cressie N (2021).",
-        "FRK: an R package for spatial and spatio-temporal prediction with large datasets.", 
-        "Journal of Statistical Software, 98(4), 1–48."
-        )
+bibentry(bibtype = "Article",
+  title        = "{FRK}: An {R} Package for Spatial and Spatio-Temporal Prediction with Large Datasets",
+  author       = c(person(given = "Andrew",
+                          family = "Zammit-Mangion"),
+                   person(given = "Noel",
+                          family = "Cressie")),
+  journal      = "Journal of Statistical Software",
+  year         = "2021",
+  volume       = "98",
+  number       = "4",
+  pages        = "1--48",
+  doi          = "10.18637/jss.v098.i04",
+  header       = "To cite FRK version 1 (with EM algorithm) in publications use:",
 )
 
-
-bibentry(
-  bibtype  = "Article",
-  title    = "Modelling big, heterogeneous, non-Gaussian spatial and spatio-temporal data using FRK",
-  author   = c(person("Matthew Sainsbury-Dale"), person("Andrew Zammit-Mangion"), person("Noel Cressie")),
-  journal  = "arXiv:2110.02507",
-  year     = "2022",
-  header   = "To cite FRK version 2 (non-Gaussian data) in publications use:",  textVersion  = paste(
-        "Sainsbury-Dale M, Zammit-Mangion A, Cressie N (2022).",
-        "Modelling big, heterogeneous, non-Gaussian spatial and spatio-temporal data using FRK", 
-        "arXiv:2110.02507"
-        )
+bibentry(bibtype = "Article",
+  title        = "Modeling Big, Heterogeneous, Non-{G}aussian Spatial and Spatio-Temporal Data Using {FRK}",
+  author       = c(person(given = "Matthew",
+                          family = "Sainsbury-Dale",
+                          email = "msdale@uow.edu.au"),
+                   person(given = "Andrew",
+                          family = "Zammit-Mangion"),
+                   person(given = "Noel",
+                          family = "Cressie")),
+  journal      = "Journal of Statistical Software",
+  year         = "2024",
+  volume       = "108",
+  number       = "10",
+  pages        = "1--39",
+  doi          = "10.18637/jss.v108.i10",
+  header       = "To cite FRK version 2 (non-Gaussian data) in publications use:"
 )

@@ -278,7 +278,7 @@
 #' @references
 #' Zammit-Mangion, A. and Cressie, N. (2021). FRK: An R package for spatial and spatio-temporal prediction with large datasets. Journal of Statistical Software, 98(4), 1-48. doi:10.18637/jss.v098.i04.
 #'
-#' Sainsbury-Dale, M. and Zammit-Mangion, A. and Cressie, N. (2023) Modelling Big, Heterogeneous, Non-Gaussian Spatial and Spatio-Temporal Data using FRK, arXiv:2110.02507
+#' Sainsbury-Dale, M. and Zammit-Mangion, A. and Cressie, N. (2024) Modelling Big, Heterogeneous, Non-Gaussian Spatial and Spatio-Temporal Data using FRK. Journal of Statistical Software, 108(10), 1--39. doi:10.18637/jss.v108.i10.
 #' @export
 #' @examples
 #' library("FRK")
