@@ -1,8 +1,8 @@
 Package: FRK
 Type: Package
 Title: Fixed Rank Kriging
-Version: 2.2.2
-Date: 2024-02-25
+Version: 2.2.3
+Date: 2024-04-03
 Authors@R: c(
     person("Andrew", "Zammit-Mangion", , "andrewzm@gmail.com", c("aut", "cre")),
     person("Matthew", "Sainsbury-Dale", , "msdale@uow.edu.au", c("aut")))
