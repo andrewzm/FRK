@@ -51,7 +51,7 @@ draw_world <- function(g = ggplot() + theme_bw() + xlab("") + ylab(""),inc_borde
     }
 
     ## Now return a gg object with the map overlayed
-    g + geom_path(data = worldmap, aes(x=long, y=lat, group=group), colour="black",size=0.1)
+    g + geom_path(data = worldmap, aes(x=long, y=lat, group=group), colour="black",linewidth=0.1)
 }
 
 #' @rdname show_basis

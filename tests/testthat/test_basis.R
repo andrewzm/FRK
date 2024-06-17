@@ -78,13 +78,18 @@ test_that("can average basis over polygons in plane", {
     HexPols_df <- SpatialPolygonsDataFrame(HexPols,
                                            cbind(over(HexPols,meuse.grid),
                                                  coordinates(HexPts)))
-    ## Generate basis functions
-    G <- auto_basis(manifold = plane(),data=meuse,nres = 2,prune=10,type = "Gaussian")
+    ## Generate regular basis functions with prune
+    G1 <- auto_basis(manifold = plane(),data=meuse,nres = 2,prune=10,type = "Gaussian")
+    expect_true({eval_basis(G1,coordinates(HexPts)); TRUE})
+    expect_true({eval_basis(G1,HexPols_df); TRUE})
+    #plot(as.numeric(S1))
+    #lines(as.numeric(S2),col='red')
 
-        expect_true({eval_basis(G,coordinates(HexPts)); TRUE})
-        expect_true({eval_basis(G,HexPols_df); TRUE})
-        #plot(as.numeric(S1))
-        #lines(as.numeric(S2),col='red')
+    ## Generate irregular basis functions, no prune, with fmesher
+    G2 <- auto_basis(manifold = plane(), data=meuse, nres = 2, type = "bisquare", regular = 0)
+    expect_true({eval_basis(G2,coordinates(HexPts)); TRUE})
+    expect_true({eval_basis(G2,HexPols_df); TRUE})
+    
 })
 
 ## Deprecated:
