@@ -61,7 +61,7 @@
     stop("If the response is Gaussian and observational error is not going to be estimated,
              please supply a field 'std' in the data objects")
 
-  if(response == "gaussian" && !est_error && !all(sapply(data, function(x) x$std >= 0)))
+  if(response == "gaussian" && !est_error && !all(unlist(sapply(data, function(x) x$std >= 0))))
     stop("If the response is Gaussian and observational error is not going to be estimated,
              the std field must contain only positive numbers")
 

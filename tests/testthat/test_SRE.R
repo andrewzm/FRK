@@ -221,6 +221,24 @@ test_that("SRE space-time sphere works",{
 
     ### summary works?
     expect_true({summary(S);TRUE})
+    
+    ## Test with multiple ST objects with differing amounts of data
+    point_to_remove <- 2
+    updated_data <- STobj@data[-point_to_remove, ]
+    updated_coords <- STobj@sp[-point_to_remove, ]
+    updated_time <- STobj@time[-point_to_remove]
+    STobj2 <- STIDF(updated_coords, updated_time, data = updated_data)
+    S <- SRE(f,list(STobj, STobj2),G,
+             grid_BAUs,
+             est_error = FALSE)
+    expect_is(S,"SRE")
+    S <- SRE.fit(S,n_EM = 3,tol = 1e-5,print_lik=FALSE)
+    expect_is(S,"SRE")
+    grid_BAUs <- predict(S)
+    expect_is(grid_BAUs,"STFDF")
+    grid_BAUs <- predict(S,obs_fs = FALSE)
+    expect_is(grid_BAUs,"STFDF")
+    expect_true({summary(S);TRUE})
 })
 
 
