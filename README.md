@@ -52,7 +52,7 @@ Type: Package
 
 Title: Fixed Rank Kriging
 
-Version: 2.3.0
+Version: 2.3.1
 
 Date: 2024-07-16
 
