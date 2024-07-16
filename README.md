@@ -52,18 +52,18 @@ Type: Package
 
 Title: Fixed Rank Kriging
 
-Version: 2.1.5
+Version: 2.3.0
 
-Date: 2023-01-30
+Date: 2024-07-16
 
 Author: Andrew Zammit-Mangion, Matthew Sainsbury-Dale
 
 Maintainer: Andrew Zammit-Mangion <andrewzm@gmail.com>
 
-Description: A tool for spatial/spatio-temporal modelling and prediction with large datasets. The approach models the field, and hence the covariance function, using a set of basis functions. This fixed-rank basis-function representation facilitates the modelling of big data, and the method naturally allows for non-stationary, anisotropic covariance functions. Discretisation of the spatial domain into so-called basic areal units (BAUs) facilitates the use of observations with varying support (i.e., both point-referenced and areal supports, potentially simultaneously), and prediction over arbitrary user-specified regions. `FRK` also supports inference over various manifolds, including the 2D plane and 3D sphere, and it provides helper functions to model, fit, predict, and plot with relative ease. Version 2.0.0 and above also supports the modelling of non-Gaussian data (e.g., Poisson, binomial, negative-binomial, gamma, and inverse-Gaussian) by employing a generalised linear mixed model (GLMM) framework.  Zammit-Mangion and Cressie <doi:10.18637/jss.v098.i04> describe `FRK` in a Gaussian setting, and detail its use of basis functions and BAUs, while Sainsbury-Dale et al. <arXiv:2110.02507> describe `FRK` in a non-Gaussian setting; two vignettes are available that summarise these papers and provide additional examples.
+Description: A tool for spatial/spatio-temporal modelling and prediction with large datasets. The approach models the field, and hence the covariance function, using a set of basis functions. This fixed-rank basis-function representation facilitates the modelling of big data, and the method naturally allows for non-stationary, anisotropic covariance functions. Discretisation of the spatial domain into so-called basic areal units (BAUs) facilitates the use of observations with varying support (i.e., both point-referenced and areal supports, potentially simultaneously), and prediction over arbitrary user-specified regions. `FRK` also supports inference over various manifolds, including the 2D plane and 3D sphere, and it provides helper functions to model, fit, predict, and plot with relative ease. Version 2.0.0 and above also supports the modelling of non-Gaussian data (e.g., Poisson, binomial, negative-binomial, gamma, and inverse-Gaussian) by employing a generalised linear mixed model (GLMM) framework.  Zammit-Mangion and Cressie (2021) describe `FRK` in a Gaussian setting, and detail its use of basis functions and BAUs, while Sainsbury-Dale et al. (2024) describe `FRK` in a non-Gaussian setting; two vignettes are available that summarise these papers and provide additional examples.
 
-* Zammit-Mangion, A. & Cressie N. (2021). “FRK: an R package for spatial and spatio-temporal prediction with large datasets.” Journal of Statistical Software, 98, 1-48.
-* Sainsbury-Dale, M., Zammit-Mangion, A. & Cressie, N. (2023). “Modelling Big, Heterogeneous, Non-Gaussian Spatial and Spatio-Temporal Data using FRK” Journal of Statistical Software, accepted for publication, https://arxiv.org/abs/2110.02507.
+* Zammit-Mangion, A. & Cressie N. (2021). “FRK: an R package for spatial and spatio-temporal prediction with large datasets.” *Journal of Statistical Software*, 98, 1-48. [doi:10.18637/jss.v098.i04](doi:10.18637/jss.v098.i04).
+* Sainsbury-Dale, M., Zammit-Mangion, A. & Cressie, N. (2024). “Modelling big, heterogeneous, non-Gaussian spatial and spatio-temporal data using FRK.” *Journal of Statistical Software*, 108(10), 1-39. [doi:10.18637/jss.v108.i10](doi:10.18637/jss.v108.i10).  
 
 
 License: GPL (>= 2)
