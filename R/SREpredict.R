@@ -12,7 +12,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
                                                pred_time = NULL, covariances = FALSE, 
                                                nsim = 400, type = "mean", k = NULL, 
                                                percentiles = c(5, 95), 
-                                               kriging = "simple") {
+                                               kriging = "simple", new_BAU_data = NULL) {
   
   ## Store the original newdata for comparison at the end of the function
   # newdata_original <- newdata
@@ -95,9 +95,28 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
       predict_BAUs <- FALSE
   }
   
+  ## Replace BAU data if provided 
+  if (!is.null(new_BAU_data)) { 
+    if (!is.data.frame(new_BAU_data)) {
+      stop("new_BAU_data must be a data.frame.")
+    }
+    if (nrow(new_BAU_data) != nrow(object@BAUs@data)) {
+      stop("Number of rows in new_BAU_data does not match object@BAUs@data.")
+    }
+    if (!identical(names(new_BAU_data), names(object@BAUs@data))) {
+      stop("Column names and their order in new_BAU_data must match object@BAUs@data.")
+    }
+    for (colname in names(new_BAU_data)) {
+      if (class(new_BAU_data[[colname]])[1] != class(object@BAUs@data[[colname]])[1]) {
+        stop(sprintf("Column '%s' in new_BAU_data does not have the same class as in object@BAUs@data.", colname))
+      }
+    }
+    object@BAUs@data <- new_BAU_data
+  }
+  
   ## Call internal prediction functions depending on which method is used
   if (object@method == "EM") {
-    pred_locs <- .SRE.predict_EM(Sm = object,              # Fitted SRE model
+    pred_locs <- .SRE.predict_EM(object = object,              # Fitted SRE model
                                  obs_fs = obs_fs,             # Case 1 or Case 2?
                                  newdata = newdata,           # Prediction polygons
                                  pred_time = pred_time,       # Prediction time points
@@ -169,54 +188,9 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     }
   }
   
-  # ## if newdata contains points that do not overlap the BAUs, they are removed
-  # ## from the prediction object: add them back in, but with NAs for the predictions.
-  # if (object@method == "TMB") {
-  #   if (!is.null(newdata_original) && length(newdata_original) != length(pred_locs$newdata)) {
-  #     pred_locs$newdata <- left_join_FRK(newdata_original, pred_locs$newdata)
-  #   }
-  # } else {
-  #   if (!is.null(newdata_original) && length(newdata_original) != length(pred_locs)) {
-  #     pred_locs <- left_join_FRK(newdata_original, pred_locs)
-  #   }
-  # }
-  
   ## Return predictions
   return(pred_locs)
 })
-
-
-# left_join_FRK <- function(x, y) {
-#   
-#   # The join works (i.e., it returns an object with the correct length), but 
-#   # all of the prediction columns are NA. This is due to the following;
-#   # any(coordinates(y)[,1] %in% coordinates(x)[,1])
-#   # any(coordinates(y)[,2] %in% coordinates(x)[,2])
-#   # any(time(y) %in% time(x))
-#   
-#   x@data$xxx <- coordinates(x)[,1]
-#   x@data$yyy <- coordinates(x)[,2]
-#   
-#   y@data$xxx <- coordinates(y)[,1]
-#   y@data$yyy <- coordinates(y)[,2]
-#   
-#   if(is(x, "ST")) {
-#     x@data$ttt <- time(x)
-#     y@data$ttt <- time(y)
-#   }
-#   
-#   x@data <- left_join(x@data, y@data)
-#   
-#   x@data$xxx <- NULL
-#   x@data$yyy <- NULL
-#   
-#   if(is(x, "ST")) {
-#     x@data$ttt <- NULL
-#   }
-#   
-#   x
-# }
-
 
 ## If newdata is a SpatialPoints, SpatialPolygons, or SPatialPixels object, 
 ## this function coerces newdata to is Spatial*DataFrame variant (with an empty 
@@ -266,21 +240,19 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
 
 # ---- Prediction functions ----
 
-.SRE.predict_EM <- function(Sm, obs_fs = FALSE, newdata = NULL,
-                            pred_time = NULL, covariances = FALSE, 
+.SRE.predict_EM <- function(object, obs_fs = FALSE, newdata = NULL, 
+                            pred_time = NULL, covariances = FALSE,
                             CP, predict_BAUs) {
   
-  
-  
   ## Get BAUs from the SRE model
-  BAUs <- Sm@BAUs
+  BAUs <- object@BAUs
   
   ## If we have to compute too many covariances then stop and give error
   if(covariances & nrow(CP) > 4000)
     stop("Cannot compute covariances for so many prediction locations. Please reduce to less than 4000")
   
   ## Get the CZ matrix
-  CZ <- Sm@Cmat
+  CZ <- object@Cmat
   
   ## If the user has specified which polygons he wants we can remove the ones we don't need
   ## We only need those BAUs that are influenced by observations and prediction locations
@@ -295,32 +267,22 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     BAUs <- BAUs[needed_BAUs,]
     CP <- CP[,needed_BAUs]
     CZ <- CZ[,needed_BAUs]
-    Sm@S0 <- Sm@S0[needed_BAUs,]
+    object@S0 <- object@S0[needed_BAUs,]
   }
   
-  ## Retrieve the dependent variable name
-  depname <- all.vars(Sm@f)[1]
-  
-  ## Set the dependent variable in BAUs to something just so that .extract.from.formula doesn't
-  ## throw an error.. we will NULL it shortly after
-  BAUs[[depname]] <- 0.1
-  
   ## Extract covariates from BAUs
-  L <- .extract.from.formula(Sm@f,data=BAUs)
-  X = as(L$X,"Matrix")
-  BAUs[[depname]] <- NULL
+  X <- .extract_BAU_X_matrix(object@f, BAUs)
   
   ## Set variables to make code more concise
-  S0 <- Sm@S0
-  S0 <- .as(S0,"dgCMatrix")   # ensure S0 is classified as sparse
-  alpha <- Sm@alphahat
-  K <- Sm@Khat
-  sigma2fs <- Sm@sigma2fshat
-  mu_eta <- Sm@mu_eta
-  S_eta <- Sm@S_eta
+  S0 <- .as(object@S0,"dgCMatrix")   
+  alpha <- object@alphahat
+  K <- object@Khat
+  sigma2fs <- object@sigma2fshat
+  mu_eta <- object@mu_eta
+  S_eta <- object@S_eta
   
-  if(Sm@fs_model == "ind") {
-    D <- sigma2fs*Sm@Vfs + Sm@Ve   # compute total variance (data)
+  if(object@fs_model == "ind") {
+    D <- sigma2fs*object@Vfs + object@Ve   # compute total variance (data)
     if(isDiagonal(D)) {
       D <- Diagonal(x=D@x)       # cast to diagonal
       Dchol <- sqrt(D)           # find the inverse of the variance-covariance matrix
@@ -346,14 +308,14 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
     if(sigma2fs > 0) {   # fine-scale variance not zero
       
       ## The below equations implement Section 2.3
-      LAMBDAinv <- bdiag(Sm@Khat_inv,Q)                # block diagonal precision matrix
+      LAMBDAinv <- bdiag(object@Khat_inv,Q)                # block diagonal precision matrix
       PI <- cbind(S0, .symDiagonal(n=length(BAUs)))    # PI = [S I]
-      tC_Ve_C <- t(CZ) %*% solve(Sm@Ve) %*% CZ +       # summary matrix
+      tC_Ve_C <- t(CZ) %*% solve(object@Ve) %*% CZ +       # summary matrix
         0*.symDiagonal(ncol(CZ))              # Ensure zeros on diagonal
       Qx <- t(PI) %*% tC_Ve_C %*% PI + LAMBDAinv       # conditional precision matrix
       chol_Qx <- cholPermute(.as(Qx,"dgCMatrix"))       # permute and do Cholesky
-      ybar <- t(PI) %*%t(CZ) %*% solve(Sm@Ve) %*%      # Qx = ybar, see vignette
-        (Sm@Z - CZ %*% X %*% alpha)
+      ybar <- t(PI) %*%t(CZ) %*% solve(object@Ve) %*%      # Qx = ybar, see vignette
+        (object@Z - CZ %*% X %*% alpha)
       x_mean <- cholsolve(Qx,ybar,perm=TRUE,           # solve Qx = ybar using permutations
                           cholQp = chol_Qx$Qpermchol, P = chol_Qx$P)
       
@@ -373,8 +335,8 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
       ## If sigma2fs = 0 then the prediction is much simpler and all our
       ## predictions / uncertainty come from the random effects
       PI <- S0
-      x_mean <- Sm@mu_eta  # conditional mean of eta
-      Cov <- Sm@S_eta      # conditional covariance of eta
+      x_mean <- object@mu_eta  # conditional mean of eta
+      Cov <- object@S_eta      # conditional covariance of eta
       
       ## Compute variances, this time indicating there is no fs variation in process
       BAUs[["var"]] <- .batch_compute_var(S0,Cov,fs_in_process = FALSE)
@@ -390,8 +352,8 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   if(obs_fs) {
     ## All predictions and prediction uncertainties comes from our
     ## prediction of and uncertainty over eta
-    x_mean <- Sm@mu_eta   # conditional mean
-    Cov <- Sm@S_eta       # conditional covariance
+    x_mean <- object@mu_eta   # conditional mean
+    Cov <- object@S_eta       # conditional covariance
     
     ## Compute variances, this time indicating there is no fs variation in process
     BAUs[["mu"]] <- as.numeric(X %*% alpha) + as.numeric(S0 %*% x_mean)
@@ -466,7 +428,7 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   mstar  <- length(obsidx)                # number of observed BAUs
   r      <- nbasis(object)                # number of basis-function coefficients
   
-  ## Covariate design matrix at the BAU level
+  ## Extract covariates from BAUs
   X <- as(.extract_BAU_X_matrix(object@f, object@BAUs), "matrix") 
   
   ## If we are doing universal kriging, use the full joint precision 

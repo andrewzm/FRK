@@ -92,7 +92,8 @@ SRE.fit(
   type = "mean",
   k = NULL,
   percentiles = c(5, 95),
-  kriging = "simple"
+  kriging = "simple",
+  new_BAU_data = NULL
 )
 
 \S4method{logLik}{SRE}(object)
@@ -190,6 +191,8 @@ simulate(object, newdata = NULL, nsim = 400, conditional_fs = FALSE, ...)
 \item{percentiles}{(applicable only if \code{method} = "TMB") a vector of scalars in (0, 100) specifying the desired percentiles of the posterior predictive distribution; if \code{NULL}, no percentiles are computed}
 
 \item{kriging}{(applicable only if \code{method} = "TMB") string indicating the kind of kriging: "simple" ignores uncertainty due to estimation of the fixed effects, while "universal" accounts for this source of uncertainty}
+
+\item{new_BAU_data}{A \code{data.frame} containing updated covariate values at the BAU level. Must have the same number of rows, column names  (in the same order), and column types as the original BAUs data. If \code{NULL} (default), the original BAUs data will be used.}
 
 \item{random_effects}{logical; if set to true, confidence intervals will also be provided for the random effects random effects \ifelse{html}{\out{<i> <b>&gamma;</b></i>}}{\eqn{\boldsymbol{\gamma}}{\gamma}} (see `?SRE` for details on these random effects)}
 
