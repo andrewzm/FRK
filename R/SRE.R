@@ -358,7 +358,7 @@ SRE <- function(f, data,basis,BAUs, est_error = TRUE, average_in_BAU = TRUE,
     normalise_wts <- FALSE
     BAUs$wts      <- 1
 
-    if(any(sapply(data, function(x) is(x, "SpatialPoints")))) {
+    if(any(sapply(data, function(x) is(x, "SpatialPoints") || is(x, "STIDF")))) {
 
       ## NOTE: The users are informed of these decisions later, only if they are
       ## found to be relevant.
