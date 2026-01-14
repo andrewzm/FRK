@@ -69,7 +69,8 @@ setMethod("predict", signature="SRE", function(object, newdata = NULL, obs_fs = 
   ## see if it is defined; using an obvious name such as "pred_points" (which 
   ## the user may have already defined in their global scope) may cause issues, 
   ## as global variables are visible from inside functions.
-  if(is(newdata, "SpatialPoints") || is(newdata, "STI")) {
+  ## The EM option below is left there for legacy reasons
+  if((is(newdata, "SpatialPoints") || is(newdata, "STI")) & !(object@method == "EM")) {  
     pred_points_from_user <- newdata # save the prediction locations for use later
     newdata <- NULL # setting newdata to NULL means we predict over the BAUs
   }

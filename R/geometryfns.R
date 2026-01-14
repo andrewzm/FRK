@@ -536,7 +536,8 @@ auto_BAU_time <- function (manifold, type, cellsize, resl, d, convex, ...) {
                by=tspacing)                  # and making the interval equal to tunit
 
   ## Finally round to the time unit (probably not needed)
-  tgrid <- roundPOSIXt(tgrid, tunit)
+  ## tgrid <- roundPOSIXt(tgrid, tunit) # Old code, causes error now
+  tgrid <- as.POSIXct(cut(tgrid, tunit), tz = attr(tgrid, "tz"))
 
   ## A warning is given from the line above when using units smaller than days
   ## and more than one element as input. This warning has no adverse affects as far
