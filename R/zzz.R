@@ -13,6 +13,10 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
+## Declare 'id' as a global variable to avoid check warnings
+## since it's used as a column name throughout the package
+utils::globalVariables("id")
+
 ## Unlooad compiled code when unloading FRK
 .onUnload <- function (libpath) {
   library.dynam.unload("FRK", libpath)
