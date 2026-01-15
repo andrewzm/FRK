@@ -678,7 +678,7 @@ info_fit(S)
 #> 
 #> $time
 #>    user  system elapsed 
-#>   0.279   0.537   0.272 
+#>   0.274   0.462   0.273 
 #> 
 logLik(S)
 #> [1] -349.8645
